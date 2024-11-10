@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Max Extension Settings</title>
+    <link rel="stylesheet" href="popup-page-style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Profile Section -->
+        <section class="section">
+            <h2>Profile</h2>
+            <div class="row">
+                <select id="profileSelect">
+                    <option value="default">Default Profile</option>
+                </select>
+                <button id="addProfile">Add Profile</button>
+                <button id="copyProfile">Duplicate Current Profile To A New One</button> <!-- New Button Added -->
+                <button id="deleteProfile" class="danger">Delete</button>
+                <p id="topExplanationText">Your changes will be saved instantly. Reload website to apply.</p>
+            </div>
+        </section>
+
+        <!-- Button Configuration (buttons are added dynamically) -->
+        <section class="section">
+            <h2>Button Configuration</h2>
+            <div class="row">
+                <input type="text" id="buttonIcon" placeholder="✨"  class="emoji-input">
+                <!-- Changed from input to textarea for dynamic height -->
+                <textarea id="buttonText" placeholder="Button Template Text" class="text-input" rows="1"></textarea>
+                <label class="checkbox-row">
+                    <input type="checkbox" id="buttonAutoSendToggle" checked>
+                    <span>Auto-send</span>
+                </label>
+            </div>
+            <div class="row">
+                <button id="addButton">Add Button</button>
+                <button id="addSeparator">Add Separator</button>
+            </div>
+            <div id="buttonList" data-draggable="true">
+                <!-- Buttons added dynamically -->
+            </div>
+        </section>
+
+        <!-- Settings -->
+        <section class="section">
+            <h2>Settings</h2>
+            <label class="checkbox-row">
+                <input type="checkbox" id="autoSendToggle">
+                <span>Enable Global Auto-send for profile. Disabling will disable auto-send everywhere.</span>
+            </label>
+            <label class="checkbox-row">
+                <input type="checkbox" id="shortcutsToggle">
+                <span>Enable Keyboard Shortcuts</span>
+            </label>
+            <button id="revertDefault" class="danger">Revert to Default</button>
+        </section>
+
+        <!-- Console -->
+        <section class="section">
+            <h2>Console</h2>
+            <div id="console" class="console"></div>
+        </section>
+
+        <div id="saveStatus" class="save-status">Last saved: Never</div>
+    </div>
+    <script src="log.js"></script>
+    <script src="popup-page-script.js"></script>
+</body>
+</html>

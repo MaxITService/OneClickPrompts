@@ -1,0 +1,378 @@
+/* popup-page-style.css */
+
+/* Root Variables for Consistent Styling */
+:root {
+    --primary-color: #7a5cc8; /* Less saturated violet shade for titles and accents */
+    --danger-color: #a94442; /* Soft red for danger buttons */
+    --border-color: #ccc; /* Light gray for borders */
+    --bg-color: #f9f9f9; /* Very light gray for background */
+    --text-color: #333; /* Dark gray for primary text */
+    --separator-color: #bbb; /* Medium gray for separators */
+    --hover-bg-color: #e6e6e6; /* Light gray on hover */
+    --transition-duration: 0.3s; /* Standard transition duration */
+    --transition-duration-release: 0.4s; /* Slower transition duration for release */
+    --box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    --box-shadow-hover: 0 4px 8px rgba(0,0,0,0.1);
+    --checkbox-size: 18px;
+}
+
+/* Body Styles */
+body {
+    margin: 0;
+    padding: 16px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg-color);
+    color: var(--text-color);
+    width: 100%;    
+    box-sizing: border-box;
+    overflow-y: auto; /* Enable vertical scrolling if content exceeds height */
+    transition: background-color var(--transition-duration) ease;
+}
+/* id="topExplanationText" text centered and a little bit gray */
+#topExplanationText {
+    text-align: center;
+    color: #666666;
+    width: 100%;
+}
+
+/* Container to Center Content */
+.container {
+    max-width: 800px;
+    min-width: 700px;
+    margin: 0 auto;
+    height: 100%; 
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+/* Sections Styling */
+.section {
+    margin-bottom: 24px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 16px;
+    background-color: #ffffff; 
+    box-shadow: var(--box-shadow);
+    transition: box-shadow var(--transition-duration) ease, background-color var(--transition-duration) ease;
+}
+
+.section:hover {
+    box-shadow: var(--box-shadow-hover);
+    background-color: #f2f2f2; 
+    transition: box-shadow var(--transition-duration-release) ease, background-color var(--transition-duration-release) ease;
+}
+
+h2 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--primary-color); 
+    transition: color var(--transition-duration) ease;
+}
+
+h2:hover {
+    color: #6a4abd; 
+    transition: color var(--transition-duration-release) ease;
+}
+
+/* Row Layout for Inputs and Buttons */
+.row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+}
+
+/* Inputs Styling */
+input[type="text"],
+textarea,
+select {
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 14px;
+    box-sizing: border-box;
+    resize: none; /* Prevent manual resizing */
+    overflow: hidden; /* Hide scrollbars */
+    transition: border-color var(--transition-duration) ease, box-shadow var(--transition-duration) ease;
+    background: #ffffff;
+    color: var(--text-color);
+}
+
+input[type="text"]:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(122, 92, 200, 0.1); /* Light violet shadow */
+}
+
+.emoji-input {
+    width: 40px;
+    text-align: center;
+}
+
+.text-input {
+    flex: 1;
+    min-height: 40px; /* Minimum height for single-line */
+    line-height: 1.2;
+}
+
+/* Buttons Styling */
+button {
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: #ffffff;
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: 14px;
+    transition: background var(--transition-duration) ease, transform 0.2s ease, color var(--transition-duration) ease;
+    position: relative;
+    overflow: hidden;
+}
+
+button:hover {
+    background: #e6e6e6; /* Light gray background on hover */
+    color: var(--text-color); /* Ensure text remains visible */
+    transition: background var(--transition-duration-release) ease, color var(--transition-duration-release) ease;
+}
+
+button.danger {
+    color: var(--danger-color);
+    border-color: var(--danger-color);
+    background: #ffffff;
+    transition: background var(--transition-duration) ease, color var(--transition-duration) ease;
+}
+
+button.danger:hover {
+    background: #f8d7da; /* Light red background on hover */
+    color: var(--danger-color); /* Maintain text color */
+    transition: background var(--transition-duration-release) ease, color var(--transition-duration-release) ease;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+/* Checkbox Layout */
+.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: color var(--transition-duration) ease;
+}
+
+.checkbox-row:hover {
+    color: var(--primary-color);
+    transition: color var(--transition-duration-release) ease;
+}
+
+.checkbox-row input[type="checkbox"] {
+    position: relative;
+    cursor: pointer;
+    width: var(--checkbox-size);
+    height: var(--checkbox-size);
+    -webkit-appearance: none;
+    appearance: none;
+    background: #ffffff;
+    border: 2px solid var(--primary-color);
+    border-radius: 3px;
+    transition: all var(--transition-duration) ease;
+    margin: 0;
+}
+
+.checkbox-row input[type="checkbox"]:checked {
+    background: var(--primary-color);
+    transition: background var(--transition-duration-release) ease;
+}
+
+.checkbox-row input[type="checkbox"]:checked::before {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #ffffff;
+    font-size: 12px;
+}
+
+/* Button List Container */
+#buttonList {
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 8px;
+    min-height: 50px;
+    background-color: #ffffff;
+    transition: background-color var(--transition-duration) ease;
+    overflow-y: auto; /* Enable scrolling if many buttons */
+    flex: 1 1 auto; /* Allow button list to expand */
+}
+
+#buttonList:hover {
+    transition: background-color var(--transition-duration-release) ease;
+}
+
+/* Individual Button Items */
+.button-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    margin: 4px 0;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: #ffffff;
+    cursor: grab;
+    transition: transform var(--transition-duration) cubic-bezier(0.4, 0, 0.2, 1), 
+                box-shadow var(--transition-duration) ease, 
+                background-color var(--transition-duration) ease;
+    position: relative;
+}
+
+.button-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--box-shadow-hover);
+    background-color: var(--hover-bg-color);
+    transition: transform var(--transition-duration-release) cubic-bezier(0.4, 0, 0.2, 1), 
+                box-shadow var(--transition-duration-release) ease, 
+                background-color var(--transition-duration-release) ease;
+}
+
+.button-item.dragging {
+    opacity: 0.8;
+    transform: scale(1.02) ;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    z-index: 2; /* Ensure dragged item is above others */
+}
+
+/* Drag Handle Styling */
+.drag-handle {
+    cursor: grab;
+    padding: 0 8px;
+    display: flex;
+    align-items: center;
+    font-size: 18px;
+    transition: background-color var(--transition-duration) ease;
+}
+
+.drag-handle:hover {
+    background-color: #e6e6e6;
+    transition: background-color var(--transition-duration-release) ease;
+}
+
+/* Separator Styles */
+.button-item.separator-item {
+    display: flex; /* Ensure flex layout */
+    align-items: center; /* Vertically center the content */
+    justify-content: center; /* Horizontally center the content */
+    gap: 8px; /* Space between lines and text */
+    margin: 8px 0; /* Vertical spacing */
+    padding: 8px; /* Inner padding */
+    background: #dcdcdc; /* Light gray background */
+    border: none;
+    cursor: move; /* Indicates draggable */
+    transition: background-color var(--transition-duration) ease, transform var(--transition-duration) ease;
+}
+
+.button-item.separator-item:hover {
+    background: #c0c0c0; /* Slightly darker gray on hover */
+    transition: background-color var(--transition-duration-release) ease, transform var(--transition-duration-release) ease;
+}
+
+.button-item.separator-item.dragging {
+    opacity: 0.7;
+    transform: scale(1.02);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+}
+
+/* Separator Line and Text */
+.separator-line {
+    flex: 1; /* Lines expand to fill space */
+    height: 1px; /* Thickness of lines */
+    background: var(--separator-color); /* Line color */
+}
+
+.separator-text {
+    white-space: nowrap; /* Prevent text wrapping */
+    color: #555555; /* Text color */
+    font-weight: 500; /* Text weight */
+    font-size: 14px; /* Text size */
+}
+
+/* Console Styling */
+.console {
+    font-family: Consolas, monospace;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: #333333; /* Dark background for console */
+    color: #cccccc; /* Light gray text */
+    transition: background-color var(--transition-duration) ease, color var(--transition-duration) ease;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.console div {
+    padding: 4px 8px;
+    border-bottom: 1px solid #444444;
+    transition: background-color var(--transition-duration) ease;
+}
+
+.console div:hover {
+    background: #444444; /* Darker background on hover */
+    transition: background-color var(--transition-duration-release) ease;
+}
+
+/* Save Status Styling */
+.save-status {
+    text-align: right;
+    color: #666666;
+    font-size: 12px;
+    margin-top: 16px;
+    animation: saveStatusFade 2s ease-out forwards;
+}
+
+@keyframes saveStatusFade {
+    0% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+/* Profile Selection Dropdown Styling */
+#profileSelect {
+    flex: 1;
+
+    background-repeat: no-repeat;
+    padding-right: 30px;
+    transition: border-color var(--transition-duration) ease, box-shadow var(--transition-duration) ease;
+}
+
+
+#profileSelect:hover {
+    border-color: var(--primary-color);
+    transition: border-color var(--transition-duration-release) ease, box-shadow var(--transition-duration-release) ease;
+}
+
+#profileSelect:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(122, 92, 200, 0.1); /* Light violet shadow */
+    transition: border-color var(--transition-duration-release) ease, box-shadow var(--transition-duration-release) ease;
+}
+
+/* Save Status Animation Reset */
+.save-status {
+    animation: saveStatusFade 2s ease-out forwards;
+}
+
+.empty-message {
+    padding: 10px;
+    color: #888;
+    font-style: italic;
+    width:100%;
+    text-align:center;
+}
