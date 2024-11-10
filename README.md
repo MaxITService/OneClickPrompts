@@ -1,7 +1,8 @@
 # [ChatGPT Quick Buttons: Custom Prompts in One Click!](https://chromewebstore.google.com/detail/chatgpt-quick-buttons-for/iiofmimaakhhoiablomgcjpilebnndbf)
 
 ![ChatGPT Quick Buttons](Promo/promo440_280.png)
-
+# How insertion works:
+![ChatGPT Quick Buttons](Promo/how_it_works_gifv.gif)
 **Insert your custom prompts into ChatGPT with a single click – works with search too!**
 
 Create and customize buttons for frequently used prompts or choose from pre-defined options. Buttons appear directly in ChatGPT’s input field, saving time and making conversations effortless. Quick to set up, free, and open-source with no data tracking. Prompts are securely stored in your browser’s sync storage.
@@ -31,7 +32,7 @@ Create and customize buttons for frequently used prompts or choose from pre-defi
 If anything doesn’t work, try reloading the browser. For persistent issues, reach out for support. The extension is designed to leave no trace upon uninstall.
 
 ## License
-**Do whatever you like** – just link back to me as the original author.
+**Do whatever you like** – just link back to me and possibly to a Chrome Web Store.
 
 ---
 
