@@ -1,7 +1,7 @@
 # --------------------------- Configuration --------------------------- #
 
 # Define exclusions
-$excludedDirs = @('.vscode', '.git', '.archive', '.Promo')     # Added '.Promo' to exclude this folder
+$excludedDirs = @('.vscode', '.git', '.archive', 'Promo')     # Added '.Promo' to exclude this folder
 $excludedFiles = @('.gitignore', 'CI-CD.ps1')                # Files to exclude
 
 # Define the source directory as the current working directory
