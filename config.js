@@ -1,6 +1,6 @@
 // config.js
 // Version: 1.1
-// Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS.
+// Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS. This one too!
 // This service worker does all Config stuff with sync storage, it handles storage exclusively, other files request data from it and don't care how it is stored.
 'use strict';
 

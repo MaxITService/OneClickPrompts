@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "ChatGPT Quick Buttons for your text",
   "description": "Insert your custom prompts into ChatGPT, 1 click.",
-  "version": "0.0.0.4",
+  "version": "0.0.0.5",
   
   "icons": {
     "16": "icon16.png",
@@ -40,6 +40,7 @@
         "events.js",
         "utils.js",
         "buttons.js",
+        "buttons-init.js",
         "interface.js",
         "init.js",
         "tests.js"
