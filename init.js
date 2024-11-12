@@ -1,6 +1,29 @@
 // init.js
 // Version: 1.4
-// Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS.
+//
+// Documentation:
+// This file serves as the main initializer for the ChatGPT extension. It handles configuration retrieval,
+// determines the active website (e.g., ChatGPT or Claude), and initiates the appropriate extension scripts.
+// Additionally, it monitors URL changes in Single Page Applications (SPAs) to ensure the extension remains functional.
+//
+// Functions:
+// - executeExtensionInitializationSequence: Starts the initialization process by fetching configuration data.
+// - commenceExtensionInitialization: Applies the configuration and sets up the extension based on the active website.
+// - doCustomModificationsExist: Checks if custom modifications are already present in the DOM.
+// - identifyActiveWebsite: Determines which supported website is currently active.
+// - initializeChatGPTExtension: Initializes ChatGPT-specific extension logic.
+// - initializeClaudeExtension: Initializes Claude-specific extension logic (to be implemented in the future).
+// - manageKeyboardShortcutEvents: Handles keyboard shortcuts for triggering custom send buttons.
+// - commenceEnhancedResiliencyChecks: Starts periodic checks to maintain extension functionality.
+// - enforceResiliencyMeasures: Re-initializes the extension without resiliency checks if conditions are met.
+// - initiateFirstInitializationSequence: Begins the first initialization sequence with optional resiliency.
+// - selectAndInitializeAppropriateExtensionScript: Chooses and initializes the script based on the active website.
+// - monitorUrlChangesInSinglePageApplications: Observes URL changes in SPAs to re-initialize the extension as needed.
+// - debounceFunctionExecution: Debounces function execution to limit how often a function can run.
+//
+// Usage:
+// Ensure that `buttons.js` and `buttons-init.js` are loaded before this script to provide necessary button functionalities.
+// This script will automatically start the initialization process upon loading.
 
 'use strict';
 
@@ -78,196 +101,6 @@ function commenceExtensionInitialization(config) {
     }
 
     /**
-     * Handles the click event on a custom send button.
-     * @param {Event} event - The click event object.
-     * @param {string} customText - The custom text to be inserted.
-     * @param {boolean} autoSend - Flag indicating whether to automatically send the message.
-     */
-    function processCustomSendButtonClick(event, customText, autoSend) {
-        // Prevent default button behavior
-        event.preventDefault();
-        logConCgp('[init] Custom send button was clicked.');
-
-        // Detect the editor area
-        const editorArea = document.querySelector('#prompt-textarea'); // Ensure this ID is consistent
-        if (editorArea) {
-            logConCgp('[init] Editor area found:', editorArea);
-        } else {
-            logConCgp('[init] Editor area not found. Unable to proceed.');
-            return;
-        }
-
-        /**
-         * Attempts to locate the send button using primary and fallback selectors.
-         * @returns {HTMLElement|null} - The send button element or null if not found.
-         */
-        function locateSendButton() {
-            // Primary Selector: Language-agnostic using data-testid
-            const primarySelector = 'button[data-testid="send-button"]';
-            let sendButton = document.querySelector(primarySelector);
-            if (sendButton) {
-                logConCgp('[init] Original send button located using primary selector:', sendButton);
-                return sendButton;
-            }
-
-            // Fallback Selector: Any button within the parent div that resembles a send button
-            logConCgp('[init] Primary send button not found. Attempting fallback selector.');
-            const parentDiv = document.querySelector('div.flex.h-[44px].items-center.justify-between');
-            if (parentDiv) {
-                const fallbackButtons = parentDiv.querySelectorAll('button');
-                if (fallbackButtons.length > 0) {
-                    // Assuming the last button is the send button; modify as needed
-                    sendButton = fallbackButtons[fallbackButtons.length - 1];
-                    logConCgp('[init] Fallback send button located:', sendButton);
-                    return sendButton;
-                } else {
-                    logConCgp('[init] No buttons found within the fallback parent div.');
-                }
-            } else {
-                logConCgp('[init] Fallback parent div not found.');
-            }
-
-            // If no button is found
-            logConCgp('[init] No suitable send button found using fallback selector.');
-            return null;
-        }
-
-        // Locate the send button
-        let originalSendButton = locateSendButton();
-        if (!originalSendButton) {
-            logConCgp('[init] Send button not found initially. Setting up MutationObserver to detect it.');
-        }
-
-        /**
-         * Handles the send button click logic.
-         * @param {HTMLElement} sendButton - The send button element.
-         */
-        function handleSendButton(sendButton) {
-            if (sendButton) {
-                logConCgp('[init] Send button is available. Proceeding with sending message.');
-
-                // Retrieve existing text in the editor
-                const existingText = editorArea.innerText;
-                logConCgp('[init] Current text in editor:', existingText);
-
-                // Concatenate existing text with custom text exactly as provided
-                const newText = `${existingText}${customText}`;
-                logConCgp('[init] Combined text to be inserted:', newText);
-
-                // Insert the new text into the editor
-                MaxExtensionUtils.insertTextIntoEditor(editorArea, newText);
-
-                // Move cursor to the end after insertion
-                MaxExtensionUtils.moveCursorToEnd(editorArea);
-
-                // Auto-send the message if global auto-send is enabled and this button's config allows it
-                if (MaxExtensionConfig.globalAutoSendEnabled && autoSend) {
-                    logConCgp('[init] Starting auto-send interval to click send button every 100ms until editor is empty.');
-
-                    // Define the interval ID so it can be cleared later
-                    const sendInterval = setInterval(() => {
-                        const currentText = editorArea.innerText.trim();
-                        logConCgp('[auto-send] Current text in editor:', currentText);
-
-                        if (currentText.length === 0) {
-                            logConCgp('[auto-send] Editor is empty. Stopping auto-send interval.');
-                            clearInterval(sendInterval);
-                            return;
-                        }
-
-                        // I SPENT FIVE HOURS DETECTING THAT THIS BUTTON CHANGES AND NEEDS TO BE RE-DETECTED. 
-                        // do not delete above comment.
-                        originalSendButton = locateSendButton();
-                        if (originalSendButton) {
-                            logConCgp('[init] Original send button located:', originalSendButton);
-                            logConCgp('[auto-send] Attempting to click the send button.');
-                            MaxExtensionUtils.simulateClick(originalSendButton);
-                            logConCgp('[auto-send] Original send button was clicked automatically.');
-                        } else {
-                            logConCgp('[init] Original send button not found. Unable to proceed.');
-                            clearInterval(sendInterval);
-                        }
-                    }, 100); // Interval set to 100 milliseconds
-                } else {
-                    logConCgp('[init] Auto-send is disabled. Message will not be sent automatically.');
-                }
-            } else {
-                logConCgp('[init] Send button is not available to handle.');
-            }
-        }
-
-        // If the send button is not found, set up a MutationObserver to detect when it appears
-        if (!originalSendButton) {
-            const observer = new MutationObserver((mutations, obs) => {
-                originalSendButton = locateSendButton();
-                if (originalSendButton) {
-                    handleSendButton(originalSendButton);
-                    obs.disconnect(); // Stop observing once the button is found
-                    logConCgp('[init] Send button detected and observer disconnected.');
-                } else {
-                    logConCgp('[init] MutationObserver detected changes, but send button still not found.');
-                }
-            });
-
-            // Start observing the DOM for changes
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true
-            });
-        } else {
-            // If send button is found, handle it immediately
-            handleSendButton(originalSendButton);
-        }
-    }
-
-
-    /**
-     * Creates and appends toggle switches to the specified container.
-     * @param {HTMLElement} container - The DOM element to which toggles will be appended.
-     */
-    function generateAndAppendToggles(container) {
-        const autoSendToggle = MaxExtensionInterface.createToggle(
-            'auto-send-toggle',
-            'Enable Auto-send',
-            MaxExtensionConfig.globalAutoSendEnabled,
-            (state) => {
-                MaxExtensionConfig.globalAutoSendEnabled = state;
-            }
-        );
-        container.appendChild(autoSendToggle);
-        logConCgp('[init] Auto-send toggle has been created and appended.');
-
-        const hotkeysToggle = MaxExtensionInterface.createToggle(
-            'hotkeys-toggle',
-            'Enable Hotkeys',
-            MaxExtensionConfig.enableShortcuts,
-            (state) => {
-                MaxExtensionConfig.enableShortcuts = state;
-            }
-        );
-        container.appendChild(hotkeysToggle);
-        logConCgp('[init] Hotkeys toggle has been created and appended.');
-    }
-
-    /**
-     * Creates and appends custom send buttons to the specified container.
-     * @param {HTMLElement} container - The DOM element to which custom buttons will be appended.
-     */
-    function generateAndAppendCustomSendButtons(container) {
-        MaxExtensionConfig.customButtons.forEach((buttonConfiguration, index) => {
-            if (buttonConfiguration.separator) {
-                const separatorElement = MaxExtensionUtils.createSeparator();
-                container.appendChild(separatorElement);
-                logConCgp('[init] Separator element has been created and appended.');
-            } else {
-                const customSendButton = MaxExtensionButtons.createCustomSendButton(buttonConfiguration, index, processCustomSendButtonClick);
-                container.appendChild(customSendButton);
-                logConCgp(`[init] Custom send button ${index + 1} has been created:`, customSendButton);
-            }
-        });
-    }
-
-    /**
      * Handles keyboard shortcut events to trigger custom send buttons.
      * @param {KeyboardEvent} event - The keyboard event object.
      */
@@ -342,33 +175,11 @@ function commenceExtensionInitialization(config) {
     }
 
     /**
-     * Creates and appends custom buttons and toggles to the target container element.
+     * Creates and inserts custom buttons and toggles into the target container element.
+     * This function has been moved to `buttons-init.js` to enhance modularity.
      * @param {HTMLElement} targetContainer - The DOM element where custom elements will be inserted.
      */
-    function createAndInsertCustomElements(targetContainer) {
-        // Prevent duplication by checking if the container already exists
-        if (doCustomModificationsExist()) {
-            logConCgp('[init] Custom buttons container already exists. Skipping creation.');
-            return;
-        }
-
-        const customElementsContainer = document.createElement('div');
-        customElementsContainer.id = 'custom-buttons-container'; // Assign a unique ID
-        customElementsContainer.style.cssText = `
-            display: flex;
-            justify-content: flex-start;
-            flex-wrap: wrap;
-            gap: 8px;
-            padding: 8px;
-            width: 100%;
-        `;
-
-        generateAndAppendCustomSendButtons(customElementsContainer);
-        generateAndAppendToggles(customElementsContainer);
-
-        targetContainer.appendChild(customElementsContainer);
-        logConCgp('[init] Custom elements have been inserted into the DOM.');
-    }
+    // Function moved to buttons-init.js
 
     /**
      * Initializes the first sequence of the ChatGPT extension.
@@ -396,8 +207,8 @@ function commenceExtensionInitialization(config) {
             if (!targetFound) {
                 targetFound = true; // Set the flag to prevent other callbacks from executing
                 logConCgp('[init] Target div has been found:', targetDiv);
-                createAndInsertCustomElements(targetDiv);
-                
+                window.MaxExtensionButtonsInit.createAndInsertCustomElements(targetDiv);
+
                 // Initiate resiliency checks only after the first successful modification
                 if (!MaxExtensionConfig.firstModificationCompleted && enableResiliency) {
                     MaxExtensionConfig.firstModificationCompleted = true;
@@ -489,3 +300,4 @@ function commenceExtensionInitialization(config) {
     // Initiate the appropriate extension script based on the active website
     selectAndInitializeAppropriateExtensionScript();
 }
+

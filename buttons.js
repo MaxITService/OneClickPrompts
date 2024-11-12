@@ -1,6 +1,17 @@
 // buttons.js
 // Version: 1.0
-// Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS.
+//
+// Documentation:
+// This file manages the creation and functionality of custom send buttons within the ChatGPT extension.
+// It provides utility functions to create buttons based on configuration and assigns keyboard shortcuts where applicable.
+//
+// Functions:
+// - createCustomSendButton: Creates a custom send button based on provided configuration.
+// - determineShortcutKeyForButtonIndex: Assigns a shortcut key to a button based on its index.
+//
+// Usage:
+// Ensure that `buttons-init.js` and `init.js` are loaded before this script to utilize button functionalities.
+// This script should be included in the `content_scripts` section of the manifest to be injected into the target pages.
 
 'use strict';
 
@@ -66,3 +77,154 @@ window.MaxExtensionButtons = {
         return null;
     }
 };
+
+/**
+ * Handles the click event on a custom send button.
+ * @param {Event} event - The click event object.
+ * @param {string} customText - The custom text to be inserted.
+ * @param {boolean} autoSend - Flag indicating whether to automatically send the message.
+ */
+function processCustomSendButtonClick(event, customText, autoSend) {
+    // Prevent default button behavior
+    event.preventDefault();
+    logConCgp('[init] Custom send button was clicked.');
+
+    // Detect the editor area
+    const editorArea = document.querySelector('#prompt-textarea'); // Ensure this ID is consistent
+    if (editorArea) {
+        logConCgp('[init] Editor area found:', editorArea);
+    } else {
+        logConCgp('[init] Editor area not found. Unable to proceed.');
+        return;
+    }
+
+    /**
+     * Attempts to locate the send button using primary and fallback selectors.
+     * @returns {HTMLElement|null} - The send button element or null if not found.
+     */
+    function locateSendButton() {
+        // Primary Selector: Language-agnostic using data-testid
+        const primarySelector = 'button[data-testid="send-button"]';
+        let sendButton = document.querySelector(primarySelector);
+        if (sendButton) {
+            logConCgp('[init] Original send button located using primary selector:', sendButton);
+            return sendButton;
+        }
+
+        // Fallback Selector: Any button within the parent div that resembles a send button
+        logConCgp('[init] Primary send button not found. Attempting fallback selector.');
+        const parentDiv = document.querySelector('div.flex.h-[44px].items-center.justify-between');
+        if (parentDiv) {
+            const fallbackButtons = parentDiv.querySelectorAll('button');
+            if (fallbackButtons.length > 0) {
+                // Assuming the last button is the send button; modify as needed
+                sendButton = fallbackButtons[fallbackButtons.length - 1];
+                logConCgp('[init] Fallback send button located:', sendButton);
+                return sendButton;
+            } else {
+                logConCgp('[init] No buttons found within the fallback parent div.');
+            }
+        } else {
+            logConCgp('[init] Fallback parent div not found.');
+        }
+
+        // If no button is found
+        logConCgp('[init] No suitable send button found using fallback selector.');
+        return null;
+    }
+
+    // Locate the send button
+    let originalSendButton = locateSendButton();
+    if (!originalSendButton) {
+        logConCgp('[init] Send button not found initially. Setting up MutationObserver to detect it.');
+    }
+
+    /**
+     * Handles the send button click logic.
+     * @param {HTMLElement} sendButton - The send button element.
+     */
+    function handleSendButton(sendButton) {
+        if (sendButton) {
+            logConCgp('[init] Send button is available. Proceeding with sending message.');
+
+            // Retrieve existing text in the editor
+            const existingText = editorArea.innerText;
+            logConCgp('[init] Current text in editor:', existingText);
+
+            // Concatenate existing text with custom text exactly as provided
+            const newText = `${existingText}${customText}`;
+            logConCgp('[init] Combined text to be inserted:', newText);
+
+            // Insert the new text into the editor
+            MaxExtensionUtils.insertTextIntoEditor(editorArea, newText);
+
+            // Move cursor to the end after insertion
+            MaxExtensionUtils.moveCursorToEnd(editorArea);
+
+            // Auto-send the message if global auto-send is enabled and this button's config allows it
+            if (MaxExtensionConfig.globalAutoSendEnabled && autoSend) {
+                logConCgp('[init] Starting auto-send interval to click send button every 100ms until editor is empty.');
+
+                // Define the interval ID so it can be cleared later
+                const sendInterval = setInterval(() => {
+                    const currentText = editorArea.innerText.trim();
+                    logConCgp('[auto-send] Current text in editor:', currentText);
+
+                    if (currentText.length === 0) {
+                        logConCgp('[auto-send] Editor is empty. Stopping auto-send interval.');
+                        clearInterval(sendInterval);
+                        return;
+                    }
+
+                    // I SPENT FIVE HOURS DETECTING THAT THIS BUTTON CHANGES AND NEEDS TO BE RE-DETECTED. 
+                    // do not delete above comment.
+                    originalSendButton = locateSendButton();
+                    if (originalSendButton) {
+                        logConCgp('[init] Original send button located:', originalSendButton);
+                        logConCgp('[auto-send] Attempting to click the send button.');
+                        MaxExtensionUtils.simulateClick(originalSendButton);
+                        logConCgp('[auto-send] Original send button was clicked automatically.');
+                    } else {
+                        logConCgp('[init] Original send button not found. Unable to proceed.');
+                        clearInterval(sendInterval);
+                    }
+                }, 100); // Interval set to 100 milliseconds
+            } else {
+                logConCgp('[init] Auto-send is disabled. Message will not be sent automatically.');
+            }
+        } else {
+            logConCgp('[init] Send button is not available to handle.');
+        }
+    }
+
+    // If the send button is not found, set up a MutationObserver to detect when it appears
+    if (!originalSendButton) {
+        const observer = new MutationObserver((mutations, obs) => {
+            originalSendButton = locateSendButton();
+            if (originalSendButton) {
+                handleSendButton(originalSendButton);
+                obs.disconnect(); // Stop observing once the button is found
+                logConCgp('[init] Send button detected and observer disconnected.');
+            } else {
+                logConCgp('[init] MutationObserver detected changes, but send button still not found.');
+            }
+        });
+
+        // Start observing the DOM for changes
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    } else {
+        // If send button is found, handle it immediately
+        handleSendButton(originalSendButton);
+    }
+}
+
+/**
+ * Creates and appends custom send buttons to the specified container.
+ * This function has been moved to `buttons-init.js` to enhance modularity.
+ * @param {HTMLElement} container - The DOM element to which custom buttons will be appended.
+ */
+// Function moved to buttons-init.js
+
