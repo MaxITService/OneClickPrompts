@@ -15,7 +15,7 @@
                     <option value="default">Default Profile</option>
                 </select>
                 <button id="addProfile">Add Profile</button>
-                <button id="copyProfile">Duplicate Current Profile To A New One</button> <!-- New Button Added -->
+                <button id="copyProfile">Duplicate Current Profile To A New One</button>
                 <button id="deleteProfile" class="danger">Delete</button>
                 <p id="topExplanationText">Your changes will be saved instantly. Reload website to apply.</p>
             </div>
@@ -26,7 +26,6 @@
             <h2>Button Configuration</h2>
             <div class="row">
                 <input type="text" id="buttonIcon" placeholder="✨"  class="emoji-input">
-                <!-- Changed from input to textarea for dynamic height -->
                 <textarea id="buttonText" placeholder="Button Template Text" class="text-input" rows="1"></textarea>
                 <label class="checkbox-row">
                     <input type="checkbox" id="buttonAutoSendToggle" checked>
@@ -63,9 +62,32 @@
         </section>
 
         <div id="saveStatus" class="save-status">Last saved: Never</div>
+
+        <!-- Backup Section -->
+        <section class="section">
+            <h2>Backup & Restore</h2>
+            <div class="row">
+                <button id="exportProfile">Export Profile</button>
+                <button id="importProfile">Import Profile</button>
+                <!-- Hidden file input for importing profile -->
+                <input type="file" id="importFileInput" accept="application/json" style="display: none;">
+            </div>
+            <!-- Confirmation Div -->
+            <div id="confirmationDiv" class="confirmation" style="display: none;">
+                <p>File loaded successfully. Do you want to overwrite current profile?</p>
+                <button id="confirmOverwrite">Yes</button>
+                <button id="cancelOverwrite">No</button>
+            </div>
+            <!-- Error Message Div -->
+            <div id="errorDiv" class="error" style="display: none;">
+                <p>Error loading file. Please ensure the file is a valid JSON profile.</p>
+            </div>
+        </section>
     </div>
     <script src="log.js"></script>
     <script src="popup-page-script.js"></script>
     <script src="popup-page-visuals.js"></script>
+    <!-- Include the new backup handler script -->
+    <script src="popup-page-backup-handler.js"></script>
 </body>
 </html>

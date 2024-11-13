@@ -376,3 +376,63 @@ button:active {
     width:100%;
     text-align:center;
 }
+
+
+
+
+
+/* Export and Import Buttons */
+#exportProfile,
+#importProfile {
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: #ffffff;
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: 14px;
+    transition: background var(--transition-duration) ease, transform 0.2s ease, color var(--transition-duration) ease;
+}
+
+#exportProfile:hover,
+#importProfile:hover {
+    background: #e6e6e6;
+    transition: background var(--transition-duration-release) ease, color var(--transition-duration-release) ease;
+}
+
+#exportProfile:active,
+#importProfile:active {
+    transform: scale(0.98);
+}
+
+/* Confirmation Div */
+.confirmation {
+    margin-top: 16px;
+    padding: 12px;
+    border: 1px solid var(--primary-color);
+    border-radius: 4px;
+    background-color: #f0f8ff; /* Light blue background */
+}
+
+.confirmation p {
+    margin: 0 0 12px 0;
+    color: var(--text-color);
+}
+
+.confirmation button {
+    margin-right: 8px;
+}
+
+/* Error Div */
+.error {
+    margin-top: 16px;
+    padding: 12px;
+    border: 1px solid var(--danger-color);
+    border-radius: 4px;
+    background-color: #ffe6e6; /* Light red background */
+}
+
+.error p {
+    margin: 0;
+    color: var(--danger-color);
+}

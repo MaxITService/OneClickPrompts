@@ -20,7 +20,8 @@
   },
   
   "permissions": [
-    "storage"
+    "storage",
+    "downloads" 
   ],
   
   "background": {
