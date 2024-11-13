@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Max Extension Settings</title>
     <link rel="stylesheet" href="popup-page-style.css">
 </head>
+
 <body>
     <div class="container">
         <!-- Profile Section -->
@@ -25,7 +27,7 @@
         <section class="section">
             <h2>Button Configuration</h2>
             <div class="row">
-                <input type="text" id="buttonIcon" placeholder="✨"  class="emoji-input">
+                <input type="text" id="buttonIcon" placeholder="✨" class="emoji-input">
                 <textarea id="buttonText" placeholder="Button Template Text" class="text-input" rows="1"></textarea>
                 <label class="checkbox-row">
                     <input type="checkbox" id="buttonAutoSendToggle" checked>
@@ -63,6 +65,7 @@
 
         <div id="saveStatus" class="save-status">Last saved: Never</div>
 
+
         <!-- Backup Section -->
         <section class="section">
             <h2>Backup & Restore</h2>
@@ -90,4 +93,5 @@
     <!-- Include the new backup handler script -->
     <script src="popup-page-backup-handler.js"></script>
 </body>
+
 </html>
