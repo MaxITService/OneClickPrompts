@@ -37,151 +37,20 @@ const copyProfileInput = document.getElementById('copyProfileInput');
 const cancelAddProfileButton = document.getElementById('cancelAddProfile'); // Cancel button for adding profile
 const cancelCopyProfileButton = document.getElementById('cancelCopyProfile'); // Cancel button for duplicating profile
 
-const toastContainer = document.getElementById('toastContainer');
-
-// -------------------------
-// 5. Button Management Functions
-// -------------------------
-
-/**
- * Creates a button element for the button list.
- * @param {Object} button - The button data from the profile.
- * @param {number} index - The index of the button in the customButtons array.
- * @returns {HTMLElement} - The button item element.
- */
-function createButtonElement(button, index) {
-    const buttonItem = document.createElement('div');
-    buttonItem.className = 'button-item';
-    buttonItem.dataset.index = index;
-    buttonItem.draggable = true; // Ensure the item is draggable
-
-    if (button.separator) {
-        buttonItem.classList.add('separator-item');
-        // Updated separator with labeled text
-        buttonItem.innerHTML = `
-            <div class="separator-line"></div>
-            <span class="separator-text">Separator</span>
-            <div class="separator-line"></div>
-            <button class="delete-button danger">Delete</button>
-        `;
-    } else {
-        buttonItem.innerHTML = `
-            <div class="drag-handle" draggable="true">&#9776;</div>
-            <input type="text" class="emoji-input" value="${button.icon}">
-            <textarea class="text-input" rows="1">${button.text}</textarea>
-            <label class="checkbox-row">
-                <input type="checkbox" class="autosend-toggle" ${button.autoSend ? 'checked' : ''}>
-                <span>Auto-send</span>
-            </label>
-            <button class="delete-button danger">Delete</button>
-        `;
-    }
-
-    return buttonItem;
-}
-
-/**
- * Updates the list of custom buttons in the interface.
- */
-function updateButtonList() {
-    buttonList.innerHTML = '';
-    if (currentProfile.customButtons && currentProfile.customButtons.length > 0) {
-        currentProfile.customButtons.forEach((button, index) => {
-            const buttonElement = createButtonElement(button, index);
-            buttonList.appendChild(buttonElement);
-        });
-    } else {
-        const emptyMessage = document.createElement('div');
-        emptyMessage.textContent = 'No custom buttons. Add buttons using the buttons above.';
-        emptyMessage.className = 'empty-message';
-        buttonList.appendChild(emptyMessage);
-    }
-
-    // After updating the list, attach event listeners
-    attachTextareaAutoResize();
-    attachEmojiInputListeners();
-    attachAutoSendToggleListeners();
-}
-
-/**
- * Adds a new custom button to the current profile.
- */
-async function addButton() {
-    const icon = document.getElementById('buttonIcon').value || '✨';
-    const text = document.getElementById('buttonText').value || 'New Button';
-    const autoSend = document.getElementById('buttonAutoSendToggle').checked;
-
-    currentProfile.customButtons.push({
-        icon: icon,
-        text: text,
-        autoSend: autoSend
-    });
-
-    await saveCurrentProfile();
-    updateButtonList();
-    logToConsole('Added new button');
-}
-
-/**
- * Adds a separator to the current profile.
- */
-async function addSeparator() {
-    currentProfile.customButtons.push({ separator: true });
-    await saveCurrentProfile();
-    updateButtonList();
-    logToConsole('Added separator');
-}
-
-/**
- * Deletes a button at a specified index.
- * @param {number} index - The index of the button to delete.
- */
-async function deleteButton(index) {
-    currentProfile.customButtons.splice(index, 1);
-    await saveCurrentProfile();
-    updateButtonList();
-    logToConsole('Deleted button');
-}
-
-// -------------------------
-// 6. Toast Notification Function
-// -------------------------
-
-/**
- * Displays a toast notification.
- *
- * @param {string} message - The message to display in the toast.
- * @param {string} type - The type of toast ('success', 'error', 'info').
- * @param {number} duration - Duration in milliseconds before the toast disappears. Defaults to 3000ms.
- */
-function showToast(message, type = 'info', duration = 3000) {
-    const toast = document.createElement('div');
-    toast.classList.add('toast', type);
-    toast.textContent = message;
-
-    toastContainer.appendChild(toast);
-
-    // Trigger reflow to enable CSS transition
-    void toast.offsetWidth;
-
-    toast.classList.add('show');
-
-    // Remove toast after specified duration
-    setTimeout(() => {
-        toast.classList.remove('show');
-        // Remove the toast from DOM after transition
-        toast.addEventListener('transitionend', () => {
-            toast.remove();
-        });
-    }, duration);
-}
-
 // -------------------------
 // 7. Settings Management
 // -------------------------
 
 /**
  * Updates global settings based on user input.
+ * 
+ * Dependencies:
+ * - /popup-page-scripts/popup-page-profiles.js: Uses saveCurrentProfile() to persist changes.
+ * - /popup-page-scripts/popup-page-visuals.js: Uses logToConsole() to log updates.
+ * 
+ * Why:
+ * This function updates the global settings of the current profile based on user interactions,
+ * saves the updated profile, and logs the changes for debugging purposes.
  */
 async function updateGlobalSettings() {
     currentProfile.globalAutoSendEnabled = document.getElementById('autoSendToggle').checked;
@@ -192,6 +61,16 @@ async function updateGlobalSettings() {
 
 /**
  * Reverts the current profile to default settings.
+ * 
+ * Dependencies:
+ * - /popup-page-scripts/popup-page-profiles.js: Uses chrome.runtime.sendMessage to create default profile and save it.
+ * - /popup-page-scripts/popup-page-visuals.js: Uses showToast() to notify the user.
+ * - /popup-page-scripts/popup-page-script.js: Uses updateInterface() to refresh the UI.
+ * - /popup-page-scripts/popup-page-profiles.js: Uses saveCurrentProfile() to persist the reverted profile.
+ * 
+ * Why:
+ * Allows users to revert their current profile settings to the default configuration, ensuring they can
+ * easily undo unwanted changes.
  */
 async function revertToDefault() {
     if (!confirm('Revert current profile to default settings?')) return;
@@ -215,6 +94,14 @@ async function revertToDefault() {
 
 /**
  * Saves the current profile configuration.
+ * 
+ * Dependencies:
+ * - /popup-page-scripts/popup-page-profiles.js: Uses chrome.runtime.sendMessage to save the profile.
+ * - /popup-page-scripts/popup-page-script.js: Uses updateSaveStatus() to update the UI.
+ * 
+ * Why:
+ * Persists the current profile's configuration to ensure that user changes are saved and can be retrieved later.
+ * 
  * @returns {Promise<boolean>} - Returns true if save is successful, else false.
  */
 async function saveCurrentProfile() {
@@ -234,6 +121,12 @@ async function saveCurrentProfile() {
 
 /**
  * Updates the save status display with the current timestamp.
+ * 
+ * Dependencies:
+ * - None directly, but interacts with the DOM to reflect the latest save time.
+ * 
+ * Why:
+ * Provides visual feedback to the user indicating when the profile was last saved, enhancing user awareness.
  */
 function updateSaveStatus() {
     const timestamp = new Date().toLocaleTimeString();
@@ -242,6 +135,13 @@ function updateSaveStatus() {
 
 /**
  * Updates the entire interface based on the current profile.
+ * 
+ * Dependencies:
+ * - /popup-page-scripts/popup-page-customButtons.js: Uses updateButtonList() to refresh the button list.
+ * - /popup-page-script.js: Interacts with DOM elements to reflect current profile settings.
+ * 
+ * Why:
+ * Ensures that the UI accurately reflects the current profile's settings and custom buttons, providing a consistent user experience.
  */
 function updateInterface() {
     // Update buttons, settings, etc. based on currentProfile
@@ -258,6 +158,18 @@ function updateInterface() {
 // 9. Event Listeners
 // -------------------------
 
+/**
+ * Initializes event listeners and loads profiles on DOMContentLoaded.
+ * 
+ * Dependencies:
+ * - /popup-page-scripts/popup-page-profiles.js: Uses loadProfiles(), switchProfile(), addNewEmptyProfile(), copyCurrentProfile(), deleteCurrentProfile().
+ * - /popup-page-scripts/popup-page-customButtons.js: Uses addButton(), addSeparator(), deleteButton().
+ * - /popup-page-scripts/popup-page-visuals.js: Uses showToast().
+ * - /popup-page-scripts/popup-page-script.js: Uses various utility functions like logToConsole(), attachTextareaAutoResize(), etc.
+ * 
+ * Why:
+ * Sets up the interactive elements of the UI, ensuring that user actions trigger the appropriate functions to manage profiles and buttons.
+ */
 document.addEventListener('DOMContentLoaded', () => {
     loadProfiles();
 
@@ -404,6 +316,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /**
  * Handles the start of a drag event.
+ * 
+ * Dependencies:
+ * - None directly, but interacts with DOM elements to manage drag state.
+ * 
+ * Why:
+ * Enables drag-and-drop functionality for reordering custom buttons within the UI.
+ * 
  * @param {DragEvent} e - The drag event.
  */
 function handleDragStart(e) {
@@ -424,6 +343,13 @@ function handleDragStart(e) {
 
 /**
  * Handles the drag over event.
+ * 
+ * Dependencies:
+ * - None directly, but interacts with DOM elements to determine drop position.
+ * 
+ * Why:
+ * Manages the visual feedback and placement of the dragged item during a drag-and-drop operation.
+ * 
  * @param {DragEvent} e - The drag event.
  */
 function handleDragOver(e) {
@@ -446,6 +372,14 @@ function handleDragOver(e) {
 
 /**
  * Handles the drop event.
+ * 
+ * Dependencies:
+ * - /popup-page-scripts/popup-page-profiles.js: Uses saveCurrentProfile() to persist the new order.
+ * - /popup-page-scripts/popup-page-visuals.js: Uses logToConsole() to log the reordering action.
+ * 
+ * Why:
+ * Finalizes the new order of custom buttons after a drag-and-drop operation and saves the updated configuration.
+ * 
  * @param {DragEvent} e - The drag event.
  */
 function handleDrop(e) {
@@ -469,6 +403,13 @@ function handleDrop(e) {
 
 /**
  * Handles the end of a drag event.
+ * 
+ * Dependencies:
+ * - None directly, but manages the drag state and UI classes.
+ * 
+ * Why:
+ * Cleans up the drag state and visual indicators after a drag-and-drop operation completes.
+ * 
  * @param {DragEvent} e - The drag event.
  */
 function handleDragEnd(e) {
@@ -484,7 +425,15 @@ function handleDragEnd(e) {
 // -------------------------
 
 /**
+ * This is not browser console!
  * Logs a message to the user-visible console with a timestamp.
+ * 
+ * Dependencies:
+ * - None directly, but interacts with the DOM to display log messages.
+ * 
+ * Why:
+ * Provides users with real-time feedback and logs of actions performed within the extension for debugging and informational purposes.
+ * 
  * @param {string} message - The message to log.
  */
 function logToConsole(message) {
@@ -497,6 +446,12 @@ function logToConsole(message) {
 
 /**
  * Automatically resizes textareas based on their content and attaches input listeners.
+ * 
+ * Dependencies:
+ * - /popup-page-scripts/popup-page-customButtons.js: Uses saveCurrentProfile() to save text changes.
+ * 
+ * Why:
+ * Enhances user experience by ensuring textareas expand to fit their content and updates the profile configuration as users type.
  */
 function attachTextareaAutoResize() {
     const textareas = buttonList.querySelectorAll('textarea.text-input');
@@ -518,6 +473,12 @@ function attachTextareaAutoResize() {
 
 /**
  * Attaches input listeners to emoji input fields to update button icons.
+ * 
+ * Dependencies:
+ * - /popup-page-scripts/popup-page-customButtons.js: Uses saveCurrentProfile() to save icon changes.
+ * 
+ * Why:
+ * Allows users to dynamically change the icons of their custom buttons and ensures these changes are saved.
  */
 function attachEmojiInputListeners() {
     const emojiInputs = buttonList.querySelectorAll('input.emoji-input');
@@ -533,6 +494,13 @@ function attachEmojiInputListeners() {
 
 /**
  * Attaches listeners to auto-send toggle inputs to update button settings.
+ * 
+ * Dependencies:
+ * - /popup-page-scripts/popup-page-customButtons.js: Uses saveCurrentProfile() to save auto-send preferences.
+ * - /popup-page-scripts/popup-page-profiles.js: Uses logToConsole() to log changes.
+ * 
+ * Why:
+ * Enables users to toggle the auto-send feature for individual buttons and ensures these preferences are persisted.
  */
 function attachAutoSendToggleListeners() {
     const autoSendToggles = buttonList.querySelectorAll('input.autosend-toggle');
@@ -546,8 +514,4 @@ function attachAutoSendToggleListeners() {
         });
     });
 }
-
-// -------------------------
-// Note: The rest of the code remains unchanged
-// -------------------------
 
