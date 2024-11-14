@@ -22,7 +22,7 @@ function exportCurrentProfile() {
         const a = document.createElement('a');
         a.href = url;
         a.download = `${currentProfile.PROFILE_NAME}_profile.json`;
-        logToConsole(`Created temporary <a> element with download attribute set to "${a.download}".`);
+
 
         // Append to the document, trigger click, and remove
         document.body.appendChild(a);
