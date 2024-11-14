@@ -1,5 +1,5 @@
 // popup-page-script.js
-// Version: 1.5
+// Version: 1.6
 // Main script for Max Extension configuration interface
 
 'use strict';
@@ -14,6 +14,22 @@ const profileSelect = document.getElementById('profileSelect');
 const buttonList = document.getElementById('buttonList');
 const consoleOutput = document.getElementById('console');
 const saveStatus = document.getElementById('saveStatus');
+
+// New DOM Elements for Profile Actions
+const addProfileButton = document.getElementById('addProfile');
+const copyProfileButton = document.getElementById('copyProfile');
+const deleteProfileButton = document.getElementById('deleteProfile');
+
+const addProfileContainer = document.getElementById('addProfileContainer');
+const copyProfileContainer = document.getElementById('copyProfileContainer');
+
+const saveAddProfileButton = document.getElementById('saveAddProfile');
+const saveCopyProfileButton = document.getElementById('saveCopyProfile');
+
+const addProfileInput = document.getElementById('addProfileInput');
+const copyProfileInput = document.getElementById('copyProfileInput');
+
+const toastContainer = document.getElementById('toastContainer');
 
 // -------------------------
 // 1. Minimal Default Config
@@ -80,17 +96,11 @@ async function switchProfile(profileName) {
 // -------------------------
 
 // Function to create a new empty profile using minimalDefaultConfig
-async function addNewEmptyProfile() {
-    const profileName = prompt('Enter new profile name:');
-    if (!profileName) {
-        logToConsole('Profile creation canceled: No name provided.');
-        return;
-    }
-
+async function addNewEmptyProfile(profileName) {
     // Trim whitespace and validate profile name
     const trimmedProfileName = profileName.trim();
     if (trimmedProfileName === "") {
-        alert('Profile name cannot be empty.');
+        showToast('Profile name cannot be empty.', 'error');
         logToConsole('Profile creation failed: Empty name provided.');
         return;
     }
@@ -98,7 +108,7 @@ async function addNewEmptyProfile() {
     // Check if profile name already exists
     const existingProfiles = Array.from(profileSelect.options).map(option => option.value);
     if (existingProfiles.includes(trimmedProfileName)) {
-        alert('A profile with this name already exists. Please choose a different name.');
+        showToast('A profile with this name already exists.', 'error');
         logToConsole(`Profile creation failed: "${trimmedProfileName}" already exists.`);
         return;
     }
@@ -115,48 +125,53 @@ async function addNewEmptyProfile() {
         await loadProfiles();
         profileSelect.value = trimmedProfileName;
         await switchProfile(trimmedProfileName);
+        showToast(`Profile "${trimmedProfileName}" added successfully.`, 'success');
         logToConsole(`Created new empty profile: ${trimmedProfileName}`);
     } catch (error) {
+        showToast(`Error creating profile: ${error.message}`, 'error');
         logToConsole(`Error creating profile: ${error.message}`);
     }
 }
 
 // -------------------------
 // 4. Copy Current Profile
-// (Optional: No changes needed for Step 1 and 2)
 // -------------------------
 
-async function copyCurrentProfile() {
-    const newProfileName = prompt('Enter a name for the new profile:');
-    if (!newProfileName) {
-        logToConsole('Profile copy canceled: No name provided.');
+async function copyCurrentProfile(newProfileName) {
+    // Trim whitespace and validate profile name
+    const trimmedProfileName = newProfileName.trim();
+    if (trimmedProfileName === "") {
+        showToast('Profile name cannot be empty.', 'error');
+        logToConsole('Profile copy failed: Empty name provided.');
         return;
     }
 
     // Check if profile name already exists
     const existingProfiles = Array.from(profileSelect.options).map(option => option.value);
-    if (existingProfiles.includes(newProfileName)) {
-        alert('A profile with this name already exists. Please choose a different name.');
-        logToConsole(`Profile copy failed: "${newProfileName}" already exists.`);
+    if (existingProfiles.includes(trimmedProfileName)) {
+        showToast('A profile with this name already exists.', 'error');
+        logToConsole(`Profile copy failed: "${trimmedProfileName}" already exists.`);
         return;
     }
 
     try {
         // Deep copy current profile settings
         const newConfig = JSON.parse(JSON.stringify(currentProfile));
-        newConfig.PROFILE_NAME = newProfileName;
+        newConfig.PROFILE_NAME = trimmedProfileName;
 
         await chrome.runtime.sendMessage({
             type: 'saveConfig',
-            profileName: newProfileName,
+            profileName: trimmedProfileName,
             config: newConfig
         });
 
         await loadProfiles();
-        profileSelect.value = newProfileName;
-        await switchProfile(newProfileName);
-        logToConsole(`Copied profile to new profile: ${newProfileName}`);
+        profileSelect.value = trimmedProfileName;
+        await switchProfile(trimmedProfileName);
+        showToast(`Profile duplicated as "${trimmedProfileName}" successfully.`, 'success');
+        logToConsole(`Copied profile to new profile: ${trimmedProfileName}`);
     } catch (error) {
+        showToast(`Error copying profile: ${error.message}`, 'error');
         logToConsole(`Error copying profile: ${error.message}`);
     }
 }
@@ -178,7 +193,9 @@ async function deleteCurrentProfile() {
 
         await loadProfiles();
         logToConsole(`Deleted profile: ${currentProfile.PROFILE_NAME}`);
+        showToast(`Profile "${currentProfile.PROFILE_NAME}" deleted successfully.`, 'success');
     } catch (error) {
+        showToast(`Error deleting profile: ${error.message}`, 'error');
         logToConsole(`Error deleting profile: ${error.message}`);
     }
 }
@@ -218,6 +235,39 @@ async function deleteButton(index) {
 }
 
 // -------------------------
+// 6. Toast Notification Function
+// -------------------------
+
+/**
+ * Displays a toast notification.
+ *
+ * @param {string} message - The message to display in the toast.
+ * @param {string} type - The type of toast ('success', 'error', 'info').
+ * @param {number} duration - Duration in milliseconds before the toast disappears. Defaults to 3000ms.
+ */
+function showToast(message, type = 'info', duration = 3000) {
+    const toast = document.createElement('div');
+    toast.classList.add('toast', type);
+    toast.textContent = message;
+
+    toastContainer.appendChild(toast);
+
+    // Trigger reflow to enable CSS transition
+    void toast.offsetWidth;
+
+    toast.classList.add('show');
+
+    // Remove toast after specified duration
+    setTimeout(() => {
+        toast.classList.remove('show');
+        // Remove the toast from DOM after transition
+        toast.addEventListener('transitionend', () => {
+            toast.remove();
+        });
+    }, duration);
+}
+
+// -------------------------
 // 7. Settings Management
 // -------------------------
 
@@ -236,8 +286,10 @@ async function revertToDefault() {
         currentProfile = response.config;
         await saveCurrentProfile();
         updateInterface();
+        showToast('Reverted to default settings successfully.', 'success');
         logToConsole('Reverted to default settings');
     } catch (error) {
+        showToast(`Error reverting to default: ${error.message}`, 'error');
         logToConsole(`Error reverting to default: ${error.message}`);
     }
 }
@@ -267,6 +319,47 @@ function updateSaveStatus() {
 }
 
 // -------------------------
+// 9. Interface Update Functions
+// -------------------------
+
+function updateInterface() {
+    // Update buttons, settings, etc. based on currentProfile
+    updateButtonList();
+    document.getElementById('autoSendToggle').checked = currentProfile.globalAutoSendEnabled;
+    document.getElementById('shortcutsToggle').checked = currentProfile.enableShortcuts;
+    // Add more interface updates as needed
+}
+
+function updateButtonList() {
+    buttonList.innerHTML = '';
+    currentProfile.customButtons.forEach((btn, index) => {
+        if (btn.separator) {
+            const separator = document.createElement('div');
+            separator.classList.add('button-item', 'separator-item');
+            separator.innerHTML = `
+                <div class="separator-line"></div>
+                <div class="separator-text">Separator</div>
+                <div class="separator-line"></div>
+            `;
+            separator.setAttribute('data-index', index);
+            buttonList.appendChild(separator);
+        } else {
+            const buttonItem = document.createElement('div');
+            buttonItem.classList.add('button-item');
+            buttonItem.setAttribute('draggable', 'true');
+            buttonItem.setAttribute('data-index', index);
+            buttonItem.innerHTML = `
+                <span class="drag-handle">☰</span>
+                <span class="button-icon">${btn.icon}</span>
+                <span class="button-text">${btn.text}</span>
+                <button class="delete-button danger">Delete</button>
+            `;
+            buttonList.appendChild(buttonItem);
+        }
+    });
+}
+
+// -------------------------
 // 10. Event Listeners
 // -------------------------
 
@@ -275,9 +368,63 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Profile management
     profileSelect.addEventListener('change', (e) => switchProfile(e.target.value));
-    document.getElementById('addProfile').addEventListener('click', addNewEmptyProfile);
-    document.getElementById('copyProfile').addEventListener('click', copyCurrentProfile);
-    document.getElementById('deleteProfile').addEventListener('click', deleteCurrentProfile);
+
+    // Add Profile Button Click
+    addProfileButton.addEventListener('click', () => {
+        addProfileContainer.style.display = 'flex';
+        addProfileButton.style.display = 'none';
+        copyProfileContainer.style.display = 'none';
+    });
+
+    // Copy Profile Button Click
+    copyProfileButton.addEventListener('click', () => {
+        copyProfileContainer.style.display = 'flex';
+        copyProfileButton.style.display = 'none';
+        addProfileContainer.style.display = 'none';
+    });
+
+    // Save Add Profile Button Click
+    saveAddProfileButton.addEventListener('click', () => {
+        const profileName = addProfileInput.value;
+        if (profileName.trim() === "") {
+            addProfileInput.classList.add('input-error');
+            addProfileInput.placeholder = "Enter profile name here";
+            addProfileInput.style.borderColor = 'var(--danger-color)';
+            showToast('Profile name cannot be empty.', 'error');
+            logToConsole('Save Add Profile failed: Empty input.');
+            return;
+        }
+        addProfileInput.classList.remove('input-error');
+        addNewEmptyProfile(profileName);
+        // Reset and hide input
+        addProfileInput.value = '';
+        addProfileInput.style.borderColor = '';
+        addProfileContainer.style.display = 'none';
+        addProfileButton.style.display = 'inline-block';
+    });
+
+    // Save Copy Profile Button Click
+    saveCopyProfileButton.addEventListener('click', () => {
+        const newProfileName = copyProfileInput.value;
+        if (newProfileName.trim() === "") {
+            copyProfileInput.classList.add('input-error');
+            copyProfileInput.placeholder = "Enter new profile name here";
+            copyProfileInput.style.borderColor = 'var(--danger-color)';
+            showToast('Profile name cannot be empty.', 'error');
+            logToConsole('Save Copy Profile failed: Empty input.');
+            return;
+        }
+        copyProfileInput.classList.remove('input-error');
+        copyCurrentProfile(newProfileName);
+        // Reset and hide input
+        copyProfileInput.value = '';
+        copyProfileInput.style.borderColor = '';
+        copyProfileContainer.style.display = 'none';
+        copyProfileButton.style.display = 'inline-block';
+    });
+
+    // Delete Profile Button Click
+    deleteProfileButton.addEventListener('click', deleteCurrentProfile);
 
     // Button management
     document.getElementById('addButton').addEventListener('click', addButton);
@@ -294,7 +441,7 @@ document.addEventListener('DOMContentLoaded', () => {
     buttonList.addEventListener('drop', handleDrop);
     buttonList.addEventListener('dragend', handleDragEnd);
 
-    // Button list event delegation
+    // Button list event delegation for delete buttons
     buttonList.addEventListener('click', async (e) => {
         if (e.target.classList.contains('delete-button')) {
             const buttonItem = e.target.closest('.button-item');
@@ -303,8 +450,73 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Input Field Placeholder Behavior
+    addProfileInput.addEventListener('input', () => {
+        if (addProfileInput.value.trim() !== "") {
+            addProfileInput.style.borderColor = '';
+            addProfileInput.classList.remove('input-error');
+        }
+    });
+
+    copyProfileInput.addEventListener('input', () => {
+        if (copyProfileInput.value.trim() !== "") {
+            copyProfileInput.style.borderColor = '';
+            copyProfileInput.classList.remove('input-error');
+        }
+    });
+
     // Initialize event listeners
     attachTextareaAutoResize();
     attachEmojiInputListeners();
     attachAutoSendToggleListeners();
 });
+
+// -------------------------
+// 11. Drag and Drop Handlers
+// -------------------------
+
+function handleDragStart(e) {
+    if (!e.target.classList.contains('button-item')) return;
+    isDragging = true;
+    draggedItem = e.target;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', e.target.outerHTML);
+    e.target.classList.add('dragging');
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const target = e.target.closest('.button-item');
+    if (target && target !== draggedItem) {
+        const rect = target.getBoundingClientRect();
+        const next = (e.clientY - rect.top) / rect.height > 0.5;
+        buttonList.insertBefore(draggedItem, next && target.nextSibling || target);
+    }
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    if (draggedItem) {
+        draggedItem.classList.remove('dragging');
+        isDragging = false;
+        draggedItem = null;
+        // Update the customButtons array based on new order
+        const newOrder = Array.from(buttonList.children).map(child => parseInt(child.dataset.index));
+        currentProfile.customButtons = newOrder.map(index => currentProfile.customButtons[index]);
+        saveCurrentProfile();
+        updateButtonList();
+        logToConsole('Reordered buttons');
+    }
+}
+
+function handleDragEnd(e) {
+    if (draggedItem) {
+        draggedItem.classList.remove('dragging');
+    }
+    isDragging = false;
+    draggedItem = null;
+}
+
+// -------------------------
+// 12. Utility 

@@ -14,6 +14,12 @@
     --box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     --box-shadow-hover: 0 4px 8px rgba(0,0,0,0.1);
     --checkbox-size: 18px;
+    --toast-bg-color: rgba(0, 0, 0, 0.8);
+    --toast-text-color: #fff;
+    --toast-padding: 12px 24px;
+    --toast-border-radius: 4px;
+    --toast-margin: 8px;
+    --toast-transition: opacity 0.5s ease, transform 0.5s ease;
 }
 
 /* Body Styles */
@@ -117,6 +123,39 @@ select:focus {
     flex: 1;
     min-height: 40px; /* Minimum height for single-line */
     line-height: 1.2;
+}
+
+/* Profile Action Containers */
+.profile-action-container {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    align-items: center;
+}
+
+.profile-action-container input[type="text"] {
+    flex: 1;
+}
+
+.profile-action-container button {
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--primary-color);
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background var(--transition-duration) ease, transform 0.2s ease, color var(--transition-duration) ease;
+}
+
+.profile-action-container button:hover {
+    background: #6a4abd;
+    transition: background var(--transition-duration-release) ease, color var(--transition-duration-release) ease;
+}
+
+.profile-action-container button:disabled {
+    background: #cccccc;
+    cursor: not-allowed;
 }
 
 /* Buttons Styling */
@@ -377,8 +416,6 @@ button:active {
     text-align:center;
 }
 
-
-
 /* Export and Import Buttons */
 #exportProfile,
 #importProfile {
@@ -474,4 +511,43 @@ button:active {
 
 .error button:active {
     transform: scale(0.98);
+}
+
+/* Toast Notification Styles */
+.toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.toast {
+    background: var(--toast-bg-color);
+    color: var(--toast-text-color);
+    padding: var(--toast-padding);
+    border-radius: var(--toast-border-radius);
+    margin-top: var(--toast-margin);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: var(--toast-transition);
+    min-width: 200px;
+    max-width: 300px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast.success {
+    background: #4BB543; /* Green for success */
+}
+
+.toast.error {
+    background: #FF3333; /* Red for errors */
+}
+
+.toast.info {
+    background: #3333FF; /* Blue for info */
 }

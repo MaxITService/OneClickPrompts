@@ -21,6 +21,16 @@
                 <button id="deleteProfile" class="danger">Delete</button>
                 <p id="topExplanationText">Your changes will be saved instantly. Reload website to apply.</p>
             </div>
+            <!-- Add Profile Input and Save Button -->
+            <div id="addProfileContainer" class="profile-action-container" style="display: none;">
+                <input type="text" id="addProfileInput" placeholder="Enter profile name here">
+                <button id="saveAddProfile">Save</button>
+            </div>
+            <!-- Copy Profile Input and Save Button -->
+            <div id="copyProfileContainer" class="profile-action-container" style="display: none;">
+                <input type="text" id="copyProfileInput" placeholder="Enter new profile name here">
+                <button id="saveCopyProfile">Save</button>
+            </div>
         </section>
 
         <!-- Button Configuration (buttons are added dynamically) -->
@@ -65,7 +75,6 @@
 
         <div id="saveStatus" class="save-status">Last saved: Never</div>
 
-
         <!-- Backup Section -->
         <section class="section">
             <h2>Backup & Restore</h2>
@@ -92,6 +101,8 @@
     <script src="popup-page-visuals.js"></script>
     <!-- Include the new backup handler script -->
     <script src="popup-page-backup-handler.js"></script>
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="toast-container"></div>
 </body>
 
 </html>
