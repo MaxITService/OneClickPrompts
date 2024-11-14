@@ -1,5 +1,5 @@
 // popup-page-script.js
-// Version: 1.6
+// Version: 1.6.1
 // Main script for Max Extension configuration interface
 
 'use strict';
@@ -421,6 +421,9 @@ document.addEventListener('DOMContentLoaded', () => {
         copyProfileInput.style.borderColor = '';
         copyProfileContainer.style.display = 'none';
         copyProfileButton.style.display = 'inline-block';
+        
+        // **Fix:** Ensure "Add Profile" button is visible after duplication
+        addProfileButton.style.display = 'inline-block';
     });
 
     // Delete Profile Button Click
@@ -519,4 +522,42 @@ function handleDragEnd(e) {
 }
 
 // -------------------------
-// 12. Utility 
+// 12. Utility Functions
+// -------------------------
+
+function logToConsole(message) {
+    const logEntry = document.createElement('div');
+    logEntry.textContent = message;
+    consoleOutput.appendChild(logEntry);
+    consoleOutput.scrollTop = consoleOutput.scrollHeight;
+}
+
+function attachTextareaAutoResize() {
+    const textareas = document.querySelectorAll('textarea');
+    textareas.forEach(textarea => {
+        textarea.addEventListener('input', () => {
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+        });
+    });
+}
+
+function attachEmojiInputListeners() {
+    const emojiInputs = document.querySelectorAll('.emoji-input');
+    emojiInputs.forEach(input => {
+        input.addEventListener('input', () => {
+            if (input.value.length > 2) {
+                input.value = input.value.slice(0, 2);
+            }
+        });
+    });
+}
+
+function attachAutoSendToggleListeners() {
+    const autoSendToggles = document.querySelectorAll('#buttonAutoSendToggle');
+    autoSendToggles.forEach(toggle => {
+        toggle.addEventListener('change', () => {
+            // Handle auto-send toggle changes if needed
+        });
+    });
+}
