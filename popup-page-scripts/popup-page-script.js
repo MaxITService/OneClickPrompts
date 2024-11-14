@@ -1,5 +1,5 @@
 // popup-page-script.js
-// Version: 1.6.2
+// Version: 1.6.3
 // Main script for Max Extension configuration interface
 
 'use strict';
@@ -39,10 +39,69 @@ const cancelCopyProfileButton = document.getElementById('cancelCopyProfile'); //
 
 const toastContainer = document.getElementById('toastContainer');
 
-
 // -------------------------
 // 5. Button Management Functions
 // -------------------------
+
+/**
+ * Creates a button element for the button list.
+ * @param {Object} button - The button data from the profile.
+ * @param {number} index - The index of the button in the customButtons array.
+ * @returns {HTMLElement} - The button item element.
+ */
+function createButtonElement(button, index) {
+    const buttonItem = document.createElement('div');
+    buttonItem.className = 'button-item';
+    buttonItem.dataset.index = index;
+    buttonItem.draggable = true; // Ensure the item is draggable
+
+    if (button.separator) {
+        buttonItem.classList.add('separator-item');
+        // Updated separator with labeled text
+        buttonItem.innerHTML = `
+            <div class="separator-line"></div>
+            <span class="separator-text">Separator</span>
+            <div class="separator-line"></div>
+            <button class="delete-button danger">Delete</button>
+        `;
+    } else {
+        buttonItem.innerHTML = `
+            <div class="drag-handle" draggable="true">&#9776;</div>
+            <input type="text" class="emoji-input" value="${button.icon}">
+            <textarea class="text-input" rows="1">${button.text}</textarea>
+            <label class="checkbox-row">
+                <input type="checkbox" class="autosend-toggle" ${button.autoSend ? 'checked' : ''}>
+                <span>Auto-send</span>
+            </label>
+            <button class="delete-button danger">Delete</button>
+        `;
+    }
+
+    return buttonItem;
+}
+
+/**
+ * Updates the list of custom buttons in the interface.
+ */
+function updateButtonList() {
+    buttonList.innerHTML = '';
+    if (currentProfile.customButtons && currentProfile.customButtons.length > 0) {
+        currentProfile.customButtons.forEach((button, index) => {
+            const buttonElement = createButtonElement(button, index);
+            buttonList.appendChild(buttonElement);
+        });
+    } else {
+        const emptyMessage = document.createElement('div');
+        emptyMessage.textContent = 'No custom buttons. Add buttons using the buttons above.';
+        emptyMessage.className = 'empty-message';
+        buttonList.appendChild(emptyMessage);
+    }
+
+    // After updating the list, attach event listeners
+    attachTextareaAutoResize();
+    attachEmojiInputListeners();
+    attachAutoSendToggleListeners();
+}
 
 /**
  * Adds a new custom button to the current profile.
@@ -181,10 +240,6 @@ function updateSaveStatus() {
     saveStatus.textContent = `Last saved: ${timestamp}`;
 }
 
-// -------------------------
-// 9. Interface Update Functions
-// -------------------------
-
 /**
  * Updates the entire interface based on the current profile.
  */
@@ -193,44 +248,14 @@ function updateInterface() {
     updateButtonList();
     document.getElementById('autoSendToggle').checked = currentProfile.globalAutoSendEnabled;
     document.getElementById('shortcutsToggle').checked = currentProfile.enableShortcuts;
-    // Add more interface updates as needed
-}
-
-/**
- * Updates the list of custom buttons in the interface.
- */
-function updateButtonList() {
-    buttonList.innerHTML = '';
-    currentProfile.customButtons.forEach((btn, index) => {
-        if (btn.separator) {
-            const separator = document.createElement('div');
-            separator.classList.add('button-item', 'separator-item');
-            separator.innerHTML = `
-                <div class="separator-line"></div>
-                <div class="separator-text">Separator</div>
-                <div class="separator-line"></div>
-                <button class="delete-button danger">Delete</button>
-            `;
-            separator.setAttribute('data-index', index);
-            buttonList.appendChild(separator);
-        } else {
-            const buttonItem = document.createElement('div');
-            buttonItem.classList.add('button-item');
-            buttonItem.setAttribute('draggable', 'true');
-            buttonItem.setAttribute('data-index', index);
-            buttonItem.innerHTML = `
-                <span class="drag-handle">☰</span>
-                <span class="button-icon">${btn.icon}</span>
-                <span class="button-text">${btn.text}</span>
-                <button class="delete-button danger">Delete</button>
-            `;
-            buttonList.appendChild(buttonItem);
-        }
-    });
+    // Clear input fields
+    document.getElementById('buttonIcon').value = '';
+    document.getElementById('buttonText').value = '';
+    document.getElementById('buttonAutoSendToggle').checked = true; // Reset to default checked
 }
 
 // -------------------------
-// 10. Event Listeners
+// 9. Event Listeners
 // -------------------------
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -382,12 +407,19 @@ document.addEventListener('DOMContentLoaded', () => {
  * @param {DragEvent} e - The drag event.
  */
 function handleDragStart(e) {
-    if (!e.target.classList.contains('button-item')) return;
-    isDragging = true;
-    draggedItem = e.target;
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/html', e.target.outerHTML);
-    e.target.classList.add('dragging');
+    if (e.target.classList.contains('drag-handle') || e.target.classList.contains('separator-item')) {
+        isDragging = true;
+        draggedItem = e.target.closest('.button-item');
+        draggedItem.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+
+        // Set a transparent image as drag image to avoid default ghost
+        const img = new Image();
+        img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
+        e.dataTransfer.setDragImage(img, 0, 0);
+    } else {
+        e.preventDefault();
+    }
 }
 
 /**
@@ -397,11 +429,18 @@ function handleDragStart(e) {
 function handleDragOver(e) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+
     const target = e.target.closest('.button-item');
-    if (target && target !== draggedItem) {
-        const rect = target.getBoundingClientRect();
-        const next = (e.clientY - rect.top) / rect.height > 0.5;
-        buttonList.insertBefore(draggedItem, next && target.nextSibling || target);
+    if (!target || target === draggedItem) return;
+
+    const bounding = target.getBoundingClientRect();
+    const offset = bounding.y + (bounding.height / 2);
+    const parent = target.parentNode;
+
+    if (e.clientY - bounding.y < bounding.height / 2) {
+        parent.insertBefore(draggedItem, target);
+    } else {
+        parent.insertBefore(draggedItem, target.nextSibling);
     }
 }
 
@@ -411,17 +450,21 @@ function handleDragOver(e) {
  */
 function handleDrop(e) {
     e.preventDefault();
+    e.stopPropagation();
+
+    isDragging = false;
     if (draggedItem) {
         draggedItem.classList.remove('dragging');
-        isDragging = false;
         draggedItem = null;
-        // Update the customButtons array based on new order
-        const newOrder = Array.from(buttonList.children).map(child => parseInt(child.dataset.index));
-        currentProfile.customButtons = newOrder.map(index => currentProfile.customButtons[index]);
-        saveCurrentProfile();
-        updateButtonList();
-        logToConsole('Reordered buttons');
     }
+
+    // Update the order in the profile
+    const newOrder = Array.from(buttonList.children).map(child => parseInt(child.dataset.index));
+    currentProfile.customButtons = newOrder.map(index => currentProfile.customButtons[index]);
+
+    saveCurrentProfile();
+    updateButtonList();
+    logToConsole('Reordered buttons');
 }
 
 /**
@@ -429,11 +472,11 @@ function handleDrop(e) {
  * @param {DragEvent} e - The drag event.
  */
 function handleDragEnd(e) {
+    isDragging = false;
     if (draggedItem) {
         draggedItem.classList.remove('dragging');
+        draggedItem = null;
     }
-    isDragging = false;
-    draggedItem = null;
 }
 
 // -------------------------
@@ -453,40 +496,58 @@ function logToConsole(message) {
 }
 
 /**
- * Automatically resizes all textareas based on their content.
+ * Automatically resizes textareas based on their content and attaches input listeners.
  */
 function attachTextareaAutoResize() {
-    const textareas = document.querySelectorAll('textarea');
+    const textareas = buttonList.querySelectorAll('textarea.text-input');
     textareas.forEach(textarea => {
+        textarea.style.height = 'auto';
+        textarea.style.height = `${textarea.scrollHeight}px`;
+
         textarea.addEventListener('input', () => {
             textarea.style.height = 'auto';
-            textarea.style.height = textarea.scrollHeight + 'px';
+            textarea.style.height = `${textarea.scrollHeight}px`;
+            // Update the corresponding button text
+            const buttonItem = textarea.closest('.button-item');
+            const index = parseInt(buttonItem.dataset.index);
+            currentProfile.customButtons[index].text = textarea.value;
+            saveCurrentProfile();
         });
     });
 }
 
 /**
- * Attaches input listeners to emoji input fields to limit input length.
+ * Attaches input listeners to emoji input fields to update button icons.
  */
 function attachEmojiInputListeners() {
-    const emojiInputs = document.querySelectorAll('.emoji-input');
+    const emojiInputs = buttonList.querySelectorAll('input.emoji-input');
     emojiInputs.forEach(input => {
         input.addEventListener('input', () => {
-            if (input.value.length > 2) {
-                input.value = input.value.slice(0, 2);
-            }
+            const buttonItem = input.closest('.button-item');
+            const index = parseInt(buttonItem.dataset.index);
+            currentProfile.customButtons[index].icon = input.value;
+            saveCurrentProfile();
         });
     });
 }
 
 /**
- * Attaches listeners to auto-send toggle inputs if needed.
+ * Attaches listeners to auto-send toggle inputs to update button settings.
  */
 function attachAutoSendToggleListeners() {
-    const autoSendToggles = document.querySelectorAll('#buttonAutoSendToggle');
+    const autoSendToggles = buttonList.querySelectorAll('input.autosend-toggle');
     autoSendToggles.forEach(toggle => {
         toggle.addEventListener('change', () => {
-            // Handle auto-send toggle changes if needed
+            const buttonItem = toggle.closest('.button-item');
+            const index = parseInt(buttonItem.dataset.index);
+            currentProfile.customButtons[index].autoSend = toggle.checked;
+            saveCurrentProfile();
+            logToConsole(`Updated auto-send for button at index ${index} to ${toggle.checked}`);
         });
     });
 }
+
+// -------------------------
+// Note: The rest of the code remains unchanged
+// -------------------------
+
