@@ -1,5 +1,5 @@
 // popup-page-script.js
-// Version: 1.6.1
+// Version: 1.6.2
 // Main script for Max Extension configuration interface
 
 'use strict';
@@ -32,6 +32,10 @@ const saveCopyProfileButton = document.getElementById('saveCopyProfile');
 
 const addProfileInput = document.getElementById('addProfileInput');
 const copyProfileInput = document.getElementById('copyProfileInput');
+
+// New DOM Elements for Cancel Actions
+const cancelAddProfileButton = document.getElementById('cancelAddProfile'); // Cancel button for adding profile
+const cancelCopyProfileButton = document.getElementById('cancelCopyProfile'); // Cancel button for duplicating profile
 
 const toastContainer = document.getElementById('toastContainer');
 
@@ -239,14 +243,20 @@ document.addEventListener('DOMContentLoaded', () => {
     addProfileButton.addEventListener('click', () => {
         addProfileContainer.style.display = 'flex';
         addProfileButton.style.display = 'none';
+        copyProfileButton.style.display = 'none';
         copyProfileContainer.style.display = 'none';
+        deleteProfileButton.style.display = 'none'; // Hide delete button during add
+        profileSelect.disabled = true; // Lock profile selector
     });
 
     // Copy Profile Button Click
     copyProfileButton.addEventListener('click', () => {
         copyProfileContainer.style.display = 'flex';
         copyProfileButton.style.display = 'none';
+        addProfileButton.style.display = 'none';
         addProfileContainer.style.display = 'none';
+        deleteProfileButton.style.display = 'none'; // Hide delete button during copy
+        profileSelect.disabled = true; // Lock profile selector
     });
 
     // Save Add Profile Button Click
@@ -266,7 +276,11 @@ document.addEventListener('DOMContentLoaded', () => {
         addProfileInput.value = '';
         addProfileInput.style.borderColor = '';
         addProfileContainer.style.display = 'none';
+        // Show both "Add Profile" and "Duplicate Profile" buttons
         addProfileButton.style.display = 'inline-block';
+        copyProfileButton.style.display = 'inline-block';
+        deleteProfileButton.style.display = 'inline-block'; // Show delete button after add
+        profileSelect.disabled = false; // Unlock profile selector
     });
 
     // Save Copy Profile Button Click
@@ -286,14 +300,33 @@ document.addEventListener('DOMContentLoaded', () => {
         copyProfileInput.value = '';
         copyProfileInput.style.borderColor = '';
         copyProfileContainer.style.display = 'none';
+        // Show both "Add Profile" and "Duplicate Profile" buttons
         copyProfileButton.style.display = 'inline-block';
-        
-        // **Fix:** Ensure "Add Profile" button is visible after duplication
         addProfileButton.style.display = 'inline-block';
+        deleteProfileButton.style.display = 'inline-block'; // Show delete button after copy
+        profileSelect.disabled = false; // Unlock profile selector
     });
 
     // Delete Profile Button Click
     deleteProfileButton.addEventListener('click', deleteCurrentProfile);
+
+    // Cancel Add Profile Button Click
+    cancelAddProfileButton.addEventListener('click', () => {
+        addProfileContainer.style.display = 'none';
+        addProfileButton.style.display = 'inline-block';
+        copyProfileButton.style.display = 'inline-block';
+        deleteProfileButton.style.display = 'inline-block'; // Show delete button
+        profileSelect.disabled = false; // Unlock profile selector
+    });
+
+    // Cancel Copy Profile Button Click
+    cancelCopyProfileButton.addEventListener('click', () => {
+        copyProfileContainer.style.display = 'none';
+        addProfileButton.style.display = 'inline-block';
+        copyProfileButton.style.display = 'inline-block';
+        deleteProfileButton.style.display = 'inline-block'; // Show delete button
+        profileSelect.disabled = false; // Unlock profile selector
+    });
 
     // Button management
     document.getElementById('addButton').addEventListener('click', addButton);
