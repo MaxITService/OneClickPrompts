@@ -165,7 +165,7 @@ function updateInterface() {
  * - /popup-page-scripts/popup-page-profiles.js: Uses loadProfiles(), switchProfile(), addNewEmptyProfile(), copyCurrentProfile(), deleteCurrentProfile().
  * - /popup-page-scripts/popup-page-customButtons.js: Uses addButton(), addSeparator(), deleteButton().
  * - /popup-page-scripts/popup-page-visuals.js: Uses showToast().
- * - /popup-page-scripts/popup-page-script.js: Uses various utility functions like logToConsole(), attachTextareaAutoResize(), etc.
+ * - /popup-page-scripts/popup-page-script.js: Uses various utility functions like logToConsole(), textareaSaverAndResizerFunc(), etc.
  * 
  * Why:
  * Sets up the interactive elements of the UI, ensuring that user actions trigger the appropriate functions to manage profiles and buttons.
@@ -305,7 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Initialize event listeners
-    attachTextareaAutoResize();
+    textareaSaverAndResizerFunc();
     attachEmojiInputListeners();
     attachAutoSendToggleListeners();
 });
@@ -453,7 +453,7 @@ function logToConsole(message) {
  * Why:
  * Enhances user experience by ensuring textareas expand to fit their content and updates the profile configuration as users type.
  */
-function attachTextareaAutoResize() {
+function textareaSaverAndResizerFunc() {
     const textareas = buttonList.querySelectorAll('textarea.text-input');
     textareas.forEach(textarea => {
         textarea.style.height = 'auto';

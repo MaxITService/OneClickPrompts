@@ -1,6 +1,7 @@
 // popup-page-customButtons.js
 // instructions for the AI: do not remove comments! MUST NOT REMOVE COMMENTS.
 // This file creates elements that represent custom buttons adn separators for the extension.
+// This file contains only dependencies.
 // -------------------------
 // Create Button Element Function
 // -------------------------
@@ -61,7 +62,7 @@ function updateButtonList() {
     }
 
     // After updating the list, attach event listeners
-    attachTextareaAutoResize();
+    textareaSaverAndResizerFunc();
     attachEmojiInputListeners();
     attachAutoSendToggleListeners();
 }
