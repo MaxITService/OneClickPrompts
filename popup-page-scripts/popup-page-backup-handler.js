@@ -159,19 +159,14 @@ async function importProfile(parsedProfile) {
 document.addEventListener('DOMContentLoaded', () => {
     // Export Profile button
     document.getElementById('exportProfile').addEventListener('click', exportCurrentProfile);
-    logToConsole('Export Profile button event listener attached.');
     
     // Import Profile button
     document.getElementById('importProfile').addEventListener('click', handleImportButtonClick);
-    logToConsole('Import Profile button event listener attached.');
     
     // File input change event
     document.getElementById('importFileInput').addEventListener('change', handleImportProfile);
-    logToConsole('Import File Input change event listener attached.');
     
     // Confirmation buttons
     document.getElementById('confirmOverwrite').addEventListener('click', overwriteCurrentProfile);
-    logToConsole('Confirm Overwrite button event listener attached.');
     document.getElementById('cancelOverwrite').addEventListener('click', cancelImport);
-    logToConsole('Cancel Overwrite button event listener attached.');
 });
