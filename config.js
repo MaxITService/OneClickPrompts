@@ -3,6 +3,7 @@
 // Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS. This one too!
 // This service worker does all Config stuff with sync storage, it handles storage exclusively, other files request data from it and don't care how it is stored.
 'use strict';
+// Dependencies: default-config.json
 
 // Ensure the service worker is registered
 self.addEventListener('install', (event) => {
@@ -18,42 +19,22 @@ function logConCgp(message, ...optionalParams) {
     console.log(`[config] ${message}`, ...optionalParams);
 }
 
-// Default configuration object
-const defaultConfig = {
-    // Configuration
-    PROFILE_NAME: "Default",
-    ENABLE_SHORTCUTS_DEFAULT: true,
-    globalAutoSendEnabled: true,
-    enableShortcuts: true,
-    firstModificationDone: false,
-    customButtons: [
-        // Thinking and explanation buttons
-        { icon: '🧠', text: ' Let\'s think about it: Do not write code, just discuss implementation and tell me, if I missed something. Try to generate human-level pseudocode overview of what will happen.', autoSend: false },
-        { icon: '🧐', text: ' Explain this concept or process in detail. Make Easier to understand.', autoSend: true },
-        { icon: '💡', text: ' <Rewrite this text, keeping all original information. Add explanations to non-obvious concepts only, don\'t explain basic things, only explain advanced concepts, like you would explain to an advanced expert, just this particular field is new to him.', autoSend: true },
-        { separator: true },
-
-        // Text processing and information buttons
-        { icon: '🎓', text: ' This was text of my conspectus. Correct this conspectus. Start your response with a percentage of correctness, then explain what went wrong. only go about real, serious errors. "Clarity" is out of review now', autoSend: true },
-        { icon: '➕', text: ' ... Add additional information to this text, especially continue from this point. Focus on providing new content beyond what has already been written.', autoSend: true },
-        { icon: '🗜️', text: ' Provide a concise and focused explanation on this topic, answer directly to question, keep your answers short', autoSend: true },
-        { icon: '📖', text: ' Read this large chunk of text. Respond with "Acknowledged" for now. I will ask questions about this text later.', autoSend: true },
-        { icon: '🌐', text: ' Perform a web search on this topic and provide an answer based on the results. Cite sources or inform about source fetch failure.', autoSend: true },
-        { separator: true },
-
-        // Output format buttons
-        { icon: '📅', text: ' Provide your next answer in a form of a table', autoSend: false },
-        { icon: '💻', text: ' output ONLY CODE, not explanations. Start by typing code in a code block', autoSend: true },
-        { icon: '🛠️', text: ' I want you to use Python for ALL calculations, and if they fail, retry, and if they fail again - then do not give answer based on your training data, tell me about failure', autoSend: true },
-        { icon: '📝', text: ' <Just check grammar in this text, and retype it correctly. Frame corrected text with the MD horizontal lines. Explain grammatical errors found or state if none is found.', autoSend: true },
-        { separator: true },
-
-        // Language and style buttons
-        { icon: '🇺🇸', text: ' Translate text to English', autoSend: true },
-        { icon: '🔄', text: ' just answer normally from now on', autoSend: true },
-        { separator: true }, // New separator at the end of the buttons
-    ]
-};
+// Function to load default configuration from JSON file
+async function loadDefaultConfig() {
+    try {
+        const response = await fetch(chrome.runtime.getURL('default-config.json'));
+        if (!response.ok) {
+            throw new Error(`Failed to load default-config.json: ${response.statusText}`);
+        }
+        const config = await response.json();
+        logConCgp('Default configuration loaded from default-config.json');
+        return config;
+    } catch (error) {
+        handleStorageError(error);
+        // Since we are removing hardcoded defaultConfig, do not provide a fallback
+        throw new Error('Unable to load default configuration.');
+    }
+}
 
 // Helper function to handle storage errors
 function handleStorageError(error) {
@@ -70,6 +51,7 @@ function handleStorageError(error) {
 async function createDefaultProfile() {
     logConCgp('Creating default profile');
     try {
+        const defaultConfig = await loadDefaultConfig(); // Load from JSON
         await chrome.storage.sync.set({
             'currentProfile': 'Default',
             'profiles.Default': defaultConfig
@@ -78,7 +60,7 @@ async function createDefaultProfile() {
         return defaultConfig;
     } catch (error) {
         handleStorageError(error);
-        return defaultConfig; // Return default config even if save fails
+        throw new Error('Failed to create default profile.');
     }
 }
 
@@ -156,7 +138,7 @@ async function getCurrentProfileConfig() {
         return await createDefaultProfile();
     } catch (error) {
         handleStorageError(error);
-        return defaultConfig;
+        throw new Error('Unable to retrieve current profile configuration.');
     }
 }
 
@@ -223,6 +205,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             getCurrentProfileConfig().then(config => {
                 sendResponse({ config });
                 logConCgp('Sent config to requesting script');
+            }).catch(error => {
+                sendResponse({ error: error.message });
             });
             return true;
 
@@ -265,6 +249,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             createDefaultProfile().then(config => {
                 sendResponse({ config });
                 logConCgp('Default profile creation request processed');
+            }).catch(error => {
+                sendResponse({ error: error.message });
             });
             return true;
 
