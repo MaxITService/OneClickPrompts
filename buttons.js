@@ -26,7 +26,7 @@ window.MaxExtensionButtons = {
      * @param {Function} onClickHandler - The function to handle the button's click event.
      * @returns {HTMLButtonElement} - The newly created custom send button element.
      */
-    createCustomSendButton: function(buttonConfig, buttonIndex, onClickHandler) {
+    createCustomSendButton: function (buttonConfig, buttonIndex, onClickHandler) {
         const customButtonElement = document.createElement('button');
         customButtonElement.innerHTML = buttonConfig.icon;
         customButtonElement.setAttribute('data-testid', `custom-send-button-${buttonIndex}`);
@@ -64,7 +64,7 @@ window.MaxExtensionButtons = {
      * @param {number} buttonIndex - The index of the button in the custom buttons array.
      * @returns {number|null} - The assigned shortcut key (1-10) or null if no shortcut is assigned.
      */
-    determineShortcutKeyForButtonIndex: function(buttonIndex) {
+    determineShortcutKeyForButtonIndex: function (buttonIndex) {
         let shortcutAssignmentCount = 0;
         for (let i = 0; i < MaxExtensionConfig.customButtons.length; i++) {
             if (!MaxExtensionConfig.customButtons[i].separator) {
@@ -98,38 +98,39 @@ function processCustomSendButtonClick(event, customText, autoSend) {
         return;
     }
 
+
     /**
-     * Attempts to locate the send button using primary and fallback selectors.
-     * @returns {HTMLElement|null} - The send button element or null if not found.
+     * Attempts to locate the send button using dynamic selectors from InjectionTargetsOnWebsite.
+     * Iterates through an array of selectors to find the first matching send button.
+     * 
+     * @returns {HTMLElement|null} - The send button element if found; otherwise, null.
      */
     function locateSendButton() {
-        // Primary Selector: Language-agnostic using data-testid
-        const primarySelector = window.InjectionTargetsOnWebsite.selectors.sendButton; // Dynamic selector
-        let sendButton = document.querySelector(primarySelector);
-        if (sendButton) {
-            logConCgp('[init] Original send button located using primary selector:', sendButton);
-            return sendButton;
-        }
+        // Retrieve the array of send button selectors from InjectionTargetsOnWebsite
+        const sendButtonSelectors = window.InjectionTargetsOnWebsite.selectors.sendButton;
 
-        // Fallback Selector: Any button within the parent div that resembles a send button
-        logConCgp('[init] Primary send button not found. Attempting fallback selector.');
-        const parentDiv = document.querySelector('div.flex.h-[44px].items-center.justify-between');
-        if (parentDiv) {
-            const fallbackButtons = parentDiv.querySelectorAll('button');
-            if (fallbackButtons.length > 0) {
-                // Assuming the last button is the send button; modify as needed
-                sendButton = fallbackButtons[fallbackButtons.length - 1];
-                logConCgp('[init] Fallback send button located:', sendButton);
-                return sendButton;
-            } else {
-                logConCgp('[init] No buttons found within the fallback parent div.');
+        // Check if sendButtonSelectors is an array
+        if (Array.isArray(sendButtonSelectors)) {
+            // Iterate through each selector to find the send button
+            for (const selector of sendButtonSelectors) {
+                const button = document.querySelector(selector);
+                if (button) {
+                    logConCgp('[init] Send button located using selector:', selector);
+                    return button;
+                }
             }
-        } else {
-            logConCgp('[init] Fallback parent div not found.');
+        }
+        // If sendButtonSelectors is a single string selector
+        else if (typeof sendButtonSelectors === 'string') {
+            const button = document.querySelector(sendButtonSelectors);
+            if (button) {
+                logConCgp('[init] Send button located using selector:', sendButtonSelectors);
+                return button;
+            }
         }
 
-        // If no button is found
-        logConCgp('[init] No suitable send button found using fallback selector.');
+        // If no send button is found using the provided selectors
+        logConCgp('[init] Send button not found using dynamic selectors.');
         return null;
     }
 

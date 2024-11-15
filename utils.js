@@ -6,7 +6,7 @@
 
 window.MaxExtensionUtils = {
     // Utility function to wait for an element to be present in the DOM
-    waitForElement: function(selector, callback, maxAttempts = 50) {
+    waitForElement: function (selector, callback, maxAttempts = 50) {
         let attempts = 0;
         const observer = new MutationObserver((mutations, obs) => {
             const element = document.querySelector(selector);
@@ -22,7 +22,7 @@ window.MaxExtensionUtils = {
     },
 
     // Function to simulate a comprehensive click event
-    simulateClick: function(element) {
+    simulateClick: function (element) {
         const event = new MouseEvent('click', {
             view: window,
             bubbles: true,
@@ -33,7 +33,7 @@ window.MaxExtensionUtils = {
     },
 
     // Function to insert text into the editor by updating innerHTML and dispatching input event
-    insertTextIntoEditor: function(editorDiv, text) {
+    insertTextIntoEditor: function (editorDiv, text) {
         logConCgp('[utils] Attempting to insert text into the editor by updating innerHTML.');
         editorDiv.focus();
 
@@ -50,7 +50,7 @@ window.MaxExtensionUtils = {
     },
 
     // Function to move cursor to the end of a contenteditable element
-    moveCursorToEnd: function(contentEditableElement) {
+    moveCursorToEnd: function (contentEditableElement) {
         contentEditableElement.focus();
         if (typeof window.getSelection != "undefined" && typeof document.createRange != "undefined") {
             const range = document.createRange();
@@ -68,7 +68,7 @@ window.MaxExtensionUtils = {
     },
 
     // Function to create a visual separator
-    createSeparator: function() {
+    createSeparator: function () {
         const separator = document.createElement('div');
         separator.style.cssText = `
             width: 1px;
@@ -83,7 +83,7 @@ window.MaxExtensionUtils = {
 /**
  * InjectionTargetsOnWebsite
  * 
- * This class centralizes all selectors and identifiers for different websites.
+ * Centralizes all selectors and identifiers for different websites.
  * Currently implemented for ChatGPT. Other websites can be added as needed.
  */
 class InjectionTargetsOnWebsite {
@@ -98,9 +98,7 @@ class InjectionTargetsOnWebsite {
         if (currentHostname.includes('chat.openai.com') || currentHostname.includes('chatgpt.com')) {
             return 'ChatGPT';
         }
-        // else if (currentHostname.includes('anotherwebsite.com')) {
-        //     return 'AnotherWebsite';
-        // }
+        // Add additional website detections here
         else {
             return 'Unknown';
         }
@@ -110,17 +108,15 @@ class InjectionTargetsOnWebsite {
         const selectors = {
             ChatGPT: {
                 container: 'div.flex.w-full.flex-col:has(textarea)',
-                sendButton: 'button[data-testid="send-button"]',
+                sendButton: [
+                    'button[data-testid="send-button"]',
+                    'button.send-button-class', // Add alternative selectors as needed
+                    'button[type="submit"]'
+                ],
                 editor: '#prompt-textarea',
                 buttonsContainerId: 'custom-buttons-container'
             },
             // TODO: Add selectors for other supported websites
-            // Claude: {
-            //     container: '...',
-            //     sendButton: '...',
-            //     editor: '...',
-            //     buttonsContainerId: '...'
-            // },
         };
         return selectors[site] || {};
     }
