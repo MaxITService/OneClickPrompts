@@ -48,23 +48,24 @@ window.MaxExtensionUtils = {
         editorDiv.dispatchEvent(event);
         logConCgp('[utils] Editor content updated and input event dispatched.');
     },
-// Function to move cursor to the end of a contenteditable element
-moveCursorToEnd: function(contentEditableElement) {
-    contentEditableElement.focus();
-    if (typeof window.getSelection != "undefined" && typeof document.createRange != "undefined") {
-        const range = document.createRange();
-        range.selectNodeContents(contentEditableElement);
-        range.collapse(false);
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
-    } else if (typeof document.body.createTextRange != "undefined") {
-        const textRange = document.body.createTextRange();
-        textRange.moveToElementText(contentEditableElement);
-        textRange.collapse(false);
-        textRange.select();
-    }
-},
+
+    // Function to move cursor to the end of a contenteditable element
+    moveCursorToEnd: function(contentEditableElement) {
+        contentEditableElement.focus();
+        if (typeof window.getSelection != "undefined" && typeof document.createRange != "undefined") {
+            const range = document.createRange();
+            range.selectNodeContents(contentEditableElement);
+            range.collapse(false);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+        } else if (typeof document.body.createTextRange != "undefined") {
+            const textRange = document.body.createTextRange();
+            textRange.moveToElementText(contentEditableElement);
+            textRange.collapse(false);
+            textRange.select();
+        }
+    },
 
     // Function to create a visual separator
     createSeparator: function() {
@@ -78,3 +79,52 @@ moveCursorToEnd: function(contentEditableElement) {
         return separator;
     }
 };
+
+/**
+ * InjectionTargetsOnWebsite
+ * 
+ * This class centralizes all selectors and identifiers for different websites.
+ * Currently implemented for ChatGPT. Other websites can be added as needed.
+ */
+class InjectionTargetsOnWebsite {
+    constructor() {
+        this.activeSite = this.identifyActiveWebsite();
+        this.selectors = this.getSelectorsForSite(this.activeSite);
+    }
+
+    identifyActiveWebsite() {
+        const currentHostname = window.location.hostname;
+
+        if (currentHostname.includes('chat.openai.com') || currentHostname.includes('chatgpt.com')) {
+            return 'ChatGPT';
+        }
+        // else if (currentHostname.includes('anotherwebsite.com')) {
+        //     return 'AnotherWebsite';
+        // }
+        else {
+            return 'Unknown';
+        }
+    }
+
+    getSelectorsForSite(site) {
+        const selectors = {
+            ChatGPT: {
+                container: 'div.flex.w-full.flex-col:has(textarea)',
+                sendButton: 'button[data-testid="send-button"]',
+                editor: '#prompt-textarea',
+                buttonsContainerId: 'custom-buttons-container'
+            },
+            // TODO: Add selectors for other supported websites
+            // Claude: {
+            //     container: '...',
+            //     sendButton: '...',
+            //     editor: '...',
+            //     buttonsContainerId: '...'
+            // },
+        };
+        return selectors[site] || {};
+    }
+}
+
+// Instantiate and expose the InjectionTargetsOnWebsite globally
+window.InjectionTargetsOnWebsite = new InjectionTargetsOnWebsite();

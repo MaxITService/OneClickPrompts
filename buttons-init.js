@@ -70,14 +70,14 @@ window.MaxExtensionButtonsInit = {
      * @param {HTMLElement} targetContainer - The DOM element where custom elements will be inserted.
      */
     createAndInsertCustomElements: function(targetContainer) {
-        // Prevent duplication by checking if the container already exists
+        // Prevent duplication by checking if the container already exists using dynamic selector
         if (doCustomModificationsExist()) {
             logConCgp('[init] Custom buttons container already exists. Skipping creation.');
             return;
         }
 
         const customElementsContainer = document.createElement('div');
-        customElementsContainer.id = 'custom-buttons-container'; // Assign a unique ID
+        customElementsContainer.id = window.InjectionTargetsOnWebsite.selectors.buttonsContainerId; // Dynamic ID
         customElementsContainer.style.cssText = `
             display: flex;
             justify-content: flex-start;
@@ -102,5 +102,5 @@ window.MaxExtensionButtonsInit = {
  * @returns {boolean} - True if modifications exist, false otherwise.
  */
 function doCustomModificationsExist() {
-    return document.getElementById('custom-buttons-container') !== null;
+    return document.getElementById(window.InjectionTargetsOnWebsite.selectors.buttonsContainerId) !== null;
 }

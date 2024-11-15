@@ -89,8 +89,8 @@ function processCustomSendButtonClick(event, customText, autoSend) {
     event.preventDefault();
     logConCgp('[init] Custom send button was clicked.');
 
-    // Detect the editor area
-    const editorArea = document.querySelector('#prompt-textarea'); // Ensure this ID is consistent
+    // Detect the editor area using dynamic selector
+    const editorArea = document.querySelector(window.InjectionTargetsOnWebsite.selectors.editor); // Dynamic selector
     if (editorArea) {
         logConCgp('[init] Editor area found:', editorArea);
     } else {
@@ -104,7 +104,7 @@ function processCustomSendButtonClick(event, customText, autoSend) {
      */
     function locateSendButton() {
         // Primary Selector: Language-agnostic using data-testid
-        const primarySelector = 'button[data-testid="send-button"]';
+        const primarySelector = window.InjectionTargetsOnWebsite.selectors.sendButton; // Dynamic selector
         let sendButton = document.querySelector(primarySelector);
         if (sendButton) {
             logConCgp('[init] Original send button located using primary selector:', sendButton);
@@ -227,4 +227,3 @@ function processCustomSendButtonClick(event, customText, autoSend) {
  * @param {HTMLElement} container - The DOM element to which custom buttons will be appended.
  */
 // Function moved to buttons-init.js
-

@@ -63,24 +63,14 @@ function commenceExtensionInitialization(config) {
      * @returns {boolean} - True if modifications exist, false otherwise.
      */
     function doCustomModificationsExist() {
-        return document.getElementById('custom-buttons-container') !== null;
+        return document.getElementById(window.InjectionTargetsOnWebsite.selectors.buttonsContainerId) !== null;
     }
 
     /**
      * Determines the active website based on the current hostname.
      * @returns {string} - The name of the active website (e.g., 'ChatGPT', 'Claude', 'Unknown').
      */
-    function identifyActiveWebsite() {
-        const currentHostname = window.location.hostname;
-
-        if (currentHostname.includes('chat.openai.com') || currentHostname.includes('chatgpt.com')) {
-            return 'ChatGPT';
-        } else if (currentHostname.includes('claude.ai')) {
-            return 'Claude';
-        } else {
-            return 'Unknown';
-        }
-    }
+    // Removed identifyActiveWebsite function as it's now handled by InjectionTargetsOnWebsite
 
     /**
      * Initializes the extension specifically for ChatGPT.
@@ -175,13 +165,6 @@ function commenceExtensionInitialization(config) {
     }
 
     /**
-     * Creates and inserts custom buttons and toggles into the target container element.
-     * This function has been moved to `buttons-init.js` to enhance modularity.
-     * @param {HTMLElement} targetContainer - The DOM element where custom elements will be inserted.
-     */
-    // Function moved to buttons-init.js
-
-    /**
      * Initializes the first sequence of the ChatGPT extension.
      * @param {boolean} enableResiliency - Flag to enable or disable resiliency checks.
      */
@@ -200,8 +183,8 @@ function commenceExtensionInitialization(config) {
         // Initialize the shared flag
         let targetFound = false;
 
-        // Define both selectors to wait for
-        const selector1 = 'div.flex.w-full.flex-col:has(textarea)';
+        // Define both selectors to wait for using InjectionTargetsOnWebsite
+        const selector1 = window.InjectionTargetsOnWebsite.selectors.container;
         // Define a unified callback function
         const handleTargetDiv = (targetDiv) => {
             if (!targetFound) {
@@ -218,7 +201,7 @@ function commenceExtensionInitialization(config) {
             }
         };
 
-        // Issue the first waitForElement call
+        // Issue the first waitForElement call using the dynamic selector
         MaxExtensionUtils.waitForElement(selector1, handleTargetDiv);
     }
 
@@ -227,7 +210,7 @@ function commenceExtensionInitialization(config) {
      */
     function selectAndInitializeAppropriateExtensionScript() {
         logConCgp('[init] InitScript invoked. Detecting active website...');
-        const activeWebsite = identifyActiveWebsite();
+        const activeWebsite = window.InjectionTargetsOnWebsite.activeSite;
 
         switch (activeWebsite) {
             case 'ChatGPT':
@@ -300,4 +283,3 @@ function commenceExtensionInitialization(config) {
     // Initiate the appropriate extension script based on the active website
     selectAndInitializeAppropriateExtensionScript();
 }
-
