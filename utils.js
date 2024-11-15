@@ -80,11 +80,12 @@ window.MaxExtensionUtils = {
     }
 };
 
+
 /**
  * InjectionTargetsOnWebsite
  * 
  * Centralizes all selectors and identifiers for different websites.
- * Currently implemented for ChatGPT. Other websites can be added as needed.
+ * Currently implemented for ChatGPT and Claude. Other websites can be added as needed.
  */
 class InjectionTargetsOnWebsite {
     constructor() {
@@ -92,11 +93,18 @@ class InjectionTargetsOnWebsite {
         this.selectors = this.getSelectorsForSite(this.activeSite);
     }
 
+    /**
+     * Identifies the active website based on the current hostname.
+     * @returns {string} - The name of the active website (e.g., 'ChatGPT', 'Claude', 'Unknown').
+     */
     identifyActiveWebsite() {
         const currentHostname = window.location.hostname;
 
         if (currentHostname.includes('chat.openai.com') || currentHostname.includes('chatgpt.com')) {
             return 'ChatGPT';
+        }
+        else if (currentHostname.includes('claude.ai') || currentHostname.includes('another-claude-domain.com')) { // Update with actual hostname(s)
+            return 'Claude';
         }
         // Add additional website detections here
         else {
@@ -104,6 +112,11 @@ class InjectionTargetsOnWebsite {
         }
     }
 
+    /**
+     * Retrieves the selectors for the specified website.
+     * @param {string} site - The name of the website.
+     * @returns {Object} - An object containing the selectors for the site.
+     */
     getSelectorsForSite(site) {
         const selectors = {
             ChatGPT: {
@@ -114,7 +127,13 @@ class InjectionTargetsOnWebsite {
                     'button[type="submit"]'
                 ],
                 editor: '#prompt-textarea',
-                buttonsContainerId: 'custom-buttons-container'
+                buttonsContainerId: 'chatgpt-custom-buttons-container'
+            },
+            Claude: { // New Website Entry
+                container: 'div.flex.flex-col.bg-bg-000.rounded-2xl', // Adjust if necessary
+                sendButton: 'button[aria-label="Send Message"]',
+                editor: 'div.ProseMirror[contenteditable="true"]',
+                buttonsContainerId: 'claude-custom-buttons-container'
             },
             // TODO: Add selectors for other supported websites
         };

@@ -2,29 +2,27 @@
 // Version: 1.4
 //
 // Documentation:
-// This file serves as the main initializer for the ChatGPT extension. It handles configuration retrieval,
-// determines the active website (e.g., ChatGPT or Claude), and initiates the appropriate extension scripts.
-// Additionally, it monitors URL changes in to ensure the extension remains functional.
-//
-// Functions:
-// - executeExtensionInitializationSequence: Starts the initialization process by fetching configuration data.
-// - commenceExtensionInitialization: Applies the configuration and sets up the extension based on the active website.
-// - doCustomModificationsExist: Checks if custom modifications are already present in the DOM.
-// - identifyActiveWebsite: Determines which supported website is currently active.
-// - initializeChatGPTExtension: Initializes ChatGPT-specific extension logic.
-// - initializeClaudeExtension: Initializes Claude-specific extension logic (to be implemented in the future).
-// - manageKeyboardShortcutEvents: Handles keyboard shortcuts for triggering custom send buttons.
-// - commenceEnhancedResiliencyChecks: Starts periodic checks to maintain extension functionality.
-// - enforceResiliencyMeasures: Re-initializes the extension without resiliency checks if conditions are met.
-// - initiateFirstInitializationSequence: Begins the first initialization sequence with optional resiliency.
-// - selectAndInitializeAppropriateExtensionScript: Chooses and initializes the script based on the active website.
-// - monitorUrlChangesInSinglePageApplications: Observes URL changes in SPAs to re-initialize the extension as needed.
-// - debounceFunctionExecution: Debounces function execution to limit how often a function can run.
-//
-// Usage:
-// Ensure that `buttons.js` and `buttons-init.js` are loaded before this script to provide necessary button functionalities.
-// This script will automatically start the initialization process upon loading.
-// Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS. This one too!
+/**
+ * This file serves as the main initializer for the ChatGPT extension. 
+ * It retrieves configuration data from the service worker and identifies 
+ * the active website, such as ChatGPT or Claude. Based on the site, it 
+ * loads the appropriate extension scripts and applies necessary settings. 
+ * The script also manages keyboard shortcuts to enhance user interaction.
+ * 
+ * It monitors URL changes, especially in single-page applications, to 
+ * dynamically adapt to navigation events. Resiliency checks ensure that 
+ * custom modifications in the DOM are validated and reinitialized as needed. 
+ * Debouncing utilities are included to limit excessive function executions 
+ * and optimize performance. The initialization sequence starts automatically, 
+ * ensuring the extension runs smoothly across supported platforms.
+ *
+ * Usage:
+ * Ensure `buttons.js` and `buttons-init.js` are loaded before this script to 
+ * enable button functionalities. The script starts the initialization process 
+ * automatically upon loading. 
+ */
+//Instructions for AI: do not remove comments!  MUST NOT REMOVE COMMENTS. This one too!
+
 'use strict';
 
 /**
@@ -67,12 +65,6 @@ function commenceExtensionInitialization(config) {
     }
 
     /**
-     * Determines the active website based on the current hostname.
-     * @returns {string} - The name of the active website (e.g., 'ChatGPT', 'Claude', 'Unknown').
-     */
-    // Removed identifyActiveWebsite function as it's now handled by InjectionTargetsOnWebsite
-
-    /**
      * Initializes the extension specifically for ChatGPT.
      * @param {boolean} enableResiliency - Flag to enable or disable resiliency checks.
      */
@@ -87,11 +79,39 @@ function commenceExtensionInitialization(config) {
      */
     function initializeClaudeExtension(enableResiliency = true) {
         logConCgp('[init] Initializing Claude-specific script...');
-        // TODO: Implement Claude-specific initialization logic in the future.
+        // This is to implement compatibility with Claude in the future. currently no functionality.
+        initializeChatGPTExtension(enableResiliency=true);
     }
 
     /**
-     * Handles keyboard shortcut events to trigger custom send buttons.
+     * Selects the correct initialization path based on the active website.
+     */
+    function selectAndInitializeAppropriateExtensionScript() {
+        logConCgp('[init] InitScript invoked. Detecting active website...');
+        const activeWebsite = window.InjectionTargetsOnWebsite.activeSite;
+
+        switch (activeWebsite) {
+            case 'ChatGPT':
+                logConCgp('[init] Active website detected: ChatGPT');
+                initializeChatGPTExtension(true);
+                break;
+            case 'Claude':
+                logConCgp('[init] Active website detected: Claude');
+                initializeClaudeExtension(true);
+                break;
+            default:
+                logConCgp('[init] Active website is not supported. Initialization aborted.');
+        }
+
+        // If the active website is ChatGPT and shortcuts are enabled, add keyboard event listeners
+        if (activeWebsite === 'ChatGPT' && MaxExtensionConfig.enableShortcuts) {
+            window.addEventListener('keydown', manageKeyboardShortcutEvents);
+            logConCgp('[init] Keyboard shortcuts have been enabled and event listener added for ChatGPT.');
+        }
+    }
+
+    /**
+     * Manages keyboard shortcut events to trigger custom send buttons.
      * @param {KeyboardEvent} event - The keyboard event object.
      */
     function manageKeyboardShortcutEvents(event) {
@@ -107,6 +127,47 @@ function commenceExtensionInitialization(config) {
                 logConCgp('[init] No button found for the pressed shortcut key:', pressedKey);
             }
         }
+    }
+
+    /**
+     * Initiates the first sequence of the extension's initialization.
+     * @param {boolean} enableResiliency - Flag to enable or disable resiliency checks.
+     */
+    function initiateFirstInitializationSequence(enableResiliency = true) {
+        logConCgp('[init] Commencing extension initialization sequence...');
+
+        if (doCustomModificationsExist() && !enableResiliency) {
+            logConCgp('[init] Modifications already exist and resiliency is disabled. Skipping initialization.');
+            return;
+        }
+
+        // Load the saved states of toggle switches
+        MaxExtensionInterface.loadToggleStates();
+        logConCgp('[init] Toggle states have been loaded.');
+
+        // Initialize the shared flag
+        let targetFound = false;
+
+        // Define both selectors to wait for using InjectionTargetsOnWebsite
+        const selector1 = window.InjectionTargetsOnWebsite.selectors.container;
+        // Define a unified callback function
+        const handleTargetDiv = (targetDiv) => {
+            if (!targetFound) {
+                targetFound = true; // Set the flag to prevent other callbacks from executing
+                logConCgp('[init] Target div has been found:', targetDiv);
+                window.MaxExtensionButtonsInit.createAndInsertCustomElements(targetDiv);
+
+                // Initiate resiliency checks only after the first successful modification
+                if (!MaxExtensionConfig.firstModificationCompleted && enableResiliency) {
+                    MaxExtensionConfig.firstModificationCompleted = true;
+                    logConCgp('[init] First modification complete. Starting resiliency checks.');
+                    commenceEnhancedResiliencyChecks();
+                }
+            }
+        };
+
+        // Issue the first waitForElement call using the dynamic selector
+        MaxExtensionUtils.waitForElement(selector1, handleTargetDiv);
     }
 
     /**
@@ -165,94 +226,6 @@ function commenceExtensionInitialization(config) {
     }
 
     /**
-     * Initializes the first sequence of the ChatGPT extension.
-     * @param {boolean} enableResiliency - Flag to enable or disable resiliency checks.
-     */
-    function initiateFirstInitializationSequence(enableResiliency = true) {
-        logConCgp('[init] Commencing extension initialization sequence...');
-
-        if (doCustomModificationsExist() && !enableResiliency) {
-            logConCgp('[init] Modifications already exist and resiliency is disabled. Skipping initialization.');
-            return;
-        }
-
-        // Load the saved states of toggle switches
-        MaxExtensionInterface.loadToggleStates();
-        logConCgp('[init] Toggle states have been loaded.');
-
-        // Initialize the shared flag
-        let targetFound = false;
-
-        // Define both selectors to wait for using InjectionTargetsOnWebsite
-        const selector1 = window.InjectionTargetsOnWebsite.selectors.container;
-        // Define a unified callback function
-        const handleTargetDiv = (targetDiv) => {
-            if (!targetFound) {
-                targetFound = true; // Set the flag to prevent other callbacks from executing
-                logConCgp('[init] Target div has been found:', targetDiv);
-                window.MaxExtensionButtonsInit.createAndInsertCustomElements(targetDiv);
-
-                // Initiate resiliency checks only after the first successful modification
-                if (!MaxExtensionConfig.firstModificationCompleted && enableResiliency) {
-                    MaxExtensionConfig.firstModificationCompleted = true;
-                    logConCgp('[init] First modification complete. Starting resiliency checks.');
-                    commenceEnhancedResiliencyChecks();
-                }
-            }
-        };
-
-        // Issue the first waitForElement call using the dynamic selector
-        MaxExtensionUtils.waitForElement(selector1, handleTargetDiv);
-    }
-
-    /**
-     * Selects the correct initialization path based on the active website.
-     */
-    function selectAndInitializeAppropriateExtensionScript() {
-        logConCgp('[init] InitScript invoked. Detecting active website...');
-        const activeWebsite = window.InjectionTargetsOnWebsite.activeSite;
-
-        switch (activeWebsite) {
-            case 'ChatGPT':
-                logConCgp('[init] Active website detected: ChatGPT');
-                initializeChatGPTExtension(true);
-                break;
-            case 'Claude':
-                logConCgp('[init] Active website detected: Claude');
-                initializeClaudeExtension(true);
-                break;
-            default:
-                logConCgp('[init] Active website is not supported. Initialization aborted.');
-        }
-
-        // If the active website is ChatGPT and shortcuts are enabled, add keyboard event listeners
-        if (activeWebsite === 'ChatGPT' && MaxExtensionConfig.enableShortcuts) {
-            window.addEventListener('keydown', manageKeyboardShortcutEvents);
-            logConCgp('[init] Keyboard shortcuts have been enabled and event listener added for ChatGPT.');
-        }
-    }
-
-    // Expose the main extension function to the global window object
-    window.extensionMainFunction = selectAndInitializeAppropriateExtensionScript;
-
-    /**
-     * Observes changes to the URL in Single Page Applications and triggers a callback upon changes.
-     * @param {Function} callback - The function to execute when a URL change is detected.
-     */
-    function monitorUrlChangesInSinglePageApplications(callback) {
-        let previousUrl = location.href;
-        const urlChangeObserver = new MutationObserver(() => {
-            const currentUrl = location.href;
-            if (currentUrl !== previousUrl) {
-                previousUrl = currentUrl;
-                callback();
-            }
-        });
-
-        urlChangeObserver.observe(document, { subtree: true, childList: true });
-    }
-
-    /**
      * Debounces a function to limit how often it can be executed.
      * @param {Function} func - The function to debounce.
      * @param {number} delay - The debounce delay in milliseconds.
@@ -274,6 +247,23 @@ function commenceExtensionInitialization(config) {
         commenceExtensionInitialization(window.MaxExtensionConfig);
     }, 1000); // Adjust the debounce delay as needed
 
+    /**
+     * Observes changes to the URL in Single Page Applications and triggers a callback upon changes.
+     * @param {Function} callback - The function to execute when a URL change is detected.
+     */
+    function monitorUrlChangesInSinglePageApplications(callback) {
+        let previousUrl = location.href;
+        const urlChangeObserver = new MutationObserver(() => {
+            const currentUrl = location.href;
+            if (currentUrl !== previousUrl) {
+                previousUrl = currentUrl;
+                callback();
+            }
+        });
+
+        urlChangeObserver.observe(document, { subtree: true, childList: true });
+    }
+
     // Begin monitoring URL changes to handle SPA navigation
     monitorUrlChangesInSinglePageApplications(() => {
         logConCgp('[init] Path change detected. Re-initializing script...');
@@ -283,3 +273,4 @@ function commenceExtensionInitialization(config) {
     // Initiate the appropriate extension script based on the active website
     selectAndInitializeAppropriateExtensionScript();
 }
+
