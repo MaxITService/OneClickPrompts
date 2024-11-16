@@ -72,7 +72,7 @@ function commenceExtensionInitialization(configurationObject) {
      */
     function initializeChatGPTExtension(enableResiliency = true) {
         logConCgp('[init] Initializing ChatGPT-specific script...');
-        initiateFirstInitializationSequence(enableResiliency);
+        buttonBoxCheckingAndInjection(enableResiliency);
     }
 
     /**
@@ -139,9 +139,9 @@ function commenceExtensionInitialization(configurationObject) {
      * Inserts custom buttons and toggles into the webpage and starts resiliency checks if enabled.
      * @param {boolean} enableResiliency - Flag to enable or disable resiliency checks.
      */
-    function initiateFirstInitializationSequence(enableResiliency = true) {
-        logConCgp('[init] Commencing extension initialization sequence...');
+    function buttonBoxCheckingAndInjection(enableResiliency = true) {
 
+        logConCgp('[init] Checking if mods already exist...');
         if (doCustomModificationsExist() && !enableResiliency) {
             logConCgp('[init] Modifications already exist and resiliency is disabled. Skipping initialization.');
             return;
@@ -231,7 +231,7 @@ function commenceExtensionInitialization(configurationObject) {
      */
     function enforceResiliencyMeasures() {
         logConCgp('[init] Enforcing resiliency measures. Re-initializing without resiliency checks.');
-        initiateFirstInitializationSequence(false);
+        buttonBoxCheckingAndInjection(false);
     }
 
     /**
@@ -278,7 +278,7 @@ function commenceExtensionInitialization(configurationObject) {
 
 
 
-    
+
     /*
     Initialization starts here!
     */
