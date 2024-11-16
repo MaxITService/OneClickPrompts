@@ -152,7 +152,7 @@ function commenceExtensionInitialization(config) {
 
         // Define the selector to wait for using InjectionTargetsOnWebsite
         const selector1 = window.InjectionTargetsOnWebsite.selectors.container;
-        // Define a unified callback function
+        // A unified callback funciton will search for div where we will insert stuff and 
         const handleTargetDiv = (targetDiv) => {
             if (!targetFound) {
                 targetFound = true; // Set the flag to prevent other callbacks from executing
