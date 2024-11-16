@@ -135,8 +135,8 @@ function commenceExtensionInitialization(configurationObject) {
     }
 
     /**
-     * Initiates the first sequence of the extension's initialization.
-     * Inserts custom buttons and toggles into the webpage and starts resiliency checks if enabled.
+     * 
+     * Inserts custom buttons, separators and setitngs toggles into the webpage and starts resiliency checks if enabled.
      * @param {boolean} enableResiliency - Flag to enable or disable resiliency checks.
      */
     function buttonBoxCheckingAndInjection(enableResiliency = true) {
