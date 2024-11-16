@@ -22,7 +22,7 @@
  * automatically upon loading. 
  */
 //Instructions for AI: do not remove comments!  MUST NOT REMOVE COMMENTS. This one too!
-
+// ALL CODE IN ALL FILES MUST USE logConCgp FOR LOGGING. NO CONSOLE LOGGING.
 'use strict';
 
 
