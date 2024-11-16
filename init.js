@@ -263,7 +263,7 @@ function commenceExtensionInitialization(configurationObject) {
      * @param {Function} callback - The function to execute when a URL change is detected.
      * @description Helper function that monitors URL changes using MutationObserver.
      */
-    function monitorUrlChangesInSinglePageApplications(callback) {
+    function resilentStartAndRetryOnSPANavigation(callback) {
         let previousUrl = location.href;
         const urlChangeObserver = new MutationObserver(() => {
             const currentUrl = location.href;
@@ -286,7 +286,7 @@ function commenceExtensionInitialization(configurationObject) {
     selectAndInitializeAppropriateExtensionScript();
 
     // Begin monitoring URL changes to handle SPA navigation
-    monitorUrlChangesInSinglePageApplications(() => {
+    resilentStartAndRetryOnSPANavigation(() => {
         logConCgp('[init] Path change detected. Re-initializing script...');
         debouncedEnhancedInitialization();
     });
