@@ -67,52 +67,25 @@ function commenceExtensionInitialization(configurationObject) {
     }
 
     /**
-     * Initializes the extension specifically for ChatGPT by injecting custom elements into the webpage.
-     * @param {boolean} enableResiliency - Flag to enable or disable resiliency checks.
-     */
-    function initializeChatGPTExtension(enableResiliency = true) {
-        logConCgp('[init] Initializing ChatGPT-specific script...');
-        buttonBoxCheckingAndInjection(enableResiliency);
-    }
-
-    /**
-     * Initializes the extension specifically for Claude by injecting custom elements into the webpage.
-     * Currently redirects to ChatGPT initialization as functionality is shared.
-     * @param {boolean} enableResiliency - Flag to enable or disable resiliency checks.
-     */
-    function initializeClaudeExtension(enableResiliency = true) {
-        logConCgp('[init] Initializing Claude-specific script...');
-        // This is to implement compatibility with Claude in the future. currently no functionality.
-        initializeChatGPTExtension(enableResiliency = true);
-    }
-
-    /**
      * Selects the correct initialization path based on the active website and sets up keyboard shortcuts if enabled.
      * Injects custom elements into the webpage accordingly.
      */
     function selectAndInitializeAppropriateExtensionScript() {
         logConCgp('[init] InitScript invoked. Detecting active website...');
+
         const activeWebsite = window.InjectionTargetsOnWebsite.activeSite;
+        logConCgp('[init] Active website detected:', activeWebsite);
 
-        switch (activeWebsite) {
-            case 'ChatGPT':
-                logConCgp('[init] Active website detected: ChatGPT');
-                initializeChatGPTExtension(true);
-                break;
-            case 'Claude':
-                logConCgp('[init] Active website detected: Claude');
-                initializeClaudeExtension(true);
-                break;
-            default:
-                logConCgp('[init] Active website is not supported. Initialization aborted.');
-        }
+        // Initialize based on the active website
+        buttonBoxCheckingAndInjection(true, activeWebsite);
 
-        // If the active website is ChatGPT and shortcuts are enabled, add keyboard event listeners
+        // Enable keyboard shortcuts if configured and on ChatGPT
         if (activeWebsite === 'ChatGPT' && window.globalMaxExtensionConfig.enableShortcuts) {
             window.addEventListener('keydown', manageKeyboardShortcutEvents);
             logConCgp('[init] Keyboard shortcuts have been enabled and event listener added for ChatGPT.');
         }
     }
+
 
     /**
      * Manages keyboard shortcut events to trigger custom send buttons on the webpage.
@@ -139,7 +112,7 @@ function commenceExtensionInitialization(configurationObject) {
      * Inserts custom buttons, separators and setitngs toggles into the webpage and starts resiliency checks if enabled.
      * @param {boolean} enableResiliency - Flag to enable or disable resiliency checks.
      */
-    function buttonBoxCheckingAndInjection(enableResiliency = true) {
+    function buttonBoxCheckingAndInjection(enableResiliency = true, activeWebsite) {
 
         logConCgp('[init] Checking if mods already exist...');
         if (doCustomModificationsExist() && !enableResiliency) {
