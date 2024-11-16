@@ -25,10 +25,6 @@
 
 'use strict';
 
-/**
- * Exposes the main function to initialize ChatGPT buttons to the global window object.
- */
-window.initChatgptButtons = executeExtensionInitializationSequence;
 
 /**
  * Initiates the retrieval of configuration data from the service worker and starts the extension.
@@ -44,10 +40,6 @@ function executeExtensionInitializationSequence() {
         }
     });
 }
-
-// Automatically start the initialization process upon script load
-executeExtensionInitializationSequence();
-
 /**
  * Initializes the extension using the provided configuration.
  * @param {Object} config - The configuration object retrieved from the service worker.
@@ -59,13 +51,14 @@ function commenceExtensionInitialization(config) {
     /**
      * Checks whether the custom buttons modifications already exist in the DOM.
      * @returns {boolean} - True if modifications exist, false otherwise.
+     * @description Helper function that checks if the custom buttons container exists in the DOM to prevent duplication.
      */
     function doCustomModificationsExist() {
         return document.getElementById(window.InjectionTargetsOnWebsite.selectors.buttonsContainerId) !== null;
     }
 
     /**
-     * Initializes the extension specifically for ChatGPT.
+     * Initializes the extension specifically for ChatGPT by injecting custom elements into the webpage.
      * @param {boolean} enableResiliency - Flag to enable or disable resiliency checks.
      */
     function initializeChatGPTExtension(enableResiliency = true) {
@@ -74,7 +67,8 @@ function commenceExtensionInitialization(config) {
     }
 
     /**
-     * Initializes the extension specifically for Claude.
+     * Initializes the extension specifically for Claude by injecting custom elements into the webpage.
+     * Currently redirects to ChatGPT initialization as functionality is shared.
      * @param {boolean} enableResiliency - Flag to enable or disable resiliency checks.
      */
     function initializeClaudeExtension(enableResiliency = true) {
@@ -84,7 +78,8 @@ function commenceExtensionInitialization(config) {
     }
 
     /**
-     * Selects the correct initialization path based on the active website.
+     * Selects the correct initialization path based on the active website and sets up keyboard shortcuts if enabled.
+     * Injects custom elements into the webpage accordingly.
      */
     function selectAndInitializeAppropriateExtensionScript() {
         logConCgp('[init] InitScript invoked. Detecting active website...');
@@ -111,7 +106,8 @@ function commenceExtensionInitialization(config) {
     }
 
     /**
-     * Manages keyboard shortcut events to trigger custom send buttons.
+     * Manages keyboard shortcut events to trigger custom send buttons on the webpage.
+     * Listens for Alt+[1-10] key presses and simulates button clicks.
      * @param {KeyboardEvent} event - The keyboard event object.
      */
     function manageKeyboardShortcutEvents(event) {
@@ -131,6 +127,7 @@ function commenceExtensionInitialization(config) {
 
     /**
      * Initiates the first sequence of the extension's initialization.
+     * Inserts custom buttons and toggles into the webpage and starts resiliency checks if enabled.
      * @param {boolean} enableResiliency - Flag to enable or disable resiliency checks.
      */
     function initiateFirstInitializationSequence(enableResiliency = true) {
@@ -148,13 +145,14 @@ function commenceExtensionInitialization(config) {
         // Initialize the shared flag
         let targetFound = false;
 
-        // Define both selectors to wait for using InjectionTargetsOnWebsite
+        // Define the selector to wait for using InjectionTargetsOnWebsite
         const selector1 = window.InjectionTargetsOnWebsite.selectors.container;
         // Define a unified callback function
         const handleTargetDiv = (targetDiv) => {
             if (!targetFound) {
                 targetFound = true; // Set the flag to prevent other callbacks from executing
                 logConCgp('[init] Target div has been found:', targetDiv);
+                // Insert custom elements into the target container on the webpage
                 window.MaxExtensionButtonsInit.createAndInsertCustomElements(targetDiv);
 
                 // Initiate resiliency checks only after the first successful modification
@@ -166,12 +164,13 @@ function commenceExtensionInitialization(config) {
             }
         };
 
-        // Issue the first waitForElement call using the dynamic selector
+        // Wait for the target element to appear in the DOM and then handle it
         MaxExtensionUtils.waitForElement(selector1, handleTargetDiv);
     }
 
     /**
-     * Initiates enhanced resiliency checks to ensure the extension remains functional.
+     * Initiates enhanced resiliency checks to ensure the extension remains functional on the webpage.
+     * Periodically checks if custom modifications exist and re-initializes if necessary.
      */
     function commenceEnhancedResiliencyChecks() {
         let consecutiveClearCheckCount = 0;
@@ -219,6 +218,7 @@ function commenceExtensionInitialization(config) {
 
     /**
      * Enforces resiliency by re-initializing the extension without further resiliency checks.
+     * Inserts custom elements into the webpage to restore functionality.
      */
     function enforceResiliencyMeasures() {
         logConCgp('[init] Enforcing resiliency measures. Re-initializing without resiliency checks.');
@@ -230,6 +230,7 @@ function commenceExtensionInitialization(config) {
      * @param {Function} func - The function to debounce.
      * @param {number} delay - The debounce delay in milliseconds.
      * @returns {Function} - The debounced function.
+     * @description Helper function that limits the rate at which a function can fire.
      */
     function debounceFunctionExecution(func, delay) {
         let timeoutIdentifier;
@@ -240,7 +241,8 @@ function commenceExtensionInitialization(config) {
     }
 
     /**
-     * Handle navigation changes in Single Page Applications.
+     * Handle navigation changes in Single Page Applications by re-initializing the extension.
+     * Ensures custom elements are present on the webpage after URL changes.
      */
     const debouncedEnhancedInitialization = debounceFunctionExecution(() => {
         logConCgp('[init] URL change detected. Attempting to initialize extension...');
@@ -250,6 +252,7 @@ function commenceExtensionInitialization(config) {
     /**
      * Observes changes to the URL in Single Page Applications and triggers a callback upon changes.
      * @param {Function} callback - The function to execute when a URL change is detected.
+     * @description Helper function that monitors URL changes using MutationObserver.
      */
     function monitorUrlChangesInSinglePageApplications(callback) {
         let previousUrl = location.href;
@@ -274,3 +277,6 @@ function commenceExtensionInitialization(config) {
     selectAndInitializeAppropriateExtensionScript();
 }
 
+
+// Automatically start the initialization process upon script load
+executeExtensionInitializationSequence();
