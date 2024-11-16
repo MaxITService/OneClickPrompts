@@ -87,14 +87,14 @@ window.MaxExtensionButtons = {
 function processCustomSendButtonClick(event, customText, autoSend) {
     // Prevent default button behavior
     event.preventDefault();
-    logConCgp('[init] Custom send button was clicked.');
+    logConCgp('[buttons] Custom send button was clicked.');
 
     // Detect the editor area using dynamic selector
     const editorArea = document.querySelector(window.InjectionTargetsOnWebsite.selectors.editor); // Dynamic selector
     if (editorArea) {
-        logConCgp('[init] Editor area found:', editorArea);
+        logConCgp('[buttons] Editor area found:', editorArea);
     } else {
-        logConCgp('[init] Editor area not found. Unable to proceed.');
+        logConCgp('[buttons] Editor area not found. Unable to proceed.');
         return;
     }
 
@@ -115,7 +115,7 @@ function processCustomSendButtonClick(event, customText, autoSend) {
             for (const selector of sendButtonSelectors) {
                 const button = document.querySelector(selector);
                 if (button) {
-                    logConCgp('[init] Send button located using selector:', selector);
+                    logConCgp('[buttons] Send button located using selector:', selector);
                     return button;
                 }
             }
@@ -124,20 +124,20 @@ function processCustomSendButtonClick(event, customText, autoSend) {
         else if (typeof sendButtonSelectors === 'string') {
             const button = document.querySelector(sendButtonSelectors);
             if (button) {
-                logConCgp('[init] Send button located using selector:', sendButtonSelectors);
+                logConCgp('[buttons] Send button located using selector:', sendButtonSelectors);
                 return button;
             }
         }
 
         // If no send button is found using the provided selectors
-        logConCgp('[init] Send button not found using dynamic selectors.');
+        logConCgp('[buttons] Send button not found using dynamic selectors.');
         return null;
     }
 
     // Locate the send button
     let originalSendButton = locateSendButton();
     if (!originalSendButton) {
-        logConCgp('[init] Send button not found initially. Setting up MutationObserver to detect it.');
+        logConCgp('[buttons] Send button not found initially. Setting up MutationObserver to detect it.');
     }
 
     /**
@@ -146,15 +146,15 @@ function processCustomSendButtonClick(event, customText, autoSend) {
      */
     function handleSendButton(sendButton) {
         if (sendButton) {
-            logConCgp('[init] Send button is available. Proceeding with sending message.');
+            logConCgp('[buttons] Send button is available. Proceeding with sending message.');
 
             // Retrieve existing text in the editor
             const existingText = editorArea.innerText;
-            logConCgp('[init] Current text in editor:', existingText);
+            logConCgp('[buttons] Current text in editor:', existingText);
 
             // Concatenate existing text with custom text exactly as provided
             const newText = `${existingText}${customText}`;
-            logConCgp('[init] Combined text to be inserted:', newText);
+            logConCgp('[buttons] Combined text to be inserted:', newText);
 
             // Insert the new text into the editor
             MaxExtensionUtils.insertTextIntoEditor(editorArea, newText);
@@ -164,7 +164,7 @@ function processCustomSendButtonClick(event, customText, autoSend) {
 
             // Auto-send the message if global auto-send is enabled and this button's config allows it
             if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
-                logConCgp('[init] Starting auto-send interval to click send button every 100ms until editor is empty.');
+                logConCgp('[buttons] Starting auto-send interval to click send button every 100ms until editor is empty.');
 
                 // Define the interval ID so it can be cleared later
                 const sendInterval = setInterval(() => {
@@ -181,20 +181,20 @@ function processCustomSendButtonClick(event, customText, autoSend) {
                     // do not delete above comment.
                     originalSendButton = locateSendButton();
                     if (originalSendButton) {
-                        logConCgp('[init] Original send button located:', originalSendButton);
+                        logConCgp('[buttons] Original send button located:', originalSendButton);
                         logConCgp('[auto-send] Attempting to click the send button.');
                         MaxExtensionUtils.simulateClick(originalSendButton);
                         logConCgp('[auto-send] Original send button was clicked automatically.');
                     } else {
-                        logConCgp('[init] Original send button not found. Unable to proceed.');
+                        logConCgp('[buttons] Original send button not found. Unable to proceed.');
                         clearInterval(sendInterval);
                     }
                 }, 100); // Interval set to 100 milliseconds
             } else {
-                logConCgp('[init] Auto-send is disabled. Message will not be sent automatically.');
+                logConCgp('[buttons] Auto-send is disabled. Message will not be sent automatically.');
             }
         } else {
-            logConCgp('[init] Send button is not available to handle.');
+            logConCgp('[buttons] Send button is not available to handle.');
         }
     }
 
@@ -205,9 +205,9 @@ function processCustomSendButtonClick(event, customText, autoSend) {
             if (originalSendButton) {
                 handleSendButton(originalSendButton);
                 obs.disconnect(); // Stop observing once the button is found
-                logConCgp('[init] Send button detected and observer disconnected.');
+                logConCgp('[buttons] Send button detected and observer disconnected.');
             } else {
-                logConCgp('[init] MutationObserver detected changes, but send button still not found.');
+                logConCgp('[buttons] MutationObserver detected changes, but send button still not found.');
             }
         });
 
