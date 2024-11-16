@@ -123,14 +123,14 @@ class InjectionTargetsOnWebsite {
                 container: 'div.flex.w-full.flex-col:has(textarea)',
                 sendButton: [
                     'button[data-testid="send-button"]',
-                    'button.send-button-class', // Add alternative selectors as needed
+                    'button.send-button-class', 
                     'button[type="submit"]'
                 ],
                 editor: '#prompt-textarea',
                 buttonsContainerId: 'chatgpt-custom-buttons-container'
             },
             Claude: { // New Website Entry
-                container: 'div.flex.flex-col.bg-bg-000.rounded-2xl', // Adjust if necessary
+                container: 'div.flex.flex-col.bg-bg-000.rounded-2xl', 
                 sendButton: 'button[aria-label="Send Message"]',
                 editor: 'div.ProseMirror[contenteditable="true"]',
                 buttonsContainerId: 'claude-custom-buttons-container'
