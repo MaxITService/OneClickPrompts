@@ -31,5 +31,3 @@ function logConCgp(message, ...optionalParams) {
     console.log(`[Chatgpt-Buttons] ${message}`, ...optionalParams);
 }
 
-// Ensure logConCgp is available globally
-window.logConCgp = logConCgp;

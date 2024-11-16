@@ -40,12 +40,12 @@ function publicStaticVoidMain() {
             logConCgp('[init] Configuration successfully loaded:', response.config);
             
               // let all files in project access config.
-            window.GlobalMaxExtensionConfig = response.config;
-            commenceExtensionInitialization(window.GlobalMaxExtensionConfig);
+            window.globalMaxExtensionConfig = response.config;
+            commenceExtensionInitialization(window.globalMaxExtensionConfig);
 
         } else {
             logConCgp('[init] Failed to load configuration from service worker. Initialization aborted.');
-            // Handle the error appropriately, perhaps by not initializing further.
+            // STOP
         }
     });
 }
@@ -108,7 +108,7 @@ function commenceExtensionInitialization(configurationObject) {
         }
 
         // If the active website is ChatGPT and shortcuts are enabled, add keyboard event listeners
-        if (activeWebsite === 'ChatGPT' && window.GlobalMaxExtensionConfig.enableShortcuts) {
+        if (activeWebsite === 'ChatGPT' && window.globalMaxExtensionConfig.enableShortcuts) {
             window.addEventListener('keydown', manageKeyboardShortcutEvents);
             logConCgp('[init] Keyboard shortcuts have been enabled and event listener added for ChatGPT.');
         }
@@ -120,7 +120,7 @@ function commenceExtensionInitialization(configurationObject) {
      * @param {KeyboardEvent} event - The keyboard event object.
      */
     function manageKeyboardShortcutEvents(event) {
-        if (!GlobalMaxExtensionConfig.enableShortcuts) return;
+        if (!globalMaxExtensionConfig.enableShortcuts) return;
 
         if (event.altKey && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
             const pressedKey = event.key === '0' ? '10' : event.key;
@@ -165,8 +165,8 @@ function commenceExtensionInitialization(configurationObject) {
                 window.MaxExtensionButtonsInit.createAndInsertCustomElements(targetDiv);
 
                 // Initiate resiliency checks only after the first successful modification
-                if (!GlobalMaxExtensionConfig.firstModificationCompleted && enableResiliency) {
-                    GlobalMaxExtensionConfig.firstModificationCompleted = true;
+                if (!globalMaxExtensionConfig.firstModificationCompleted && enableResiliency) {
+                    globalMaxExtensionConfig.firstModificationCompleted = true;
                     logConCgp('[init] First modification complete. Starting resiliency checks.');
                     commenceEnhancedResiliencyChecks();
                 }
@@ -255,7 +255,7 @@ function commenceExtensionInitialization(configurationObject) {
      */
     const debouncedEnhancedInitialization = debounceFunctionExecution(() => {
         logConCgp('[init] URL change detected. Attempting to initialize extension...');
-        commenceExtensionInitialization(window.GlobalMaxExtensionConfig);
+        commenceExtensionInitialization(window.globalMaxExtensionConfig);
     }, 1000); // Adjust the debounce delay as needed
 
     /**

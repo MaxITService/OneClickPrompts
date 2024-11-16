@@ -41,12 +41,12 @@ window.MaxExtensionInterface = {
     loadToggleStates: function() {
         const savedAutoSendState = localStorage.getItem('globalAutoSendEnabled');
         if (savedAutoSendState !== null) {
-            GlobalMaxExtensionConfig.globalAutoSendEnabled = savedAutoSendState === 'true';
+            globalMaxExtensionConfig.globalAutoSendEnabled = savedAutoSendState === 'true';
         }
 
         const savedHotkeysState = localStorage.getItem('enableShortcuts');
         if (savedHotkeysState !== null) {
-            GlobalMaxExtensionConfig.enableShortcuts = savedHotkeysState === 'true';
+            globalMaxExtensionConfig.enableShortcuts = savedHotkeysState === 'true';
         }
     }
 };

@@ -27,9 +27,9 @@ window.MaxExtensionButtonsInit = {
         const autoSendToggle = MaxExtensionInterface.createToggle(
             'auto-send-toggle',
             'Enable Auto-send',
-            GlobalMaxExtensionConfig.globalAutoSendEnabled,
+            globalMaxExtensionConfig.globalAutoSendEnabled,
             (state) => {
-                GlobalMaxExtensionConfig.globalAutoSendEnabled = state;
+                globalMaxExtensionConfig.globalAutoSendEnabled = state;
             }
         );
         container.appendChild(autoSendToggle);
@@ -38,9 +38,9 @@ window.MaxExtensionButtonsInit = {
         const hotkeysToggle = MaxExtensionInterface.createToggle(
             'hotkeys-toggle',
             'Enable Hotkeys',
-            GlobalMaxExtensionConfig.enableShortcuts,
+            globalMaxExtensionConfig.enableShortcuts,
             (state) => {
-                GlobalMaxExtensionConfig.enableShortcuts = state;
+                globalMaxExtensionConfig.enableShortcuts = state;
             }
         );
         container.appendChild(hotkeysToggle);
@@ -52,7 +52,7 @@ window.MaxExtensionButtonsInit = {
      * @param {HTMLElement} container - The DOM element to which custom buttons will be appended.
      */
     generateAndAppendCustomSendButtons: function(container) {
-        GlobalMaxExtensionConfig.customButtons.forEach((buttonConfiguration, index) => {
+        globalMaxExtensionConfig.customButtons.forEach((buttonConfiguration, index) => {
             if (buttonConfiguration.separator) {
                 const separatorElement = MaxExtensionUtils.createSeparator();
                 container.appendChild(separatorElement);
