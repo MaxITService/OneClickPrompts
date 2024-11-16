@@ -38,7 +38,11 @@ function publicStaticVoidMain() {
     chrome.runtime.sendMessage({ type: 'getConfig' }, (response) => {
         if (response && response.config) {
             logConCgp('[init] Configuration successfully loaded:', response.config);
-            commenceExtensionInitialization(response.config);
+            
+              // let all files in project access config.
+            window.GlobalMaxExtensionConfig = response.config;
+            commenceExtensionInitialization(window.GlobalMaxExtensionConfig);
+
         } else {
             logConCgp('[init] Failed to load configuration from service worker. Initialization aborted.');
             // Handle the error appropriately, perhaps by not initializing further.
@@ -47,11 +51,11 @@ function publicStaticVoidMain() {
 }
 /**
  * Initializes the extension using the provided configuration.
- * @param {Object} config - The configuration object retrieved from the service worker.
+ * @param {Object} configurationObject - The configuration object retrieved from the service worker.
  */
-function commenceExtensionInitialization(config) {
-    window.MaxExtensionConfig = config;
-    logConCgp('[init] Configuration has been applied:', config);
+function commenceExtensionInitialization(configurationObject) {
+  
+    logConCgp('[init] Configuration has been applied:', configurationObject);
 
     /**
      * Checks whether the custom buttons modifications already exist in the DOM.
@@ -104,7 +108,7 @@ function commenceExtensionInitialization(config) {
         }
 
         // If the active website is ChatGPT and shortcuts are enabled, add keyboard event listeners
-        if (activeWebsite === 'ChatGPT' && MaxExtensionConfig.enableShortcuts) {
+        if (activeWebsite === 'ChatGPT' && window.GlobalMaxExtensionConfig.enableShortcuts) {
             window.addEventListener('keydown', manageKeyboardShortcutEvents);
             logConCgp('[init] Keyboard shortcuts have been enabled and event listener added for ChatGPT.');
         }
@@ -116,7 +120,7 @@ function commenceExtensionInitialization(config) {
      * @param {KeyboardEvent} event - The keyboard event object.
      */
     function manageKeyboardShortcutEvents(event) {
-        if (!MaxExtensionConfig.enableShortcuts) return;
+        if (!GlobalMaxExtensionConfig.enableShortcuts) return;
 
         if (event.altKey && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
             const pressedKey = event.key === '0' ? '10' : event.key;
@@ -161,8 +165,8 @@ function commenceExtensionInitialization(config) {
                 window.MaxExtensionButtonsInit.createAndInsertCustomElements(targetDiv);
 
                 // Initiate resiliency checks only after the first successful modification
-                if (!MaxExtensionConfig.firstModificationCompleted && enableResiliency) {
-                    MaxExtensionConfig.firstModificationCompleted = true;
+                if (!GlobalMaxExtensionConfig.firstModificationCompleted && enableResiliency) {
+                    GlobalMaxExtensionConfig.firstModificationCompleted = true;
                     logConCgp('[init] First modification complete. Starting resiliency checks.');
                     commenceEnhancedResiliencyChecks();
                 }
@@ -251,7 +255,7 @@ function commenceExtensionInitialization(config) {
      */
     const debouncedEnhancedInitialization = debounceFunctionExecution(() => {
         logConCgp('[init] URL change detected. Attempting to initialize extension...');
-        commenceExtensionInitialization(window.MaxExtensionConfig);
+        commenceExtensionInitialization(window.GlobalMaxExtensionConfig);
     }, 1000); // Adjust the debounce delay as needed
 
     /**

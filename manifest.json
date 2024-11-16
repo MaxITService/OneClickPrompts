@@ -37,7 +37,7 @@
       ],
       "js": [
         "log.js",
-        "events.js",
+        "event-handlers.js",
         "utils.js",
         "buttons.js",
         "buttons-init.js",

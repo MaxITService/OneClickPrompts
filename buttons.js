@@ -33,7 +33,7 @@ window.MaxExtensionButtons = {
 
         // Assign keyboard shortcuts to the first 10 non-separator buttons if shortcuts are enabled
         let assignedShortcutKey = null;
-        if (MaxExtensionConfig.enableShortcuts) {
+        if (GlobalMaxExtensionConfig.enableShortcuts) {
             assignedShortcutKey = this.determineShortcutKeyForButtonIndex(buttonIndex);
             if (assignedShortcutKey !== null) {
                 customButtonElement.dataset.shortcutKey = assignedShortcutKey.toString();
@@ -66,8 +66,8 @@ window.MaxExtensionButtons = {
      */
     determineShortcutKeyForButtonIndex: function (buttonIndex) {
         let shortcutAssignmentCount = 0;
-        for (let i = 0; i < MaxExtensionConfig.customButtons.length; i++) {
-            if (!MaxExtensionConfig.customButtons[i].separator) {
+        for (let i = 0; i < GlobalMaxExtensionConfig.customButtons.length; i++) {
+            if (!GlobalMaxExtensionConfig.customButtons[i].separator) {
                 shortcutAssignmentCount++;
                 if (i === buttonIndex && shortcutAssignmentCount <= 10) {
                     return shortcutAssignmentCount % 10; // 0 represents 10
@@ -163,7 +163,7 @@ function processCustomSendButtonClick(event, customText, autoSend) {
             MaxExtensionUtils.moveCursorToEnd(editorArea);
 
             // Auto-send the message if global auto-send is enabled and this button's config allows it
-            if (MaxExtensionConfig.globalAutoSendEnabled && autoSend) {
+            if (GlobalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
                 logConCgp('[init] Starting auto-send interval to click send button every 100ms until editor is empty.');
 
                 // Define the interval ID so it can be cleared later
