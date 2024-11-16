@@ -34,12 +34,12 @@
  * This funcition is called first.
  */
 function publicStaticVoidMain() {
-    // The message intended for the service worker config.js
+    // The message intended for the service worker config.js, the fucntion will be run after response will be received.
     chrome.runtime.sendMessage({ type: 'getConfig' }, (response) => {
         if (response && response.config) {
             logConCgp('[init] Configuration successfully loaded:', response.config);
-            
-              // let all files in project access config.
+
+            // let all files in project access config.
             window.globalMaxExtensionConfig = response.config;
             commenceExtensionInitialization(window.globalMaxExtensionConfig);
 
@@ -54,8 +54,8 @@ function publicStaticVoidMain() {
  * @param {Object} configurationObject - The configuration object retrieved from the service worker.
  */
 function commenceExtensionInitialization(configurationObject) {
-  
-    logConCgp('[init] Configuration has been applied:', configurationObject);
+
+    logConCgp('[init] Configuration has been received:', configurationObject);
 
     /**
      * Checks whether the custom buttons modifications already exist in the DOM.
@@ -83,7 +83,7 @@ function commenceExtensionInitialization(configurationObject) {
     function initializeClaudeExtension(enableResiliency = true) {
         logConCgp('[init] Initializing Claude-specific script...');
         // This is to implement compatibility with Claude in the future. currently no functionality.
-        initializeChatGPTExtension(enableResiliency=true);
+        initializeChatGPTExtension(enableResiliency = true);
     }
 
     /**
@@ -252,12 +252,12 @@ function commenceExtensionInitialization(configurationObject) {
     /**
      * Handle navigation changes in Single Page Applications by re-initializing the extension.
      * Ensures custom elements are present on the webpage after URL changes.
+     * Function will be called once after last trigger with 1000 ms delay
      */
     const debouncedEnhancedInitialization = debounceFunctionExecution(() => {
         logConCgp('[init] URL change detected. Attempting to initialize extension...');
         commenceExtensionInitialization(window.globalMaxExtensionConfig);
-    }, 1000); // Adjust the debounce delay as needed
-
+    }, 1000);
     /**
      * Observes changes to the URL in Single Page Applications and triggers a callback upon changes.
      * @param {Function} callback - The function to execute when a URL change is detected.
@@ -276,14 +276,22 @@ function commenceExtensionInitialization(configurationObject) {
         urlChangeObserver.observe(document, { subtree: true, childList: true });
     }
 
+
+
+    
+    /*
+    Initialization starts here!
+    */
+    // Initiate the appropriate extension script based on the active website
+    selectAndInitializeAppropriateExtensionScript();
+
     // Begin monitoring URL changes to handle SPA navigation
     monitorUrlChangesInSinglePageApplications(() => {
         logConCgp('[init] Path change detected. Re-initializing script...');
         debouncedEnhancedInitialization();
     });
 
-    // Initiate the appropriate extension script based on the active website
-    selectAndInitializeAppropriateExtensionScript();
+
 }
 
 
