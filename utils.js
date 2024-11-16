@@ -6,21 +6,27 @@
 
 window.MaxExtensionUtils = {
     // Utility function to wait for an element to be present in the DOM
-    waitForElement: function (selector, callback, maxAttempts = 50) {
+    waitForElements: function (selectors, callback, maxAttempts = 50) {
+        if (!Array.isArray(selectors)) {
+            selectors = [selectors]; // Ensure selectors is an array
+        }
         let attempts = 0;
         const observer = new MutationObserver((mutations, obs) => {
-            const element = document.querySelector(selector);
-            if (element) {
+            for (const selector of selectors) {
+                const element = document.querySelector(selector);
+                if (element) {
+                    obs.disconnect();
+                    callback(element);
+                    return;
+                }
+            }
+            if (++attempts >= maxAttempts) {
                 obs.disconnect();
-                callback(element);
-            } else if (++attempts >= maxAttempts) {
-                obs.disconnect();
-                logConCgp(`[utils] Element ${selector} not found after ${maxAttempts} attempts.`);
+                logConCgp(`[utils] Elements ${selectors.join(', ')} not found after ${maxAttempts} attempts.`);
             }
         });
         observer.observe(document, { childList: true, subtree: true });
     },
-
     // Function to simulate a comprehensive click event
     simulateClick: function (element) {
         const event = new MouseEvent('click', {
@@ -123,14 +129,16 @@ class InjectionTargetsOnWebsite {
                 container: 'div.flex.w-full.flex-col:has(textarea)',
                 sendButton: [
                     'button[data-testid="send-button"]',
-                    'button.send-button-class', 
+                    'button.send-button-class',
                     'button[type="submit"]'
                 ],
                 editor: '#prompt-textarea',
                 buttonsContainerId: 'chatgpt-custom-buttons-container'
             },
             Claude: { // New Website Entry
-                container: 'div.flex.flex-col.bg-bg-000.rounded-2xl', 
+                container: ['div.flex.flex-col.bg-bg-000.rounded-2xl'
+                    , 'div.flex.flex-col.bg-bg-000.gap-1\\.5'
+                ],
                 sendButton: 'button[aria-label="Send Message"]',
                 editor: 'div.ProseMirror[contenteditable="true"]',
                 buttonsContainerId: 'claude-custom-buttons-container'

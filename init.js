@@ -128,7 +128,7 @@ function commenceExtensionInitialization(configurationObject) {
         let targetFound = false;
 
         // Define the selector to wait for using InjectionTargetsOnWebsite
-        const selector1 = window.InjectionTargetsOnWebsite.selectors.container;
+        const selectors = window.InjectionTargetsOnWebsite.selectors.container;
         // A unified callback funciton will search for div where we will insert stuff and 
         const handleTargetDiv = (targetDiv) => {
             if (!targetFound) {
@@ -147,7 +147,7 @@ function commenceExtensionInitialization(configurationObject) {
         };
 
         // Wait for the target element to appear in the DOM and then handle it
-        MaxExtensionUtils.waitForElement(selector1, handleTargetDiv);
+        MaxExtensionUtils.waitForElements(selectors, handleTargetDiv);
     }
 
     /**
