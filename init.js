@@ -3,7 +3,7 @@
 //
 // Documentation:
 /**
- * This file serves as the main initializer for the ChatGPT extension. 
+ * This file serves as the main initializer for the ChatGPT Chrome extension. 
  * It retrieves configuration data from the service worker and identifies 
  * the active website, such as ChatGPT or Claude. Based on the site, it 
  * loads the appropriate extension scripts and applies necessary settings. 
@@ -20,6 +20,10 @@
  * Ensure `buttons.js` and `buttons-init.js` are loaded before this script to 
  * enable button functionalities. The script starts the initialization process 
  * automatically upon loading. 
+ * 
+ * Depandencies:
+ * This file is main script, it therefore depends on all othter helper files that are content scripts. Popup page scripts are separate.
+ * 
  */
 //Instructions for AI: do not remove comments!  MUST NOT REMOVE COMMENTS. This one too!
 // ALL CODE IN ALL FILES MUST USE logConCgp FOR LOGGING. NO CONSOLE LOGGING.
@@ -30,6 +34,7 @@
  * This funcition is called first.
  */
 function publicStaticVoidMain() {
+    // The message intended for the service worker config.js
     chrome.runtime.sendMessage({ type: 'getConfig' }, (response) => {
         if (response && response.config) {
             logConCgp('[init] Configuration successfully loaded:', response.config);
