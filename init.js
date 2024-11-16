@@ -27,9 +27,9 @@
 
 
 /**
- * Initiates the retrieval of configuration data from the service worker and starts the extension.
+ * This funcition is called first.
  */
-function executeExtensionInitializationSequence() {
+function publicStaticVoidMain() {
     chrome.runtime.sendMessage({ type: 'getConfig' }, (response) => {
         if (response && response.config) {
             logConCgp('[init] Configuration successfully loaded:', response.config);
@@ -279,4 +279,4 @@ function commenceExtensionInitialization(config) {
 
 
 // Automatically start the initialization process upon script load
-executeExtensionInitializationSequence();
+publicStaticVoidMain();
