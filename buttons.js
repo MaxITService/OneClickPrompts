@@ -1,20 +1,25 @@
-// buttons.js
-// Version: 1.0
-//
-// Documentation:
-// This file manages the creation and functionality of custom send buttons within the ChatGPT extension.
-// It provides utility functions to create buttons based on configuration and assigns keyboard shortcuts where applicable.
-//
-// Functions:
-// - createCustomSendButton: Creates a custom send button based on provided configuration.
-// - determineShortcutKeyForButtonIndex: Assigns a shortcut key to a button based on its index.
-//
-// Usage:
-// Ensure that `buttons-init.js` and `init.js` are loaded before this script to utilize button functionalities.
-// This script should be included in the `content_scripts` section of the manifest to be injected into the target pages.
-// Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS. This one too!
-'use strict';
+/* buttons.js
+   Version: 1.0
 
+   Documentation:
+
+   This file is a dependency. Desinged to host helper functions for init.js. Manages the creation and functionality of custom send buttons within the ChatGPT extension.
+   It provides utility functions to create buttons based on configuration and assigns keyboard shortcuts where applicable.
+
+   Functions:
+   - createCustomSendButton: Creates a custom send button based on provided configuration.
+   - determineShortcutKeyForButtonIndex: Assigns a shortcut key to a button based on its index.
+
+   Usage:
+   Ensure that `buttons-init.js` and `init.js` are loaded before this script to utilize button functionalities.
+   This script should be included in the `content_scripts` section of the manifest to be injected into the target pages.
+   
+   Depends on:
+   utils.js - object containting all selectors and identifiers
+   buttons-init.js - handles only some initializations.
+
+   Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS. This one too! */
+'use strict';
 /**
  * Namespace object containing functions related to creating and managing custom buttons.
  */
