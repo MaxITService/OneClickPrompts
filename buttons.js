@@ -83,13 +83,7 @@ window.MaxExtensionButtons = {
     }
 };
 
-/**
- * Handles the click event on a custom send button.
- * @param {Event} event - The click event object.
- * @param {string} customText - The custom text to be inserted.
- * @param {boolean} autoSend - Flag indicating whether to automatically send the message.
- */
-'use strict';
+// #region clickingbuttons - entry
 
 /**
  * Handles click events on custom send buttons across different supported sites.
@@ -128,8 +122,9 @@ function processCustomSendButtonClick(event, customText, autoSend) {
     }
 }
 
+// #endregion
 
-
+// #region ChatGPT
 function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
     // Prevent default button behavior
     event.preventDefault();
@@ -295,6 +290,9 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
         }, 100); // Interval set to 100 milliseconds
     }
 }
+
+// #endregion
+// #region Copilot-Only-Fucntions
 
 function processCopilotCustomSendButtonClick(event, customText, autoSend) {
     // Prevent default button behavior
@@ -492,9 +490,9 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
     }
 }
 
+// #endregion
 
-
-// THE LOWER SECITON IS FOR CLAUDE ONLY!
+// #region Claude-Only-Fucntions
 
 
 
@@ -823,3 +821,4 @@ const ClaudeEditorUtils = {
         }
     }
 };
+// #endregion
