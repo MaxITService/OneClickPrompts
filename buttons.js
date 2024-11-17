@@ -300,17 +300,19 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
     event.preventDefault();
     logConCgp('[buttons] Custom send button was clicked.');
 
-    const editorSelectors = window.InjectionTargetsOnWebsite.selectors.editors;
+    const injectionTargets = new InjectionTargetsOnWebsite();
+    const editorSelectors = injectionTargets.selectors.editors;
     let editorArea = null;
 
     // Iterate through editor selectors to find the editor area
-    editorSelectors.forEach((selector) => {
+    for (const selector of editorSelectors) {
         const foundEditor = document.querySelector(selector);
-        if (foundEditor && !editorArea) {
+        if (foundEditor) {
             editorArea = foundEditor;
             logConCgp('[buttons] Editor area found:', editorArea);
+            break;
         }
-    });
+    }
 
     // If editor area is not found, log and exit the function
     if (!editorArea) {
@@ -319,14 +321,27 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
     }
 
     /**
-     * Sets the value of the editor in a way that React recognizes.
+     * Determines if the editor is in its initial state (only placeholder text).
+     * @param {HTMLElement} element - The editor element.
+     * @returns {boolean} - True if in initial state, false otherwise.
+     */
+    function isEditorInInitialState(element) {
+        const placeholder = element.getAttribute('placeholder') || '';
+        const currentValue = element.value || '';
+        const isInitial = currentValue.trim() === '';
+        logConCgp('[buttons] Editor initial state check:', isInitial);
+        return isInitial;
+    }
+
+    /**
+     * Sets the value of the editor directly without simulating user events.
      * @param {HTMLElement} element - The editor element.
      * @param {string} text - The text to insert.
      */
-    function setEditorValue(element, text) {
+    function setEditorValueDirectly(element, text) {
         // Focus the editor to mimic user interaction
         element.focus();
-        logConCgp('[buttons] Editor focused.');
+        logConCgp('[buttons] Editor focused for setting value directly.');
 
         // Use the native value setter to update the value property
         const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
@@ -339,12 +354,12 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
         // Dispatch input event for React (or similar) to recognize the change
         const inputEvent = new Event('input', { bubbles: true });
         element.dispatchEvent(inputEvent);
-        logConCgp('[buttons] Input event dispatched.');
+        logConCgp('[buttons] Input event dispatched after setting value directly.');
 
         // Additionally, dispatch change event to cover more frameworks
         const changeEvent = new Event('change', { bubbles: true });
         element.dispatchEvent(changeEvent);
-        logConCgp('[buttons] Change event dispatched.');
+        logConCgp('[buttons] Change event dispatched after setting value directly.');
     }
 
     /**
@@ -352,7 +367,7 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
      * @returns {HTMLElement[]} Array of found send button elements.
      */
     function locateSendButtons() {
-        const sendButtonSelectors = window.InjectionTargetsOnWebsite.selectors.sendButtons;
+        const sendButtonSelectors = injectionTargets.selectors.sendButtons;
         const sendButtons = [];
 
         // Iterate through send button selectors to find all matching buttons
@@ -374,31 +389,6 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
     // Locate send buttons initially
     let originalSendButtons = locateSendButtons();
 
-    // If no send buttons are found, set up a MutationObserver to detect them
-    if (originalSendButtons.length === 0) {
-        logConCgp('[buttons] Send buttons not found initially. Setting up MutationObserver to detect them.');
-
-        const observer = new MutationObserver((mutations, obs) => {
-            originalSendButtons = locateSendButtons();
-            if (originalSendButtons.length > 0) {
-                handleSendButtons(originalSendButtons);
-                obs.disconnect();
-                logConCgp('[buttons] Send buttons detected and observer disconnected.');
-            } else {
-                logConCgp('[buttons] MutationObserver detected changes, but send buttons still not found.');
-            }
-        });
-
-        // Start observing the DOM for changes to detect send buttons
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-    } else {
-        // If send buttons are found, handle them immediately
-        handleSendButtons(originalSendButtons);
-    }
-
     /**
      * Handles the send buttons by inserting text and initiating auto-send if enabled.
      * @param {HTMLElement[]} sendButtons - Array of send button elements.
@@ -416,11 +406,15 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
             logConCgp('[buttons] Combined text to be inserted:', newText);
 
             // Insert the new text into the editor
-            setEditorValue(editorArea, newText);
+            setEditorValueDirectly(editorArea, newText);
 
             // Move cursor to the end after insertion
-            editorArea.setSelectionRange(newText.length, newText.length);
-            logConCgp('[buttons] Cursor moved to the end of the editor.');
+            if (typeof editorArea.setSelectionRange === 'function') {
+                editorArea.setSelectionRange(newText.length, newText.length);
+                logConCgp('[buttons] Cursor moved to the end of the editor.');
+            } else {
+                logConCgp('[buttons] setSelectionRange is not supported on this editor.');
+            }
 
             // Check if auto-send is enabled both globally and for this button
             if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
@@ -489,7 +483,93 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
             });
         }, 100); // Interval set to 100 milliseconds
     }
+
+    /**
+     * Sets the value of the editor in a way that React recognizes.
+     * @param {HTMLElement} element - The editor element.
+     * @param {string} text - The text to insert.
+     */
+    function setEditorValue(element, text) {
+        // Focus the editor to mimic user interaction
+        element.focus();
+        logConCgp('[buttons] Editor focused for setting value.');
+    
+        // Use the native value setter to update the value property
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+            Object.getPrototypeOf(element),
+            'value'
+        ).set;
+        nativeInputValueSetter.call(element, text);
+        logConCgp('[buttons] Native setter called with text:', text);
+    
+        // Dispatch input event for React (or similar) to recognize the change
+        const inputEvent = new Event('input', { bubbles: true });
+        element.dispatchEvent(inputEvent);
+        logConCgp('[buttons] Input event dispatched after setting value.');
+    
+        // Additionally, dispatch change event to cover more frameworks
+        const changeEvent = new Event('change', { bubbles: true });
+        element.dispatchEvent(changeEvent);
+        logConCgp('[buttons] Change event dispatched after setting value.');
+    }
+
+    /**
+     * Handles the entire process of inserting text and sending the message.
+     * This includes state detection, direct text insertion, and send button handling.
+     */
+    function handleMessageInsertion() {
+        const initialState = isEditorInInitialState(editorArea);
+
+        if (initialState) {
+            logConCgp('[buttons] Editor is in initial state. Inserting custom text directly.');
+
+            // Insert custom text directly to transition the editor to active state
+            setEditorValueDirectly(editorArea, customText);
+
+            // Move cursor to the end after insertion
+            if (typeof editorArea.setSelectionRange === 'function') {
+                editorArea.setSelectionRange(customText.length, customText.length);
+                logConCgp('[buttons] Cursor moved to the end of the editor after direct insertion.');
+            } else {
+                logConCgp('[buttons] setSelectionRange is not supported on this editor after direct insertion.');
+            }
+
+            // Locate send buttons after insertion
+            originalSendButtons = locateSendButtons();
+
+            if (originalSendButtons.length === 0) {
+                // If send buttons are still not found, set up a MutationObserver
+                logConCgp('[buttons] Send buttons not found after direct insertion. Setting up MutationObserver.');
+                const observer = new MutationObserver((mutations, obs) => {
+                    originalSendButtons = locateSendButtons();
+                    if (originalSendButtons.length > 0) {
+                        handleSendButtons(originalSendButtons);
+                        obs.disconnect();
+                        logConCgp('[buttons] Send buttons detected and observer disconnected.');
+                    } else {
+                        logConCgp('[buttons] MutationObserver detected changes, but send buttons still not found.');
+                    }
+                });
+
+                // Start observing the DOM for changes to detect send buttons
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                });
+            } else {
+                // If send buttons are found after insertion, handle them
+                handleSendButtons(originalSendButtons);
+            }
+        } else {
+            logConCgp('[buttons] Editor is already in active state. Proceeding with existing logic.');
+            handleSendButtons(originalSendButtons);
+        }
+    }
+
+    // Start the message insertion and sending process
+    handleMessageInsertion();
 }
+
 
 // #endregion
 
