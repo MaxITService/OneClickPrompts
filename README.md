@@ -11,7 +11,7 @@ Create and customize buttons for frequently used prompts or choose from pre-defi
 - **Customizable Buttons**: Easily create buttons with your go-to prompts.
 - **Profiles**: Organize buttons into profiles for different projects or contexts.
 - **Emoji Icons**: Assign emojis or custom characters to each button for easy recognition.
-- **Auto-send Option**: Choose to send messages instantly upon button click.
+- **Auto-send Option**: Choose to send messages instantly upon button click. Press shift to invert auto send behaviour.
 - **Keyboard Shortcuts**: Use Alt + [1-9] for quick button access.
 - **Separators**: Organize buttons visually with customizable separators.
 - **In-Browser Settings**: Manage everything directly in your browser.
@@ -32,7 +32,7 @@ Create and customize buttons for frequently used prompts or choose from pre-defi
 If anything doesn’t work, try reloading the browser. For persistent issues, reach out for support. The extension is designed to leave no trace upon uninstall.
 
 ## License
-**Do whatever you like** – just link back to me and possibly to a Chrome Web Store.
+**Do whatever you like** – just link back to me and possibly to a Chrome Web Store. If you have improvements, please do pull request!
 
 ---
 
