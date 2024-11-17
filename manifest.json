@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ChatGPT Quick Buttons for your text",
-  "description": "Insert your custom prompts into ChatGPT, 1 click.",
+  "description": "Insert your custom prompts into ChatGPT, Claude, Copilot, 1 click.",
   "version": "0.0.0.5",
   
   "icons": {
