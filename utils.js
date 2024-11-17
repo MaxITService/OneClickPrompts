@@ -101,7 +101,7 @@ class InjectionTargetsOnWebsite {
 
     /**
      * Identifies the active website based on the current hostname.
-     * @returns {string} - The name of the active website (e.g., 'ChatGPT', 'Claude', 'Unknown').
+     * @returns {string} - The name of the active website (e.g., 'ChatGPT', 'Claude', 'Copilot', 'Unknown').
      */
     identifyActiveWebsite() {
         const currentHostname = window.location.hostname;
@@ -111,6 +111,9 @@ class InjectionTargetsOnWebsite {
         }
         else if (currentHostname.includes('claude.ai') || currentHostname.includes('another-claude-domain.com')) { // Update with actual hostname(s)
             return 'Claude';
+        }
+        else if (currentHostname.includes('github.com') || currentHostname.includes('copilot')) {
+            return 'Copilot';
         }
         // Add additional website detections here
         else {
@@ -144,11 +147,21 @@ class InjectionTargetsOnWebsite {
                 editors: ['div.ProseMirror[contenteditable="true"]'],
                 buttonsContainerId: 'claude-custom-buttons-container'
             },
+            Copilot: {
+                containers: ['div.shadow-composer-input'],
+                sendButtons: [
+                    'button[title="Submit message"]',
+                    'button.rounded-submitButton'
+                ],
+                editors: ['textarea#userInput'],
+                buttonsContainerId: 'copilot-custom-buttons-container'
+            },
             // TODO: Add selectors for other supported websites
         };
         return selectors[site] || {};
     }
 }
+
 
 // Instantiate and expose the InjectionTargetsOnWebsite globally
 window.InjectionTargetsOnWebsite = new InjectionTargetsOnWebsite();

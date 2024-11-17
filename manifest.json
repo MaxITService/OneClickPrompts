@@ -33,7 +33,8 @@
       "matches": [
         "https://chat.openai.com/*",
         "https://chatgpt.com/*",
-        "https://claude.ai/*"
+        "https://claude.ai/*",
+        "https://copilot.microsoft.com/*"
       ],
       "js": [
         "log.js",

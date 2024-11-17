@@ -96,7 +96,7 @@ window.MaxExtensionButtons = {
 function processCustomSendButtonClick(event, customText, autoSend) {
     event.preventDefault();
     logConCgp('[buttons] Custom send button clicked');
-    
+
     // Get the active site from the injection targets
     const activeSite = window.InjectionTargetsOnWebsite.activeSite;
     logConCgp('[buttons] Active site:', activeSite);
@@ -108,7 +108,10 @@ function processCustomSendButtonClick(event, customText, autoSend) {
             break;
         case 'ChatGPT':
             processChatGPTCustomSendButtonClick(event, customText, autoSend);
-            break;    
+            break;
+        case 'Copilot':
+            processCopilotCustomSendButtonClick(event, customText, autoSend);
+            break;
         default:
             logConCgp('[buttons] Unsupported site:', activeSite);
     }
@@ -282,7 +285,171 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
     }
 }
 
+function processCopilotCustomSendButtonClick(event, customText, autoSend) {
+    // Prevent default button behavior
+    event.preventDefault();
+    logConCgp('[buttons] Custom send button was clicked.');
 
+    const editorSelectors = window.InjectionTargetsOnWebsite.selectors.editors;
+    let editorArea = null;
+
+    // Iterate through editor selectors to find the editor area
+    editorSelectors.forEach((selector) => {
+        const foundEditor = document.querySelector(selector);
+        if (foundEditor && !editorArea) {
+            editorArea = foundEditor;
+            logConCgp('[buttons] Editor area found:', editorArea);
+        }
+    });
+
+    // If editor area is not found, log and exit the function
+    if (!editorArea) {
+        logConCgp('[buttons] Editor area not found. Unable to proceed.');
+        return;
+    }
+
+    /**
+     * Locates all send buttons based on the provided selectors.
+     * @returns {HTMLElement[]} Array of found send button elements.
+     */
+    function locateSendButtons() {
+        const sendButtonSelectors = window.InjectionTargetsOnWebsite.selectors.sendButtons;
+        const sendButtons = [];
+
+        // Iterate through send button selectors to find all matching buttons
+        sendButtonSelectors.forEach((selector) => {
+            const button = document.querySelector(selector);
+            if (button) {
+                logConCgp('[buttons] Send button located using selector:', selector);
+                sendButtons.push(button);
+            }
+        });
+
+        if (sendButtons.length === 0) {
+            logConCgp('[buttons] Send buttons not found using dynamic selectors.');
+        }
+
+        return sendButtons;
+    }
+
+    // Locate send buttons initially
+    let originalSendButtons = locateSendButtons();
+
+    // If no send buttons are found, set up a MutationObserver to detect them
+    if (originalSendButtons.length === 0) {
+        logConCgp('[buttons] Send buttons not found initially. Setting up MutationObserver to detect them.');
+
+        const observer = new MutationObserver((mutations, obs) => {
+            originalSendButtons = locateSendButtons();
+            if (originalSendButtons.length > 0) {
+                handleSendButtons(originalSendButtons);
+                obs.disconnect();
+                logConCgp('[buttons] Send buttons detected and observer disconnected.');
+            } else {
+                logConCgp('[buttons] MutationObserver detected changes, but send buttons still not found.');
+            }
+        });
+
+        // Start observing the DOM for changes to detect send buttons
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    } else {
+        // If send buttons are found, handle them immediately
+        handleSendButtons(originalSendButtons);
+    }
+
+    /**
+     * Handles the send buttons by inserting text and initiating auto-send if enabled.
+     * @param {HTMLElement[]} sendButtons - Array of send button elements.
+     */
+    function handleSendButtons(sendButtons) {
+        if (sendButtons.length > 0) {
+            logConCgp('[buttons] Send buttons are available. Proceeding with sending message.');
+
+            // Retrieve existing text in the editor
+            const existingText = editorArea.innerText;
+            logConCgp('[buttons] Current text in editor:', existingText);
+
+            // Concatenate existing text with custom text exactly as provided
+            const newText = `${existingText}${customText}`;
+            logConCgp('[buttons] Combined text to be inserted:', newText);
+
+            // Insert the new text into the editor
+            MaxExtensionUtils.insertTextIntoEditor(editorArea, newText);
+
+            // Move cursor to the end after insertion
+            MaxExtensionUtils.moveCursorToEnd(editorArea);
+
+            // Check if auto-send is enabled both globally and for this button
+            if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
+                logConCgp('[buttons] Auto-send is enabled. Starting auto-send process.');
+
+                // Start the auto-send process
+                startAutoSend(sendButtons, editorArea);
+            } else {
+                logConCgp('[buttons] Auto-send is disabled. Message will not be sent automatically.');
+            }
+        } else {
+            logConCgp('[buttons] Send buttons are not available to handle.');
+        }
+    }
+
+    /**
+     * Starts the auto-send interval to automatically click send buttons until the editor is empty.
+     * @param {HTMLElement[]} sendButtons - Array of send button elements.
+     * @param {HTMLElement} editor - The editor area element.
+     */
+    function startAutoSend(sendButtons, editor) {
+        // Prevent multiple auto-send intervals from running simultaneously
+        if (window.autoSendInterval) {
+            logConCgp('[auto-send] Auto-send is already running. Skipping initiation.');
+            return;
+        }
+
+        logConCgp('[auto-send] Starting auto-send interval to click send buttons every 100ms.');
+
+        window.autoSendInterval = setInterval(() => {
+            const currentText = editor.innerText.trim();
+            logConCgp('[auto-send] Current text in editor:', currentText);
+
+            // If editor is empty, stop the auto-send interval
+            if (currentText.length === 0) {
+                logConCgp('[auto-send] Editor is empty. Stopping auto-send interval.');
+                clearInterval(window.autoSendInterval);
+                window.autoSendInterval = null;
+                return;
+            }
+
+            // Attempt to locate send buttons again in case they have changed
+            const updatedSendButtons = locateSendButtons();
+
+            if (updatedSendButtons.length === 0) {
+                logConCgp('[auto-send] Send buttons not found during auto-send. Stopping auto-send interval.');
+                clearInterval(window.autoSendInterval);
+                window.autoSendInterval = null;
+                return;
+            }
+
+            // Click each send button found
+            updatedSendButtons.forEach((sendButton, index) => {
+                if (sendButton) {
+                    logConCgp(`[auto-send] Clicking send button ${index + 1}:`, sendButton);
+                    MaxExtensionUtils.simulateClick(sendButton);
+                    logConCgp('[auto-send] Send button clicked successfully.');
+
+                    // After a successful click, assume the message is sent and stop auto-send
+                    clearInterval(window.autoSendInterval);
+                    window.autoSendInterval = null;
+                    logConCgp('[auto-send] Auto-send interval stopped after successful send.');
+                } else {
+                    logConCgp('[auto-send] Send button not found during auto-send.');
+                }
+            });
+        }, 100); // Interval set to 100 milliseconds
+    }
+}
 
 
 // THE LOWER SECITON IS FOR CLAUDE ONLY!
@@ -299,7 +466,7 @@ function handleClaudeSite(customText, autoSend) {
 
     // First try to insert the text
     const insertionSuccessful = ClaudeEditorUtils.insertTextIntoClaudeEditor(customText);
-    
+
     if (!insertionSuccessful) {
         logConCgp('[Claude] Text insertion failed');
         return;
@@ -346,7 +513,7 @@ function handleClaudeSend() {
 
     // If not found, set up observer
     logConCgp('[Claude] Send button not found immediately, setting up observer');
-    
+
     const observer = new MutationObserver((mutations, obs) => {
         attempts++;
         const sendButton = findClaudeSendButton();
@@ -389,9 +556,9 @@ const ClaudeEditorUtils = {
      * @param {string} textToInsert - The text to insert into the editor
      * @returns {boolean} - Whether the insertion was successful
      */
-    insertTextIntoClaudeEditor: function(textToInsert) {
+    insertTextIntoClaudeEditor: function (textToInsert) {
         logConCgp('[ClaudeEditor] Starting text insertion process');
-        
+
         // Only proceed if we're on Claude
         if (window.InjectionTargetsOnWebsite.activeSite !== 'Claude') {
             logConCgp('[ClaudeEditor] Not on Claude site, aborting');
@@ -417,7 +584,7 @@ const ClaudeEditorUtils = {
      * Finds the editor element in the DOM
      * @returns {Element|null} - The found editor element or null
      */
-    findEditorElement: function() {
+    findEditorElement: function () {
         logConCgp('[ClaudeEditor] Searching for editor element');
 
         // First try to find the ProseMirror editor
@@ -451,7 +618,7 @@ const ClaudeEditorUtils = {
      * @param {Element} editorElement - The editor element to analyze
      * @returns {Object} - Object containing editor state information
      */
-    analyzeEditorState: function(editorElement) {
+    analyzeEditorState: function (editorElement) {
         const state = {
             hasPlaceholder: false,
             isEmpty: true,
@@ -463,16 +630,16 @@ const ClaudeEditorUtils = {
         try {
             // Check if element is actually editable
             state.isEditable = editorElement.getAttribute('contenteditable') === 'true';
-            
+
             // Determine element type
             state.elementType = editorElement.classList.contains('ProseMirror') ? 'prosemirror' : 'standard';
-            
+
             // Check for placeholder
             const paragraphElement = editorElement.querySelector('p');
             if (paragraphElement) {
-                state.hasPlaceholder = paragraphElement.classList.contains('is-empty') || 
-                                     paragraphElement.classList.contains('is-editor-empty');
-                
+                state.hasPlaceholder = paragraphElement.classList.contains('is-empty') ||
+                    paragraphElement.classList.contains('is-editor-empty');
+
                 // Check content
                 const textContent = paragraphElement.textContent.trim();
                 state.isEmpty = !textContent;
@@ -494,9 +661,9 @@ const ClaudeEditorUtils = {
      * @param {Object} editorState - The current editor state
      * @returns {boolean} - Whether the insertion was successful
      */
-    performTextInsertion: function(editorElement, textToInsert, editorState) {
+    performTextInsertion: function (editorElement, textToInsert, editorState) {
         logConCgp('[ClaudeEditor] Attempting text insertion');
-        
+
         try {
             if (editorState.elementType === 'prosemirror') {
                 return this.handleProseMirrorInsertion(editorElement, textToInsert, editorState);
@@ -516,7 +683,7 @@ const ClaudeEditorUtils = {
      * @param {Object} editorState - The current editor state
      * @returns {boolean} - Whether the insertion was successful
      */
-    handleProseMirrorInsertion: function(editorElement, textToInsert, editorState) {
+    handleProseMirrorInsertion: function (editorElement, textToInsert, editorState) {
         logConCgp('[ClaudeEditor] Handling ProseMirror insertion');
 
         try {
@@ -524,7 +691,7 @@ const ClaudeEditorUtils = {
             if (editorState.hasPlaceholder) {
                 logConCgp('[ClaudeEditor] Editor has placeholder, focusing first');
                 editorElement.focus();
-                
+
                 // Small delay to allow focus to take effect
                 setTimeout(() => {
                     this.insertTextIntoParagraph(editorElement, textToInsert);
@@ -554,12 +721,12 @@ const ClaudeEditorUtils = {
      * @param {Object} editorState - The current editor state
      * @returns {boolean} - Whether the insertion was successful
      */
-    handleStandardInsertion: function(editorElement, textToInsert, editorState) {
+    handleStandardInsertion: function (editorElement, textToInsert, editorState) {
         logConCgp('[ClaudeEditor] Handling standard insertion');
 
         try {
             const paragraph = editorElement.querySelector('p') || editorElement;
-            
+
             // Clear placeholder if present
             if (editorState.hasPlaceholder) {
                 logConCgp('[ClaudeEditor] Clearing placeholder');
@@ -569,7 +736,7 @@ const ClaudeEditorUtils = {
             // Insert the text
             const textNode = document.createTextNode(textToInsert);
             paragraph.appendChild(textNode);
-            
+
             logConCgp('[ClaudeEditor] Text inserted successfully');
             return true;
         } catch (error) {
@@ -584,7 +751,7 @@ const ClaudeEditorUtils = {
      * @param {string} textToInsert - The text to insert
      * @returns {boolean} - Whether the insertion was successful
      */
-    insertTextIntoParagraph: function(editorElement, textToInsert) {
+    insertTextIntoParagraph: function (editorElement, textToInsert) {
         try {
             // Find or create paragraph
             let paragraph = editorElement.querySelector('p');
@@ -602,10 +769,10 @@ const ClaudeEditorUtils = {
             // Insert text
             const textNode = document.createTextNode(textToInsert);
             paragraph.appendChild(textNode);
-            
+
             // Trigger input event to notify editor of changes
             editorElement.dispatchEvent(new Event('input', { bubbles: true }));
-            
+
             logConCgp('[ClaudeEditor] Text inserted into paragraph successfully');
             return true;
         } catch (error) {
