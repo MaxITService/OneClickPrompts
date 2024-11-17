@@ -126,21 +126,22 @@ class InjectionTargetsOnWebsite {
     getSelectorsForSite(site) {
         const selectors = {
             ChatGPT: {
-                container: 'div.flex.w-full.flex-col:has(textarea)',
-                sendButton: [
+                containers: ['div.flex.w-full.flex-col:has(textarea)'],
+                sendButtons: [
                     'button[data-testid="send-button"]',
                     'button.send-button-class',
                     'button[type="submit"]'
                 ],
-                editor: '#prompt-textarea',
+                editors: ['#prompt-textarea'],
                 buttonsContainerId: 'chatgpt-custom-buttons-container'
             },
-            Claude: { // New Website Entry
-                container: ['div.flex.flex-col.bg-bg-000.rounded-2xl'
-                    , 'div.flex.flex-col.bg-bg-000.gap-1\\.5'
+            Claude: {
+                containers: [
+                    'div.flex.flex-col.bg-bg-000.rounded-2xl',
+                    'div.flex.flex-col.bg-bg-000.gap-1\\.5'
                 ],
-                sendButton: 'button[aria-label="Send Message"]',
-                editor: 'div.ProseMirror[contenteditable="true"]',
+                sendButtons: ['button[aria-label="Send Message"]'],
+                editors: ['div.ProseMirror[contenteditable="true"]'],
                 buttonsContainerId: 'claude-custom-buttons-container'
             },
             // TODO: Add selectors for other supported websites

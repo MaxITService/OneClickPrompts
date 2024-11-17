@@ -89,64 +89,83 @@ function processCustomSendButtonClick(event, customText, autoSend) {
     event.preventDefault();
     logConCgp('[buttons] Custom send button was clicked.');
 
-    // Detect the editor area using dynamic selector
-    const editorArea = document.querySelector(window.InjectionTargetsOnWebsite.selectors.editor); // Dynamic selector
-    if (editorArea) {
-        logConCgp('[buttons] Editor area found:', editorArea);
-    } else {
+    const editorSelectors = window.InjectionTargetsOnWebsite.selectors.editors;
+    let editorArea = null;
+
+    // Iterate through editor selectors to find the editor area
+    editorSelectors.forEach((selector) => {
+        const foundEditor = document.querySelector(selector);
+        if (foundEditor && !editorArea) {
+            editorArea = foundEditor;
+            logConCgp('[buttons] Editor area found:', editorArea);
+        }
+    });
+
+    // If editor area is not found, log and exit the function
+    if (!editorArea) {
         logConCgp('[buttons] Editor area not found. Unable to proceed.');
         return;
     }
 
-
     /**
-     * Attempts to locate the send button using dynamic selectors from InjectionTargetsOnWebsite.
-     * Iterates through an array of selectors to find the first matching send button.
-     * 
-     * @returns {HTMLElement|null} - The send button element if found; otherwise, null.
+     * Locates all send buttons based on the provided selectors.
+     * @returns {HTMLElement[]} Array of found send button elements.
      */
-    function locateSendButton() {
-        // Retrieve the array of send button selectors from InjectionTargetsOnWebsite
-        const sendButtonSelectors = window.InjectionTargetsOnWebsite.selectors.sendButton;
+    function locateSendButtons() {
+        const sendButtonSelectors = window.InjectionTargetsOnWebsite.selectors.sendButtons;
+        const sendButtons = [];
 
-        // Check if sendButtonSelectors is an array
-        if (Array.isArray(sendButtonSelectors)) {
-            // Iterate through each selector to find the send button
-            for (const selector of sendButtonSelectors) {
-                const button = document.querySelector(selector);
-                if (button) {
-                    logConCgp('[buttons] Send button located using selector:', selector);
-                    return button;
-                }
-            }
-        }
-        // If sendButtonSelectors is a single string selector
-        else if (typeof sendButtonSelectors === 'string') {
-            const button = document.querySelector(sendButtonSelectors);
+        // Iterate through send button selectors to find all matching buttons
+        sendButtonSelectors.forEach((selector) => {
+            const button = document.querySelector(selector);
             if (button) {
-                logConCgp('[buttons] Send button located using selector:', sendButtonSelectors);
-                return button;
+                logConCgp('[buttons] Send button located using selector:', selector);
+                sendButtons.push(button);
             }
+        });
+
+        if (sendButtons.length === 0) {
+            logConCgp('[buttons] Send buttons not found using dynamic selectors.');
         }
 
-        // If no send button is found using the provided selectors
-        logConCgp('[buttons] Send button not found using dynamic selectors.');
-        return null;
+        return sendButtons;
     }
 
-    // Locate the send button
-    let originalSendButton = locateSendButton();
-    if (!originalSendButton) {
-        logConCgp('[buttons] Send button not found initially. Setting up MutationObserver to detect it.');
+    // Locate send buttons initially
+    let originalSendButtons = locateSendButtons();
+
+    // If no send buttons are found, set up a MutationObserver to detect them
+    if (originalSendButtons.length === 0) {
+        logConCgp('[buttons] Send buttons not found initially. Setting up MutationObserver to detect them.');
+
+        const observer = new MutationObserver((mutations, obs) => {
+            originalSendButtons = locateSendButtons();
+            if (originalSendButtons.length > 0) {
+                handleSendButtons(originalSendButtons);
+                obs.disconnect();
+                logConCgp('[buttons] Send buttons detected and observer disconnected.');
+            } else {
+                logConCgp('[buttons] MutationObserver detected changes, but send buttons still not found.');
+            }
+        });
+
+        // Start observing the DOM for changes to detect send buttons
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    } else {
+        // If send buttons are found, handle them immediately
+        handleSendButtons(originalSendButtons);
     }
 
     /**
-     * Handles the send button click logic.
-     * @param {HTMLElement} sendButton - The send button element.
+     * Handles the send buttons by inserting text and initiating auto-send if enabled.
+     * @param {HTMLElement[]} sendButtons - Array of send button elements.
      */
-    function handleSendButton(sendButton) {
-        if (sendButton) {
-            logConCgp('[buttons] Send button is available. Proceeding with sending message.');
+    function handleSendButtons(sendButtons) {
+        if (sendButtons.length > 0) {
+            logConCgp('[buttons] Send buttons are available. Proceeding with sending message.');
 
             // Retrieve existing text in the editor
             const existingText = editorArea.innerText;
@@ -162,65 +181,76 @@ function processCustomSendButtonClick(event, customText, autoSend) {
             // Move cursor to the end after insertion
             MaxExtensionUtils.moveCursorToEnd(editorArea);
 
-            // Auto-send the message if global auto-send is enabled and this button's config allows it
+            // Check if auto-send is enabled both globally and for this button
             if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
-                logConCgp('[buttons] Starting auto-send interval to click send button every 100ms until editor is empty.');
+                logConCgp('[buttons] Auto-send is enabled. Starting auto-send process.');
 
-                // Define the interval ID so it can be cleared later
-                const sendInterval = setInterval(() => {
-                    const currentText = editorArea.innerText.trim();
-                    logConCgp('[auto-send] Current text in editor:', currentText);
-
-                    if (currentText.length === 0) {
-                        logConCgp('[auto-send] Editor is empty. Stopping auto-send interval.');
-                        clearInterval(sendInterval);
-                        return;
-                    }
-
-                    // I SPENT FIVE HOURS DETECTING THAT THIS BUTTON CHANGES AND NEEDS TO BE RE-DETECTED. 
-                    // do not delete above comment.
-                    originalSendButton = locateSendButton();
-                    if (originalSendButton) {
-                        logConCgp('[buttons] Original send button located:', originalSendButton);
-                        logConCgp('[auto-send] Attempting to click the send button.');
-                        MaxExtensionUtils.simulateClick(originalSendButton);
-                        logConCgp('[auto-send] Original send button was clicked automatically.');
-                    } else {
-                        logConCgp('[buttons] Original send button not found. Unable to proceed.');
-                        clearInterval(sendInterval);
-                    }
-                }, 100); // Interval set to 100 milliseconds
+                // Start the auto-send process
+                startAutoSend(sendButtons, editorArea);
             } else {
                 logConCgp('[buttons] Auto-send is disabled. Message will not be sent automatically.');
             }
         } else {
-            logConCgp('[buttons] Send button is not available to handle.');
+            logConCgp('[buttons] Send buttons are not available to handle.');
         }
     }
 
-    // If the send button is not found, set up a MutationObserver to detect when it appears
-    if (!originalSendButton) {
-        const observer = new MutationObserver((mutations, obs) => {
-            originalSendButton = locateSendButton();
-            if (originalSendButton) {
-                handleSendButton(originalSendButton);
-                obs.disconnect(); // Stop observing once the button is found
-                logConCgp('[buttons] Send button detected and observer disconnected.');
-            } else {
-                logConCgp('[buttons] MutationObserver detected changes, but send button still not found.');
-            }
-        });
+    /**
+     * Starts the auto-send interval to automatically click send buttons until the editor is empty.
+     * @param {HTMLElement[]} sendButtons - Array of send button elements.
+     * @param {HTMLElement} editor - The editor area element.
+     */
+    function startAutoSend(sendButtons, editor) {
+        // Prevent multiple auto-send intervals from running simultaneously
+        if (window.autoSendInterval) {
+            logConCgp('[auto-send] Auto-send is already running. Skipping initiation.');
+            return;
+        }
 
-        // Start observing the DOM for changes
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-    } else {
-        // If send button is found, handle it immediately
-        handleSendButton(originalSendButton);
+        logConCgp('[auto-send] Starting auto-send interval to click send buttons every 100ms.');
+
+        window.autoSendInterval = setInterval(() => {
+            const currentText = editor.innerText.trim();
+            logConCgp('[auto-send] Current text in editor:', currentText);
+
+            // If editor is empty, stop the auto-send interval
+            if (currentText.length === 0) {
+                logConCgp('[auto-send] Editor is empty. Stopping auto-send interval.');
+                clearInterval(window.autoSendInterval);
+                window.autoSendInterval = null;
+                return;
+            }
+
+            // Attempt to locate send buttons again in case they have changed
+            const updatedSendButtons = locateSendButtons();
+
+            if (updatedSendButtons.length === 0) {
+                logConCgp('[auto-send] Send buttons not found during auto-send. Stopping auto-send interval.');
+                clearInterval(window.autoSendInterval);
+                window.autoSendInterval = null;
+                return;
+            }
+
+            // Click each send button found
+            updatedSendButtons.forEach((sendButton, index) => {
+                if (sendButton) {
+                    logConCgp(`[auto-send] Clicking send button ${index + 1}:`, sendButton);
+                    MaxExtensionUtils.simulateClick(sendButton);
+                    logConCgp('[auto-send] Send button clicked successfully.');
+
+                    // After a successful click, assume the message is sent and stop auto-send
+                    clearInterval(window.autoSendInterval);
+                    window.autoSendInterval = null;
+                    logConCgp('[auto-send] Auto-send interval stopped after successful send.');
+                } else {
+                    logConCgp('[auto-send] Send button not found during auto-send.');
+                }
+            });
+        }, 100); // Interval set to 100 milliseconds
     }
 }
+
+
 
 /**
  * Creates and appends custom send buttons to the specified container.

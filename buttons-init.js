@@ -77,7 +77,8 @@ window.MaxExtensionButtonsInit = {
         }
 
         const customElementsContainer = document.createElement('div');
-        customElementsContainer.id = window.InjectionTargetsOnWebsite.selectors.buttonsContainerId; // Dynamic ID
+        // This should be created already by 
+        customElementsContainer.id = window.InjectionTargetsOnWebsite.selectors.buttonsContainerId; // where to insert buttons
         customElementsContainer.style.cssText = `
             display: flex;
             justify-content: flex-start;

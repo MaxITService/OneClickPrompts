@@ -128,7 +128,7 @@ function commenceExtensionInitialization(configurationObject) {
         let targetFound = false;
 
         // Define the selector to wait for using InjectionTargetsOnWebsite
-        const selectors = window.InjectionTargetsOnWebsite.selectors.container;
+        const selectors = window.InjectionTargetsOnWebsite.selectors.containers;
         // A unified callback funciton will search for div where we will insert stuff and 
         const handleTargetDiv = (targetDiv) => {
             if (!targetFound) {
