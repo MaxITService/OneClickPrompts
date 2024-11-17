@@ -309,19 +309,32 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
     }
 
     /**
-     * Sets the value of the editor and dispatches the necessary events.
+     * Sets the value of the editor in a way that React recognizes.
      * @param {HTMLElement} element - The editor element.
      * @param {string} text - The text to insert.
      */
     function setEditorValue(element, text) {
-        // Set the value
-        element.value = text;
+        // Focus the editor to mimic user interaction
+        element.focus();
+        logConCgp('[buttons] Editor focused.');
 
-        // Dispatch input event for React to recognize the change
+        // Use the native value setter to update the value property
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+            Object.getPrototypeOf(element),
+            'value'
+        ).set;
+        nativeInputValueSetter.call(element, text);
+        logConCgp('[buttons] Native setter called with text:', text);
+
+        // Dispatch input event for React (or similar) to recognize the change
         const inputEvent = new Event('input', { bubbles: true });
         element.dispatchEvent(inputEvent);
+        logConCgp('[buttons] Input event dispatched.');
 
-        logConCgp('[buttons] Text inserted into editor:', text);
+        // Additionally, dispatch change event to cover more frameworks
+        const changeEvent = new Event('change', { bubbles: true });
+        element.dispatchEvent(changeEvent);
+        logConCgp('[buttons] Change event dispatched.');
     }
 
     /**
@@ -385,7 +398,7 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
             logConCgp('[buttons] Send buttons are available. Proceeding with sending message.');
 
             // Retrieve existing text in the editor
-            const existingText = editorArea.value; // Use 'value' instead of 'innerText'
+            const existingText = editorArea.value || ''; // Use 'value' instead of 'innerText'
             logConCgp('[buttons] Current text in editor:', existingText);
 
             // Concatenate existing text with custom text exactly as provided
@@ -396,8 +409,8 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
             setEditorValue(editorArea, newText);
 
             // Move cursor to the end after insertion
-            editorArea.focus();
-            editorArea.setSelectionRange(editorArea.value.length, editorArea.value.length);
+            editorArea.setSelectionRange(newText.length, newText.length);
+            logConCgp('[buttons] Cursor moved to the end of the editor.');
 
             // Check if auto-send is enabled both globally and for this button
             if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
@@ -467,6 +480,7 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
         }, 100); // Interval set to 100 milliseconds
     }
 }
+
 
 
 // THE LOWER SECITON IS FOR CLAUDE ONLY!
@@ -798,9 +812,3 @@ const ClaudeEditorUtils = {
         }
     }
 };
-/**
- * Creates and appends custom send buttons to the specified container.
- * This function has been moved to `buttons-init.js` to enhance modularity.
- * @param {HTMLElement} container - The DOM element to which custom buttons will be appended.
- */
-// Function moved to buttons-init.js
