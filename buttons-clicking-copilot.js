@@ -2,6 +2,12 @@
 // This file is a dependency for buttons.js. It provides functions to handle the send button clicking process for Copilot.
 'use strict';
 
+/**
+ * Processes the custom send button click for Copilot, handling both manual and autosend functionalities.
+ * @param {Event} event - The click event triggered by the send button.
+ * @param {string} customText - The custom text to be sent.
+ * @param {boolean} autoSend - Flag indicating whether autosend is enabled.
+ */
 function processCopilotCustomSendButtonClick(event, customText, autoSend) {
     // Prevent default button behavior
     event.preventDefault();
@@ -98,9 +104,11 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
 
     /**
      * Handles the send buttons by inserting text and initiating auto-send if enabled.
+     * Operates on only the first send button to prevent duplicate sends.
      * @param {HTMLElement[]} sendButtons - Array of send button elements.
      */
     function handleSendButtons(sendButtons) {
+        logConCgp('[buttons] handleSendButtons called.');
         if (sendButtons.length > 0) {
             logConCgp('[buttons] Send buttons are available. Proceeding with sending message.');
 
@@ -127,8 +135,8 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
             if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
                 logConCgp('[buttons] Auto-send is enabled. Starting auto-send process.');
 
-                // Start the auto-send process
-                startAutoSend(sendButtons, editorArea);
+                // Use only the first send button
+                startAutoSend([sendButtons[0]], editorArea);
             } else {
                 logConCgp('[buttons] Auto-send is disabled. Message will not be sent automatically.');
             }
@@ -139,17 +147,20 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
 
     /**
      * Starts the auto-send interval to automatically click send buttons until the editor is empty.
+     * Ensures only one interval runs at a time and clicks only the first send button.
      * @param {HTMLElement[]} sendButtons - Array of send button elements.
      * @param {HTMLElement} editor - The editor area element.
      */
     function startAutoSend(sendButtons, editor) {
+        logConCgp('[auto-send] startAutoSend called.');
+
         // Prevent multiple auto-send intervals from running simultaneously
         if (window.autoSendInterval) {
             logConCgp('[auto-send] Auto-send is already running. Skipping initiation.');
             return;
         }
 
-        logConCgp('[auto-send] Starting auto-send interval to click send buttons every 100ms.');
+        logConCgp('[auto-send] Starting auto-send interval to click send button every 100ms.');
 
         window.autoSendInterval = setInterval(() => {
             const currentText = editor.value.trim(); // Use 'value' instead of 'innerText'
@@ -167,27 +178,26 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
             const updatedSendButtons = locateSendButtons();
 
             if (updatedSendButtons.length === 0) {
-                logConCgp('[auto-send] Send buttons not found during auto-send. Stopping auto-send interval.');
+                logConCgp('[auto-send] Send button not found during auto-send. Stopping auto-send interval.');
                 clearInterval(window.autoSendInterval);
                 window.autoSendInterval = null;
                 return;
             }
 
-            // Click each send button found
-            updatedSendButtons.forEach((sendButton, index) => {
-                if (sendButton) {
-                    logConCgp(`[auto-send] Clicking send button ${index + 1}:`, sendButton);
-                    sendButton.click(); // Trigger the click event
-                    logConCgp('[auto-send] Send button clicked successfully.');
+            // Click only the first send button found
+            const sendButton = updatedSendButtons[0];
+            if (sendButton) {
+                logConCgp('[auto-send] Clicking send button:', sendButton);
+                sendButton.click(); // Trigger the click event
+                logConCgp('[auto-send] Send button clicked successfully.');
 
-                    // After a successful click, assume the message is sent and stop auto-send
-                    clearInterval(window.autoSendInterval);
-                    window.autoSendInterval = null;
-                    logConCgp('[auto-send] Auto-send interval stopped after successful send.');
-                } else {
-                    logConCgp('[auto-send] Send button not found during auto-send.');
-                }
-            });
+                // After a successful click, assume the message is sent and stop auto-send
+                clearInterval(window.autoSendInterval);
+                window.autoSendInterval = null;
+                logConCgp('[auto-send] Auto-send interval stopped after successful send.');
+            } else {
+                logConCgp('[auto-send] Send button not found during auto-send.');
+            }
         }, 100); // Interval set to 100 milliseconds
     }
 
@@ -200,7 +210,7 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
         // Focus the editor to mimic user interaction
         element.focus();
         logConCgp('[buttons] Editor focused for setting value.');
-    
+
         // Use the native value setter to update the value property
         const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
             Object.getPrototypeOf(element),
@@ -208,12 +218,12 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
         ).set;
         nativeInputValueSetter.call(element, text);
         logConCgp('[buttons] Native setter called with text:', text);
-    
+
         // Dispatch input event for React (or similar) to recognize the change
         const inputEvent = new Event('input', { bubbles: true });
         element.dispatchEvent(inputEvent);
         logConCgp('[buttons] Input event dispatched after setting value.');
-    
+
         // Additionally, dispatch change event to cover more frameworks
         const changeEvent = new Event('change', { bubbles: true });
         element.dispatchEvent(changeEvent);
@@ -225,6 +235,7 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
      * This includes state detection, direct text insertion, and send button handling.
      */
     function handleMessageInsertion() {
+        logConCgp('[buttons] handleMessageInsertion called.');
         const initialState = isEditorInInitialState(editorArea);
 
         if (initialState) {
@@ -263,6 +274,17 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
                     childList: true,
                     subtree: true
                 });
+
+                // Set a timeout to disconnect the observer after a reasonable time to prevent it from running indefinitely
+                setTimeout(() => {
+                    if (window.autoSendInterval) {
+                        // If auto-send is already running, do not disconnect
+                        logConCgp('[buttons] MutationObserver timeout reached, but auto-send is running. Observer remains.');
+                        return;
+                    }
+                    observer.disconnect();
+                    logConCgp('[buttons] MutationObserver disconnected after timeout.');
+                }, 5000); // Adjust the timeout duration as needed (e.g., 5000ms = 5 seconds)
             } else {
                 // If send buttons are found after insertion, handle them
                 handleSendButtons(originalSendButtons);
@@ -276,4 +298,3 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
     // Start the message insertion and sending process
     handleMessageInsertion();
 }
-
