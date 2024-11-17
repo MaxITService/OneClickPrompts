@@ -86,6 +86,7 @@ window.MaxExtensionButtonsInit = {
             gap: 8px;
             padding: 8px;
             width: 100%;
+            z-index: 1000;
         `;
 
         // Append custom send buttons
