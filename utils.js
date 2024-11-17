@@ -150,10 +150,13 @@ class InjectionTargetsOnWebsite {
             Copilot: {
                 containers: ['div.shadow-composer-input'],
                 sendButtons: [
-                    'button[title="Submit message"]',
-                    'button.rounded-submitButton'
+                    'button.rounded-submitButton[title="Submit message"]',
+                    'button[type="button"][title="Submit message"]'
                 ],
-                editors: ['textarea#userInput'],
+                editors: [
+                    'div.shadow-composer-input textarea#userInput',
+                    'textarea#userInput[placeholder="Message Copilot"]'
+                ],
                 buttonsContainerId: 'copilot-custom-buttons-container'
             },
             // TODO: Add selectors for other supported websites

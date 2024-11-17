@@ -309,6 +309,22 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
     }
 
     /**
+     * Sets the value of the editor and dispatches the necessary events.
+     * @param {HTMLElement} element - The editor element.
+     * @param {string} text - The text to insert.
+     */
+    function setEditorValue(element, text) {
+        // Set the value
+        element.value = text;
+
+        // Dispatch input event for React to recognize the change
+        const inputEvent = new Event('input', { bubbles: true });
+        element.dispatchEvent(inputEvent);
+
+        logConCgp('[buttons] Text inserted into editor:', text);
+    }
+
+    /**
      * Locates all send buttons based on the provided selectors.
      * @returns {HTMLElement[]} Array of found send button elements.
      */
@@ -369,7 +385,7 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
             logConCgp('[buttons] Send buttons are available. Proceeding with sending message.');
 
             // Retrieve existing text in the editor
-            const existingText = editorArea.innerText;
+            const existingText = editorArea.value; // Use 'value' instead of 'innerText'
             logConCgp('[buttons] Current text in editor:', existingText);
 
             // Concatenate existing text with custom text exactly as provided
@@ -377,10 +393,11 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
             logConCgp('[buttons] Combined text to be inserted:', newText);
 
             // Insert the new text into the editor
-            MaxExtensionUtils.insertTextIntoEditor(editorArea, newText);
+            setEditorValue(editorArea, newText);
 
             // Move cursor to the end after insertion
-            MaxExtensionUtils.moveCursorToEnd(editorArea);
+            editorArea.focus();
+            editorArea.setSelectionRange(editorArea.value.length, editorArea.value.length);
 
             // Check if auto-send is enabled both globally and for this button
             if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
@@ -411,7 +428,7 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
         logConCgp('[auto-send] Starting auto-send interval to click send buttons every 100ms.');
 
         window.autoSendInterval = setInterval(() => {
-            const currentText = editor.innerText.trim();
+            const currentText = editor.value.trim(); // Use 'value' instead of 'innerText'
             logConCgp('[auto-send] Current text in editor:', currentText);
 
             // If editor is empty, stop the auto-send interval
@@ -436,7 +453,7 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
             updatedSendButtons.forEach((sendButton, index) => {
                 if (sendButton) {
                     logConCgp(`[auto-send] Clicking send button ${index + 1}:`, sendButton);
-                    MaxExtensionUtils.simulateClick(sendButton);
+                    sendButton.click(); // Trigger the click event
                     logConCgp('[auto-send] Send button clicked successfully.');
 
                     // After a successful click, assume the message is sent and stop auto-send
