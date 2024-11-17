@@ -7,7 +7,7 @@
 // Function to export the current profile as a JSON file
 function exportCurrentProfile() {
     logToConsole('Initiating profile export...');
-    
+
     try {
         // Serialize the currentProfile to JSON
         const profileJSON = JSON.stringify(currentProfile, null, 2);
@@ -58,7 +58,7 @@ function handleImportProfile(event) {
     logToConsole(`Selected file for import: ${file.name}`);
 
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = function (e) {
         try {
             logToConsole(`Reading file content: ${file.name}`);
             const parsedProfile = JSON.parse(e.target.result);
@@ -75,8 +75,10 @@ function handleImportProfile(event) {
                 logToConsole(`Imported profile name "${parsedProfile.PROFILE_NAME}" matches the current profile.`);
                 // Show the confirmation div
                 document.getElementById('confirmationDiv').style.display = 'block';
+                // Scroll to the confirmation div
+                document.getElementById('confirmationDiv').scrollIntoView({ behavior: 'smooth' });
                 document.getElementById('errorDiv').style.display = 'none';
-                
+
                 // Store the parsedProfile temporarily
                 window.tempParsedProfile = parsedProfile;
             } else {
@@ -90,13 +92,13 @@ function handleImportProfile(event) {
             document.getElementById('errorDiv').style.display = 'block';
         }
     };
-    reader.onerror = function(error) {
+    reader.onerror = function (error) {
         console.error('File reading error:', error);
         logToConsole(`File reading error: ${error.message}`);
         document.getElementById('errorDiv').style.display = 'block';
     };
     reader.readAsText(file);
-    
+
     // Reset the file input value to allow re-importing the same file if needed
     event.target.value = '';
 }
@@ -112,7 +114,7 @@ async function overwriteCurrentProfile() {
     logToConsole(`Overwriting current profile "${currentProfile.PROFILE_NAME}" with imported profile "${parsedProfile.PROFILE_NAME}".`);
     currentProfile = parsedProfile;
     const saveSuccess = await saveCurrentProfile();
-    
+
     if (saveSuccess) {
         updateInterface();
         logToConsole(`Profile "${currentProfile.PROFILE_NAME}" imported and overwritten successfully.`);
@@ -121,10 +123,10 @@ async function overwriteCurrentProfile() {
         logToConsole('Failed to save the imported profile.');
         alert('Failed to overwrite the current profile. Please try again.');
     }
-    
+
     // Hide the confirmation div
     document.getElementById('confirmationDiv').style.display = 'none';
-    
+
     // Clear the temporary parsed profile
     window.tempParsedProfile = null;
 }
@@ -134,7 +136,7 @@ function cancelImport() {
     logToConsole('User canceled the profile overwrite.');
     // Hide the confirmation div
     document.getElementById('confirmationDiv').style.display = 'none';
-    
+
     // Clear the temporary parsed profile
     window.tempParsedProfile = null;
 }
@@ -144,7 +146,7 @@ async function importProfile(parsedProfile) {
     logToConsole(`Importing profile "${parsedProfile.PROFILE_NAME}" directly without confirmation.`);
     currentProfile = parsedProfile;
     const saveSuccess = await saveCurrentProfile();
-    
+
     if (saveSuccess) {
         updateInterface();
         logToConsole(`Profile "${currentProfile.PROFILE_NAME}" imported successfully.`);
@@ -159,13 +161,13 @@ async function importProfile(parsedProfile) {
 document.addEventListener('DOMContentLoaded', () => {
     // Export Profile button
     document.getElementById('exportProfile').addEventListener('click', exportCurrentProfile);
-    
+
     // Import Profile button
     document.getElementById('importProfile').addEventListener('click', handleImportButtonClick);
-    
+
     // File input change event
     document.getElementById('importFileInput').addEventListener('change', handleImportProfile);
-    
+
     // Confirmation buttons
     document.getElementById('confirmOverwrite').addEventListener('click', overwriteCurrentProfile);
     document.getElementById('cancelOverwrite').addEventListener('click', cancelImport);
