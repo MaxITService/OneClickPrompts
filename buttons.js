@@ -102,6 +102,12 @@ function processCustomSendButtonClick(event, customText, autoSend) {
     event.preventDefault();
     logConCgp('[buttons] Custom send button clicked');
 
+
+    // Invert autoSend if Shift key is pressed during the click
+    if (event.shiftKey) {
+        autoSend = !autoSend;
+        logConCgp('[buttons] Shift key detected. autoSend inverted to:', autoSend);
+    }
     // Get the active site from the injection targets
     const activeSite = window.InjectionTargetsOnWebsite.activeSite;
     logConCgp('[buttons] Active site:', activeSite);
