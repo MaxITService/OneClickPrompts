@@ -1,7 +1,6 @@
 // buttons-clicking-copilot.js
 // This file is a dependency for buttons.js. It provides functions to handle the send button clicking process for Copilot.
 'use strict';
-// #region Copilot-Only-Fucntions
 
 function processCopilotCustomSendButtonClick(event, customText, autoSend) {
     // Prevent default button behavior
@@ -278,5 +277,3 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
     handleMessageInsertion();
 }
 
-
-// #endregion
