@@ -125,6 +125,7 @@ function processCustomSendButtonClick(event, customText, autoSend) {
 // #endregion
 
 // #region ChatGPT
+// endregion
 function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
     // Prevent default button behavior
     event.preventDefault();
