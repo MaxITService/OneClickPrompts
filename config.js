@@ -15,7 +15,7 @@ self.addEventListener('activate', (event) => {
 });
 
 // Function to handle logging with [config] prefix
-function logConCgp(message, ...optionalParams) {
+function logConfigurationRelatedStuff(message, ...optionalParams) {
     console.log(`[config] ${message}`, ...optionalParams);
 }
 
@@ -27,7 +27,7 @@ async function loadDefaultConfig() {
             throw new Error(`Failed to load default-config.json: ${response.statusText}`);
         }
         const config = await response.json();
-        logConCgp('Default configuration loaded from default-config.json');
+        logConfigurationRelatedStuff('Default configuration loaded from default-config.json');
         return config;
     } catch (error) {
         handleStorageError(error);
@@ -39,9 +39,9 @@ async function loadDefaultConfig() {
 // Helper function to handle storage errors
 function handleStorageError(error) {
     if (error) {
-        logConCgp('Storage error:', error);
+        logConfigurationRelatedStuff('Storage error:', error);
         if (error.message.includes('QUOTA_BYTES_PER_ITEM')) {
-            logConCgp('Storage quota exceeded. Some data may not be saved.');
+            logConfigurationRelatedStuff('Storage quota exceeded. Some data may not be saved.');
         }
     }
     return error;
@@ -49,14 +49,14 @@ function handleStorageError(error) {
 
 // Function to create default profile
 async function createDefaultProfile() {
-    logConCgp('Creating default profile');
+    logConfigurationRelatedStuff('Creating default profile');
     try {
         const defaultConfig = await loadDefaultConfig(); // Load from JSON
         await chrome.storage.sync.set({
             'currentProfile': 'Default',
             'profiles.Default': defaultConfig
         });
-        logConCgp('Default profile created successfully');
+        logConfigurationRelatedStuff('Default profile created successfully');
         return defaultConfig;
     } catch (error) {
         handleStorageError(error);
@@ -66,13 +66,13 @@ async function createDefaultProfile() {
 
 // Function to save profile configuration
 async function saveProfileConfig(profileName, config) {
-    logConCgp(`Saving profile: ${profileName}`);
+    logConfigurationRelatedStuff(`Saving profile: ${profileName}`);
     try {
         await chrome.storage.sync.set({
             'currentProfile': profileName,
             [`profiles.${profileName}`]: config
         });
-        logConCgp(`Profile ${profileName} saved successfully`);
+        logConfigurationRelatedStuff(`Profile ${profileName} saved successfully`);
         return true;
     } catch (error) {
         handleStorageError(error);
@@ -82,16 +82,16 @@ async function saveProfileConfig(profileName, config) {
 
 // Function to load profile configuration
 async function loadProfileConfig(profileName) {
-    logConCgp(`Loading profile: ${profileName}`);
+    logConfigurationRelatedStuff(`Loading profile: ${profileName}`);
     try {
         const result = await chrome.storage.sync.get([`profiles.${profileName}`]);
         const profile = result[`profiles.${profileName}`];
         
         if (profile) {
-            logConCgp(`Profile ${profileName} loaded successfully`);
+            logConfigurationRelatedStuff(`Profile ${profileName} loaded successfully`);
             return profile;
         } else {
-            logConCgp(`Profile ${profileName} not found`);
+            logConfigurationRelatedStuff(`Profile ${profileName} not found`);
             return null;
         }
     } catch (error) {
@@ -102,15 +102,15 @@ async function loadProfileConfig(profileName) {
 
 // Function to switch to a different profile
 async function switchProfile(profileName) {
-    logConCgp(`Switching to profile: ${profileName}`);
+    logConfigurationRelatedStuff(`Switching to profile: ${profileName}`);
     try {
         const profile = await loadProfileConfig(profileName);
         if (profile) {
             await chrome.storage.sync.set({ 'currentProfile': profileName });
-            logConCgp(`Switched to profile: ${profileName}`);
+            logConfigurationRelatedStuff(`Switched to profile: ${profileName}`);
             return profile;
         } else {
-            logConCgp(`Failed to switch to profile: ${profileName}`);
+            logConfigurationRelatedStuff(`Failed to switch to profile: ${profileName}`);
             return null;
         }
     } catch (error) {
@@ -121,20 +121,20 @@ async function switchProfile(profileName) {
 
 // Function to get currently active profile
 async function getCurrentProfileConfig() {
-    logConCgp('Retrieving current profile from storage');
+    logConfigurationRelatedStuff('Retrieving current profile from storage');
     try {
         const result = await chrome.storage.sync.get(['currentProfile']);
         const currentProfile = result.currentProfile;
 
         if (currentProfile) {
-            logConCgp(`Current profile found: ${currentProfile}`);
+            logConfigurationRelatedStuff(`Current profile found: ${currentProfile}`);
             const profile = await loadProfileConfig(currentProfile);
             if (profile) {
                 return profile;
             }
         }
 
-        logConCgp('No current profile found. Creating default profile');
+        logConfigurationRelatedStuff('No current profile found. Creating default profile');
         return await createDefaultProfile();
     } catch (error) {
         handleStorageError(error);
@@ -150,7 +150,7 @@ async function listProfiles() {
             .filter(key => key.startsWith('profiles.'))
             .map(key => key.replace('profiles.', ''));
         
-        logConCgp('Available profiles:', profiles);
+        logConfigurationRelatedStuff('Available profiles:', profiles);
         return profiles;
     } catch (error) {
         handleStorageError(error);
@@ -162,7 +162,7 @@ async function listProfiles() {
 async function clearStorage() {
     try {
         await chrome.storage.sync.clear();
-        logConCgp('Storage cleared successfully');
+        logConfigurationRelatedStuff('Storage cleared successfully');
         return true;
     } catch (error) {
         handleStorageError(error);
@@ -172,11 +172,11 @@ async function clearStorage() {
 
 // Function to delete a specific profile
 async function deleteProfile(profileName) {
-    logConCgp(`Deleting profile: ${profileName}`);
+    logConfigurationRelatedStuff(`Deleting profile: ${profileName}`);
     try {
         // Don't allow deleting the default profile
         if (profileName === 'Default') {
-            logConCgp('Cannot delete Default profile');
+            logConfigurationRelatedStuff('Cannot delete Default profile');
             return false;
         }
 
@@ -190,7 +190,7 @@ async function deleteProfile(profileName) {
 
         // Remove the profile from storage
         await chrome.storage.sync.remove(`profiles.${profileName}`);
-        logConCgp(`Profile ${profileName} deleted successfully`);
+        logConfigurationRelatedStuff(`Profile ${profileName} deleted successfully`);
         return true;
     } catch (error) {
         handleStorageError(error);
@@ -204,7 +204,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case 'getConfig':
             getCurrentProfileConfig().then(config => {
                 sendResponse({ config });
-                logConCgp('Sent config to requesting script');
+                logConfigurationRelatedStuff('Sent config to requesting script');
             }).catch(error => {
                 sendResponse({ error: error.message });
             });
@@ -213,49 +213,49 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case 'saveConfig':
             saveProfileConfig(request.profileName, request.config).then(success => {
                 sendResponse({ success });
-                logConCgp('Config save request processed');
+                logConfigurationRelatedStuff('Config save request processed');
             });
             return true;
 
         case 'switchProfile':
             switchProfile(request.profileName).then(config => {
                 sendResponse({ config });
-                logConCgp('Profile switch request processed');
+                logConfigurationRelatedStuff('Profile switch request processed');
             });
             return true;
 
         case 'listProfiles':
             listProfiles().then(profiles => {
                 sendResponse({ profiles });
-                logConCgp('Profile list request processed');
+                logConfigurationRelatedStuff('Profile list request processed');
             });
             return true;
 
         case 'clearStorage':
             clearStorage().then(success => {
                 sendResponse({ success });
-                logConCgp('Storage clear request processed');
+                logConfigurationRelatedStuff('Storage clear request processed');
             });
             return true;
 
         case 'deleteProfile':
             deleteProfile(request.profileName).then(success => {
                 sendResponse({ success });
-                logConCgp('Profile deletion request processed');
+                logConfigurationRelatedStuff('Profile deletion request processed');
             });
             return true;
 
         case 'createDefaultProfile':
             createDefaultProfile().then(config => {
                 sendResponse({ config });
-                logConCgp('Default profile creation request processed');
+                logConfigurationRelatedStuff('Default profile creation request processed');
             }).catch(error => {
                 sendResponse({ error: error.message });
             });
             return true;
 
         default:
-            logConCgp('Unknown message type received:', request.type);
+            logConfigurationRelatedStuff('Unknown message type received:', request.type);
             sendResponse({ error: 'Unknown message type' });
             return false;
     }
@@ -265,7 +265,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'sync') {
         for (let [key, { oldValue, newValue }] of Object.entries(changes)) {
-            logConCgp(`Storage key "${key}" changed:`, {
+            logConfigurationRelatedStuff(`Storage key "${key}" changed:`, {
                 'from': oldValue,
                 'to': newValue
             });
