@@ -36,6 +36,7 @@ window.MaxExtensionUtils = {
             buttons: 1
         });
         element.dispatchEvent(event);
+        logConCgp('[utils] simulateClick: Click event dispatched.', element);
     },
 
     // Function to insert text into the editor by updating innerHTML and dispatching input event
@@ -65,11 +66,13 @@ window.MaxExtensionUtils = {
             const sel = window.getSelection();
             sel.removeAllRanges();
             sel.addRange(range);
+            logConCgp('[utils] Cursor moved to the end of the contenteditable element.');
         } else if (typeof document.body.createTextRange != "undefined") {
             const textRange = document.body.createTextRange();
             textRange.moveToElementText(contentEditableElement);
             textRange.collapse(false);
             textRange.select();
+            logConCgp('[utils] Cursor moved to the end using TextRange.');
         }
     },
 
@@ -137,8 +140,28 @@ class InjectionTargetsOnWebsite {
                 editors: ['div.ProseMirror#prompt-textarea', 'div.ProseMirror'],
                 buttonsContainerId: 'chatgpt-custom-buttons-container'
             },
-            // Other sites can be added here
-            // ...
+            Claude: {
+                containers: [
+                    'div.flex.flex-col.bg-bg-000.rounded-2xl',
+                    'div.flex.flex-col.bg-bg-000.gap-1\\.5'
+                ],
+                sendButtons: ['button[aria-label="Send Message"]'],
+                editors: ['div.ProseMirror[contenteditable="true"]'],
+                buttonsContainerId: 'claude-custom-buttons-container'
+            },
+            Copilot: {
+                containers: ['div.shadow-composer-input'],
+                sendButtons: [
+                    'button.rounded-submitButton[title="Submit message"]',
+                    'button[type="button"][title="Submit message"]'
+                ],
+                editors: [
+                    'div.shadow-composer-input textarea#userInput',
+                    'textarea#userInput[placeholder="Message Copilot"]'
+                ],
+                buttonsContainerId: 'copilot-custom-buttons-container'
+            },
+            // TODO: Add selectors for other supported websites
         };
         return selectors[site] || {};
     }
