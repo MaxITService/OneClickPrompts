@@ -1,5 +1,5 @@
 // utils.js
-// Version: 1.0
+// Version: 1.1
 // Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS.
 
 'use strict';
@@ -49,7 +49,7 @@ window.MaxExtensionUtils = {
         // Update the innerHTML directly
         editorDiv.innerHTML = `<p>${escapedText}</p>`;
 
-        // Dispatch an input event to notify React of the change
+        // Dispatch an input event to notify ProseMirror of the change
         const event = new Event('input', { bubbles: true });
         editorDiv.dispatchEvent(event);
         logConCgp('[utils] Editor content updated and input event dispatched.');
@@ -86,12 +86,11 @@ window.MaxExtensionUtils = {
     }
 };
 
-
 /**
  * InjectionTargetsOnWebsite
  * 
  * Centralizes all selectors and identifiers for different websites.
- * Currently implemented for ChatGPT and Claude. Other websites can be added as needed.
+ * Currently implemented for ChatGPT and other sites. Other websites can be added as needed.
  */
 class InjectionTargetsOnWebsite {
     constructor() {
@@ -135,36 +134,15 @@ class InjectionTargetsOnWebsite {
                     'button.send-button-class',
                     'button[type="submit"]'
                 ],
-                editors: ['#prompt-textarea'],
+                editors: ['div.ProseMirror#prompt-textarea', 'div.ProseMirror'],
                 buttonsContainerId: 'chatgpt-custom-buttons-container'
             },
-            Claude: {
-                containers: [
-                    'div.flex.flex-col.bg-bg-000.rounded-2xl',
-                    'div.flex.flex-col.bg-bg-000.gap-1\\.5'
-                ],
-                sendButtons: ['button[aria-label="Send Message"]'],
-                editors: ['div.ProseMirror[contenteditable="true"]'],
-                buttonsContainerId: 'claude-custom-buttons-container'
-            },
-            Copilot: {
-                containers: ['div.shadow-composer-input'],
-                sendButtons: [
-                    'button.rounded-submitButton[title="Submit message"]',
-                    'button[type="button"][title="Submit message"]'
-                ],
-                editors: [
-                    'div.shadow-composer-input textarea#userInput',
-                    'textarea#userInput[placeholder="Message Copilot"]'
-                ],
-                buttonsContainerId: 'copilot-custom-buttons-container'
-            },
-            // TODO: Add selectors for other supported websites
+            // Other sites can be added here
+            // ...
         };
         return selectors[site] || {};
     }
 }
-
 
 // Instantiate and expose the InjectionTargetsOnWebsite globally
 window.InjectionTargetsOnWebsite = new InjectionTargetsOnWebsite();
