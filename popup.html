@@ -78,7 +78,7 @@
         <div id="saveStatus" class="save-status">Last saved: Never</div>
 
         <!-- Backup Section -->
-        <section class="section">
+        <section class="section" id="backupSection">
             <h2>Backup & Restore</h2>
             <div class="row">
                 <button id="exportProfile">Export Profile</button>
@@ -97,8 +97,20 @@
                 <p>Error loading file. Please ensure the file is a valid JSON profile.</p>
             </div>
         </section>
+
+        <!-- Help Section -->
+        <section class="section" id="helpSection">
+            <h2>Help</h2>
+            <p>Here is some information about the ChatGPT Quick Buttons</p>
+            <p>ABSOLUTELY DO BACKUP YOUR PROFILE! IN CASE OF UPDATE, YOU MAY LOSE YOUR BUTTONS - ANYTIME. I, unfortunately do not </p>
+            <ul>
+                <li>In case something stopped working: The websites often change their structure. My extension therefore addresses elements that are not longer present.</li>
+                <li><a href="mailto:support@youremail.com">Contact Support</a></li>
+            </ul>
+        </section>
     </div>   
-     <!-- Toast Notification Container -->
+
+    <!-- Toast Notification Container -->
     <div id="toastContainer" class="toast-container"></div>
     <script src="log.js"></script>    
     <script src="/popup-page-scripts/popup-page-visuals.js"></script>
