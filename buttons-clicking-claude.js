@@ -1,13 +1,6 @@
 // buttons-clicking-claude.js
 // This file is a dependency for buttons.js. It provides functions to handle the send button clicking process for Claude.
 
-
-
-
-// #region Claude-Only-Fucntions
-
-
-
 /**
  * Handles text insertion and sending for Claude site
  * @param {string} customText - The text to insert
@@ -58,8 +51,11 @@ function handleClaudeSend() {
     // First immediate attempt
     const sendButton = findClaudeSendButton();
     if (sendButton) {
-        logConCgp('[Claude] Send button found immediately, clicking');
-        MaxExtensionUtils.simulateClick(sendButton);
+        logConCgp('[Claude] Send button found immediately, delaying click by 200ms');
+        setTimeout(() => {
+            MaxExtensionUtils.simulateClick(sendButton);
+            logConCgp('[Claude] Send button clicked after 200ms delay');
+        }, 200);
         return;
     }
 
@@ -73,8 +69,11 @@ function handleClaudeSend() {
         if (sendButton) {
             clearTimeout(timeoutId);
             obs.disconnect();
-            logConCgp('[Claude] Send button found after observation, clicking');
-            MaxExtensionUtils.simulateClick(sendButton);
+            logConCgp('[Claude] Send button found after observation, delaying click by 200ms');
+            setTimeout(() => {
+                MaxExtensionUtils.simulateClick(sendButton);
+                logConCgp('[Claude] Send button clicked after 200ms delay');
+            }, 200);
         } else if (attempts >= MAX_ATTEMPTS) {
             clearTimeout(timeoutId);
             obs.disconnect();
@@ -94,9 +93,6 @@ function handleClaudeSend() {
         logConCgp('[Claude] Timeout reached without finding send button');
     }, TIMEOUT_DURATION);
 }
-
-
-
 
 /**
  * Utility functions for handling text insertion in Claude's editor
@@ -305,32 +301,36 @@ const ClaudeEditorUtils = {
      */
     insertTextIntoParagraph: function (editorElement, textToInsert) {
         try {
-            // Find or create paragraph
-            let paragraph = editorElement.querySelector('p');
-            if (!paragraph) {
-                paragraph = document.createElement('p');
-                editorElement.appendChild(paragraph);
-            }
+            // Focus the editor
+            editorElement.focus();
 
-            // Handle placeholder paragraph
-            if (paragraph.classList.contains('is-empty') || paragraph.classList.contains('is-editor-empty')) {
-                paragraph.classList.remove('is-empty', 'is-editor-empty');
-                paragraph.innerHTML = '';
-            }
+            // Create a range and set it to the end of the editor content
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            const range = document.createRange();
+            range.selectNodeContents(editorElement);
+            range.collapse(false);
+            selection.addRange(range);
 
-            // Insert text
+            // Create a text node with the text to insert
             const textNode = document.createTextNode(textToInsert);
-            paragraph.appendChild(textNode);
 
-            // Trigger input event to notify editor of changes
+            // Insert the text node at the cursor position
+            range.insertNode(textNode);
+
+            // Move the cursor after the inserted text
+            range.setStartAfter(textNode);
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            // Dispatch input event to notify editor of changes
             editorElement.dispatchEvent(new Event('input', { bubbles: true }));
 
-            logConCgp('[ClaudeEditor] Text inserted into paragraph successfully');
+            logConCgp('[ClaudeEditor] Text inserted at cursor position successfully');
             return true;
         } catch (error) {
-            logConCgp('[ClaudeEditor] Error inserting text into paragraph:', error);
+            logConCgp('[ClaudeEditor] Error inserting text at cursor position:', error);
             return false;
         }
     }
 };
-// #endregion
