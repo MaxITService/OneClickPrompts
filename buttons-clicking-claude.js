@@ -94,6 +94,7 @@ function handleClaudeSend() {
     }, TIMEOUT_DURATION);
 }
 
+
 /**
  * Utility functions for handling text insertion in Claude's editor
  * Handles different editor states and element structures
@@ -235,26 +236,16 @@ const ClaudeEditorUtils = {
         logConCgp('[ClaudeEditor] Handling ProseMirror insertion');
 
         try {
-            // If editor has placeholder, we need to focus it first
-            if (editorState.hasPlaceholder) {
-                logConCgp('[ClaudeEditor] Editor has placeholder, focusing first');
-                editorElement.focus();
+            // Focus the editor
+            editorElement.focus();
 
-                // Small delay to allow focus to take effect
-                setTimeout(() => {
-                    this.insertTextIntoParagraph(editorElement, textToInsert);
-                }, 50);
-                return true;
+            // If editor has placeholder, clear it
+            if (editorState.hasPlaceholder || editorState.isEmpty) {
+                logConCgp('[ClaudeEditor] Editor is empty or has placeholder, initializing content');
+                editorElement.innerHTML = '<p><br></p>';
             }
 
-            // If editor has existing text, append to it
-            if (editorState.hasExistingText) {
-                logConCgp('[ClaudeEditor] Appending to existing text');
-                return this.insertTextIntoParagraph(editorElement, textToInsert);
-            }
-
-            // Empty editor without placeholder
-            logConCgp('[ClaudeEditor] Inserting into empty editor');
+            // Insert text into the editor
             return this.insertTextIntoParagraph(editorElement, textToInsert);
         } catch (error) {
             logConCgp('[ClaudeEditor] Error in ProseMirror insertion:', error);
@@ -294,8 +285,8 @@ const ClaudeEditorUtils = {
     },
 
     /**
-     * Inserts text into a paragraph element
-     * @param {Element} editorElement - The editor element containing the paragraph
+     * Inserts text into the editor, handling both empty and non-empty cases
+     * @param {Element} editorElement - The editor element
      * @param {string} textToInsert - The text to insert
      * @returns {boolean} - Whether the insertion was successful
      */
@@ -304,32 +295,47 @@ const ClaudeEditorUtils = {
             // Focus the editor
             editorElement.focus();
 
-            // Create a range and set it to the end of the editor content
             const selection = window.getSelection();
             selection.removeAllRanges();
             const range = document.createRange();
-            range.selectNodeContents(editorElement);
-            range.collapse(false);
+
+            // Check if the editor is empty
+            if (editorElement.textContent.trim() === '') {
+                // Editor is empty, create a new paragraph
+                const newParagraph = document.createElement('p');
+                editorElement.appendChild(newParagraph);
+                range.setStart(newParagraph, 0);
+            } else {
+                // Editor has content, append text to last paragraph
+
+                // Find the last paragraph element
+                const paragraphs = editorElement.querySelectorAll('p');
+                let lastParagraph;
+                if (paragraphs.length > 0) {
+                    lastParagraph = paragraphs[paragraphs.length - 1];
+                } else {
+                    // If no paragraphs, create one
+                    lastParagraph = document.createElement('p');
+                    editorElement.appendChild(lastParagraph);
+                }
+
+                // Set the selection to the end of the last paragraph
+                range.selectNodeContents(lastParagraph);
+                range.collapse(false);
+            }
+
             selection.addRange(range);
 
-            // Create a text node with the text to insert
-            const textNode = document.createTextNode(textToInsert);
-
-            // Insert the text node at the cursor position
-            range.insertNode(textNode);
-
-            // Move the cursor after the inserted text
-            range.setStartAfter(textNode);
-            selection.removeAllRanges();
-            selection.addRange(range);
+            // Use execCommand to insert text at the cursor position
+            document.execCommand('insertText', false, textToInsert);
 
             // Dispatch input event to notify editor of changes
             editorElement.dispatchEvent(new Event('input', { bubbles: true }));
 
-            logConCgp('[ClaudeEditor] Text inserted at cursor position successfully');
+            logConCgp('[ClaudeEditor] Text inserted successfully');
             return true;
         } catch (error) {
-            logConCgp('[ClaudeEditor] Error inserting text at cursor position:', error);
+            logConCgp('[ClaudeEditor] Error inserting text:', error);
             return false;
         }
     }
