@@ -310,7 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
     attachAutoSendToggleListeners();
 
     // -------------------------
-    // 10. Open Links in New Tabs - This is the way to open external files in Extensions
+    // 10. Open Links in New Tabs - This is the way to open external links in extensions, otherwise clicking does nothing
     // -------------------------
 
     /**
