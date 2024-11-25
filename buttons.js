@@ -3,7 +3,7 @@
 
    Documentation:
 
-   This file is a dependency. Desinged to host helper functions for init.js. Manages the creation and functionality of custom send buttons within the ChatGPT extension.
+   This file is a dependency. Designed to host helper functions for init.js. Manages the creation and functionality of custom send buttons within the ChatGPT extension.
    It provides utility functions to create buttons based on configuration and assigns keyboard shortcuts where applicable.
 
    Functions:
@@ -15,7 +15,7 @@
    Ensure that dependencies are loaded before this script to utilize button functionalities.
       
    Depends on:
-   utils.js - object containting all selectors and identifiers
+   utils.js - object containing all selectors and identifiers
    buttons-init.js - handles only some initializations.
    +
    buttons-clicking-chatgpt.js - handles the send button clicking process for ChatGPT
