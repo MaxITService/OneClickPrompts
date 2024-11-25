@@ -308,6 +308,31 @@ document.addEventListener('DOMContentLoaded', () => {
     textareaSaverAndResizerFunc();
     attachEmojiInputListeners();
     attachAutoSendToggleListeners();
+
+    // -------------------------
+    // 10. Open Links in New Tabs - This is the way to open external files in Extensions
+    // -------------------------
+
+    /**
+     * Opens external links in new tabs using the Chrome Tabs API.
+     * @param {Event} e - The click event.
+     */
+    function handleExternalLinkClick(e) {
+        e.preventDefault(); // Prevent the default link behavior
+        const url = e.currentTarget.href;
+        chrome.tabs.create({ url });
+    }
+
+    // Select the Help Section
+    const helpSection = document.getElementById('helpSection');
+    if (helpSection) {
+        // Select all anchor tags within the Help Section that have href starting with http or https
+        const helpLinks = helpSection.querySelectorAll('a[href^="http"]');
+
+        helpLinks.forEach(link => {
+            link.addEventListener('click', handleExternalLinkClick);
+        });
+    }
 });
 
 // -------------------------
@@ -514,4 +539,3 @@ function attachAutoSendToggleListeners() {
         });
     });
 }
-
