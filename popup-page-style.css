@@ -34,6 +34,13 @@ body {
     overflow-y: auto; /* Enable vertical scrolling if content exceeds height */
     transition: background-color var(--transition-duration) ease;
 }
+
+#version
+{
+    text-align: center;
+    color: #666666;
+    width: 100%;
+}
 /* id="topExplanationText" text centered and a little bit gray */
 #topExplanationText {
     text-align: center;
