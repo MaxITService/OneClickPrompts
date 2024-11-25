@@ -87,6 +87,7 @@ function commenceExtensionInitialization(configurationObject) {
     }
 
 
+    // TODO: Shift key inverts autoSend for custom send buttons
     /**
      * Manages keyboard shortcut events to trigger custom send buttons on the webpage.
      * Listens for Alt+[1-10] key presses and simulates button clicks.
