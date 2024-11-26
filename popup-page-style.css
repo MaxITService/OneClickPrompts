@@ -35,12 +35,32 @@ body {
     transition: background-color var(--transition-duration) ease;
 }
 
+
+/* Version text is not needed at all when the profile manipulation flows are initiated  */
+body:has(#addProfileContainer:not([style*="display: none"])) #versionContainer,
+body:has(#copyProfileContainer:not([style*="display: none"])) #versionContainer {
+
+    opacity: 0; 
+    transition: opacity 0.4s ease; 
+}
+
+/* When #versionContainer is visible */
+#versionContainer {
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 0.5s ease; 
+}
+
+
+
 #version
 {
     text-align: center;
     color: #666666;
     width: 100%;
 }
+
+
 /* id="topExplanationText" text centered and a little bit gray */
 #topExplanationText {
     text-align: center;
