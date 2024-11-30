@@ -48,7 +48,7 @@ function handleImportButtonClick() {
 }
 
 // Function to handle the file input change event
-function handleImportProfile(event) {
+async function handleImportProfile(event) {
     const file = event.target.files[0];
     if (!file) {
         logToConsole('No file selected for import.');
@@ -58,7 +58,7 @@ function handleImportProfile(event) {
     logToConsole(`Selected file for import: ${file.name}`);
 
     const reader = new FileReader();
-    reader.onload = function (e) {
+    reader.onload = async function (e) {
         try {
             logToConsole(`Reading file content: ${file.name}`);
             const parsedProfile = JSON.parse(e.target.result);
@@ -70,9 +70,13 @@ function handleImportProfile(event) {
             }
             logToConsole('Imported profile structure is valid.');
 
-            // Check if the profile name matches the current profile
-            if (parsedProfile.PROFILE_NAME === currentProfile.PROFILE_NAME) {
-                logToConsole(`Imported profile name "${parsedProfile.PROFILE_NAME}" matches the current profile.`);
+            // Fetch the list of existing profiles
+            const response = await chrome.runtime.sendMessage({ type: 'listProfiles' });
+            const existingProfiles = response.profiles;
+
+            // Check if a profile with the same name exists
+            if (existingProfiles.includes(parsedProfile.PROFILE_NAME)) {
+                logToConsole(`A profile named "${parsedProfile.PROFILE_NAME}" already exists.`);
                 // Show the confirmation div
                 document.getElementById('confirmationDiv').style.display = 'block';
                 // Scroll to the confirmation div
@@ -82,8 +86,8 @@ function handleImportProfile(event) {
                 // Store the parsedProfile temporarily
                 window.tempParsedProfile = parsedProfile;
             } else {
-                logToConsole(`Imported profile name "${parsedProfile.PROFILE_NAME}" does not match the current profile "${currentProfile.PROFILE_NAME}". Proceeding to import without confirmation.`);
-                // Directly overwrite the current profile
+                logToConsole(`Profile name "${parsedProfile.PROFILE_NAME}" does not exist. Importing as a new profile.`);
+                // Directly import the new profile
                 importProfile(parsedProfile);
             }
         } catch (error) {
@@ -103,7 +107,8 @@ function handleImportProfile(event) {
     event.target.value = '';
 }
 
-// Function to overwrite the current profile with the parsed profile
+
+// Function to overwrite the existing profile with the parsed profile
 async function overwriteCurrentProfile() {
     const parsedProfile = window.tempParsedProfile;
     if (!parsedProfile) {
@@ -111,17 +116,26 @@ async function overwriteCurrentProfile() {
         return;
     }
 
-    logToConsole(`Overwriting current profile "${currentProfile.PROFILE_NAME}" with imported profile "${parsedProfile.PROFILE_NAME}".`);
-    currentProfile = parsedProfile;
-    const saveSuccess = await saveCurrentProfile();
+    logToConsole(`Overwriting existing profile "${parsedProfile.PROFILE_NAME}" with imported profile.`);
 
-    if (saveSuccess) {
+    try {
+        await chrome.runtime.sendMessage({
+            type: 'saveConfig',
+            profileName: parsedProfile.PROFILE_NAME,
+            config: parsedProfile
+        });
+
+        // Reload profiles and switch to the imported profile
+        await loadProfiles();
+        profileSelect.value = parsedProfile.PROFILE_NAME;
+        await switchProfile(parsedProfile.PROFILE_NAME);
+
         updateInterface();
-        logToConsole(`Profile "${currentProfile.PROFILE_NAME}" imported and overwritten successfully.`);
-        alert(`Profile "${currentProfile.PROFILE_NAME}" has been overwritten successfully.`);
-    } else {
-        logToConsole('Failed to save the imported profile.');
-        alert('Failed to overwrite the current profile. Please try again.');
+        logToConsole(`Profile "${parsedProfile.PROFILE_NAME}" imported and overwritten successfully.`);
+        alert(`Profile "${parsedProfile.PROFILE_NAME}" has been overwritten successfully.`);
+    } catch (error) {
+        logToConsole(`Failed to save the imported profile: ${error.message}`);
+        alert('Failed to overwrite the existing profile. Please try again.');
     }
 
     // Hide the confirmation div
@@ -130,6 +144,7 @@ async function overwriteCurrentProfile() {
     // Clear the temporary parsed profile
     window.tempParsedProfile = null;
 }
+
 
 // Function to cancel the import process
 function cancelImport() {
@@ -143,19 +158,28 @@ function cancelImport() {
 
 // Function to import profile directly without confirmation
 async function importProfile(parsedProfile) {
-    logToConsole(`Importing profile "${parsedProfile.PROFILE_NAME}" directly without confirmation.`);
-    currentProfile = parsedProfile;
-    const saveSuccess = await saveCurrentProfile();
+    logToConsole(`Importing profile "${parsedProfile.PROFILE_NAME}" as a new profile.`);
+    try {
+        await chrome.runtime.sendMessage({
+            type: 'saveConfig',
+            profileName: parsedProfile.PROFILE_NAME,
+            config: parsedProfile
+        });
 
-    if (saveSuccess) {
+        // Reload profiles and switch to the new profile
+        await loadProfiles();
+        profileSelect.value = parsedProfile.PROFILE_NAME;
+        await switchProfile(parsedProfile.PROFILE_NAME);
+
         updateInterface();
-        logToConsole(`Profile "${currentProfile.PROFILE_NAME}" imported successfully.`);
-        alert(`Profile "${currentProfile.PROFILE_NAME}" has been imported successfully.`);
-    } else {
-        logToConsole('Failed to save the imported profile.');
+        logToConsole(`Profile "${parsedProfile.PROFILE_NAME}" imported successfully.`);
+        alert(`Profile "${parsedProfile.PROFILE_NAME}" has been imported successfully.`);
+    } catch (error) {
+        logToConsole(`Failed to save the imported profile: ${error.message}`);
         alert('Failed to import the profile. Please try again.');
     }
 }
+
 
 // Attach event listeners after DOM content is loaded
 document.addEventListener('DOMContentLoaded', () => {
