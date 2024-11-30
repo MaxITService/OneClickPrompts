@@ -96,6 +96,11 @@ body:has(#copyProfileContainer:not([style*="display: none"])) #versionContainer 
     transition: box-shadow var(--transition-duration-release) ease, background-color var(--transition-duration-release) ease;
 }
 
+.text-inside-container
+{
+    margin: 0 2rem;
+}
+
 h2 {
     margin: 0 0 16px 0;
     font-size: 16px;
