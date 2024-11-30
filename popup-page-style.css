@@ -399,7 +399,7 @@ button:active {
 }
 
 /* Save Status Styling */
-.save-status {
+.small-hoovering-text {
     text-align: right;
     color: #666666;
     font-size: 12px;
@@ -436,7 +436,7 @@ button:active {
 }
 
 /* Save Status Animation Reset */
-.save-status {
+.small-hoovering-text {
     animation: saveStatusFade 2s ease-out forwards;
 }
 
