@@ -1,29 +1,104 @@
 {
-    "PROFILE_NAME": "Default",
-    "ENABLE_SHORTCUTS_DEFAULT": true,
-    "globalAutoSendEnabled": true,
-    "enableShortcuts": true,
-    "firstModificationDone": false,
-    "customButtons": [
-        { "icon": "🧠", "text": " Let's think about it: Do not write code, just discuss implementation and tell me, if I missed something. Try to generate human-level pseudocode overview of what will happen.", "autoSend": false },
-        { "icon": "🧐", "text": " Explain this concept or process in detail, but be short and on the point. Make Easier to understand.", "autoSend": true },
-        { "icon": "💡", "text": " <Rewrite this text, keeping all original information. Add explanations to non-obvious concepts only, don't explain basic things, only explain advanced concepts, like you would explain to an advanced expert, just this particular field is new to him.", "autoSend": true },
-        { "separator": true },
-        { "icon": "🎓", "text": " This was text of my conspectus. Correct this conspectus. Start your response with a percentage of correctness, then explain what went wrong. only go about real, serious errors. \"Clarity\" is out of review now", "autoSend": true },
-        { "icon": "➕", "text": " ... Add additional information to this text, especially continue from this point. Focus on providing new content beyond what has already been written.", "autoSend": true },
-        { "icon": "🗜️", "text": " Provide a concise and focused explanation on this topic, answer directly to question, keep your answers short", "autoSend": true },
-        { "icon": "3", "text": " Explain in 3 sentences", "autoSend": true },
-        { "icon": "2", "text": " Explain in 2 sentences", "autoSend": true },
-        { "icon": "📖", "text": " Read this large chunk of text. Respond with \"Acknowledged\" for now. I will ask questions about this text later.", "autoSend": true },
-        { "icon": "🌐", "text": " Factcheck data in your last message. Perform a web search on this topic and provide an answer based on the results. Cite sources or inform about source fetch failure. To be clear, I don't say that your message was invalid, I just want additional verification to be sure. Write concise response. I DO NOT WANT A BREAKDOWN, just write \"all correct!\"", "autoSend": true },
-        { "separator": true },
-        { "icon": "📅", "text": " Provide your next answer in a form of a table", "autoSend": false },
-        { "icon": "💻", "text": " output ONLY CODE, not explanations. Start by typing code in a code block", "autoSend": true },
-        { "icon": "🛠️", "text": " I want you to use Python for ALL calculations, and if they fail, retry, and if they fail again - then do not give answer based on your training data, tell me about failure", "autoSend": true },
-        { "icon": "📝", "text": " <Just check grammar in this text, and retype it correctly. Frame corrected text with the MD horizontal lines. Explain grammatical errors found or state if none is found.", "autoSend": true },
-        { "separator": true },
-        { "icon": "🇺🇸", "text": " Translate text to English", "autoSend": true },
-        { "icon": "🔄", "text": " just answer normally from now on", "autoSend": true },
-        { "separator": true }
-    ]
+  "PROFILE_NAME": "Default",
+  "ENABLE_SHORTCUTS_DEFAULT": true,
+  "globalAutoSendEnabled": true,
+  "enableShortcuts": true,
+  "firstModificationDone": false,
+  "customButtons": [
+    {
+      "icon": "🧠",
+      "text": " Let's think about it: Do not write code, just discuss implementation and tell me, if I missed something. Try to generate human-level pseudocode overview of what will happen.",
+      "autoSend": false
+    },
+    {
+      "icon": "🧐",
+      "text": " Explain this concept or process in detail, but be short and on the point. Make Easier to understand.",
+      "autoSend": true
+    },
+    {
+      "icon": "💡",
+      "text": " <Rewrite this text, keeping all original information. Add explanations to non-obvious concepts only, don't explain basic things, only explain advanced concepts, like you would explain to an advanced expert, just this particular field is new to him.",
+      "autoSend": true
+    },
+    { "separator": true },
+    {
+      "icon": "🎓",
+      "text": " This was text of my conspectus. Correct this conspectus. Start your response with a percentage of correctness, then explain what went wrong. only go about real, serious errors. \"Clarity\" is out of review now",
+      "autoSend": true
+    },
+    {
+      "icon": "➕",
+      "text": " ... Add additional information to this text, especially continue from this point. Focus on providing new content beyond what has already been written.",
+      "autoSend": true
+    },
+    {
+      "icon": "🗜️",
+      "text": " Provide a concise and focused explanation on this topic, answer directly to question, keep your answers short",
+      "autoSend": true
+    },
+    { "icon": "3", "text": " Explain in 3 sentences", "autoSend": true },
+    { "icon": "2", "text": " Explain in 2 sentences", "autoSend": true },
+
+    {
+      "autoSend": true,
+      "icon": "👌",
+      "text": "Keep all your responses short, but pack them with useful information."
+    },
+
+    {
+      "icon": "📖",
+      "text": " Read this large chunk of text. Respond with \"Acknowledged\" for now. I will ask questions about this text later.",
+      "autoSend": true
+    },
+    {
+      "icon": "🌐",
+      "text": " Factcheck data in your last message. Perform a web search on this topic and provide an answer based on the results. Cite sources or inform about source fetch failure. To be clear, I don't say that your message was invalid, I just want additional verification to be sure. Write concise response. I DO NOT WANT A BREAKDOWN, just write \"all correct!\"",
+      "autoSend": true
+    },
+    { "separator": true },
+    {
+      "icon": "📅",
+      "text": " Provide your next answer in a form of a table",
+      "autoSend": false
+    },
+    {
+      "icon": "💻",
+      "text": " output ONLY CODE, not explanations. Start by typing code in a code block",
+      "autoSend": true
+    },
+    {
+      "icon": "🛠️",
+      "text": " I want you to use Python for ALL calculations, and if they fail, retry, and if they fail again - then do not give answer based on your training data, tell me about failure",
+      "autoSend": true
+    },
+    {
+      "icon": "📝",
+      "text": " <Just check grammar in this text, and retype it correctly. Frame corrected text with the MD horizontal lines. Explain grammatical errors found or state if none is found.",
+      "autoSend": true
+    },
+    { "separator": true },
+    { "icon": "🇺🇸", "text": " Translate text to English", "autoSend": true },
+    {
+      "icon": "🔄",
+      "text": " just answer normally from now on",
+      "autoSend": true
+    },
+    { "separator": true },
+    {
+      "autoSend": true,
+      "icon": "📰",
+      "text": " The text above was about the topics we had already covered: to reduce context length in this chat, i created a summary of conversation with you, that I had. Read it so we can proceed learning what we had missed. Now just say ok."
+    },
+    {
+      "autoSend": true,
+      "icon": "🗞️",
+      "text": " Summarize all covered in this conversation since last summarization, if were any or from the beginning. Provide longest summary possible."
+    },
+    {
+      "autoSend": true,
+      "icon": "😮",
+      "text": "Activate the Emotional Resonance Mode and keep it active"
+    },
+    { "separator": true }
+  ]
 }
