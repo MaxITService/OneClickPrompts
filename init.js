@@ -21,8 +21,8 @@
  * enable button functionalities. The script starts the initialization process 
  * automatically upon loading. 
  * 
- * Depandencies:
- * This file is main script, it therefore depends on all othter helper files that are content scripts. Popup page scripts are separate.
+ * Dependencies:
+ * This file is main script, it therefore depends on all other helper files that are content scripts. Popup page scripts are separate.
  * 
  */
 //Instructions for AI: do not remove comments!  MUST NOT REMOVE COMMENTS. This one too!
@@ -31,10 +31,10 @@
 
 
 /**
- * This funcition is called first.
+ * This function is called first.
  */
 function publicStaticVoidMain() {
-    // The message intended for the service worker config.js, the fucntion will be run after response will be received.
+    // The message intended for the service worker config.js, the function will be run after response will be received.
     chrome.runtime.sendMessage({ type: 'getConfig' }, (response) => {
         if (response && response.config) {
             logConCgp('[init] Configuration successfully loaded:', response.config);
@@ -128,7 +128,7 @@ function manageKeyboardShortcutEvents(event) {
 
     /**
      * 
-     * Inserts custom buttons, separators and setitngs toggles into the webpage and starts resiliency checks if enabled.
+     * Inserts custom buttons, separators and settings toggles into the webpage and starts resiliency checks if enabled.
      * @param {boolean} enableResiliency - Flag to enable or disable resiliency checks.
      */
     function buttonBoxCheckingAndInjection(enableResiliency = true, activeWebsite) {
@@ -148,7 +148,7 @@ function manageKeyboardShortcutEvents(event) {
 
         // Define the selector to wait for using InjectionTargetsOnWebsite
         const selectors = window.InjectionTargetsOnWebsite.selectors.containers;
-        // A unified callback funciton will search for div where we will insert stuff and 
+        // A unified callback function will search for div where we will insert stuff and 
         const handleTargetDiv = (targetDiv) => {
             if (!targetFound) {
                 targetFound = true; // Set the flag to prevent other callbacks from executing
@@ -255,7 +255,7 @@ function manageKeyboardShortcutEvents(event) {
      * @param {Function} callback - The function to execute when a URL change is detected.
      * @description Helper function that monitors URL changes using MutationObserver.
      */
-    function resilentStartAndRetryOnSPANavigation(callback) {
+    function resilientStartAndRetryOnSPANavigation(callback) {
         let previousUrl = location.href;
         const urlChangeObserver = new MutationObserver(() => {
             const currentUrl = location.href;
@@ -278,7 +278,7 @@ function manageKeyboardShortcutEvents(event) {
     selectAndInitializeAppropriateExtensionScript();
 
     // Begin monitoring URL changes to handle SPA navigation
-    resilentStartAndRetryOnSPANavigation(() => {
+    resilientStartAndRetryOnSPANavigation(() => {
         logConCgp('[init] Path change detected. Re-initializing script...');
         debouncedEnhancedInitialization();
     });
