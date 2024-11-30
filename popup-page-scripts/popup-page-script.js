@@ -152,6 +152,9 @@ function updateInterface() {
     document.getElementById('buttonIcon').value = '';
     document.getElementById('buttonText').value = '';
     document.getElementById('buttonAutoSendToggle').checked = true; // Reset to default checked
+
+    // **New Addition: Set the profileSelect dropdown to the current profile**
+    profileSelect.value = currentProfile.PROFILE_NAME;
 }
 
 // -------------------------
