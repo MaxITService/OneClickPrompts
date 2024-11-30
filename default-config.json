@@ -15,7 +15,7 @@
         { "icon": "3", "text": " Explain in 3 sentences", "autoSend": true },
         { "icon": "2", "text": " Explain in 2 sentences", "autoSend": true },
         { "icon": "📖", "text": " Read this large chunk of text. Respond with \"Acknowledged\" for now. I will ask questions about this text later.", "autoSend": true },
-        { "icon": "🌐", "text": " Perform a web search on this topic and provide an answer based on the results. Cite sources or inform about source fetch failure.", "autoSend": true },
+        { "icon": "🌐", "text": " Factcheck data in your last message. Perform a web search on this topic and provide an answer based on the results. Cite sources or inform about source fetch failure. To be clear, I don't say that your message was invalid, I just want additional verification to be sure. Write concise response. I DO NOT WANT A BREAKDOWN, just write \"all correct!\"", "autoSend": true },
         { "separator": true },
         { "icon": "📅", "text": " Provide your next answer in a form of a table", "autoSend": false },
         { "icon": "💻", "text": " output ONLY CODE, not explanations. Start by typing code in a code block", "autoSend": true },
