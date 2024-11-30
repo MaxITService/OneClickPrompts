@@ -87,26 +87,44 @@ function commenceExtensionInitialization(configurationObject) {
     }
 
 
-    // TODO: Shift key inverts autoSend for custom send buttons
-    /**
-     * Manages keyboard shortcut events to trigger custom send buttons on the webpage.
-     * Listens for Alt+[1-10] key presses and simulates button clicks.
-     * @param {KeyboardEvent} event - The keyboard event object.
-     */
-    function manageKeyboardShortcutEvents(event) {
-        if (!globalMaxExtensionConfig.enableShortcuts) return;
+/**
+ * Manages keyboard shortcut events to trigger custom send buttons on the webpage.
+ * Listens for Alt+[1-10] key presses and simulates button clicks.
+ * If Shift is also pressed, it inverts the autoSend flag for this press only.
+ * @param {KeyboardEvent} event - The keyboard event object.
+ */
+function manageKeyboardShortcutEvents(event) {
+    if (!globalMaxExtensionConfig.enableShortcuts) return;
 
-        if (event.altKey && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
-            const pressedKey = event.key === '0' ? '10' : event.key;
-            const targetButton = document.querySelector(`button[data-shortcut-key="${pressedKey}"]`);
-            if (targetButton) {
-                event.preventDefault();
-                targetButton.click();
-            } else {
-                logConCgp('[init] No button found for the pressed shortcut key:', pressedKey);
-            }
+    // Only handle events where Alt is pressed and the key is a digit [1-10]
+    if (
+        event.altKey &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        event.code.startsWith('Digit')
+    ) {
+        let pressedKey = event.code.replace('Digit', '');
+        if (pressedKey === '0') pressedKey = '10';
+
+        const targetButton = document.querySelector(`button[data-shortcut-key="${pressedKey}"]`);
+        if (targetButton) {
+            event.preventDefault();
+            // Create a new MouseEvent with shiftKey set based on the current event
+            const clickEvent = new MouseEvent('click', {
+                bubbles: true,
+                cancelable: true,
+                view: window,
+                shiftKey: event.shiftKey
+            });
+            targetButton.dispatchEvent(clickEvent);
+        } else {
+            logConCgp('[init] No button found for the pressed shortcut key:', pressedKey);
         }
     }
+}
+
+
+
 
     /**
      * 
