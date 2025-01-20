@@ -117,6 +117,9 @@ class InjectionTargetsOnWebsite {
         else if (currentHostname.includes('github.com') || currentHostname.includes('copilot')) {
             return 'Copilot';
         }
+        else if (currentHostname.includes('chat.deepseek.com')) {
+            return 'DeepSeek';
+        }
         // Add additional website detections here
         else {
             return 'Unknown';
@@ -159,9 +162,15 @@ class InjectionTargetsOnWebsite {
                     'div.shadow-composer-input textarea#userInput',
                     'textarea#userInput[placeholder="Message Copilot"]'
                 ],
-                buttonsContainerId: 'copilot-custom-buttons-container'
-            },
-            // TODO: Add selectors for other supported websites
+            buttonsContainerId: 'copilot-custom-buttons-container'
+        },
+        DeepSeek: {
+            containers: ['div.dd442025.b699646e'],
+            sendButtons: ['button[type="submit"]'],
+            editors: ['textarea#chat-input'],
+            buttonsContainerId: 'deepseek-custom-buttons-container'
+        },
+        // TODO: Add selectors for other supported websites
         };
         return selectors[site] || {};
     }

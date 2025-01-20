@@ -37,7 +37,8 @@
         "https://chat.openai.com/*",
         "https://chatgpt.com/*",
         "https://claude.ai/*",
-        "https://copilot.microsoft.com/*"
+        "https://copilot.microsoft.com/*",
+        "https://chat.deepseek.com/*"
       ],
       "js": [
         "log.js",
