@@ -1,163 +1,139 @@
 // buttons-clicking-deepseek.js
-// Version: 1.1
-// Handles DeepSeek-specific button clicking and text insertion logic
+// Version: 2.0 - Robust implementation
+// Handles DeepSeek input and sending with multiple fallbacks
 
 'use strict';
 
 /**
- * Processes DeepSeek custom button clicks with full ChatGPT-like functionality
+ * Processes DeepSeek custom button clicks with robust input handling
  * @param {Event} event - Click event object
- * @param {string} customText - Text to insert into editor
- * @param {boolean} autoSend - Whether to automatically send message
+ * @param {string} customText - Text to insert
+ * @param {boolean} autoSend - Auto-send enabled
  */
 function processDeepSeekCustomSendButtonClick(event, customText, autoSend) {
     event.preventDefault();
-    logConCgp('[DeepSeek] Custom button clicked with text:', customText);
+    logConCgp('[DeepSeek] Starting processing with text:', customText);
 
-    const injectionTargets = window.InjectionTargetsOnWebsite.selectors;
-    let editorArea = null;
+    // 1. Find all potential editors
+    const editors = Array.from(document.querySelectorAll(
+        window.InjectionTargetsOnWebsite.selectors.editors.join(', ')
+    )).filter(el => {
+        // Filter visible editors
+        const style = window.getComputedStyle(el);
+        return style.display !== 'none' && style.visibility === 'visible';
+    });
 
-    // Find editor using configured selectors
-    for (const selector of injectionTargets.editors) {
-        editorArea = document.querySelector(selector);
-        if (editorArea) {
-            logConCgp('[DeepSeek] Editor found:', editorArea);
-            break;
-        }
-    }
-
-    if (!editorArea) {
-        logConCgp('[DeepSeek] Editor element not found');
+    if (editors.length === 0) {
+        logConCgp('[DeepSeek] No active editors found');
         return;
     }
 
-    /**
-     * Locates send buttons using configured selectors
-     * @returns {HTMLElement[]} Array of found send buttons
-     */
-    function locateSendButtons() {
-        const sendButtons = [];
-        injectionTargets.sendButtons.forEach(selector => {
-            document.querySelectorAll(selector).forEach(btn => {
-                if (!sendButtons.includes(btn)) {
-                    logConCgp('[DeepSeek] Found send button:', btn);
-                    sendButtons.push(btn);
-                }
-            });
-        });
-        return sendButtons;
-    }
-
-    /**
-     * Starts auto-send interval with ChatGPT-like behavior
-     * @param {HTMLElement} editor - Editor element reference
-     */
-    // buttons-clicking-deepseek.js
-    // Update the startAutoSend function:
-
-    function startAutoSend(editor) {
-        logConCgp('[DeepSeek] Starting auto-send process');
-
-        if (window.deepseekAutoSendInterval) {
-            logConCgp('[DeepSeek] Auto-send already running');
-            return;
-        }
-
-        // Create a temporary attribute to mark the text we're sending
-        const timestamp = Date.now();
-        editor.setAttribute('data-autosend-text', timestamp);
-
-        window.deepseekAutoSendInterval = setInterval(() => {
-            // Check if the text is still present using both input methods
-            const currentText = editor.value ? editor.value.trim() : '';
-            const divText = document.querySelector('.b13855df')?.textContent?.trim() || '';
-
-            // Verify this is our text using the timestamp marker
-            const isOurText = editor.getAttribute('data-autosend-text') === String(timestamp);
-
-            if ((currentText.length === 0 && divText.length === 0) || !isOurText) {
-                logConCgp('[DeepSeek] Text cleared - stopping auto-send');
-                clearInterval(window.deepseekAutoSendInterval);
-                window.deepseekAutoSendInterval = null;
-                editor.removeAttribute('data-autosend-text');
+    // 2. Input handling system
+    function handleEditorInput(editor, text) {
+        try {
+            logConCgp('[DeepSeek] Handling editor:', editor.tagName);
+            
+            // For textareas
+            if (editor.tagName === 'TEXTAREA') {
+                editor.value += text;
+                editor.dispatchEvent(new Event('input', { bubbles: true }));
+                editor.dispatchEvent(new Event('change', { bubbles: true }));
                 return;
             }
 
-            // Find the actual send button (not just submit buttons)
-            const sendButtons = locateSendButtons().filter(btn => {
-                const text = btn.querySelector('.ad0c98fd')?.textContent?.toLowerCase();
-                return text === 'deepthink' || text === 'search';
-            });
-
-            if (sendButtons.length > 0) {
-                logConCgp('[DeepSeek] Clicking verified send button:', sendButtons[0]);
-
-                // Use direct click instead of simulation for DeepSeek's complex button structure
-                sendButtons[0].click();
-
-                // Clear the interval immediately after successful click
-                clearInterval(window.deepseekAutoSendInterval);
-                window.deepseekAutoSendInterval = null;
-                editor.removeAttribute('data-autosend-text');
-
-                logConCgp('[DeepSeek] Send button clicked successfully');
+            // For contenteditable divs
+            if (editor.hasAttribute('contenteditable')) {
+                const range = document.createRange();
+                const selection = window.getSelection();
+                range.selectNodeContents(editor);
+                range.collapse(false);
+                selection.removeAllRanges();
+                selection.addRange(range);
+                document.execCommand('insertText', false, text);
+                editor.dispatchEvent(new Event('input', { bubbles: true }));
+                return;
             }
-        }, 300); // Reduced interval to 300ms for better responsiveness
-    }
 
-    /**
-     * Handles text insertion with proper event simulation
-     * @param {HTMLElement} editor - Editor element
-     */
-    function handleMessageInsertion(editor) {
-        logConCgp('[DeepSeek] Inserting text:', customText);
-
-        // Focus and clear existing text if needed
-        editor.focus();
-        editor.value = customText;
-
-        // Dispatch full sequence of events
-        const inputEvent = new Event('input', { bubbles: true });
-        const changeEvent = new Event('change', { bubbles: true });
-
-        editor.dispatchEvent(inputEvent);
-        editor.dispatchEvent(changeEvent);
-
-        logConCgp('[DeepSeek] Text inserted and events dispatched');
-
-        // Handle auto-send if enabled
-        if (autoSend && globalMaxExtensionConfig.globalAutoSendEnabled) {
-            startAutoSend(editor);
+            // Fallback for React-controlled divs
+            editor.textContent += text;
+            const reactEvent = new Event('input', { bubbles: true });
+            Object.defineProperty(reactEvent, 'target', { value: editor });
+            editor.dispatchEvent(reactEvent);
+        } catch (error) {
+            logConCgp('[DeepSeek] Input error:', error);
         }
     }
 
-    // Start the insertion process
-    handleMessageInsertion(editorArea);
+    // 3. Send button locator with fallbacks
+    function findSendButton() {
+        // Try primary selectors first
+        const buttons = window.InjectionTargetsOnWebsite.selectors.sendButtons
+            .flatMap(selector => Array.from(document.querySelectorAll(selector)))
+            .filter(btn => {
+                if (!btn.offsetParent) return false; // Visible check
+                const disabled = btn.disabled || 
+                              btn.getAttribute('aria-disabled') === 'true' ||
+                              btn.classList.contains('disabled');
+                return !disabled;
+            });
+
+        // Priority 1: Button with send icon
+        const iconButton = buttons.find(btn => 
+            btn.querySelector('svg')?.innerHTML.includes('send')
+        );
+
+        // Priority 2: Last button in container
+        return iconButton || buttons[buttons.length - 1];
+    }
+
+    // 4. Robust auto-send system
+    function startAutoSend() {
+        const MAX_ATTEMPTS = 15; // 4.5 seconds max
+        let attempts = 0;
+        let interval;
+
+        const attemptSend = () => {
+            if (attempts++ > MAX_ATTEMPTS) {
+                clearInterval(interval);
+                return;
+            }
+
+            const sendButton = findSendButton();
+            if (sendButton) {
+                logConCgp('[DeepSeek] Found active send button');
+                sendButton.click();
+                clearInterval(interval);
+            }
+        };
+
+        interval = setInterval(attemptSend, 300);
+        attemptSend(); // Immediate first attempt
+    }
+
+    // Execute input on all relevant editors
+    editors.forEach(editor => handleEditorInput(editor, customText));
+
+    // Initiate auto-send if enabled
+    if (autoSend && globalMaxExtensionConfig.globalAutoSendEnabled) {
+        logConCgp('[DeepSeek] Starting auto-send sequence');
+        startAutoSend();
+    }
 }
 
-/**
- * Initializes DeepSeek button injection using centralized logic
- */
+// Initialization and exports remain the same
 function initializeDeepSeekButtonInjection() {
-    logConCgp('[DeepSeek] Initializing button injection');
-
     window.MaxExtensionUtils.waitForElements(
         window.InjectionTargetsOnWebsite.selectors.containers,
-        (container) => {
-            // Use centralized initialization from buttons-init
+        container => {
             window.MaxExtensionButtonsInit.createAndInsertCustomElements(container);
-            logConCgp('[DeepSeek] Custom elements injected successfully');
-        },
-        50 // Max attempts
+        }
     );
 }
 
-// DOM ready initialization
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeDeepSeekButtonInjection);
 } else {
     initializeDeepSeekButtonInjection();
 }
 
-// Expose function globally for unified click handling
 window.processDeepSeekCustomSendButtonClick = processDeepSeekCustomSendButtonClick;

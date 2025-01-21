@@ -165,12 +165,21 @@ class InjectionTargetsOnWebsite {
                 buttonsContainerId: 'copilot-custom-buttons-container'
             },
             DeepSeek: {
-                containers: ['div.dd442025.b699646e'],
-                sendButtons: [
-                    'div.ec4f5d61 > div[role="button"].ds-button', // DeepThink button
-                    'div.ec4f5d61 > div[role="button"].d9f56c96' // Search button
+                containers: [
+                    'div.dd442025', // Primary container
+                    '[class*="editorContainer"]' // Class name fallback
                 ],
-                editors: ['textarea#chat-input', 'div.b13855df'],
+                sendButtons: [
+                    'div.bf38813a [role="button"]', // Main send button
+                    'button:has(svg)', // Any button with icon
+                    '[aria-label*="Send"]', // ARIA fallback
+                    '[data-testid="send-button"]' // Test ID fallback
+                ],
+                editors: [
+                    'textarea#chat-input', // Textarea editor
+                    'div.b13855df', // Div-based editor
+                    '[contenteditable="true"]' // Generic contenteditable
+                ],
                 buttonsContainerId: 'deepseek-custom-buttons-container'
             },
             // TODO: Add selectors for other supported websites
