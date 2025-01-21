@@ -162,15 +162,18 @@ class InjectionTargetsOnWebsite {
                     'div.shadow-composer-input textarea#userInput',
                     'textarea#userInput[placeholder="Message Copilot"]'
                 ],
-            buttonsContainerId: 'copilot-custom-buttons-container'
-        },
-        DeepSeek: {
-            containers: ['div.dd442025.b699646e'],
-            sendButtons: ['button[type="submit"]'],
-            editors: ['textarea#chat-input'],
-            buttonsContainerId: 'deepseek-custom-buttons-container'
-        },
-        // TODO: Add selectors for other supported websites
+                buttonsContainerId: 'copilot-custom-buttons-container'
+            },
+            DeepSeek: {
+                containers: ['div.dd442025.b699646e'],
+                sendButtons: [
+                    'div.ec4f5d61 > div[role="button"].ds-button', // DeepThink button
+                    'div.ec4f5d61 > div[role="button"].d9f56c96' // Search button
+                ],
+                editors: ['textarea#chat-input', 'div.b13855df'],
+                buttonsContainerId: 'deepseek-custom-buttons-container'
+            },
+            // TODO: Add selectors for other supported websites
         };
         return selectors[site] || {};
     }
