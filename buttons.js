@@ -114,19 +114,23 @@ function processCustomSendButtonClick(event, customText, autoSend) {
     logConCgp('[buttons] Active site:', activeSite);
 
     // Handle different sites
+  // In processCustomSendButtonClick function
     switch (activeSite) {
-        case 'Claude':
-            handleClaudeSite(customText, autoSend);
-            break;
-        case 'ChatGPT':
-            processChatGPTCustomSendButtonClick(event, customText, autoSend);
-            break;
-        case 'Copilot':
-            processCopilotCustomSendButtonClick(event, customText, autoSend);
-            break;
-        default:
-            logConCgp('[buttons] Unsupported site:', activeSite);
-    }
+    case 'Claude':
+        handleClaudeSite(customText, autoSend);
+        break;
+    case 'ChatGPT':
+        processChatGPTCustomSendButtonClick(event, customText, autoSend);
+        break;
+    case 'Copilot':
+        processCopilotCustomSendButtonClick(event, customText, autoSend);
+        break;
+    case 'DeepSeek': 
+        processDeepSeekCustomSendButtonClick(event, customText, autoSend);
+        break;
+    default:
+        logConCgp('[buttons] Unsupported site:', activeSite);
+}
 }
 
 
