@@ -31,37 +31,31 @@ body {
     color: var(--text-color);
     width: 100%;    
     box-sizing: border-box;
-    overflow-y: auto; /* Enable vertical scrolling if content exceeds height */
+    overflow-y: auto;
     transition: background-color var(--transition-duration) ease;
 }
 
 
-/* Version text is not needed at all when the profile manipulation flows are initiated  */
+/* Hide version container if the user is adding or copying a profile */
 body:has(#addProfileContainer:not([style*="display: none"])) #versionContainer,
 body:has(#copyProfileContainer:not([style*="display: none"])) #versionContainer {
-
-    opacity: 0; 
-    transition: opacity 0.4s ease; 
+    opacity: 0;
+    transition: opacity 0.4s ease;
 }
 
 /* When #versionContainer is visible */
 #versionContainer {
     opacity: 1;
     pointer-events: auto;
-    transition: opacity 0.5s ease; 
+    transition: opacity 0.5s ease;
 }
 
-
-
-#version
-{
+#version {
     text-align: center;
     color: #666666;
     width: 100%;
 }
 
-
-/* id="topExplanationText" text centered and a little bit gray */
 #topExplanationText {
     text-align: center;
     color: #666666;
@@ -73,10 +67,11 @@ body:has(#copyProfileContainer:not([style*="display: none"])) #versionContainer 
     max-width: 800px;
     min-width: 700px;
     margin: 0 auto;
-    height: 100%; 
+    height: 100%;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    scroll-behavior: smooth;
 }
 
 /* Sections Styling */
@@ -85,19 +80,18 @@ body:has(#copyProfileContainer:not([style*="display: none"])) #versionContainer 
     border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 16px;
-    background-color: #ffffff; 
+    background-color: #ffffff;
     box-shadow: var(--box-shadow);
     transition: box-shadow var(--transition-duration) ease, background-color var(--transition-duration) ease;
 }
 
 .section:hover {
     box-shadow: var(--box-shadow-hover);
-    background-color: #f2f2f2; 
+    background-color: #f2f2f2;
     transition: box-shadow var(--transition-duration-release) ease, background-color var(--transition-duration-release) ease;
 }
 
-.text-inside-container
-{
+.text-inside-container {
     margin: 0 2rem;
 }
 
@@ -105,12 +99,12 @@ h2 {
     margin: 0 0 16px 0;
     font-size: 16px;
     font-weight: 600;
-    color: var(--primary-color); 
+    color: var(--primary-color);
     transition: color var(--transition-duration) ease;
 }
 
 h2:hover {
-    color: #6a4abd; 
+    color: #6a4abd;
     transition: color var(--transition-duration-release) ease;
 }
 
@@ -119,7 +113,7 @@ h2:hover {
     display: flex;
     gap: 8px;
     margin-bottom: 16px;
-    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    flex-wrap: wrap;
 }
 
 /* Inputs Styling */
@@ -131,8 +125,8 @@ select {
     border-radius: 4px;
     font-size: 14px;
     box-sizing: border-box;
-    resize: none; /* Prevent manual resizing */
-    overflow: hidden; /* Hide scrollbars */
+    resize: none;
+    overflow: hidden;
     transition: border-color var(--transition-duration) ease, box-shadow var(--transition-duration) ease;
     background: #ffffff;
     color: var(--text-color);
@@ -143,7 +137,7 @@ textarea:focus,
 select:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(122, 92, 200, 0.1); /* Light violet shadow */
+    box-shadow: 0 0 0 3px rgba(122, 92, 200, 0.1);
 }
 
 .emoji-input {
@@ -153,7 +147,7 @@ select:focus {
 
 .text-input {
     flex: 1;
-    min-height: 40px; /* Minimum height for single-line */
+    min-height: 40px;
     line-height: 1.2;
 }
 
@@ -182,7 +176,6 @@ select:focus {
 
 .profile-action-container button:hover {
     background: #6a4abd;
-    transition: background var(--transition-duration-release) ease, color var(--transition-duration-release) ease;
 }
 
 .profile-action-container button:disabled {
@@ -205,22 +198,17 @@ button {
 }
 
 button:hover {
-    background: #e6e6e6; /* Light gray background on hover */
-    color: var(--text-color); /* Ensure text remains visible */
-    transition: background var(--transition-duration-release) ease, color var(--transition-duration-release) ease;
+    background: #e6e6e6;
 }
 
 button.danger {
     color: var(--danger-color);
     border-color: var(--danger-color);
     background: #ffffff;
-    transition: background var(--transition-duration) ease, color var(--transition-duration) ease;
 }
 
 button.danger:hover {
-    background: #f8d7da; /* Light red background on hover */
-    color: var(--danger-color); /* Maintain text color */
-    transition: background var(--transition-duration-release) ease, color var(--transition-duration-release) ease;
+    background: #f8d7da;
 }
 
 button:active {
@@ -239,7 +227,6 @@ button:active {
 
 .checkbox-row:hover {
     color: var(--primary-color);
-    transition: color var(--transition-duration-release) ease;
 }
 
 .checkbox-row input[type="checkbox"] {
@@ -258,7 +245,6 @@ button:active {
 
 .checkbox-row input[type="checkbox"]:checked {
     background: var(--primary-color);
-    transition: background var(--transition-duration-release) ease;
 }
 
 .checkbox-row input[type="checkbox"]:checked::before {
@@ -279,12 +265,10 @@ button:active {
     min-height: 50px;
     background-color: #ffffff;
     transition: background-color var(--transition-duration) ease;
-    overflow-y: auto; /* Enable scrolling if many buttons */
-    flex: 1 1 auto; /* Allow button list to expand */
-}
-
-#buttonList:hover {
-    transition: background-color var(--transition-duration-release) ease;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    scroll-behavior: smooth;
+    transform-style: preserve-3d;
 }
 
 /* Individual Button Items */
@@ -298,27 +282,28 @@ button:active {
     border-radius: 4px;
     background: #ffffff;
     cursor: grab;
-    transition: transform var(--transition-duration) cubic-bezier(0.4, 0, 0.2, 1), 
-                box-shadow var(--transition-duration) ease, 
-                background-color var(--transition-duration) ease;
     position: relative;
-}
-
-.button-item:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--box-shadow-hover);
-    background-color: var(--hover-bg-color);
-    transition: transform var(--transition-duration-release) cubic-bezier(0.4, 0, 0.2, 1), 
-                box-shadow var(--transition-duration-release) ease, 
-                background-color var(--transition-duration-release) ease;
+    /* Set initial scale to 1 and enable a smooth transition */
+    transform: scale(1);
+    transition: transform 0.9s ease, background-color 0.9s ease;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    perspective: 1000px;
 }
 
 .button-item.dragging {
+    transform: scale(0.8);       /* Shrinks to 80% while dragging */
+    background-color: #d4f8d4 !important; /* Light green highlight */
     opacity: 0.8;
-    transform: scale(1.02) ;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-    z-index: 2; /* Ensure dragged item is above others */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    cursor: grabbing;
+    z-index: 2;
 }
+
+.button-item:hover {
+    background-color: var(--hover-bg-color);
+}
+
 
 /* Drag Handle Styling */
 .drag-handle {
@@ -327,51 +312,43 @@ button:active {
     display: flex;
     align-items: center;
     font-size: 18px;
-    transition: background-color var(--transition-duration) ease;
-}
-
-.drag-handle:hover {
-    background-color: #e6e6e6;
-    transition: background-color var(--transition-duration-release) ease;
 }
 
 /* Separator Styles */
 .button-item.separator-item {
-    display: flex; /* Ensure flex layout */
-    align-items: center; /* Vertically center the content */
-    justify-content: center; /* Horizontally center the content */
-    gap: 8px; /* Space between lines and text */
-    margin: 8px 0; /* Vertical spacing */
-    padding: 8px; /* Inner padding */
-    background: #dcdcdc; /* Light gray background */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 8px 0;
+    padding: 8px;
+    background: #dcdcdc;
     border: none;
-    cursor: move; /* Indicates draggable */
-    transition: background-color var(--transition-duration) ease, transform var(--transition-duration) ease;
+    cursor: move;
+    transition: background-color var(--transition-duration) ease;
 }
 
 .button-item.separator-item:hover {
-    background: #c0c0c0; /* Slightly darker gray on hover */
-    transition: background-color var(--transition-duration-release) ease, transform var(--transition-duration-release) ease;
+    background: #c0c0c0;
 }
 
 .button-item.separator-item.dragging {
     opacity: 0.7;
-    transform: scale(1.02);
-    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
 /* Separator Line and Text */
 .separator-line {
-    flex: 1; /* Lines expand to fill space */
-    height: 1px; /* Thickness of lines */
-    background: var(--separator-color); /* Line color */
+    flex: 1;
+    height: 1px;
+    background: var(--separator-color);
 }
 
 .separator-text {
-    white-space: nowrap; /* Prevent text wrapping */
-    color: #555555; /* Text color */
-    font-weight: 500; /* Text weight */
-    font-size: 14px; /* Text size */
+    white-space: nowrap;
+    color: #555555;
+    font-weight: 500;
+    font-size: 14px;
 }
 
 /* Console Styling */
@@ -380,9 +357,8 @@ button:active {
     padding: 8px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
-    background: #333333; /* Dark background for console */
-    color: #cccccc; /* Light gray text */
-    transition: background-color var(--transition-duration) ease, color var(--transition-duration) ease;
+    background: #333333;
+    color: #cccccc;
     max-height: 150px;
     overflow-y: auto;
 }
@@ -390,12 +366,10 @@ button:active {
 .console div {
     padding: 4px 8px;
     border-bottom: 1px solid #444444;
-    transition: background-color var(--transition-duration) ease;
 }
 
 .console div:hover {
-    background: #444444; /* Darker background on hover */
-    transition: background-color var(--transition-duration-release) ease;
+    background: #444444;
 }
 
 /* Save Status Styling */
@@ -416,36 +390,28 @@ button:active {
 /* Profile Selection Dropdown Styling */
 #profileSelect {
     flex: 1;
-
     background-repeat: no-repeat;
     padding-right: 30px;
     transition: border-color var(--transition-duration) ease, box-shadow var(--transition-duration) ease;
 }
 
-
 #profileSelect:hover {
     border-color: var(--primary-color);
-    transition: border-color var(--transition-duration-release) ease, box-shadow var(--transition-duration-release) ease;
 }
 
 #profileSelect:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(122, 92, 200, 0.1); /* Light violet shadow */
-    transition: border-color var(--transition-duration-release) ease, box-shadow var(--transition-duration-release) ease;
+    box-shadow: 0 0 0 3px rgba(122, 92, 200, 0.1);
 }
 
-/* Save Status Animation Reset */
-.small-hoovering-text {
-    animation: saveStatusFade 2s ease-out forwards;
-}
-
+/* No custom buttons message */
 .empty-message {
     padding: 10px;
     color: #888;
     font-style: italic;
-    width:100%;
-    text-align:center;
+    width: 100%;
+    text-align: center;
 }
 
 /* Export and Import Buttons */
@@ -464,7 +430,6 @@ button:active {
 #exportProfile:hover,
 #importProfile:hover {
     background: #e6e6e6;
-    transition: background var(--transition-duration-release) ease, color var(--transition-duration-release) ease;
 }
 
 #exportProfile:active,
@@ -480,7 +445,6 @@ button:active {
     border-radius: 6px;
     background-color: #f0f8ff;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    transition: box-shadow var(--transition-duration) ease, transform var(--transition-duration) ease;
 }
 
 .confirmation p {
@@ -516,7 +480,6 @@ button:active {
     border-radius: 6px;
     background-color: #ffe6e6;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    transition: box-shadow var(--transition-duration) ease, transform var(--transition-duration) ease;
 }
 
 .error p {
@@ -573,13 +536,37 @@ button:active {
 }
 
 .toast.success {
-    background: #4BB543; /* Green for success */
+    background: #4BB543;
 }
 
 .toast.error {
-    background: #FF3333; /* Red for errors */
+    background: #FF3333;
 }
 
 .toast.info {
-    background: #3333FF; /* Blue for info */
+    background: #3333FF;
+}
+
+.button-list-wrapper {
+    position: relative;
+    transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ------------------------- */
+/* **New Functionality Below** */
+/* ------------------------- */
+
+/* Disable hover effects on .button-item when dragging is active */
+body.dragging .button-item:hover {
+    background-color: transparent !important;
+    box-shadow: none !important;
+    cursor: default !important;
+}
+
+/* Optionally, disable hover effects on other interactive elements if needed */
+/* Example for buttons */
+body.dragging button:hover {
+    background-color: transparent !important;
+    box-shadow: none !important;
+    cursor: default !important;
 }

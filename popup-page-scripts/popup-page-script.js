@@ -1,5 +1,5 @@
 // popup-page-script.js
-// Version: 1.6.3
+// Version: 1.6.4
 // Main script for Max Extension configuration interface
 
 'use strict';
@@ -34,8 +34,12 @@ const addProfileInput = document.getElementById('addProfileInput');
 const copyProfileInput = document.getElementById('copyProfileInput');
 
 // New DOM Elements for Cancel Actions
-const cancelAddProfileButton = document.getElementById('cancelAddProfile'); // Cancel button for adding profile
-const cancelCopyProfileButton = document.getElementById('cancelCopyProfile'); // Cancel button for duplicating profile
+const cancelAddProfileButton = document.getElementById('cancelAddProfile');
+const cancelCopyProfileButton = document.getElementById('cancelCopyProfile');
+
+// Scroll interval data
+let scrollInterval = null;
+let lastDragPosition = { x: 0, y: 0 };
 
 // -------------------------
 // 7. Settings Management
@@ -43,14 +47,6 @@ const cancelCopyProfileButton = document.getElementById('cancelCopyProfile'); //
 
 /**
  * Updates global settings based on user input.
- * 
- * Dependencies:
- * - /popup-page-scripts/popup-page-profiles.js: Uses saveCurrentProfile() to persist changes.
- * - /popup-page-scripts/popup-page-visuals.js: Uses logToConsole() to log updates.
- * 
- * Why:
- * This function updates the global settings of the current profile based on user interactions,
- * saves the updated profile, and logs the changes for debugging purposes.
  */
 async function updateGlobalSettings() {
     currentProfile.globalAutoSendEnabled = document.getElementById('autoSendToggle').checked;
@@ -61,16 +57,6 @@ async function updateGlobalSettings() {
 
 /**
  * Reverts the current profile to default settings.
- * 
- * Dependencies:
- * - /popup-page-scripts/popup-page-profiles.js: Uses chrome.runtime.sendMessage to create default profile and save it.
- * - /popup-page-scripts/popup-page-visuals.js: Uses showToast() to notify the user.
- * - /popup-page-scripts/popup-page-script.js: Uses updateInterface() to refresh the UI.
- * - /popup-page-scripts/popup-page-profiles.js: Uses saveCurrentProfile() to persist the reverted profile.
- * 
- * Why:
- * Allows users to revert their current profile settings to the default configuration, ensuring they can
- * easily undo unwanted changes.
  */
 async function revertToDefault() {
     if (!confirm('Revert current profile to default settings?')) return;
@@ -94,14 +80,6 @@ async function revertToDefault() {
 
 /**
  * Saves the current profile configuration.
- * 
- * Dependencies:
- * - /popup-page-scripts/popup-page-profiles.js: Uses chrome.runtime.sendMessage to save the profile.
- * - /popup-page-scripts/popup-page-script.js: Uses updateSaveStatus() to update the UI.
- * 
- * Why:
- * Persists the current profile's configuration to ensure that user changes are saved and can be retrieved later.
- * 
  * @returns {Promise<boolean>} - Returns true if save is successful, else false.
  */
 async function saveCurrentProfile() {
@@ -121,12 +99,6 @@ async function saveCurrentProfile() {
 
 /**
  * Updates the save status display with the current timestamp.
- * 
- * Dependencies:
- * - None directly, but interacts with the DOM to reflect the latest save time.
- * 
- * Why:
- * Provides visual feedback to the user indicating when the profile was last saved, enhancing user awareness.
  */
 function updateSaveStatus() {
     const timestamp = new Date().toLocaleTimeString();
@@ -135,13 +107,6 @@ function updateSaveStatus() {
 
 /**
  * Updates the entire interface based on the current profile.
- * 
- * Dependencies:
- * - /popup-page-scripts/popup-page-customButtons.js: Uses updateButtonList() to refresh the button list.
- * - /popup-page-script.js: Interacts with DOM elements to reflect current profile settings.
- * 
- * Why:
- * Ensures that the UI accurately reflects the current profile's settings and custom buttons, providing a consistent user experience.
  */
 function updateInterface() {
     // Update buttons, settings, etc. based on currentProfile
@@ -153,7 +118,7 @@ function updateInterface() {
     document.getElementById('buttonText').value = '';
     document.getElementById('buttonAutoSendToggle').checked = true; // Reset to default checked
 
-    // **New Addition: Set the profileSelect dropdown to the current profile**
+    // Set the profileSelect dropdown to the current profile
     profileSelect.value = currentProfile.PROFILE_NAME;
 }
 
@@ -161,18 +126,6 @@ function updateInterface() {
 // 9. Event Listeners
 // -------------------------
 
-/**
- * Initializes event listeners and loads profiles on DOMContentLoaded.
- * 
- * Dependencies:
- * - /popup-page-scripts/popup-page-profiles.js: Uses loadProfiles(), switchProfile(), addNewEmptyProfile(), copyCurrentProfile(), deleteCurrentProfile().
- * - /popup-page-scripts/popup-page-customButtons.js: Uses addButton(), addSeparator(), deleteButton().
- * - /popup-page-scripts/popup-page-visuals.js: Uses showToast().
- * - /popup-page-scripts/popup-page-script.js: Uses various utility functions like logToConsole(), textareaSaverAndResizerFunc(), etc.
- * 
- * Why:
- * Sets up the interactive elements of the UI, ensuring that user actions trigger the appropriate functions to manage profiles and buttons.
- */
 document.addEventListener('DOMContentLoaded', () => {
     loadProfiles();
 
@@ -277,11 +230,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('shortcutsToggle').addEventListener('change', updateGlobalSettings);
     document.getElementById('revertDefault').addEventListener('click', revertToDefault);
 
-    // Drag and drop
+    // Drag and drop events
     buttonList.addEventListener('dragstart', handleDragStart);
     buttonList.addEventListener('dragover', handleDragOver);
     buttonList.addEventListener('drop', handleDrop);
-    buttonList.addEventListener('dragend', handleDragEnd);
+    // Listen to dragend on the entire document as well, in case user drops outside the buttonList
+    document.addEventListener('dragend', handleDragEnd);
 
     // Button list event delegation for delete buttons
     buttonList.addEventListener('click', async (e) => {
@@ -313,25 +267,17 @@ document.addEventListener('DOMContentLoaded', () => {
     attachAutoSendToggleListeners();
 
     // -------------------------
-    // 10. Open Links in New Tabs - This is the way to open external links in extensions, otherwise clicking does nothing
+    // Open external links in new tabs
     // -------------------------
-
-    /**
-     * Opens external links in new tabs using the Chrome Tabs API.
-     * @param {Event} e - The click event.
-     */
     function handleExternalLinkClick(e) {
-        e.preventDefault(); // Prevent the default link behavior
+        e.preventDefault();
         const url = e.currentTarget.href;
         chrome.tabs.create({ url });
     }
 
-    // Select the Help Section
     const helpSection = document.getElementById('helpSection');
     if (helpSection) {
-        // Select all anchor tags within the Help Section that have href starting with http or https
         const helpLinks = helpSection.querySelectorAll('a[href^="http"]');
-
         helpLinks.forEach(link => {
             link.addEventListener('click', handleExternalLinkClick);
         });
@@ -342,110 +288,96 @@ document.addEventListener('DOMContentLoaded', () => {
 // 11. Drag and Drop Handlers
 // -------------------------
 
-/**
- * Handles the start of a drag event.
- * 
- * Dependencies:
- * - None directly, but interacts with DOM elements to manage drag state.
- * 
- * Why:
- * Enables drag-and-drop functionality for reordering custom buttons within the UI.
- * 
- * @param {DragEvent} e - The drag event.
- */
 function handleDragStart(e) {
+    // Only allow dragging via drag-handle or the entire separator
     if (e.target.classList.contains('drag-handle') || e.target.classList.contains('separator-item')) {
         isDragging = true;
         draggedItem = e.target.closest('.button-item');
         draggedItem.classList.add('dragging');
+
+        // **Added Functionality: Add 'dragging' class to body to disable hover effects**
+        document.body.classList.add('dragging');
+
         e.dataTransfer.effectAllowed = 'move';
 
-        // Set a transparent image as drag image to avoid default ghost
+        // A transparent image for drag image
         const img = new Image();
-        img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
+        img.src =
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
         e.dataTransfer.setDragImage(img, 0, 0);
     } else {
         e.preventDefault();
     }
 }
 
-/**
- * Handles the drag over event.
- * 
- * Dependencies:
- * - None directly, but interacts with DOM elements to determine drop position.
- * 
- * Why:
- * Manages the visual feedback and placement of the dragged item during a drag-and-drop operation.
- * 
- * @param {DragEvent} e - The drag event.
- */
 function handleDragOver(e) {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    if (!isDragging) return;
 
+    e.dataTransfer.dropEffect = 'move';
+    lastDragPosition = { x: e.clientX, y: e.clientY };
+
+    // Identify potential target
     const target = e.target.closest('.button-item');
     if (!target || target === draggedItem) return;
 
     const bounding = target.getBoundingClientRect();
-    const offset = bounding.y + (bounding.height / 2);
     const parent = target.parentNode;
+    const offsetY = e.clientY - bounding.top;
+    const isBefore = offsetY < bounding.height / 2;
 
-    if (e.clientY - bounding.y < bounding.height / 2) {
+    // Re-insert draggedItem before or after 'target'
+    if (isBefore) {
         parent.insertBefore(draggedItem, target);
     } else {
         parent.insertBefore(draggedItem, target.nextSibling);
     }
+
+    // Auto-scroll if near top/bottom
+    handleAutoScroll();
 }
 
-/**
- * Handles the drop event.
- * 
- * Dependencies:
- * - /popup-page-scripts/popup-page-profiles.js: Uses saveCurrentProfile() to persist the new order.
- * - /popup-page-scripts/popup-page-visuals.js: Uses logToConsole() to log the reordering action.
- * 
- * Why:
- * Finalizes the new order of custom buttons after a drag-and-drop operation and saves the updated configuration.
- * 
- * @param {DragEvent} e - The drag event.
- */
 function handleDrop(e) {
     e.preventDefault();
     e.stopPropagation();
 
-    isDragging = false;
-    if (draggedItem) {
-        draggedItem.classList.remove('dragging');
-        draggedItem = null;
-    }
+    if (!isDragging || !draggedItem) return;
 
-    // Update the order in the profile
-    const newOrder = Array.from(buttonList.children).map(child => parseInt(child.dataset.index));
-    currentProfile.customButtons = newOrder.map(index => currentProfile.customButtons[index]);
-
-    saveCurrentProfile();
-    updateButtonList();
+    // Finalize position, save the new order
+    finalizeDrag();
     logToConsole('Reordered buttons');
 }
 
-/**
- * Handles the end of a drag event.
- * 
- * Dependencies:
- * - None directly, but manages the drag state and UI classes.
- * 
- * Why:
- * Cleans up the drag state and visual indicators after a drag-and-drop operation completes.
- * 
- * @param {DragEvent} e - The drag event.
- */
 function handleDragEnd(e) {
+    if (!isDragging || !draggedItem) return;
+
+    // If user drops outside the buttonList, finalize
+    finalizeDrag();
+}
+
+/**
+ * Stop any scrolling and finalize the new button order
+ */
+function finalizeDrag() {
     isDragging = false;
     if (draggedItem) {
         draggedItem.classList.remove('dragging');
         draggedItem = null;
     }
+
+    // **Added Functionality: Remove 'dragging' class from body to re-enable hover effects**
+    document.body.classList.remove('dragging');
+
+    clearInterval(scrollInterval);
+    scrollInterval = null;
+
+    // Rebuild the customButtons array in new order
+    const newOrder = Array.from(buttonList.children).map(child => parseInt(child.dataset.index));
+    currentProfile.customButtons = newOrder.map(index => currentProfile.customButtons[index]);
+
+    // Save changes and rebuild UI
+    saveCurrentProfile();
+    updateButtonList();
 }
 
 // -------------------------
@@ -455,13 +387,6 @@ function handleDragEnd(e) {
 /**
  * This is not browser console!
  * Logs a message to the user-visible console with a timestamp.
- * 
- * Dependencies:
- * - None directly, but interacts with the DOM to display log messages.
- * 
- * Why:
- * Provides users with real-time feedback and logs of actions performed within the extension for debugging and informational purposes.
- * 
  * @param {string} message - The message to log.
  */
 function logToConsole(message) {
@@ -474,12 +399,6 @@ function logToConsole(message) {
 
 /**
  * Automatically resizes textareas based on their content and attaches input listeners.
- * 
- * Dependencies:
- * - /popup-page-scripts/popup-page-customButtons.js: Uses saveCurrentProfile() to save text changes.
- * 
- * Why:
- * Enhances user experience by ensuring textareas expand to fit their content and updates the profile configuration as users type.
  */
 function textareaSaverAndResizerFunc() {
     const textareas = buttonList.querySelectorAll('textarea.text-input');
@@ -501,12 +420,6 @@ function textareaSaverAndResizerFunc() {
 
 /**
  * Attaches input listeners to emoji input fields to update button icons.
- * 
- * Dependencies:
- * - /popup-page-scripts/popup-page-customButtons.js: Uses saveCurrentProfile() to save icon changes.
- * 
- * Why:
- * Allows users to dynamically change the icons of their custom buttons and ensures these changes are saved.
  */
 function attachEmojiInputListeners() {
     const emojiInputs = buttonList.querySelectorAll('input.emoji-input');
@@ -522,13 +435,6 @@ function attachEmojiInputListeners() {
 
 /**
  * Attaches listeners to auto-send toggle inputs to update button settings.
- * 
- * Dependencies:
- * - /popup-page-scripts/popup-page-customButtons.js: Uses saveCurrentProfile() to save auto-send preferences.
- * - /popup-page-scripts/popup-page-profiles.js: Uses logToConsole() to log changes.
- * 
- * Why:
- * Enables users to toggle the auto-send feature for individual buttons and ensures these preferences are persisted.
  */
 function attachAutoSendToggleListeners() {
     const autoSendToggles = buttonList.querySelectorAll('input.autosend-toggle');

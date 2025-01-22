@@ -35,6 +35,7 @@ function createButtonElement(button, index) {
             <label class="checkbox-row">
                 <input type="checkbox" class="autosend-toggle" ${button.autoSend ? 'checked' : ''}>
                 <span>Auto-send</span>
+                <span class="shortcut-indicator">Ctrl+${index + 1}</span>
             </label>
             <button class="delete-button danger">Delete</button>
         `;
