@@ -11,7 +11,7 @@
 function processAIStudioCustomSendButtonClick(event, customText, autoSend) {
     // Prevent default button behavior
     event.preventDefault();
-    logConCgp('[buttons] Custom send button was clicked for AI Studio.');
+    logConCgp('[AIStudio] Starting process with text:', customText);
 
     const injectionTargets = window.InjectionTargetsOnWebsite;
     const editorSelectors = injectionTargets.selectors.editors;
@@ -73,6 +73,54 @@ function processAIStudioCustomSendButtonClick(event, customText, autoSend) {
         logConCgp('[buttons] AI Studio Auto-send enabled, attempting to send message');
         MaxExtensionUtils.simulateClick(sendButton);
     }
+}
+
+function initializeAIStudioButtonInjection() {
+    const injectionTargets = window.InjectionTargetsOnWebsite;
+    
+    window.MaxExtensionUtils.waitForElements(
+        injectionTargets.selectors.containers,
+        (container) => {
+            logConCgp('[AIStudio] Found container:', container);
+            
+            // Create dedicated buttons container
+            let buttonsContainer = document.getElementById(
+                injectionTargets.selectors.buttonsContainerId
+            );
+            
+            if (!buttonsContainer) {
+                buttonsContainer = document.createElement('div');
+                buttonsContainer.id = injectionTargets.selectors.buttonsContainerId;
+                buttonsContainer.style.cssText = `
+                    display: flex;
+                    gap: 8px;
+                    padding: 8px;
+                    align-items: center;
+                    order: -1; /* Place before input area */
+                `;
+                
+                // Insert within Angular component structure
+                const inputWrapper = container.querySelector('ms-text-chunk');
+                if (inputWrapper) {
+                    inputWrapper.parentNode.insertBefore(buttonsContainer, inputWrapper);
+                    logConCgp('[AIStudio] Inserted buttons container before input wrapper');
+                } else {
+                    container.appendChild(buttonsContainer);
+                }
+            }
+            
+            window.MaxExtensionButtonsInit.createAndInsertCustomElements(buttonsContainer);
+        },
+        10, // Increased max attempts
+        500 // Longer timeout (500ms)
+    );
+}
+
+// Update initialization
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeAIStudioButtonInjection);
+} else {
+    initializeAIStudioButtonInjection();
 }
 
 // Expose the function globally

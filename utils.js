@@ -185,9 +185,20 @@ class InjectionTargetsOnWebsite {
                 buttonsContainerId: 'deepseek-custom-buttons-container'
             },
             AIStudio: {
-                containers: ['footer._ngcontent-ng-c3539710310'],
-                sendButtons: ['run-button button[type="submit"]'],
-                editors: ['ms-autosize-textarea textarea[aria-label="User text input"]'],
+                containers: [
+                    'div.input-wrapper',
+                    'ms-chunk-input',
+                    'section.text-and-attachments-wrapper'
+                ],
+                sendButtons: [
+                    'button.run-button',
+                    'button[aria-label="Run"]',
+                    'run-button button[type="submit"]'
+                ],
+                editors: [
+                    'ms-autosize-textarea textarea[aria-label="User text input"]',
+                    'textarea[placeholder="Type something"]'
+                ],
                 buttonsContainerId: 'aistudio-custom-buttons-container'
             },
             // TODO: Add selectors for other supported websites

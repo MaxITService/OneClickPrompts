@@ -116,18 +116,21 @@ function processCustomSendButtonClick(event, customText, autoSend) {
     // Handle different sites
   // In processCustomSendButtonClick function
     switch (activeSite) {
-    case 'Claude':
-        handleClaudeSite(customText, autoSend);
-        break;
-    case 'ChatGPT':
-        processChatGPTCustomSendButtonClick(event, customText, autoSend);
-        break;
-    case 'Copilot':
-        processCopilotCustomSendButtonClick(event, customText, autoSend);
-        break;
-    case 'DeepSeek': 
-        processDeepSeekCustomSendButtonClick(event, customText, autoSend);
-        break;
+        case 'ChatGPT':
+            processChatGPTCustomSendButtonClick(event, customText, autoSend);
+            break;
+        case 'Claude':
+            processClaudeCustomSendButtonClick(event, customText, autoSend);
+            break;
+        case 'Copilot':
+            processCopilotCustomSendButtonClick(event, customText, autoSend);
+            break;
+        case 'DeepSeek':
+            processDeepSeekCustomSendButtonClick(event, customText, autoSend);
+            break;
+        case 'AIStudio':
+            processAIStudioCustomSendButtonClick(event, customText, autoSend);
+            break;
     case 'AIStudio':
         processAIStudioCustomSendButtonClick(event, customText, autoSend);
         break;
