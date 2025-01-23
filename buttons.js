@@ -128,6 +128,9 @@ function processCustomSendButtonClick(event, customText, autoSend) {
     case 'DeepSeek': 
         processDeepSeekCustomSendButtonClick(event, customText, autoSend);
         break;
+    case 'AIStudio':
+        processAIStudioCustomSendButtonClick(event, customText, autoSend);
+        break;
     default:
         logConCgp('[buttons] Unsupported site:', activeSite);
 }

@@ -119,6 +119,8 @@ class InjectionTargetsOnWebsite {
         }
         else if (currentHostname.includes('chat.deepseek.com')) {
             return 'DeepSeek';
+        } else if (currentHostname.includes('aistudio.google.com')) {
+            return 'AIStudio';
         }
         // Add additional website detections here
         else {
@@ -181,6 +183,12 @@ class InjectionTargetsOnWebsite {
                     '[contenteditable="true"]' // Generic contenteditable
                 ],
                 buttonsContainerId: 'deepseek-custom-buttons-container'
+            },
+            AIStudio: {
+                containers: ['footer._ngcontent-ng-c3539710310'],
+                sendButtons: ['run-button button[type="submit"]'],
+                editors: ['ms-autosize-textarea textarea[aria-label="User text input"]'],
+                buttonsContainerId: 'aistudio-custom-buttons-container'
             },
             // TODO: Add selectors for other supported websites
         };

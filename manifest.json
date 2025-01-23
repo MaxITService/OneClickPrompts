@@ -38,7 +38,8 @@
         "https://chatgpt.com/*",
         "https://claude.ai/*",
         "https://copilot.microsoft.com/*",
-        "https://chat.deepseek.com/*"
+        "https://chat.deepseek.com/*",
+        "https://aistudio.google.com/*"
       ],
       "js": [
         "log.js",
@@ -48,6 +49,7 @@
         "buttons-clicking-copilot.js",
         "buttons-clicking-claude.js",
         "buttons-clicking-deepseek.js",
+        "buttons-clicking-aistudio.js",
         "buttons.js",
         "buttons-init.js",
         "interface.js",
