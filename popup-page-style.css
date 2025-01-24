@@ -556,6 +556,17 @@ button:active {
 /* **New Functionality Below** */
 /* ------------------------- */
 
+/* AI Studio Angular Component Overrides */
+ms-chunk-input, ms-text-chunk, ms-autosize-textarea {
+  display: contents !important; /* Preserve Angular layout */
+}
+
+#aistudio-custom-buttons-container {
+  z-index: 9999 !important;
+  position: relative;
+  background: var(--mdc-theme-surface) !important;
+}
+
 /* Disable hover effects on .button-item when dragging is active */
 body.dragging .button-item:hover {
     background-color: transparent !important;

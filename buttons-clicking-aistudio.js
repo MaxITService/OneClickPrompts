@@ -50,13 +50,26 @@ function processAIStudioCustomSendButtonClick(event, customText, autoSend) {
         return;
     }
 
-    // Insert text into the editor
-    editorArea.focus();
+    // Angular-compatible text insertion
     if (editorArea.tagName === 'TEXTAREA') {
-        editorArea.value += customText;
-        editorArea.dispatchEvent(new Event('input', { bubbles: true }));
-        editorArea.dispatchEvent(new Event('change', { bubbles: true }));
-    } else { // Assuming contenteditable div
+        const inputEvent = new Event('input', { bubbles: true });
+        const ngUpdate = new CustomEvent('_ngcontent', { 
+            detail: { 
+                value: editorArea.value + customText,
+                ngProjectAs: null
+            }
+        });
+        
+        // Set value through Angular property binding pattern
+        editorArea.value = editorArea.value + customText;
+        
+        // Trigger Angular's change detection
+        editorArea.dispatchEvent(inputEvent);
+        editorArea.dispatchEvent(ngUpdate);
+        
+        // Force Material Design component update
+        editorArea.parentElement?.dispatchEvent(new Event('resize'));
+    } else if (editorArea.isContentEditable) {
         document.execCommand('insertText', false, customText);
     }
 
@@ -94,16 +107,28 @@ function initializeAIStudioButtonInjection() {
                 buttonsContainer.style.cssText = `
                     display: flex;
                     gap: 8px;
-                    padding: 8px;
+                    padding: 8px 0;
+                    margin: 0 12px;
+                    order: 2; /* Force position after input */
+                    width: auto; /* Remove 100% width */
+                    flex-wrap: nowrap; /* Prevent wrapping */
                     align-items: center;
-                    order: -1; /* Place before input area */
+                    flex-shrink: 0;
                 `;
                 
-                // Insert within Angular component structure
+                // Insert after the input wrapper to maintain Angular binding
                 const inputWrapper = container.querySelector('ms-text-chunk');
                 if (inputWrapper) {
-                    inputWrapper.parentNode.insertBefore(buttonsContainer, inputWrapper);
-                    logConCgp('[AIStudio] Inserted buttons container before input wrapper');
+                    // Wait for Angular component initialization
+                    const componentObserver = new MutationObserver((_, obs) => {
+                        const textarea = inputWrapper.querySelector('textarea');
+                        if (textarea && textarea.offsetParent) { // Check if actually visible
+                            inputWrapper.parentNode.insertBefore(buttonsContainer, inputWrapper.nextSibling);
+                            obs.disconnect();
+                            logConCgp('[AIStudio] Inserted buttons container after Angular initialization');
+                        }
+                    });
+                    componentObserver.observe(inputWrapper, { childList: true, subtree: true, attributes: true });
                 } else {
                     container.appendChild(buttonsContainer);
                 }
@@ -111,8 +136,8 @@ function initializeAIStudioButtonInjection() {
             
             window.MaxExtensionButtonsInit.createAndInsertCustomElements(buttonsContainer);
         },
-        10, // Increased max attempts
-        500 // Longer timeout (500ms)
+        25, // Increased max attempts for Angular async rendering
+        1500 // 1.5 second timeout for SPA initialization
     );
 }
 
