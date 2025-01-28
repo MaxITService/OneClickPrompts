@@ -186,9 +186,9 @@ class InjectionTargetsOnWebsite {
             },
             AIStudio: {
                 containers: [
-                    'div.input-wrapper',
-                    'ms-chunk-input',
-                    'section.text-and-attachments-wrapper'
+                    'section.chunk-editor-main',  // Parent section that contains the footer
+                    'footer',  // Target the footer directly
+                    'ms-chunk-editor-menu' // Fallback target
                 ],
                 sendButtons: [
                     'button.run-button',
