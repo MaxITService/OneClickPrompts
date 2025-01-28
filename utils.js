@@ -186,18 +186,27 @@ class InjectionTargetsOnWebsite {
             },
             AIStudio: {
                 containers: [
-                    'section.chunk-editor-main',  // Parent section that contains the footer
-                    'footer',  // Target the footer directly
-                    'ms-chunk-editor-menu' // Fallback target
+                    // Primary selectors (ARIA-based)
+                    'section.chunk-editor-main',
+                    'footer',
+                    'ms-chunk-editor-menu',
+                    // Fallback selectors (DOM path)
+                    'body > app-root > div > div > div.layout-wrapper > div > span > ms-prompt-switcher > ms-chunk-editor > section > footer'
                 ],
                 sendButtons: [
-                    'button.run-button',
+                    // Primary selectors (ARIA-based)
+                    'button.run-button[type="submit"]',
                     'button[aria-label="Run"]',
-                    'run-button button[type="submit"]'
+                    'run-button button[type="submit"]',
+                    // Fallback selectors (DOM path)
+                    'footer > div.input-wrapper > div:nth-child(3) > run-button > button'
                 ],
                 editors: [
+                    // Primary selectors (ARIA-based)
                     'ms-autosize-textarea textarea[aria-label="User text input"]',
-                    'textarea.textarea.gmat-body-medium[aria-label="Type something"]'
+                    'textarea.textarea.gmat-body-medium[aria-label="Type something"]',
+                    // Fallback selectors (DOM path)
+                    'footer > div.input-wrapper > div.text-wrapper > ms-chunk-input > section > ms-text-chunk > ms-autosize-textarea'
                 ],
                 buttonsContainerId: 'aistudio-custom-buttons-container'
             },

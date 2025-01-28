@@ -16,8 +16,20 @@ function processAIStudioCustomSendButtonClick(event, customText, autoSend) {
     const injectionTargets = window.InjectionTargetsOnWebsite;
     const aiStudioSelectors = injectionTargets.getSelectorsForSite('AIStudio');
     
-    const editorArea = document.querySelector(aiStudioSelectors.editors[0]) ||
-                      document.querySelector(aiStudioSelectors.editors[1]);
+    let editorArea = null;
+    // Try each editor selector until we find one that works
+    for (const selector of aiStudioSelectors.editors) {
+        try {
+            const found = document.querySelector(selector);
+            if (found) {
+                editorArea = found;
+                logConCgp('[AIStudio] Found editor using selector:', selector);
+                break;
+            }
+        } catch (e) {
+            logConCgp('[AIStudio] Invalid selector:', selector, e);
+        }
+    }
 
     let sendButton = null;
     
