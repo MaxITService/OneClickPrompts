@@ -120,20 +120,5 @@ function processDeepSeekCustomSendButtonClick(event, customText, autoSend) {
     }
 }
 
-// Initialization and exports remain the same
-function initializeDeepSeekButtonInjection() {
-    window.MaxExtensionUtils.waitForElements(
-        window.InjectionTargetsOnWebsite.selectors.containers,
-        container => {
-            window.MaxExtensionButtonsInit.createAndInsertCustomElements(container);
-        }
-    );
-}
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeDeepSeekButtonInjection);
-} else {
-    initializeDeepSeekButtonInjection();
-}
 
 window.processDeepSeekCustomSendButtonClick = processDeepSeekCustomSendButtonClick;

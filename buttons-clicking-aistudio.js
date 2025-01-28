@@ -13,7 +13,6 @@ function processAIStudioCustomSendButtonClick(event, customText, autoSend) {
     event.preventDefault();
     logConCgp('[AIStudio] Starting process with text:', customText);
 
-    const injectionTargets = window.InjectionTargetsOnWebsite;
     const editorSelectors = injectionTargets.selectors.editors;
     const sendButtonSelectors = injectionTargets.selectors.sendButtons;
 
@@ -88,53 +87,6 @@ function processAIStudioCustomSendButtonClick(event, customText, autoSend) {
     }
 }
 
-function initializeAIStudioButtonInjection() {
-    const injectionTargets = window.InjectionTargetsOnWebsite;
-    
-    window.MaxExtensionUtils.waitForElements(
-        'footer',
-        (footer) => {
-            logConCgp('[AIStudio] Found footer:', footer);
-            
-            // Create dedicated buttons container
-            let buttonsContainer = document.getElementById(
-                injectionTargets.selectors.buttonsContainerId
-            );
-            
-            if (!buttonsContainer) {
-                buttonsContainer = document.createElement('div');
-                buttonsContainer.id = injectionTargets.selectors.buttonsContainerId;
-                buttonsContainer.style.cssText = `
-                    display: flex;
-                    gap: 8px;
-                    padding: 8px 0;
-                    margin: 8px 12px;
-                    width: calc(100% - 24px);
-                    flex-basis: 100%;
-                    flex-wrap: wrap;
-                    align-items: center;
-                    justify-content: flex-start;
-                    border-top: 1px solid rgba(0, 0, 0, 0.1);
-                    position: relative;
-                `;
-                
-                // Insert the container after the footer
-                footer.parentNode.insertBefore(buttonsContainer, footer.nextSibling);
-                window.MaxExtensionButtonsInit.createAndInsertCustomElements(buttonsContainer);
-                logConCgp('[AIStudio] Inserted buttons container after footer');
-            }
-        },
-        25,
-        1500
-    );
-}
-
-// Update initialization
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeAIStudioButtonInjection);
-} else {
-    initializeAIStudioButtonInjection();
-}
 
 // Expose the function globally
 window.processAIStudioCustomSendButtonClick = processAIStudioCustomSendButtonClick;
