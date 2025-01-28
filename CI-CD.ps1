@@ -11,7 +11,7 @@ $source = Get-Location
 $parent = Split-Path $source -Parent
 
 # Define the target directory path
-$targetFolderName = "Prompt Pilot Release"
+$targetFolderName = "OneClickPrompts Release"
 $destination = Join-Path $parent $targetFolderName
 
 # Define the ZIP file path

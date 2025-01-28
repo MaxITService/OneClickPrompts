@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Prompt Pilot",
+  "name": "OneClickPrompts",
   "description": "One-Click AI Prompts into ChatGPT, Claude, Copilot, DeepSeek, Ai Studio",
   "version": "0.0.0.8",
   
@@ -19,7 +19,7 @@
       "48": "icon48.png",
       "128": "icon128.png"
     },
-    "default_title": "Prompt Pilot: Open User Interface"
+    "default_title": "OneClickPrompts: Open User Interface"
   },
   
   "permissions": [
