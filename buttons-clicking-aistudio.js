@@ -92,9 +92,9 @@ function initializeAIStudioButtonInjection() {
     const injectionTargets = window.InjectionTargetsOnWebsite;
     
     window.MaxExtensionUtils.waitForElements(
-        injectionTargets.selectors.containers,
-        (container) => {
-            logConCgp('[AIStudio] Found container:', container);
+        'footer',
+        (footer) => {
+            logConCgp('[AIStudio] Found footer:', footer);
             
             // Create dedicated buttons container
             let buttonsContainer = document.getElementById(
@@ -108,36 +108,24 @@ function initializeAIStudioButtonInjection() {
                     display: flex;
                     gap: 8px;
                     padding: 8px 0;
-                    margin: 0 12px;
-                    order: 2; /* Force position after input */
-                    width: auto; /* Remove 100% width */
-                    flex-wrap: nowrap; /* Prevent wrapping */
+                    margin: 8px 12px;
+                    width: calc(100% - 24px);
+                    flex-basis: 100%;
+                    flex-wrap: wrap;
                     align-items: center;
-                    flex-shrink: 0;
+                    justify-content: flex-start;
+                    border-top: 1px solid rgba(0, 0, 0, 0.1);
+                    position: relative;
                 `;
                 
-                // Insert after the input wrapper to maintain Angular binding
-                const inputWrapper = container.querySelector('ms-text-chunk');
-                if (inputWrapper) {
-                    // Wait for Angular component initialization
-                    const componentObserver = new MutationObserver((_, obs) => {
-                        const textarea = inputWrapper.querySelector('textarea');
-                        if (textarea && textarea.offsetParent) { // Check if actually visible
-                            inputWrapper.parentNode.insertBefore(buttonsContainer, inputWrapper.nextSibling);
-                            obs.disconnect();
-                            logConCgp('[AIStudio] Inserted buttons container after Angular initialization');
-                        }
-                    });
-                    componentObserver.observe(inputWrapper, { childList: true, subtree: true, attributes: true });
-                } else {
-                    container.appendChild(buttonsContainer);
-                }
+                // Insert the container after the footer
+                footer.parentNode.insertBefore(buttonsContainer, footer.nextSibling);
+                window.MaxExtensionButtonsInit.createAndInsertCustomElements(buttonsContainer);
+                logConCgp('[AIStudio] Inserted buttons container after footer');
             }
-            
-            window.MaxExtensionButtonsInit.createAndInsertCustomElements(buttonsContainer);
         },
-        25, // Increased max attempts for Angular async rendering
-        1500 // 1.5 second timeout for SPA initialization
+        25,
+        1500
     );
 }
 
