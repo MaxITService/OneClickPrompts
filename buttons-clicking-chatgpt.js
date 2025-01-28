@@ -39,15 +39,20 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
     function createInputEvent(type, char) {
         const eventInit = {
             key: char,
-            code: char,
-            charCode: char.charCodeAt(0),
-            keyCode: char.charCodeAt(0),
-            which: char.charCodeAt(0),
-            bubbles: true
+            code: `Key${char.toUpperCase()}`,
+            bubbles: true,
+            composed: true,
+            cancelable: true
         };
         
         return type === 'input' 
-            ? new InputEvent(type, { data: char, bubbles: true })
+            ? new InputEvent(type, { 
+                data: char, 
+                inputType: 'insertText',
+                bubbles: true,
+                composed: true,
+                cancelable: true
+            })
             : new KeyboardEvent(type, eventInit);
     }
 
@@ -63,7 +68,14 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
                 const event = createInputEvent(eventType, char);
                 editorElement.dispatchEvent(event);
                 if (eventType === 'input') {
-                    document.execCommand('insertText', false, char);
+                    // Modern approach to insert text
+                    const selection = window.getSelection();
+                    const range = selection.getRangeAt(0);
+                    const textNode = document.createTextNode(char);
+                    range.insertNode(textNode);
+                    range.collapse(false);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
                 }
             });
         });
