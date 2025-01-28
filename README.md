@@ -1,39 +1,50 @@
-# [ChatGPT Quick Buttons: Custom Prompts in One Click!](https://chromewebstore.google.com/detail/chatgpt-quick-buttons-for/iiofmimaakhhoiablomgcjpilebnndbf)
+# [OneClickPrompts:  Your Quick Prompt Companion for Multiple AI Chats!](https://chromewebstore.google.com/detail/chatgpt-quick-buttons-for/iiofmimaakhhoiablomgcjpilebnndbf)
 
-![ChatGPT Quick Buttons](Promo/promo440_280.png)
-# How insertion works:
-![ChatGPT Quick Buttons](Promo/how_it_works_gifv.gif)
-**Insert your custom prompts into ChatGPT with a single click – works with search too!**
+**📢  Important Name Change:  "ChatGPT Quick Buttons" is now "OneClickPrompts"! 📢**
 
-Create and customize buttons for frequently used prompts or choose from pre-defined options. Buttons appear directly in ChatGPT’s input field, saving time and making conversations effortless. Quick to set up, free, and open-source with no data tracking. Prompts are securely stored in your browser’s sync storage.
+![OneClickPrompts Extension Logo](Promo/promo440_280.png)
+# Effortless Prompts Across Your Favorite AI Chats: One Click Away!
+![OneClickPrompts Prompt Insertion GIF](Promo/how_it_works_gifv.gif)
 
-## Features
-- **Customizable Buttons**: Easily create buttons with your go-to prompts.
-- **Profiles**: Organize buttons into profiles for different projects or contexts.
-- **Emoji Icons**: Assign emojis or custom characters to each button for easy recognition.
-- **Auto-send Option**: Choose to send messages instantly upon button click. Press shift to invert auto send behaviour.
-- **Keyboard Shortcuts**: Use Alt + [1-9] for quick button access.
-- **Separators**: Organize buttons visually with customizable separators.
-- **In-Browser Settings**: Manage everything directly in your browser.
+**Boost your productivity across multiple AI platforms with OneClickPrompts!  Insert your frequently used prompts with a single click in:**
 
-## How to Use
-1. **Open Settings**: Click the extension icon in your Chrome toolbar.
-2. **Create a Profile**: Use "Add Profile" to group buttons.
-3. **Add Custom Buttons**:
-   - Choose an emoji or character for the button icon.
-   - Enter your prompt text in the "Button Template Text" field.
-   - Click "Add Button."
-4. **Organize**: Drag and drop to reorder or add separators.
-5. **Configure**:
-   - Toggle "Global Auto-send" for instant sending.
-   - Enable keyboard shortcuts (Alt + [1-9]) for the first nine buttons.
+* **ChatGPT**
+* **DeepSeek Chat**
+* **Google AI Studio**
+* **Claude**
+* **Microsoft Copilot (formerly Bing Chat)**
+
+
+Tired of retyping the same prompts in your AI chats?  **OneClickPrompts** lets you create custom buttons for your go-to prompts, or choose from pre-defined options.  These buttons appear directly in the input field of your favorite AI chat platforms, dramatically saving you time and making your conversations smoother and more efficient, no matter where you're chatting!
+
+**Get set up in seconds!** OneClickPrompts is free, open-source, and respects your privacy – no data tracking. Your prompts are securely stored in your browser's sync storage.
+
+## Key Features
+
+- One-Click Prompt Insertion: Instantly add your custom prompts to ChatGPT, DeepSeek Chat, Google AI Studio, Claude, Copilot, and more with a single click.
+- Multi-Platform Support:  Works seamlessly across ChatGPT, DeepSeek Chat, Google AI Studio, Claude, and Copilot (and growing!).
+- Customizable Buttons:  Easily create buttons for any prompt you use regularly.
+- Prompt Profiles: Organize your buttons into profiles for different tasks, projects, AI platforms, or writing styles.
+- Visual Icons & Emojis:  Personalize buttons with emojis or characters for quick visual recognition.
+- Auto-Send Convenience:  Optionally send messages automatically when you click a button. Use Shift-click to toggle auto-send behavior.
+- Keyboard Shortcuts (Alt + 1-9):  Quickly access your first nine buttons with keyboard shortcuts for maximum speed.
+- Button Separators:  Visually organize your prompt buttons with customizable separators for a cleaner workspace.
+- Simple In-Browser Settings:  Manage all your prompts and settings directly within your browser – no external accounts needed.
+
+## Get Started with OneClickPrompts in 3 Easy Steps:
+
+1. Install OneClickPrompts: Add the extension from the Chrome Web Store.
+2. Open Settings: Click the OneClickPrompts icon in your Chrome toolbar.
+3. Create & Customize: Add profiles, create custom buttons with your favorite prompts, and personalize them with icons.
 
 ## Troubleshooting
-If anything doesn’t work, try reloading the browser. For persistent issues, reach out for support. The extension is designed to leave no trace upon uninstall.
+
+If you encounter any issues, simply reload your browser. For persistent problems, please don't hesitate to reach out for support.  Uninstalling the extension is clean and leaves no trace.
 
 ## License
-**Do whatever you like** – just link back to me and possibly to a Chrome Web Store. If you have improvements, please do pull request!
+
+**Do whatever you like!**  Attribution is appreciated – a link back to me and the Chrome Web Store listing would be great.  Pull requests with improvements are welcome!
 
 ---
 
-**[Install ChatGPT Quick Buttons on Chrome Web Store](https://chromewebstore.google.com/detail/chatgpt-quick-buttons-for/iiofmimaakhhoiablomgcjpilebnndbf)**
+**[Install OneClickPrompts on Chrome Web Store](https://chromewebstore.google.com/detail/chatgpt-quick-buttons-for/iiofmimaakhhoiablomgcjpilebnndbf)**
