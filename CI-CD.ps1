@@ -11,7 +11,7 @@ $source = Get-Location
 $parent = Split-Path $source -Parent
 
 # Define the target directory path
-$targetFolderName = "ChatGPT Quick Buttons For Your Text Release"
+$targetFolderName = "Prompt Pilot Release"
 $destination = Join-Path $parent $targetFolderName
 
 # Define the ZIP file path
