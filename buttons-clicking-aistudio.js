@@ -14,19 +14,15 @@ function processAIStudioCustomSendButtonClick(event, customText, autoSend) {
     logConCgp('[AIStudio] Starting process with text:', customText);
 
     const injectionTargets = window.InjectionTargetsOnWebsite;
-    const editorArea = document.querySelector('ms-autosize-textarea textarea[aria-label="User text input"]') ||
-                      document.querySelector('textarea.textarea.gmat-body-medium[aria-label="Type something"]');
+    const aiStudioSelectors = injectionTargets.getSelectorsForSite('AIStudio');
+    
+    const editorArea = document.querySelector(aiStudioSelectors.editors[0]) ||
+                      document.querySelector(aiStudioSelectors.editors[1]);
 
-    // Keep existing send button handling as it was working fine
-    const sendButtonSelectors = [
-        'button.run-button[type="submit"]',
-        'run-button button[type="submit"]',
-        'button[aria-label="Run"]'
-    ];
     let sendButton = null;
-
-    // Find send button
-    for (const selector of sendButtonSelectors) {
+    
+    // Find send button using selectors from configuration
+    for (const selector of aiStudioSelectors.sendButtons) {
         const foundButton = document.querySelector(selector);
         if (foundButton) {
             sendButton = foundButton;
