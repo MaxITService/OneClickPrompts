@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "ChatGPT Quick Buttons for your text",
-  "description": "Insert your custom prompts into ChatGPT, Claude, Copilot, 1 click.",
+  "name": "Prompt Pilot",
+  "description": "One-Click AI Prompts into ChatGPT, Claude, Copilot, DeepSeek, Ai Studio",
   "version": "0.0.0.8",
   
   "icons": {
@@ -19,7 +19,7 @@
       "48": "icon48.png",
       "128": "icon128.png"
     },
-    "default_title": "ChatGPT Quick Buttons: Open User Interface"
+    "default_title": "Prompt Pilot: Open User Interface"
   },
   
   "permissions": [
