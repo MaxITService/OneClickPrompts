@@ -14,20 +14,10 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
     event.preventDefault();
     logConCgp('[buttons] Custom send button was clicked.');
 
-    const editorSelectors = window.InjectionTargetsOnWebsite.selectors.editors;
-    let editorArea = null;
+    const editorArea = document.querySelector(window.InjectionTargetsOnWebsite.selectors.editors.find(selector => 
+        document.querySelector(selector)
+    ));
 
-    // Iterate through editor selectors to find the editor area
-    for (const selector of editorSelectors) {
-        const foundEditor = document.querySelector(selector);
-        if (foundEditor) {
-            editorArea = foundEditor;
-            logConCgp('[buttons] Editor area found:', editorArea);
-            break;
-        }
-    }
-
-    // If editor area is not found, log and exit the function
     if (!editorArea) {
         logConCgp('[buttons] Editor area not found. Unable to proceed.');
         return;
@@ -45,6 +35,22 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
         return isInitial;
     }
 
+    // Helper function to create keyboard/input events
+    function createInputEvent(type, char) {
+        const eventInit = {
+            key: char,
+            code: char,
+            charCode: char.charCodeAt(0),
+            keyCode: char.charCodeAt(0),
+            which: char.charCodeAt(0),
+            bubbles: true
+        };
+        
+        return type === 'input' 
+            ? new InputEvent(type, { data: char, bubbles: true })
+            : new KeyboardEvent(type, eventInit);
+    }
+
     /**
      * Simulates typing text into a ProseMirror editor.
      * @param {HTMLElement} editorElement - The ProseMirror editor element.
@@ -52,41 +58,15 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
      */
     function simulateTypingIntoProseMirror(editorElement, text) {
         editorElement.focus();
-        for (let i = 0; i < text.length; i++) {
-            const char = text.charAt(i);
-
-            // Create and dispatch a keydown event
-            const keyDownEvent = new KeyboardEvent('keydown', {
-                key: char,
-                code: char,
-                charCode: char.charCodeAt(0),
-                keyCode: char.charCodeAt(0),
-                which: char.charCodeAt(0),
-                bubbles: true,
+        Array.from(text).forEach(char => {
+            ['keydown', 'input', 'keyup'].forEach(eventType => {
+                const event = createInputEvent(eventType, char);
+                editorElement.dispatchEvent(event);
+                if (eventType === 'input') {
+                    document.execCommand('insertText', false, char);
+                }
             });
-            editorElement.dispatchEvent(keyDownEvent);
-
-            // Insert the character into the editor's content
-            document.execCommand('insertText', false, char);
-
-            // Create and dispatch an input event
-            const inputEvent = new InputEvent('input', {
-                data: char,
-                bubbles: true,
-            });
-            editorElement.dispatchEvent(inputEvent);
-
-            // Create and dispatch a keyup event
-            const keyUpEvent = new KeyboardEvent('keyup', {
-                key: char,
-                code: char,
-                charCode: char.charCodeAt(0),
-                keyCode: char.charCodeAt(0),
-                which: char.charCodeAt(0),
-                bubbles: true,
-            });
-            editorElement.dispatchEvent(keyUpEvent);
-        }
+        });
     }
 
     /**
@@ -94,25 +74,10 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
      * @returns {HTMLElement[]} Array of found send button elements.
      */
     function locateSendButtons() {
-        const sendButtonSelectors = window.InjectionTargetsOnWebsite.selectors.sendButtons;
-        const sendButtons = [];
-
-        // Iterate through send button selectors to find all matching buttons
-        sendButtonSelectors.forEach((selector) => {
-            const buttons = document.querySelectorAll(selector);
-            buttons.forEach((button) => {
-                if (!sendButtons.includes(button)) {
-                    logConCgp('[buttons] Send button located using selector:', selector);
-                    sendButtons.push(button);
-                }
-            });
-        });
-
-        if (sendButtons.length === 0) {
-            logConCgp('[buttons] Send buttons not found using dynamic selectors.');
-        }
-
-        return sendButtons;
+        return [...new Set(
+            window.InjectionTargetsOnWebsite.selectors.sendButtons
+                .flatMap(selector => [...document.querySelectorAll(selector)])
+        )];
     }
 
     // Locate send buttons initially
@@ -125,20 +90,16 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
      */
     function handleSendButtons(sendButtons) {
         logConCgp('[buttons] handleSendButtons called.');
-        if (sendButtons.length > 0) {
-            logConCgp('[buttons] Send buttons are available. Proceeding with sending message.');
-
-            // Check if auto-send is enabled both globally and for this button
-            if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
-                logConCgp('[buttons] Auto-send is enabled. Starting auto-send process.');
-
-                // Use only the first send button
-                startAutoSend([sendButtons[0]], editorArea);
-            } else {
-                logConCgp('[buttons] Auto-send is disabled. Message will not be sent automatically.');
-            }
-        } else {
+        if (!sendButtons.length) {
             logConCgp('[buttons] Send buttons are not available to handle.');
+            return;
+        }
+
+        logConCgp('[buttons] Send buttons are available. Proceeding with sending message.');
+        
+        if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
+            logConCgp('[buttons] Auto-send is enabled. Starting auto-send process.');
+            startAutoSend([sendButtons[0]], editorArea);
         }
     }
 
