@@ -13,80 +13,55 @@ function processAIStudioCustomSendButtonClick(event, customText, autoSend) {
     event.preventDefault();
     logConCgp('[AIStudio] Starting process with text:', customText);
 
-    const editorSelectors = injectionTargets.selectors.editors;
-    const sendButtonSelectors = injectionTargets.selectors.sendButtons;
+    const injectionTargets = window.InjectionTargetsOnWebsite;
+    const editorArea = document.querySelector('ms-autosize-textarea textarea[aria-label="User text input"]') ||
+                      document.querySelector('textarea.textarea.gmat-body-medium[aria-label="Type something"]');
 
-    let editorArea = null;
+    // Keep existing send button handling as it was working fine
+    const sendButtonSelectors = [
+        'button.run-button[type="submit"]',
+        'run-button button[type="submit"]',
+        'button[aria-label="Run"]'
+    ];
     let sendButton = null;
 
-    // Iterate through editor selectors to find the editor area
-    for (const selector of editorSelectors) {
-        const foundEditor = document.querySelector(selector);
-        if (foundEditor) {
-            editorArea = foundEditor;
-            logConCgp('[buttons] AI Studio Editor area found:', editorArea);
-            break;
-        }
-    }
-
-    // Iterate through send button selectors to find the send button
+    // Find send button
     for (const selector of sendButtonSelectors) {
         const foundButton = document.querySelector(selector);
         if (foundButton) {
             sendButton = foundButton;
-            logConCgp('[buttons] AI Studio Send button found:', sendButton);
+            logConCgp('[buttons] AI Studio Send button found:', selector);
             break;
         }
     }
 
-    // If editor area or send button is not found, log and exit the function
     if (!editorArea) {
-        logConCgp('[buttons] AI Studio Editor area not found. Unable to proceed.');
-        return;
-    }
-    if (!sendButton) {
-        logConCgp('[buttons] AI Studio Send button not found. Unable to proceed.');
+        logConCgp('[buttons] AI Studio Editor not found. Unable to proceed.');
         return;
     }
 
-    // Angular-compatible text insertion
-    if (editorArea.tagName === 'TEXTAREA') {
-        const inputEvent = new Event('input', { bubbles: true });
-        const ngUpdate = new CustomEvent('_ngcontent', { 
-            detail: { 
-                value: editorArea.value + customText,
-                ngProjectAs: null
-            }
-        });
-        
-        // Set value through Angular property binding pattern
-        editorArea.value = editorArea.value + customText;
-        
-        // Trigger Angular's change detection
-        editorArea.dispatchEvent(inputEvent);
-        editorArea.dispatchEvent(ngUpdate);
-        
-        // Force Material Design component update
-        editorArea.parentElement?.dispatchEvent(new Event('resize'));
-    } else if (editorArea.isContentEditable) {
-        document.execCommand('insertText', false, customText);
-    }
+    // Insert text and trigger Angular's change detection
+    editorArea.value = editorArea.value + customText;
+    
+    // Dispatch events for Angular binding
+    const events = ['input', 'change'];
+    events.forEach(eventType => {
+        const event = new Event(eventType, { bubbles: true });
+        editorArea.dispatchEvent(event);
+    });
 
-    // Move cursor to the end after insertion (if possible)
-    if (typeof editorArea.selectionStart == "number") {
-        editorArea.selectionStart = editorArea.selectionEnd = editorArea.value.length;
-    } else if (typeof editorArea.setSelectionRange == "function") {
-        editorArea.setSelectionRange(editorArea.value.length, editorArea.value.length);
-    }
-
+    // Move cursor to end
+    editorArea.setSelectionRange(editorArea.value.length, editorArea.value.length);
 
     // Auto-send if enabled
     if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
         logConCgp('[buttons] AI Studio Auto-send enabled, attempting to send message');
-        MaxExtensionUtils.simulateClick(sendButton);
+        // Use setTimeout to ensure text is processed before sending
+        setTimeout(() => {
+            MaxExtensionUtils.simulateClick(sendButton);
+        }, 100);
     }
 }
-
 
 // Expose the function globally
 window.processAIStudioCustomSendButtonClick = processAIStudioCustomSendButtonClick;

@@ -197,7 +197,7 @@ class InjectionTargetsOnWebsite {
                 ],
                 editors: [
                     'ms-autosize-textarea textarea[aria-label="User text input"]',
-                    'textarea[placeholder="Type something"]'
+                    'textarea.textarea.gmat-body-medium[aria-label="Type something"]'
                 ],
                 buttonsContainerId: 'aistudio-custom-buttons-container'
             },
