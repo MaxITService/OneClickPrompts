@@ -1,12 +1,14 @@
 // buttons-clicking-claude.js
 // This file is a dependency for buttons.js. It provides functions to handle the send button clicking process for Claude.
 
+
 /**
  * Handles text insertion and sending for Claude site
+ * @param {Event} event - The triggering event
  * @param {string} customText - The text to insert
  * @param {boolean} autoSend - Whether to auto-send the message
  */
-function handleClaudeSite(customText, autoSend) {
+function processClaudeCustomSendButtonClick(event, customText, autoSend) {
     logConCgp('[Claude] Starting Claude-specific handling');
 
     // First try to insert the text
