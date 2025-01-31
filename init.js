@@ -1,5 +1,7 @@
 // init.js
+
 // Version: 1.4
+
 //
 // Documentation:
 /**
@@ -27,8 +29,8 @@
  */
 //Instructions for AI: do not remove comments!  MUST NOT REMOVE COMMENTS. This one too!
 // ALL CODE IN ALL FILES MUST USE logConCgp FOR LOGGING. NO CONSOLE LOGGING.
-'use strict';
 
+'use strict';
 
 /**
  * This function is called first.
@@ -42,13 +44,13 @@ function publicStaticVoidMain() {
             // let all files in project access config.
             window.globalMaxExtensionConfig = response.config;
             commenceExtensionInitialization(window.globalMaxExtensionConfig);
-
         } else {
             logConCgp('[init] Failed to load configuration from service worker. Initialization aborted.');
             // STOP
         }
     });
 }
+
 /**
  * Initializes the extension using the provided configuration.
  * @param {Object} configurationObject - The configuration object retrieved from the service worker.
@@ -86,53 +88,47 @@ function commenceExtensionInitialization(configurationObject) {
         }
     }
 
+    /**
+     * Manages keyboard shortcut events to trigger custom send buttons on the webpage.
+     * Listens for Alt+[1-10] key presses and simulates button clicks.
+     * If Shift is also pressed, it inverts the autoSend flag for this press only.
+     * @param {KeyboardEvent} event - The keyboard event object.
+     */
+    function manageKeyboardShortcutEvents(event) {
+        if (!globalMaxExtensionConfig.enableShortcuts) return;
 
-/**
- * Manages keyboard shortcut events to trigger custom send buttons on the webpage.
- * Listens for Alt+[1-10] key presses and simulates button clicks.
- * If Shift is also pressed, it inverts the autoSend flag for this press only.
- * @param {KeyboardEvent} event - The keyboard event object.
- */
-function manageKeyboardShortcutEvents(event) {
-    if (!globalMaxExtensionConfig.enableShortcuts) return;
+        // Only handle events where Alt is pressed and the key is a digit [1-10]
+        if (
+            event.altKey &&
+            !event.ctrlKey &&
+            !event.metaKey &&
+            event.code.startsWith('Digit')
+        ) {
+            let pressedKey = event.code.replace('Digit', '');
+            if (pressedKey === '0') pressedKey = '10';
 
-    // Only handle events where Alt is pressed and the key is a digit [1-10]
-    if (
-        event.altKey &&
-        !event.ctrlKey &&
-        !event.metaKey &&
-        event.code.startsWith('Digit')
-    ) {
-        let pressedKey = event.code.replace('Digit', '');
-        if (pressedKey === '0') pressedKey = '10';
-
-        const targetButton = document.querySelector(`button[data-shortcut-key="${pressedKey}"]`);
-        if (targetButton) {
-            event.preventDefault();
-            // Create a new MouseEvent with shiftKey set based on the current event
-            const clickEvent = new MouseEvent('click', {
-                bubbles: true,
-                cancelable: true,
-                view: window,
-                shiftKey: event.shiftKey
-            });
-            targetButton.dispatchEvent(clickEvent);
-        } else {
-            logConCgp('[init] No button found for the pressed shortcut key:', pressedKey);
+            const targetButton = document.querySelector(`button[data-shortcut-key="${pressedKey}"]`);
+            if (targetButton) {
+                event.preventDefault();
+                // Create a new MouseEvent with shiftKey set based on the current event
+                const clickEvent = new MouseEvent('click', {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window,
+                    shiftKey: event.shiftKey
+                });
+                targetButton.dispatchEvent(clickEvent);
+            } else {
+                logConCgp('[init] No button found for the pressed shortcut key:', pressedKey);
+            }
         }
     }
-}
-
-
-
 
     /**
-     * 
      * Inserts custom buttons, separators and settings toggles into the webpage and starts resiliency checks if enabled.
      * @param {boolean} enableResiliency - Flag to enable or disable resiliency checks.
      */
     function buttonBoxCheckingAndInjection(enableResiliency = true, activeWebsite) {
-
         logConCgp('[init] Checking if mods already exist...');
         if (doCustomModificationsExist() && !enableResiliency) {
             logConCgp('[init] Modifications already exist and resiliency is disabled. Skipping initialization.');
@@ -175,13 +171,14 @@ function manageKeyboardShortcutEvents(event) {
      */
     function commenceEnhancedResiliencyChecks() {
         let consecutiveClearCheckCount = 0;
-        const requiredConsecutiveClearChecks = 3;
-        const maximumTotalIterations = 10;
+      // This looks if the buttons present for few times, and tries to insert them again.
+        const requiredConsecutiveClearChecks = 2; // missing for this many times = reinsert
+        const maximumTotalIterations = 16; 
         let totalIterationsPerformed = 0;
-        const intervalTimeInMilliseconds = 1000; // 1000 milliseconds
+        const intervalTimeInMilliseconds = 50; 
 
         logConCgp('[init] Beginning enhanced resiliency checks...');
-        logConCgp(`[init] Requires ${requiredConsecutiveClearChecks} consecutive clear checks.`);
+        logConCgp(`[init] Requires ${requiredConsecutiveClearCheckCount || requiredConsecutiveClearChecks} consecutive clear checks.`);
 
         const resiliencyCheckInterval = setInterval(() => {
             totalIterationsPerformed++;
@@ -250,6 +247,7 @@ function manageKeyboardShortcutEvents(event) {
         logConCgp('[init] URL change detected. Attempting to initialize extension...');
         commenceExtensionInitialization(window.globalMaxExtensionConfig);
     }, 1000);
+
     /**
      * Observes changes to the URL in Single Page Applications and triggers a callback upon changes.
      * @param {Function} callback - The function to execute when a URL change is detected.
@@ -268,9 +266,6 @@ function manageKeyboardShortcutEvents(event) {
         urlChangeObserver.observe(document, { subtree: true, childList: true });
     }
 
-
-
-
     /*
     Initialization starts here!
     */
@@ -282,10 +277,7 @@ function manageKeyboardShortcutEvents(event) {
         logConCgp('[init] Path change detected. Re-initializing script...');
         debouncedEnhancedInitialization();
     });
-
-
 }
-
 
 // Automatically start the initialization process upon script load
 publicStaticVoidMain();
