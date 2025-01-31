@@ -178,7 +178,8 @@ function commenceExtensionInitialization(configurationObject) {
         const intervalTimeInMilliseconds = 50; 
 
         logConCgp('[init] Beginning enhanced resiliency checks...');
-        logConCgp(`[init] Requires ${requiredConsecutiveClearCheckCount || requiredConsecutiveClearChecks} consecutive clear checks.`);
+        logConCgp(`[init] Requires ${requiredConsecutiveClearChecks} consecutive clear checks.`);
+
 
         const resiliencyCheckInterval = setInterval(() => {
             totalIterationsPerformed++;
