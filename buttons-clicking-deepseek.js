@@ -1,5 +1,7 @@
 // buttons-clicking-deepseek.js
+
 // Version: 2.0 - Robust implementation
+
 // Handles DeepSeek input and sending with multiple fallbacks
 
 'use strict';
@@ -43,13 +45,32 @@ function processDeepSeekCustomSendButtonClick(event, customText, autoSend) {
 
             // For contenteditable divs
             if (editor.hasAttribute('contenteditable')) {
-                const range = document.createRange();
+                // Modern alternative to deprecated document.execCommand:
                 const selection = window.getSelection();
-                range.selectNodeContents(editor);
-                range.collapse(false);
-                selection.removeAllRanges();
-                selection.addRange(range);
-                document.execCommand('insertText', false, text);
+                let range;
+                if (selection && selection.rangeCount > 0) {
+                    // Use current selection range if available
+                    range = selection.getRangeAt(0);
+                } else {
+                    // Create a new range at the end of the editor if no selection exists
+                    range = document.createRange();
+                    range.selectNodeContents(editor);
+                    range.collapse(false);
+                    if (selection) {
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                    }
+                }
+                // Insert text node at the current caret position
+                const textNode = document.createTextNode(text);
+                range.insertNode(textNode);
+                // Move caret immediately after inserted text
+                range.setStartAfter(textNode);
+                range.collapse(true);
+                if (selection) {
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                }
                 editor.dispatchEvent(new Event('input', { bubbles: true }));
                 return;
             }
@@ -119,6 +140,5 @@ function processDeepSeekCustomSendButtonClick(event, customText, autoSend) {
         startAutoSend();
     }
 }
-
 
 window.processDeepSeekCustomSendButtonClick = processDeepSeekCustomSendButtonClick;
