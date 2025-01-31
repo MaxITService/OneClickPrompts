@@ -9,6 +9,7 @@
    Functions:
    - createCustomSendButton: Creates a custom send button based on provided configuration.
    - determineShortcutKeyForButtonIndex: Assigns a shortcut key to a button based on its index.
+
    After that, tje 
 
    Usage:
@@ -22,9 +23,10 @@
    buttons-clicking-copilot.js - ... for Copilot
    buttons-clicking-claude.js - ... Claude
 
-
-   Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS. This one too! */
+   Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS. This one too!
+*/
 'use strict';
+
 /**
  * Namespace object containing functions related to creating and managing custom buttons.
  */
@@ -50,8 +52,12 @@ window.MaxExtensionButtons = {
             }
         }
 
+        // Prepare tooltip parts: append (Auto-sends) if autoSend behavior is enabled
+        const autoSendDescription = buttonConfig.autoSend ? ' (Auto-sends)' : '';
         const shortcutDescription = assignedShortcutKey !== null ? ` (Shortcut: Alt+${assignedShortcutKey})` : '';
-        customButtonElement.setAttribute('title', `${buttonConfig.text}${shortcutDescription}`);
+
+        // Set the tooltip (title attribute) combining the button text with auto-send and shortcut info
+        customButtonElement.setAttribute('title', `${buttonConfig.text}${autoSendDescription}${shortcutDescription}`);
 
         customButtonElement.style.cssText = `
             background-color: transparent;
@@ -103,7 +109,6 @@ function processCustomSendButtonClick(event, customText, autoSend) {
     event.preventDefault();
     logConCgp('[buttons] Custom send button clicked');
 
-
     // Invert autoSend if Shift key is pressed during the click
     if (event.shiftKey) {
         autoSend = !autoSend;
@@ -114,7 +119,7 @@ function processCustomSendButtonClick(event, customText, autoSend) {
     logConCgp('[buttons] Active site:', activeSite);
 
     // Handle different sites
-  // In processCustomSendButtonClick function
+    // In processCustomSendButtonClick function
     switch (activeSite) {
         case 'ChatGPT':
             processChatGPTCustomSendButtonClick(event, customText, autoSend);
@@ -131,14 +136,12 @@ function processCustomSendButtonClick(event, customText, autoSend) {
         case 'AIStudio':
             processAIStudioCustomSendButtonClick(event, customText, autoSend);
             break;
-    case 'AIStudio':
-        processAIStudioCustomSendButtonClick(event, customText, autoSend);
-        break;
-    default:
-        logConCgp('[buttons] Unsupported site:', activeSite);
+        case 'AIStudio':
+            processAIStudioCustomSendButtonClick(event, customText, autoSend);
+            break;
+        default:
+            logConCgp('[buttons] Unsupported site:', activeSite);
+    }
 }
-}
-
-
 
 // #endregion
