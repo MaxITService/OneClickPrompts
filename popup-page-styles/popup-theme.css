@@ -7,13 +7,13 @@ It adjusts colors, backgrounds, borders, and other visual elements to better sui
 Key areas:
 - Global overrides on body.dark-theme for base colors.
 - Adjustments for buttons, sections, inputs, and other UI components.
-- Specific overrides for dynamic button items and toast notifications.
+- Specific overrides for dynamic button items, toast notifications, and danger buttons.
 */
 
 /* ------------------------------------------------------------------------- */
- /* Global Dark Theme Overrides                                               */
- /* ------------------------------------------------------------------------- */
- body.dark-theme {
+/* Global Dark Theme Overrides                                               */
+/* ------------------------------------------------------------------------- */
+body.dark-theme {
     --primary-color: #9a79d3; /* Violet used for primary elements in dark mode */
     --danger-color: #d16c6c;
     --border-color: #444;
@@ -24,8 +24,8 @@ Key areas:
 }
 
 /* ------------------------------------------------------------------------- */
- /* Dark Theme Overrides for Buttons and Sections                             */
- /* ------------------------------------------------------------------------- */
+/* Dark Theme Overrides for Buttons and Sections                             */
+/* ------------------------------------------------------------------------- */
 body.dark-theme button {
     background: #333;
     color: #eee;
@@ -46,9 +46,24 @@ body.dark-theme select {
     border-color: #555;
 }
 
+/* ------------------------------------------------------------------------- */
+/* Dark Theme Overrides for Danger Buttons                                   */
+/* ------------------------------------------------------------------------- */
+/* Ensure that buttons with the 'danger' class retain a red (danger) styling */
+body.dark-theme button.danger {
+    background: var(--danger-color);
+    color: #fff;
+    border-color: var(--danger-color);
+}
 
-/* ===== Dark Theme Overrides for Dynamic Prompt Dialogs ===== */
+body.dark-theme button.danger:hover {
+    background: #b85c5c;
+    border-color: #b85c5c;
+}
 
+/* ------------------------------------------------------------------------- */
+/* Dark Theme Overrides for Dynamic Prompt Dialogs                           */
+/* ------------------------------------------------------------------------- */
 body.dark-theme .confirmation,
 body.dark-theme .error {
     background-color: #333;       /* Dark background for dialogs */
@@ -76,10 +91,9 @@ body.dark-theme .error button:hover {
     border-color: #777;
 }
 
-
 /* ------------------------------------------------------------------------- */
- /* Dark Theme Overrides for Miscellaneous Components                         */
- /* ------------------------------------------------------------------------- */
+/* Dark Theme Overrides for Miscellaneous Components                         */
+/* ------------------------------------------------------------------------- */
 body.dark-theme .checkbox-row {
     color: #eee;
 }
@@ -108,11 +122,9 @@ body.dark-theme .toast {
     color: #eee;
 }
 
-
-
 /* ------------------------------------------------------------------------- */
- /* Dark Theme Overrides for Dynamic Button Items                             */
- /* ------------------------------------------------------------------------- */
+/* Dark Theme Overrides for Dynamic Button Items                             */
+/* ------------------------------------------------------------------------- */
 body.dark-theme .button-item {
     background: #333 !important;       /* Dark background for button items */
     border-color: #555 !important;       /* Darker border */
