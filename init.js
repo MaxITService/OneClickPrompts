@@ -60,15 +60,6 @@ function commenceExtensionInitialization(configurationObject) {
     logConCgp('[init] Configuration has been received:', configurationObject);
 
     /**
-     * Checks whether the custom buttons modifications already exist in the DOM.
-     * @returns {boolean} - True if modifications exist, false otherwise.
-     * @description Helper function that checks if the custom buttons container exists in the DOM to prevent duplication.
-     */
-    function doCustomModificationsExist() {
-        return document.getElementById(window.InjectionTargetsOnWebsite.selectors.buttonsContainerId) !== null;
-    }
-
-    /**
      * Selects the correct initialization path based on the active website and sets up keyboard shortcuts if enabled.
      * Injects custom elements into the webpage accordingly.
      */
@@ -78,7 +69,7 @@ function commenceExtensionInitialization(configurationObject) {
         const activeWebsite = window.InjectionTargetsOnWebsite.activeSite;
         logConCgp('[init] Active website detected:', activeWebsite);
 
-        // Initialize based on the active website
+        // Initialize button injection logic (moved to separate file "button-injection.js")
         buttonBoxCheckingAndInjection(true, activeWebsite);
 
         // Enable keyboard shortcuts if configured and on ChatGPT
@@ -122,106 +113,6 @@ function commenceExtensionInitialization(configurationObject) {
                 logConCgp('[init] No button found for the pressed shortcut key:', pressedKey);
             }
         }
-    }
-
-    /**
-     * Inserts custom buttons, separators and settings toggles into the webpage and starts resiliency checks if enabled.
-     * @param {boolean} enableResiliency - Flag to enable or disable resiliency checks.
-     */
-    function buttonBoxCheckingAndInjection(enableResiliency = true, activeWebsite) {
-        logConCgp('[init] Checking if mods already exist...');
-        if (doCustomModificationsExist() && !enableResiliency) {
-            logConCgp('[init] Modifications already exist and resiliency is disabled. Skipping initialization.');
-            return;
-        }
-
-        // Load the saved states of toggle switches
-        MaxExtensionInterface.loadToggleStates();
-        logConCgp('[init] Toggle states have been loaded.');
-
-        // Initialize the shared flag
-        let targetFound = false;
-
-        // Define the selector to wait for using InjectionTargetsOnWebsite
-        const selectors = window.InjectionTargetsOnWebsite.selectors.containers;
-        // A unified callback function will search for div where we will insert stuff and 
-        const handleTargetDiv = (targetDiv) => {
-            if (!targetFound) {
-                targetFound = true; // Set the flag to prevent other callbacks from executing
-                logConCgp('[init] Target div has been found:', targetDiv);
-                // Insert custom elements into the target container on the webpage
-                window.MaxExtensionButtonsInit.createAndInsertCustomElements(targetDiv);
-
-                // Initiate resiliency checks only after the first successful modification
-                if (!globalMaxExtensionConfig.firstModificationCompleted && enableResiliency) {
-                    globalMaxExtensionConfig.firstModificationCompleted = true;
-                    logConCgp('[init] First modification complete. Starting resiliency checks.');
-                    commenceEnhancedResiliencyChecks();
-                }
-            }
-        };
-
-        // Wait for the target element to appear in the DOM and then handle it
-        MaxExtensionUtils.waitForElements(selectors, handleTargetDiv);
-    }
-
-    /**
-     * Initiates enhanced resiliency checks to ensure the extension remains functional on the webpage.
-     * Periodically checks if custom modifications exist and re-initializes if necessary.
-     */
-    function commenceEnhancedResiliencyChecks() {
-        let consecutiveClearCheckCount = 0;
-      // This looks if the buttons present for few times, and tries to insert them again.
-        const requiredConsecutiveClearChecks = 2; // missing for this many times = reinsert
-        const maximumTotalIterations = 16; 
-        let totalIterationsPerformed = 0;
-        const intervalTimeInMilliseconds = 50; 
-
-        logConCgp('[init] Beginning enhanced resiliency checks...');
-        logConCgp(`[init] Requires ${requiredConsecutiveClearChecks} consecutive clear checks.`);
-
-
-        const resiliencyCheckInterval = setInterval(() => {
-            totalIterationsPerformed++;
-
-            if (doCustomModificationsExist()) {
-                consecutiveClearCheckCount = 0; // Reset counter if modifications are detected
-                logConCgp(`[init] Existing modifications detected. Resetting consecutive clear check counter. (Iteration ${totalIterationsPerformed}/${maximumTotalIterations})`);
-            } else {
-                consecutiveClearCheckCount++;
-                logConCgp(`[init] No modifications detected. Consecutive clear checks: ${consecutiveClearCheckCount}/${requiredConsecutiveClearChecks}`);
-            }
-
-            // Verify if the required number of consecutive clear checks has been met
-            if (consecutiveClearCheckCount >= requiredConsecutiveClearChecks) {
-                logConCgp('[init] Required consecutive clear checks achieved. Proceeding with initialization.');
-                clearInterval(resiliencyCheckInterval);
-                enforceResiliencyMeasures();
-            }
-
-            // Safety measure to prevent infinite loops
-            if (totalIterationsPerformed >= maximumTotalIterations) {
-                logConCgp('[init] Maximum iterations reached without achieving consecutive clear checks.');
-                clearInterval(resiliencyCheckInterval);
-
-                // Only proceed if no modifications are present at this point
-                if (!doCustomModificationsExist()) {
-                    logConCgp('[init] No modifications present after maximum iterations. Proceeding cautiously.');
-                    enforceResiliencyMeasures();
-                } else {
-                    logConCgp('[init] Modifications still present after maximum iterations. Aborting initialization.');
-                }
-            }
-        }, intervalTimeInMilliseconds);
-    }
-
-    /**
-     * Enforces resiliency by re-initializing the extension without further resiliency checks.
-     * Inserts custom elements into the webpage to restore functionality.
-     */
-    function enforceResiliencyMeasures() {
-        logConCgp('[init] Enforcing resiliency measures. Re-initializing without resiliency checks.');
-        buttonBoxCheckingAndInjection(false);
     }
 
     /**
