@@ -28,7 +28,6 @@
  * - Popup page scripts are handled separately.
  *
  */
-
 //Instructions for AI: do not remove comments!  MUST NOT REMOVE COMMENTS. This one too!
 // ALL CODE IN ALL FILES MUST USE logConCgp FOR LOGGING. NO CONSOLE LOGGING.
 
@@ -135,7 +134,7 @@ function commenceExtensionInitialization(configurationObject) {
     /**
      * Handle navigation changes in Single Page Applications by re-initializing the extension.
      * Ensures custom elements are present on the webpage after URL changes.
-     * Function will be called once after last trigger with 1000 ms delay
+     * Function will be called once after last trigger with 1000 ms delay.
      */
     const debouncedEnhancedInitialization = debounceFunctionExecution(() => {
         logConCgp('[init] URL change detected. Attempting to initialize extension...');
@@ -160,18 +159,54 @@ function commenceExtensionInitialization(configurationObject) {
         urlChangeObserver.observe(document, { subtree: true, childList: true });
     }
 
-    /*
-    Initialization starts here!
-    */
-    // Initiate the appropriate extension script based on the active website
-    selectAndInitializeAppropriateExtensionScript();
+    // ----------------------------------------------------------------
+    // NEW: Immediate SPA Navigation Detection using History API events.
+    // ----------------------------------------------------------------
 
-    // Begin monitoring URL changes to handle SPA navigation
+    // Listen to popstate event (back/forward navigation)
+    window.addEventListener('popstate', () => {
+        logConCgp('[init] popstate event detected. Triggering injection.');
+        buttonBoxCheckingAndInjection(true);
+    });
+
+    // Listen to hashchange event (if URL hash changes)
+    window.addEventListener('hashchange', () => {
+        logConCgp('[init] hashchange event detected. Triggering injection.');
+        buttonBoxCheckingAndInjection(true);
+    });
+
+    // Monkey-patch pushState and replaceState for immediate detection on state changes.
+    (function(history) {
+        const originalPushState = history.pushState;
+        history.pushState = function(state, title, url) {
+            const result = originalPushState.apply(history, arguments);
+            logConCgp('[init] pushState called. URL:', url);
+            buttonBoxCheckingAndInjection(true);
+            return result;
+        };
+
+        const originalReplaceState = history.replaceState;
+        history.replaceState = function(state, title, url) {
+            const result = originalReplaceState.apply(history, arguments);
+            logConCgp('[init] replaceState called. URL:', url);
+            buttonBoxCheckingAndInjection(true);
+            return result;
+        };
+    })(window.history);
+
+    // ----------------------------------------------------------------
+    // End of Immediate Navigation Detection
+    // ----------------------------------------------------------------
+
+    // Begin monitoring URL changes to handle SPA navigation using MutationObserver as a fallback.
     resilientStartAndRetryOnSPANavigation(() => {
-        logConCgp('[init] Path change detected. Re-initializing script...');
+        logConCgp('[init] Path change detected via MutationObserver. Re-initializing script...');
         debouncedEnhancedInitialization();
     });
+
+    // Initiate the appropriate extension script based on the active website.
+    selectAndInitializeAppropriateExtensionScript();
 }
 
-// Automatically start the initialization process upon script load
+// Automatically start the initialization process upon script load.
 publicStaticVoidMain();
