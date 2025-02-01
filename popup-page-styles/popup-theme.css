@@ -46,6 +46,37 @@ body.dark-theme select {
     border-color: #555;
 }
 
+
+/* ===== Dark Theme Overrides for Dynamic Prompt Dialogs ===== */
+
+body.dark-theme .confirmation,
+body.dark-theme .error {
+    background-color: #333;       /* Dark background for dialogs */
+    color: #fff;                  /* Light text for dialogs */
+    border: 1px solid #555;       /* Dark border */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    padding: 1em;                 /* Consistent spacing */
+    border-radius: 4px;           /* Rounded corners */
+}
+
+body.dark-theme .confirmation button,
+body.dark-theme .error button {
+    background-color: #444;       /* Dark button background */
+    color: #fff;                  /* Light button text */
+    border: 1px solid #666;       /* Button border */
+    padding: 0.5em 1em;           /* Button padding */
+    border-radius: 4px;           /* Rounded corners */
+    cursor: pointer;
+}
+
+/* Button hover states for dialogs */
+body.dark-theme .confirmation button:hover,
+body.dark-theme .error button:hover {
+    background-color: #555;
+    border-color: #777;
+}
+
+
 /* ------------------------------------------------------------------------- */
  /* Dark Theme Overrides for Miscellaneous Components                         */
  /* ------------------------------------------------------------------------- */
@@ -76,6 +107,8 @@ body.dark-theme .toast {
     background: rgba(50, 50, 50, 0.9);
     color: #eee;
 }
+
+
 
 /* ------------------------------------------------------------------------- */
  /* Dark Theme Overrides for Dynamic Button Items                             */
