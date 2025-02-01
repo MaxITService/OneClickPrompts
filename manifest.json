@@ -53,6 +53,7 @@
         "buttons.js",
         "buttons-init.js",
         "interface.js",
+        "button-injection.js",
         "init.js",
         "tests.js"
       ]
