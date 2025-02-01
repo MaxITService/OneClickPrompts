@@ -1,32 +1,34 @@
 // init.js
-
-// Version: 1.4
-
+// Version: 1.5
 //
 // Documentation:
 /**
- * This file serves as the main initializer for the ChatGPT Chrome extension. 
- * It retrieves configuration data from the service worker and identifies 
- * the active website, such as ChatGPT or Claude. Based on the site, it 
- * loads the appropriate extension scripts and applies necessary settings. 
- * The script also manages keyboard shortcuts to enhance user interaction.
- * 
- * It monitors URL changes, especially in single-page applications, to 
- * dynamically adapt to navigation events. Resiliency checks ensure that 
- * custom modifications in the DOM are validated and reinitialized as needed. 
- * Debouncing utilities are included to limit excessive function executions 
- * and optimize performance. The initialization sequence starts automatically, 
- * ensuring the extension runs smoothly across supported platforms.
+ * This file serves as the main initializer for the OneClickPrompts extension.
+ *
+ * Overview:
+ * - Retrieves configuration data from the service worker.
+ * - Identifies the active website (e.g., ChatGPT or Claude) and loads 
+ *   the appropriate extension scripts.
+ * - Applies necessary settings and manages keyboard shortcuts to enhance 
+ *   user interaction.
+ * - Monitors URL changes in single-page applications and ensures resiliency 
+ *   by validating and reinitializing custom modifications in the DOM.
+ * - Uses debouncing to limit excessive function executions for performance.
  *
  * Usage:
- * Ensure `buttons.js` and `buttons-init.js` are loaded before this script to 
- * enable button functionalities. The script starts the initialization process 
- * automatically upon loading. 
- * 
+ * - Ensure the following scripts are loaded (in order) before this file:
+ *   1. buttons.js
+ *   2. buttons-init.js
+ *   3. button-injection.js
+ * - The initialization process starts automatically upon script load.
+ *
  * Dependencies:
- * This file is main script, it therefore depends on all other helper files that are content scripts. Popup page scripts are separate.
- * 
+ * - This is the main script, and it depends on all other helper files that are 
+ *   used as content scripts.
+ * - Popup page scripts are handled separately.
+ *
  */
+
 //Instructions for AI: do not remove comments!  MUST NOT REMOVE COMMENTS. This one too!
 // ALL CODE IN ALL FILES MUST USE logConCgp FOR LOGGING. NO CONSOLE LOGGING.
 

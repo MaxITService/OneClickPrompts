@@ -98,11 +98,3 @@ window.MaxExtensionButtonsInit = {
         logConCgp('[init] Custom elements have been inserted into the DOM.');
     }
 };
-
-/**
- * Checks whether the custom buttons modifications already exist in the DOM.
- * @returns {boolean} - True if modifications exist, false otherwise.
- */
-function doCustomModificationsExist() {
-    return document.getElementById(window.InjectionTargetsOnWebsite.selectors.buttonsContainerId) !== null;
-}
