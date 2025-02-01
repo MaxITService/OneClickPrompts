@@ -7,7 +7,8 @@ It adjusts colors, backgrounds, borders, and other visual elements to better sui
 Key areas:
 - Global overrides on body.dark-theme for base colors.
 - Adjustments for buttons, sections, inputs, and other UI components.
-- Specific overrides for dynamic button items, toast notifications, and danger buttons.
+- Specific overrides for dynamic button items, toast notifications, danger buttons,
+  versionContainer text, and links.
 */
 
 /* ------------------------------------------------------------------------- */
@@ -145,4 +146,21 @@ body.dark-theme .button-item label,
 body.dark-theme .button-item .shortcut-indicator {
     color: #eee !important;
     background: transparent !important;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Additional Dark Theme Overrides for Version Container and Links           */
+/* ------------------------------------------------------------------------- */
+/* Make the versionContainer text light */
+body.dark-theme #versionContainer {
+    color: var(--text-color);
+}
+
+/* All links in dark theme should be super light blue */
+body.dark-theme a {
+    color: #add8e6;
+}
+
+body.dark-theme a:hover {
+    color: #9acfea;
 }
