@@ -19,7 +19,7 @@
  * - Ensure the following scripts are loaded (in order) before this file:
  *   1. buttons.js
  *   2. buttons-init.js
- *   3. button-injection.js
+ *   3. buttons-injection.js
  * - The initialization process starts automatically upon script load.
  *
  * Dependencies:
@@ -71,7 +71,7 @@ function commenceExtensionInitialization(configurationObject) {
         const activeWebsite = window.InjectionTargetsOnWebsite.activeSite;
         logConCgp('[init] Active website detected:', activeWebsite);
 
-        // Initialize button injection logic (moved to separate file "button-injection.js")
+        // Initialize button injection logic (moved to separate file "buttons-injection.js")
         buttonBoxCheckingAndInjection(true, activeWebsite);
 
         // Enable keyboard shortcuts if configured and on ChatGPT
