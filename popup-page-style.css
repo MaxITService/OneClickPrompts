@@ -581,18 +581,17 @@ body.dragging button:hover {
     box-shadow: none !important;
     cursor: default !important;
 }
-
 /* ------------------------- */
 /* Dark Theme Overrides */
 /* ------------------------- */
 body.dark-theme {
-    --primary-color: #9a79d3; /* Adjusted primary color for dark theme */
-    --danger-color: #d16c6c;  /* Adjusted danger color for dark theme */
-    --border-color: #444;     /* Darker border */
-    --bg-color: #222;         /* Dark background */
-    --text-color: #eee;       /* Light text */
-    --separator-color: #666;  /* Dark separator */
-    --hover-bg-color: #333;   /* Dark hover background */
+    --primary-color: #9a79d3; /* Violet used for primary elements */
+    --danger-color: #d16c6c;
+    --border-color: #444;
+    --bg-color: #222;
+    --text-color: #eee;
+    --separator-color: #666;
+    --hover-bg-color: #333;
 }
 
 body.dark-theme button {
@@ -624,9 +623,17 @@ body.dark-theme .console {
     color: #ccc;
 }
 
-/* Ensure the button list also uses a dark background in dark theme */
+/* Ensure the button list uses a dark background in dark theme */
 body.dark-theme #buttonList {
     background-color: #333;
+}
+
+/* Override Export/Import buttons so they use violet in dark theme */
+body.dark-theme #exportProfile,
+body.dark-theme #importProfile {
+    background: var(--primary-color);
+    color: #fff;
+    border-color: var(--primary-color);
 }
 
 /* Dark theme toast styling */
@@ -683,8 +690,9 @@ body.dark-theme .toast {
     border-radius: 50%;
 }
 
+/* Change the toggle "on" color to violet (primary color) */
 .switch input:checked + .slider {
-    background-color: #2196F3;
+    background-color: var(--primary-color);
 }
 
 .switch input:checked + .slider:before {
@@ -693,7 +701,7 @@ body.dark-theme .toast {
 
 /* Optional: Add a focus effect for accessibility */
 .switch input:focus + .slider {
-    box-shadow: 0 0 1px #2196F3;
+    box-shadow: 0 0 1px var(--primary-color);
 }
 
 /* Styling for the switch label */
