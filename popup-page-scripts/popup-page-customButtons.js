@@ -20,7 +20,6 @@ function createButtonElement(button, index) {
 
     if (button.separator) {
         buttonItem.classList.add('separator-item');
-        // Updated separator with labeled text
         buttonItem.innerHTML = `
             <div class="separator-line"></div>
             <span class="separator-text">Separator</span>
@@ -35,7 +34,10 @@ function createButtonElement(button, index) {
             <label class="checkbox-row">
                 <input type="checkbox" class="autosend-toggle" ${button.autoSend ? 'checked' : ''}>
                 <span>Auto-send</span>
-                <span class="shortcut-indicator">Ctrl+${index + 1}</span>
+                ${ index < 10 
+                    ? `<span class="shortcut-indicator">[Ctrl+${index === 9 ? 0 : index + 1}]</span>` 
+                    : '' 
+                }
             </label>
             <button class="delete-button danger">Delete</button>
         `;
@@ -43,6 +45,7 @@ function createButtonElement(button, index) {
 
     return buttonItem;
 }
+
 
 
 /**
