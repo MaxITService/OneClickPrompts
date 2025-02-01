@@ -18,46 +18,62 @@ function doCustomModificationsExist() {
 }
 
 /**
- * Inserts custom buttons, separators and settings toggles into the webpage and starts resiliency checks if enabled.
- * @param {boolean} enableResiliency - Flag to enable or disable resiliency checks.
- * @param {string} activeWebsite - The identifier of the active website.
+ * Checks for the existence of the custom modifications and injects the custom buttons,
+ * separators, and toggle switches into the webpage. It also starts resiliency checks
+ * to ensure that the modifications are re‑injected if they disappear (for example, after SPA navigation).
+ *
+ * @param {boolean} enableResiliency - Flag indicating whether resiliency checks should be enabled.
+ * @param {string} activeWebsite - The identifier of the active website (not used directly in this function).
  */
 function buttonBoxCheckingAndInjection(enableResiliency = true, activeWebsite) {
     logConCgp('[button-injection] Checking if mods already exist...');
+    
+    // If modifications already exist and resiliency is disabled, skip the injection.
     if (doCustomModificationsExist() && !enableResiliency) {
         logConCgp('[button-injection] Modifications already exist and resiliency is disabled. Skipping initialization.');
         return;
     }
 
-    // Load the saved states of toggle switches
+    // Load the saved states of toggle switches (e.g., Auto-send, Hotkeys) from localStorage.
     MaxExtensionInterface.loadToggleStates();
     logConCgp('[button-injection] Toggle states have been loaded.');
 
-    // Initialize the shared flag
+    // Flag to ensure we only process one target container (if multiple callbacks are fired).
     let targetFound = false;
 
-    // Define the selector to wait for using InjectionTargetsOnWebsite
+    // Get the list of selectors for the containers into which the buttons should be injected.
     const selectors = window.InjectionTargetsOnWebsite.selectors.containers;
-    // A unified callback function will search for div where we will insert stuff
+
+    /**
+     * Unified callback function that is called when a target container is detected in the DOM.
+     * This function injects the custom elements and starts the resiliency mechanism.
+     *
+     * @param {HTMLElement} targetDiv - The container element in which to inject the custom buttons.
+     */
     const handleTargetDiv = (targetDiv) => {
         if (!targetFound) {
-            targetFound = true; // Set the flag to prevent other callbacks from executing
+            targetFound = true; // Prevent further executions for this injection cycle.
             logConCgp('[button-injection] Target div has been found:', targetDiv);
-            // Insert custom elements into the target container on the webpage
+
+            // Insert custom elements (custom send buttons and toggles) into the target container.
             window.MaxExtensionButtonsInit.createAndInsertCustomElements(targetDiv);
 
-            // Initiate resiliency checks only after the first successful modification
-            if (!window.globalMaxExtensionConfig.firstModificationCompleted && enableResiliency) {
-                window.globalMaxExtensionConfig.firstModificationCompleted = true;
-                logConCgp('[button-injection] First modification complete. Starting resiliency checks.');
+            // Always start resiliency checks when enableResiliency is true.
+            // This change removes the one-time flag (firstModificationCompleted) dependency.
+            if (enableResiliency) {
+                logConCgp('[button-injection] Starting resiliency checks.');
                 commenceEnhancedResiliencyChecks();
             }
         }
     };
 
-    // Wait for the target element to appear in the DOM and then handle it
+    // Use a utility function to wait for the target container(s) to appear in the DOM.
     MaxExtensionUtils.waitForElements(selectors, handleTargetDiv);
 }
+
+
+
+
 
 /**
  * The resiliency mechanism continuously monitors the DOM to verify that custom modifications remain intact.
@@ -65,58 +81,68 @@ function buttonBoxCheckingAndInjection(enableResiliency = true, activeWebsite) {
  * Once a predefined threshold is reached, or after a maximum number of iterations, it triggers a reinjection of the elements.
  * This approach ensures the extension maintains functionality even when the webpage dynamically resets or modifies its content.
  */
+
+// Global variable to store the current resiliency check timer
+window.OneClickPropmts_currentResiliencyTimeout = null;
+// fucntion that uses it:
 function commenceEnhancedResiliencyChecks() {
+    // Cancel any previous resiliency check
+    if (window.OneClickPropmts_currentResiliencyTimeout) {
+        clearTimeout(window.OneClickPropmts_currentResiliencyTimeout);
+        window.OneClickPropmts_currentResiliencyTimeout = null;
+        logConCgp('[button-injection] Previous resiliency check canceled due to new initialization.');
+    }
+
     let consecutiveClearCheckCount = 0;
     const requiredConsecutiveClearChecks = 2; // Missing for this many consecutive checks triggers reinjection
-    const maximumTotalIterations = 160;
+    const maximumTotalIterations = 30;
     let totalIterationsPerformed = 0;
 
     logConCgp('[button-injection] Beginning enhanced resiliency checks with dynamic interval...');
     logConCgp(`[button-injection] Requires ${requiredConsecutiveClearChecks} consecutive clear checks.`);
 
-    // The adaptive check function uses a dynamic delay based on current state.
+    // Adaptive check function that adjusts the delay based on the state
     function adaptiveCheck() {
         totalIterationsPerformed++;
         const modificationsExist = doCustomModificationsExist();
         let delay;
 
         if (modificationsExist) {
-            // When modifications are present, reset the missing counter.
-            consecutiveClearCheckCount = 0;
-            // Log only every 10 iterations to avoid excessive logs.
+            consecutiveClearCheckCount = 0; // Reset counter if modifications are present
+            // Log "everything is okay" only every 10 iterations to avoid log spam.
             if (totalIterationsPerformed % 10 === 0) {
                 logConCgp(`[button-injection] Modifications detected. Total iterations: ${totalIterationsPerformed}/${maximumTotalIterations}.`);
             }
-            // Slow down checks when everything is okay.
-            delay = 500;
+            // Slow down the checks when modifications are present
+            delay = 100;
         } else {
             consecutiveClearCheckCount++;
             logConCgp(`[button-injection] No modifications detected. Consecutive missing: ${consecutiveClearCheckCount}/${requiredConsecutiveClearChecks}`);
-            // Rapid checks when modifications are missing.
+            // Use a faster check interval when modifications are missing
             delay = 50;
         }
 
-        // If we have reached the required consecutive clear checks, reinject.
+        // If the required consecutive missing checks have been reached, trigger reinjection.
         if (consecutiveClearCheckCount >= requiredConsecutiveClearChecks) {
             logConCgp('[button-injection] Required consecutive clear checks achieved. Proceeding with initialization.');
             enforceResiliencyMeasures();
             return;
         }
 
-        // Safety: if maximum iterations have been reached, decide based on current state.
+        // Safety: If maximum iterations have been reached, decide based on current state.
         if (totalIterationsPerformed >= maximumTotalIterations) {
             logConCgp('[button-injection] Maximum iterations reached.');
             if (!doCustomModificationsExist()) {
                 logConCgp('[button-injection] No modifications present after maximum iterations. Proceeding cautiously.');
                 enforceResiliencyMeasures();
             } else {
-                logConCgp('[button-injection] Modifications still present after maximum iterations. Aborting initialization.');
+                logConCgp('[button-injection] Modifications still present after maximum iterations. We had succesfully injected buttons and they stayed there. Resiliency checks will be disabled.');
             }
             return;
         }
 
-        // Schedule the next check with the dynamic delay.
-        setTimeout(adaptiveCheck, delay);
+        // Schedule the next check with the determined delay and store its timer.
+        window.OneClickPropmts_currentResiliencyTimeout = setTimeout(adaptiveCheck, delay);
     }
 
     adaptiveCheck();
