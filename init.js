@@ -134,12 +134,14 @@ function commenceExtensionInitialization(configurationObject) {
     /**
      * Handle navigation changes in Single Page Applications by re-initializing the extension.
      * Ensures custom elements are present on the webpage after URL changes.
-     * Function will be called once after last trigger with 1000 ms delay.
+     * Function will be called once after last trigger.
+     *
+     * NOTE: Reduced debounce delay from 1000ms to 100ms to remove visible injection delay.
      */
     const debouncedEnhancedInitialization = debounceFunctionExecution(() => {
         logConCgp('[init] URL change detected. Attempting to initialize extension...');
         commenceExtensionInitialization(window.globalMaxExtensionConfig);
-    }, 1000);
+    }, 100);
 
     /**
      * Observes changes to the URL in Single Page Applications and triggers a callback upon changes.
