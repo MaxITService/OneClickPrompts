@@ -29,14 +29,18 @@ function processClaudeCustomSendButtonClick(event, customText, autoSend) {
 
 /**
  * Handles the send button clicking process for Claude
- * Uses a promise-based approach to wait for the send button, reducing duplicate code.
  */
 function handleClaudeSend() {
-    const TIMEOUT_DURATION = 5000; // 5 seconds
+    // Add timeout and attempt counter for finding send button
+    let attempts = 0;
+    const MAX_ATTEMPTS = 50;
+    const TIMEOUT_DURATION = 5000;
+    let timeoutId;
 
-    // Helper to find a send button using the selectors provided
-    const findClaudeSendButton = () => {
+    function findClaudeSendButton() {
+        // Common selectors for Claude send buttons
         const sendButtonSelectors = window.InjectionTargetsOnWebsite.selectors.sendButtons;
+
         for (const selector of sendButtonSelectors) {
             const button = document.querySelector(selector);
             if (button) {
@@ -45,54 +49,54 @@ function handleClaudeSend() {
             }
         }
         return null;
-    };
+    }
 
-    // Promise-based helper to wait for a send button
-    const waitForClaudeSendButton = (timeout = TIMEOUT_DURATION) => {
-        return new Promise((resolve, reject) => {
-            // Try immediately
-            const button = findClaudeSendButton();
-            if (button) {
-                return resolve(button);
-            }
+    // First immediate attempt
+    const sendButton = findClaudeSendButton();
+    if (sendButton) {
+        logConCgp('[Claude] Send button found immediately, delaying click by 200ms');
+        setTimeout(() => {
+            MaxExtensionUtils.simulateClick(sendButton);
+            logConCgp('[Claude] Send button clicked after 200ms delay');
+        }, 200);
+        return;
+    }
 
-            let attempts = 0;
-            const observer = new MutationObserver(() => {
-                attempts++;
-                const btn = findClaudeSendButton();
-                if (btn) {
-                    observer.disconnect();
-                    logConCgp(`[Claude] Send button found after ${attempts} mutation callbacks`);
-                    resolve(btn);
-                } else {
-                    logConCgp(`[Claude] Attempt ${attempts}: Send button not found yet`);
-                }
-            });
+    // If not found, set up observer
+    logConCgp('[Claude] Send button not found immediately, setting up observer');
 
-            observer.observe(document.body, { childList: true, subtree: true });
+    const observer = new MutationObserver((mutations, obs) => {
+        attempts++;
+        const sendButton = findClaudeSendButton();
 
-            // Timeout to reject the promise if the button is not found
-            setTimeout(() => {
-                observer.disconnect();
-                reject(new Error('Timeout reached without finding send button'));
-            }, timeout);
-        });
-    };
-
-    // Use an async IIFE to wait for the send button and then click it
-    (async () => {
-        try {
-            const sendButton = await waitForClaudeSendButton();
-            logConCgp('[Claude] Send button found, delaying click by 200ms');
+        if (sendButton) {
+            clearTimeout(timeoutId);
+            obs.disconnect();
+            logConCgp('[Claude] Send button found after observation, delaying click by 200ms');
             setTimeout(() => {
                 MaxExtensionUtils.simulateClick(sendButton);
                 logConCgp('[Claude] Send button clicked after 200ms delay');
             }, 200);
-        } catch (error) {
-            logConCgp('[Claude] ' + error.message);
+        } else if (attempts >= MAX_ATTEMPTS) {
+            clearTimeout(timeoutId);
+            obs.disconnect();
+            logConCgp('[Claude] Maximum attempts reached without finding send button');
+        } else {
+            logConCgp(`[Claude] Attempt ${attempts}/${MAX_ATTEMPTS}: Send button not found yet`);
         }
-    })();
+    });
+
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+
+    timeoutId = setTimeout(() => {
+        observer.disconnect();
+        logConCgp('[Claude] Timeout reached without finding send button');
+    }, TIMEOUT_DURATION);
 }
+
 
 /**
  * Utility functions for handling text insertion in Claude's editor
@@ -238,7 +242,7 @@ const ClaudeEditorUtils = {
             // Focus the editor
             editorElement.focus();
 
-            // If editor has placeholder or is empty, initialize content
+            // If editor has placeholder, clear it
             if (editorState.hasPlaceholder || editorState.isEmpty) {
                 logConCgp('[ClaudeEditor] Editor is empty or has placeholder, initializing content');
                 editorElement.innerHTML = '<p><br></p>';
@@ -285,7 +289,6 @@ const ClaudeEditorUtils = {
 
     /**
      * Inserts text into the editor, handling both empty and non-empty cases
-     * Uses modern Range and Selection APIs.
      * @param {Element} editorElement - The editor element
      * @param {string} textToInsert - The text to insert
      * @returns {boolean} - Whether the insertion was successful
@@ -296,9 +299,6 @@ const ClaudeEditorUtils = {
             editorElement.focus();
 
             const selection = window.getSelection();
-            if (!selection) {
-                throw new Error('Selection API not available');
-            }
             selection.removeAllRanges();
             const range = document.createRange();
 
@@ -309,7 +309,9 @@ const ClaudeEditorUtils = {
                 editorElement.appendChild(newParagraph);
                 range.setStart(newParagraph, 0);
             } else {
-                // Editor has content, append text to the last paragraph
+                // Editor has content, append text to last paragraph
+
+                // Find the last paragraph element
                 const paragraphs = editorElement.querySelectorAll('p');
                 let lastParagraph;
                 if (paragraphs.length > 0) {
@@ -319,6 +321,8 @@ const ClaudeEditorUtils = {
                     lastParagraph = document.createElement('p');
                     editorElement.appendChild(lastParagraph);
                 }
+
+                // Set the selection to the end of the last paragraph
                 range.selectNodeContents(lastParagraph);
                 range.collapse(false);
             }
