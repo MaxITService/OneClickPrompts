@@ -125,7 +125,7 @@ async function getCurrentProfileConfig() {
     try {
         const result = await chrome.storage.sync.get(['currentProfile']);
         const currentProfile = result.currentProfile;
-
+        
         if (currentProfile) {
             logConfigurationRelatedStuff(`Current profile found: ${currentProfile}`);
             const profile = await loadProfileConfig(currentProfile);
@@ -133,7 +133,7 @@ async function getCurrentProfileConfig() {
                 return profile;
             }
         }
-
+        
         logConfigurationRelatedStuff('No current profile found. Creating default profile');
         return await createDefaultProfile();
     } catch (error) {
@@ -179,7 +179,7 @@ async function deleteProfile(profileName) {
             logConfigurationRelatedStuff('Cannot delete Default profile');
             return false;
         }
-
+        
         // Get current profile
         const result = await chrome.storage.sync.get(['currentProfile']);
         
@@ -187,7 +187,7 @@ async function deleteProfile(profileName) {
         if (result.currentProfile === profileName) {
             await switchProfile('Default');
         }
-
+        
         // Remove the profile from storage
         await chrome.storage.sync.remove(`profiles.${profileName}`);
         logConfigurationRelatedStuff(`Profile ${profileName} deleted successfully`);
@@ -209,42 +209,36 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 sendResponse({ error: error.message });
             });
             return true;
-
         case 'saveConfig':
             saveProfileConfig(request.profileName, request.config).then(success => {
                 sendResponse({ success });
                 logConfigurationRelatedStuff('Config save request processed');
             });
             return true;
-
         case 'switchProfile':
             switchProfile(request.profileName).then(config => {
                 sendResponse({ config });
                 logConfigurationRelatedStuff('Profile switch request processed');
             });
             return true;
-
         case 'listProfiles':
             listProfiles().then(profiles => {
                 sendResponse({ profiles });
                 logConfigurationRelatedStuff('Profile list request processed');
             });
             return true;
-
         case 'clearStorage':
             clearStorage().then(success => {
                 sendResponse({ success });
                 logConfigurationRelatedStuff('Storage clear request processed');
             });
             return true;
-
         case 'deleteProfile':
             deleteProfile(request.profileName).then(success => {
                 sendResponse({ success });
                 logConfigurationRelatedStuff('Profile deletion request processed');
             });
             return true;
-
         case 'createDefaultProfile':
             createDefaultProfile().then(config => {
                 sendResponse({ config });
@@ -253,7 +247,34 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 sendResponse({ error: error.message });
             });
             return true;
-
+        // ----- New Cases for Dark Theme Support -----
+        case 'getTheme':
+            (async () => {
+                try {
+                    const result = await chrome.storage.sync.get(['darkTheme']);
+                    // Default to 'light' if not set
+                    const theme = result.darkTheme ? result.darkTheme : 'light';
+                    logConfigurationRelatedStuff('Retrieved theme preference: ' + theme);
+                    sendResponse({ darkTheme: theme });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
+            return true;
+        case 'setTheme':
+            (async () => {
+                try {
+                    await chrome.storage.sync.set({ darkTheme: request.darkTheme });
+                    logConfigurationRelatedStuff('Set theme preference to: ' + request.darkTheme);
+                    sendResponse({ success: true });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
+            return true;
+        // ----- End New Cases -----
         default:
             logConfigurationRelatedStuff('Unknown message type received:', request.type);
             sendResponse({ error: 'Unknown message type' });

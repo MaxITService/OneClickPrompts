@@ -1,13 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
+  <head>
     <meta charset="UTF-8">
     <title>Max Extension Settings</title>
     <link rel="stylesheet" href="popup-page-style.css">
-</head>
-
-<body>
+  </head>
+  <body>
     <div class="container">
         <!-- Profile Section -->
         <section class="section">
@@ -24,7 +22,6 @@
                     <p id="topExplanationText"> Your changes will be saved instantly. Reload website to apply. Pressing
                         "Shift" while pressing a key or button changes its autosend behaviour!
                         <a href="#helpSection">Go to Help Section</a>
-
                     </p>
                 </div>
             </div>
@@ -41,7 +38,7 @@
                 <button id="cancelCopyProfile" class="danger">Cancel</button>
             </div>
         </section>
-
+        
         <div id="saveStatus" class="small-hoovering-text">Last saved: Never</div>
         <!-- Button Configuration (buttons are added dynamically) -->
         <section class="section">
@@ -62,7 +59,7 @@
                 <!-- Buttons added dynamically -->
             </div>
         </section>
-
+        
         <!-- Settings -->
         <section class="section">
             <h2>Settings</h2>
@@ -76,15 +73,13 @@
             </label>
             <button id="revertDefault" class="danger">Revert Current Profile to Default</button>
         </section>
-
+        
         <!-- Console -->
         <section class="section">
             <h2>Console</h2>
             <div id="console" class="console"></div>
         </section>
-
-      
-
+        
         <!-- Backup Section -->
         <section class="section" id="backupSection">
             <h2>Backup & Restore</h2>
@@ -106,7 +101,7 @@
                 <p>Error loading file. Please ensure the file is a valid JSON profile.</p>
             </div>
         </section>
-
+        
         <!-- Help Section -->
         <section class="section" id="helpSection">
             <h2>Help</h2>
@@ -127,24 +122,35 @@
                         English. I only test on English languages of webpages, because I have to work and have no spare
                         time.</li>
                     <li><a href="https://github.com/MaxITService/ChatGPT-Quick-Buttons-for-your-text">Github: you can
-                            provide code you want to see in app here.</a></li>
+                        provide code you want to see in app here.</a></li>
                     <li><a href="https://buymeacoffee.com/netstaff">Donation link. If you are very rich, please send me
-                            huge amount of money, thank you!</a></li>
+                        huge amount of money, thank you!</a></li>
                     <li>Introducing changes faster than once in second causes saving issues</li>
                 </ul>
             </div>
         </section>
+        
+        <!-- ===== New Theme Section (Dark Theme Toggle) ===== -->
+        <section class="section" id="themeSection">
+            <h2>Theme</h2>
+            <label class="checkbox-row">
+                <input type="checkbox" id="darkThemeToggle">
+                <span>Enable Dark Theme</span>
+            </label>
+        </section>
+        <!-- ===== End Theme Section ===== -->
+        
     </div>
-
+    
     <!-- Toast Notification Container -->
     <div id="toastContainer" class="toast-container"></div>
+    
     <script src="log.js"></script>
     <script src="/popup-page-scripts/popup-page-visuals.js"></script>
     <script src="/popup-page-scripts/popup-page-profiles.js"></script>
     <script src="/popup-page-scripts/popup-page-backup-handler.js"></script>
     <script src="/popup-page-scripts/popup-page-customButtons.js"></script>
     <script src="/popup-page-scripts/popup-page-script.js"></script>
-
-</body>
-
+    <script src="/popup-page-scripts/popup-page-theme.js"></script>
+  </body>
 </html>
