@@ -1,0 +1,144 @@
+/*
+popup-buttons.css
+Version: 1.1
+
+This file is responsible for:
+1. Base Button Styling: Generic styling for all <button> elements within the popup interface.
+2. Custom Button Section: Styles for the custom buttons area including the button list container,
+   individual custom button items (with hover and dragging effects), drag handles, and separator items.
+*/
+
+/* ------------------------------------------------------------------------- */
+/* 1. Base Button Styling for All Buttons                                   */
+/* ------------------------------------------------------------------------- */
+
+/* Generic styling for all buttons */
+button {
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: #ffffff;
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: 14px;
+    transition: background var(--transition-duration) ease,
+                transform 0.2s ease,
+                color var(--transition-duration) ease;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Hover state for buttons */
+button:hover {
+    background: #e6e6e6;
+}
+
+/* Active state for buttons */
+button:active {
+    transform: scale(0.98);
+}
+
+/* Special styling for buttons with the "danger" class */
+button.danger {
+    color: var(--danger-color);
+    border-color: var(--danger-color);
+    background: #ffffff;
+}
+
+button.danger:hover {
+    background: #f8d7da;
+}
+
+
+/* ------------------------------------------------------------------------- */
+/* 2. Custom Buttons Section                                                 */
+/* ------------------------------------------------------------------------- */
+
+/* Container for the custom button list */
+#buttonList {
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 8px;
+    min-height: 50px;
+    background-color: #ffffff;
+    transition: background-color var(--transition-duration) ease;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    scroll-behavior: smooth;
+    transform-style: preserve-3d;
+}
+
+/* Styles for individual custom button items */
+.button-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    margin: 4px 0;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: #ffffff;
+    cursor: grab;
+    position: relative;
+    /* Set initial scale to 1 and enable a smooth transition */
+    transform: scale(1);
+    transition: transform 0.9s ease, background-color 0.9s ease;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    perspective: 1000px;
+}
+
+/* Hover effect for button items */
+.button-item:hover {
+    background-color: var(--hover-bg-color);
+}
+
+/* Styling when a button item is being dragged */
+.button-item.dragging {
+    transform: scale(0.8);               /* Shrinks to 80% while dragging */
+    background-color: #d4f8d4 !important;  /* Light green highlight */
+    opacity: 0.8;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    cursor: grabbing;
+    z-index: 2;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Drag Handle Styling                                                       */
+/* ------------------------------------------------------------------------- */
+
+/* Visual affordance for dragging custom button items */
+.drag-handle {
+    cursor: grab;
+    padding: 0 8px;
+    display: flex;
+    align-items: center;
+    font-size: 18px;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Separator Styles                                                          */
+/* ------------------------------------------------------------------------- */
+
+/* Special styles for separator items within the button list */
+.button-item.separator-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 8px 0;
+    padding: 8px;
+    background: #dcdcdc;
+    border: none;
+    cursor: move;
+    transition: background-color var(--transition-duration) ease;
+}
+
+.button-item.separator-item:hover {
+    background: #c0c0c0;
+}
+
+.button-item.separator-item.dragging {
+    opacity: 0.7;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}

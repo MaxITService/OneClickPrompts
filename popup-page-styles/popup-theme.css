@@ -1,0 +1,103 @@
+/*
+popup-theme.css
+Version: 1.0
+
+This file provides dark mode overrides for the Max Extension Settings popup.
+It adjusts colors, backgrounds, borders, and other visual elements to better suit a dark theme.
+Key areas:
+- Global overrides on body.dark-theme for base colors.
+- Adjustments for buttons, sections, inputs, and other UI components.
+- Specific overrides for dynamic button items and toast notifications.
+*/
+
+/* ------------------------------------------------------------------------- */
+ /* Global Dark Theme Overrides                                               */
+ /* ------------------------------------------------------------------------- */
+ body.dark-theme {
+    --primary-color: #9a79d3; /* Violet used for primary elements in dark mode */
+    --danger-color: #d16c6c;
+    --border-color: #444;
+    --bg-color: #222;
+    --text-color: #eee;
+    --separator-color: #666;
+    --hover-bg-color: #333;
+}
+
+/* ------------------------------------------------------------------------- */
+ /* Dark Theme Overrides for Buttons and Sections                             */
+ /* ------------------------------------------------------------------------- */
+body.dark-theme button {
+    background: #333;
+    color: #eee;
+    border-color: #555;
+}
+
+body.dark-theme .section {
+    background-color: #2a2a2a;
+    border-color: #444;
+    box-shadow: none;
+}
+
+body.dark-theme input[type="text"],
+body.dark-theme textarea,
+body.dark-theme select {
+    background: #333;
+    color: #eee;
+    border-color: #555;
+}
+
+/* ------------------------------------------------------------------------- */
+ /* Dark Theme Overrides for Miscellaneous Components                         */
+ /* ------------------------------------------------------------------------- */
+body.dark-theme .checkbox-row {
+    color: #eee;
+}
+
+body.dark-theme .console {
+    background: #111;
+    color: #ccc;
+}
+
+/* Ensure the button list uses a dark background in dark theme */
+body.dark-theme #buttonList {
+    background-color: #333;
+}
+
+/* Override Export/Import buttons to use primary color in dark mode */
+body.dark-theme #exportProfile,
+body.dark-theme #importProfile {
+    background: var(--primary-color);
+    color: #fff;
+    border-color: var(--primary-color);
+}
+
+/* Dark theme toast styling */
+body.dark-theme .toast {
+    background: rgba(50, 50, 50, 0.9);
+    color: #eee;
+}
+
+/* ------------------------------------------------------------------------- */
+ /* Dark Theme Overrides for Dynamic Button Items                             */
+ /* ------------------------------------------------------------------------- */
+body.dark-theme .button-item {
+    background: #333 !important;       /* Dark background for button items */
+    border-color: #555 !important;       /* Darker border */
+    color: #eee !important;              /* Light text color */
+}
+
+body.dark-theme .button-item.separator-item {
+    background: #444 !important;         /* Slightly lighter than .button-item for separators */
+    border-color: #555 !important;
+    color: #ccc !important;
+}
+
+/* Ensure that any internal elements within button items also adapt */
+body.dark-theme .button-item .drag-handle,
+body.dark-theme .button-item input,
+body.dark-theme .button-item textarea,
+body.dark-theme .button-item label,
+body.dark-theme .button-item .shortcut-indicator {
+    color: #eee !important;
+    background: transparent !important;
+}

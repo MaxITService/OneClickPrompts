@@ -1,0 +1,107 @@
+/*
+popup-layout.css
+Version: 1.0
+
+This file is responsible for the layout-related styles of the Max Extension Settings popup.
+It defines the row layouts, form controls, and profile action container styles.
+These rules ensure proper spacing and alignment for input fields, textareas, selects,
+and the various buttons used in profile actions.
+*/
+
+/* ------------------------------------------------------------------------- */
+/* Row Layouts for Inputs and Buttons                                        */
+/* ------------------------------------------------------------------------- */
+
+/* Layout for grouping elements horizontally with wrap and gap */
+.row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Form Controls: Inputs, Textareas, and Selects                             */
+/* ------------------------------------------------------------------------- */
+
+/* Standard styling for text inputs, textareas, and select boxes */
+input[type="text"],
+textarea,
+select {
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 14px;
+    box-sizing: border-box;
+    resize: none;
+    overflow: hidden;
+    transition: border-color var(--transition-duration) ease, box-shadow var(--transition-duration) ease;
+    background: #ffffff;
+    color: var(--text-color);
+}
+
+/* Focus state for inputs to improve accessibility and visibility */
+input[type="text"]:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(122, 92, 200, 0.1);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Specific Input Field Styles                                               */
+/* ------------------------------------------------------------------------- */
+
+/* Emoji input: Narrow input designed for displaying emojis */
+.emoji-input {
+    width: 40px;
+    text-align: center;
+}
+
+/* Text input: Flexible input for longer text entries */
+.text-input {
+    flex: 1;
+    min-height: 40px;
+    line-height: 1.2;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Profile Action Containers                                                 */
+/* ------------------------------------------------------------------------- */
+
+/* Container for profile actions (e.g., add, copy, delete profile) */
+.profile-action-container {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    align-items: center;
+}
+
+/* Ensure text inputs within profile action containers fill available space */
+.profile-action-container input[type="text"] {
+    flex: 1;
+}
+
+/* Styling for buttons within profile action containers */
+.profile-action-container button {
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--primary-color);
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background var(--transition-duration) ease, transform 0.2s ease, color var(--transition-duration) ease;
+}
+
+/* Hover effect for profile action buttons */
+.profile-action-container button:hover {
+    background: #6a4abd;
+}
+
+/* Disabled state styling for buttons */
+.profile-action-container button:disabled {
+    background: #cccccc;
+    cursor: not-allowed;
+}

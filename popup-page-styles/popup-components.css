@@ -1,0 +1,237 @@
+/*
+popup-components.css
+Version: 1.0
+
+This file is responsible for UI components within the Max Extension Settings popup.
+It includes styles for the console, save status text, profile selection dropdown,
+export/import buttons, confirmation and error dialogs, and toast notifications.
+Key areas:
+- .console: Styling for the user-visible console.
+- .small-hoovering-text: Save status messages.
+- #profileSelect: Profile selection dropdown.
+- .empty-message: Placeholder for empty button lists.
+- #exportProfile, #importProfile: Export/Import buttons.
+- .confirmation and .error: Dialog boxes for user feedback.
+- .toast and .toast-container: Toast notifications.
+*/
+
+ /* ------------------------------------------------------------------------- */
+ /* Console Styling                                                           */
+ /* ------------------------------------------------------------------------- */
+ .console {
+    font-family: Consolas, monospace;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: #333333;
+    color: #cccccc;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.console div {
+    padding: 4px 8px;
+    border-bottom: 1px solid #444444;
+}
+
+.console div:hover {
+    background: #444444;
+}
+
+/* ------------------------------------------------------------------------- */
+ /* Save Status Styling                                                       */
+ /* ------------------------------------------------------------------------- */
+.small-hoovering-text {
+    text-align: right;
+    color: #666666;
+    font-size: 12px;
+    margin-top: 16px;
+    animation: saveStatusFade 2s ease-out forwards;
+}
+
+@keyframes saveStatusFade {
+    0% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+/* ------------------------------------------------------------------------- */
+ /* Profile Selection Dropdown Styling                                        */
+ /* ------------------------------------------------------------------------- */
+#profileSelect {
+    flex: 1;
+    background-repeat: no-repeat;
+    padding-right: 30px;
+    transition: border-color var(--transition-duration) ease, box-shadow var(--transition-duration) ease;
+}
+
+#profileSelect:hover {
+    border-color: var(--primary-color);
+}
+
+#profileSelect:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(122, 92, 200, 0.1);
+}
+
+/* ------------------------------------------------------------------------- */
+ /* Empty Message for Button List                                             */
+ /* ------------------------------------------------------------------------- */
+.empty-message {
+    padding: 10px;
+    color: #888;
+    font-style: italic;
+    width: 100%;
+    text-align: center;
+}
+
+/* ------------------------------------------------------------------------- */
+ /* Export and Import Buttons                                                 */
+ /* ------------------------------------------------------------------------- */
+#exportProfile,
+#importProfile {
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: #ffffff;
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: 14px;
+    transition: background var(--transition-duration) ease, transform 0.2s ease, color var(--transition-duration) ease;
+}
+
+#exportProfile:hover,
+#importProfile:hover {
+    background: #e6e6e6;
+}
+
+#exportProfile:active,
+#importProfile:active {
+    transform: scale(0.98);
+}
+
+/* ------------------------------------------------------------------------- */
+ /* Confirmation Dialog Styling                                               */
+ /* ------------------------------------------------------------------------- */
+.confirmation {
+    margin-top: 16px;
+    padding: 16px;
+    border: 1px solid var(--primary-color);
+    border-radius: 6px;
+    background-color: #f0f8ff;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.confirmation p {
+    margin: 0 0 16px 0;
+    color: var(--text-color);
+    font-size: 14px;
+}
+
+.confirmation button {
+    margin-right: 12px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    background-color: var(--primary-color);
+    color: #ffffff;
+    cursor: pointer;
+    transition: background-color var(--transition-duration) ease, transform var(--transition-duration) ease;
+}
+
+.confirmation button:hover {
+    background-color: #6a4abd;
+    transform: scale(1.02);
+}
+
+.confirmation button:active {
+    transform: scale(0.98);
+}
+
+/* ------------------------------------------------------------------------- */
+ /* Error Dialog Styling                                                      */
+ /* ------------------------------------------------------------------------- */
+.error {
+    margin-top: 16px;
+    padding: 16px;
+    border: 1px solid var(--danger-color);
+    border-radius: 6px;
+    background-color: #ffe6e6;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.error p {
+    margin: 0;
+    color: var(--danger-color);
+    font-size: 14px;
+}
+
+.error button {
+    margin-right: 12px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    background-color: var(--danger-color);
+    color: #ffffff;
+    cursor: pointer;
+    transition: background-color var(--transition-duration) ease, transform var(--transition-duration) ease;
+}
+
+.error button:hover {
+    background-color: #c9302c;
+    transform: scale(1.02);
+}
+
+.error button:active {
+    transform: scale(0.98);
+}
+
+/* ------------------------------------------------------------------------- */
+ /* Toast Notification Styles                                                 */
+ /* ------------------------------------------------------------------------- */
+.toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.toast {
+    background: var(--toast-bg-color);
+    color: var(--toast-text-color);
+    padding: var(--toast-padding);
+    border-radius: var(--toast-border-radius);
+    margin-top: var(--toast-margin);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: var(--toast-transition);
+    min-width: 200px;
+    max-width: 300px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast.success {
+    background: #4BB543;
+}
+
+.toast.error {
+    background: #FF3333;
+}
+
+.toast.info {
+    background: #3333FF;
+}
+
+/* ------------------------------------------------------------------------- */
+ /* Wrapper for the Button List (if needed)                                  */
+ /* ------------------------------------------------------------------------- */
+.button-list-wrapper {
+    position: relative;
+    transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}

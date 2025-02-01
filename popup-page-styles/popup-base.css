@@ -1,0 +1,134 @@
+/*
+popup-base.css
+Version: 1.0
+
+This file is responsible for the base styles of the Max Extension Settings popup.
+It defines the overall visual foundation including root variables, global body styles,
+container centering, section styling, and heading (h2) styles.
+These rules set up the basic typography, spacing, and color scheme for the interface.
+*/
+
+/* ------------------------------------------------------------------------- */
+/* Root Variables for Consistent Styling                                   */
+/* ------------------------------------------------------------------------- */
+:root {
+    --primary-color: #7a5cc8; /* Less saturated violet shade for titles and accents */
+    --danger-color: #a94442; /* Soft red for danger buttons */
+    --border-color: #ccc; /* Light gray for borders */
+    --bg-color: #f9f9f9; /* Very light gray for background */
+    --text-color: #333; /* Dark gray for primary text */
+    --separator-color: #bbb; /* Medium gray for separators */
+    --hover-bg-color: #e6e6e6; /* Light gray on hover */
+    --transition-duration: 0.3s; /* Standard transition duration */
+    --transition-duration-release: 0.4s; /* Slower transition duration for release */
+    --box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    --box-shadow-hover: 0 4px 8px rgba(0,0,0,0.1);
+    --checkbox-size: 18px;
+    --toast-bg-color: rgba(0, 0, 0, 0.8);
+    --toast-text-color: #fff;
+    --toast-padding: 12px 24px;
+    --toast-border-radius: 4px;
+    --toast-margin: 8px;
+    --toast-transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Global Body Styles                                                        */
+/* ------------------------------------------------------------------------- */
+body {
+    margin: 0;
+    padding: 16px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg-color);
+    color: var(--text-color);
+    width: 100%;    
+    box-sizing: border-box;
+    overflow-y: auto;
+    transition: background-color var(--transition-duration) ease;
+}
+
+/* Hide version container when the user is adding or copying a profile */
+body:has(#addProfileContainer:not([style*="display: none"])) #versionContainer,
+body:has(#copyProfileContainer:not([style*="display: none"])) #versionContainer {
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+/* Show version container when not in profile add/copy mode */
+#versionContainer {
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 0.5s ease;
+}
+
+/* Centered version text styling */
+#version {
+    text-align: center;
+    color: #666666;
+    width: 100%;
+}
+
+/* Explanation text styling */
+#topExplanationText {
+    text-align: center;
+    color: #666666;
+    width: 100%;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Container & Section Styles                                                */
+/* ------------------------------------------------------------------------- */
+
+/* Container to Center Content */
+.container {
+    max-width: 800px;
+    min-width: 700px;
+    margin: 0 auto;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    scroll-behavior: smooth;
+}
+
+/* Sections Styling: Boxes that wrap content areas */
+.section {
+    margin-bottom: 24px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 16px;
+    background-color: #ffffff;
+    box-shadow: var(--box-shadow);
+    transition: box-shadow var(--transition-duration) ease, background-color var(--transition-duration) ease;
+}
+
+/* Section Hover Effects: Enhance shadow and background on hover */
+.section:hover {
+    box-shadow: var(--box-shadow-hover);
+    background-color: #f2f2f2;
+    transition: box-shadow var(--transition-duration-release) ease, background-color var(--transition-duration-release) ease;
+}
+
+/* Additional text spacing within sections */
+.text-inside-container {
+    margin: 0 2rem;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Headings (h2) Styles                                                      */
+/* ------------------------------------------------------------------------- */
+
+/* Primary headings for each section */
+h2 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--primary-color);
+    transition: color var(--transition-duration) ease;
+}
+
+/* Hover effect for headings for subtle feedback */
+h2:hover {
+    color: #6a4abd;
+    transition: color var(--transition-duration-release) ease;
+}
