@@ -60,51 +60,68 @@ function buttonBoxCheckingAndInjection(enableResiliency = true, activeWebsite) {
 }
 
 /**
- * Initiates enhanced resiliency checks to ensure the extension remains functional on the webpage.
+ * The resiliency mechanism continuously monitors the DOM to verify that custom modifications remain intact.
+ * It performs periodic checks and counts consecutive iterations where the modifications are absent.
+ * Once a predefined threshold is reached, or after a maximum number of iterations, it triggers a reinjection of the elements.
+ * This approach ensures the extension maintains functionality even when the webpage dynamically resets or modifies its content.
  */
 function commenceEnhancedResiliencyChecks() {
     let consecutiveClearCheckCount = 0;
-    const requiredConsecutiveClearChecks = 2; // missing for this many times = reinsert
-    const maximumTotalIterations = 16;
+    const requiredConsecutiveClearChecks = 2; // Missing for this many consecutive checks triggers reinjection
+    const maximumTotalIterations = 160;
     let totalIterationsPerformed = 0;
-    const intervalTimeInMilliseconds = 50;
 
-    logConCgp('[button-injection] Beginning enhanced resiliency checks...');
+    logConCgp('[button-injection] Beginning enhanced resiliency checks with dynamic interval...');
     logConCgp(`[button-injection] Requires ${requiredConsecutiveClearChecks} consecutive clear checks.`);
 
-    const resiliencyCheckInterval = setInterval(() => {
+    // The adaptive check function uses a dynamic delay based on current state.
+    function adaptiveCheck() {
         totalIterationsPerformed++;
+        const modificationsExist = doCustomModificationsExist();
+        let delay;
 
-        if (doCustomModificationsExist()) {
-            consecutiveClearCheckCount = 0; // Reset counter if modifications are detected
-            logConCgp(`[button-injection] Existing modifications detected. Resetting consecutive clear check counter. (Iteration ${totalIterationsPerformed}/${maximumTotalIterations})`);
+        if (modificationsExist) {
+            // When modifications are present, reset the missing counter.
+            consecutiveClearCheckCount = 0;
+            // Log only every 10 iterations to avoid excessive logs.
+            if (totalIterationsPerformed % 10 === 0) {
+                logConCgp(`[button-injection] Modifications detected. Total iterations: ${totalIterationsPerformed}/${maximumTotalIterations}.`);
+            }
+            // Slow down checks when everything is okay.
+            delay = 500;
         } else {
             consecutiveClearCheckCount++;
-            logConCgp(`[button-injection] No modifications detected. Consecutive clear checks: ${consecutiveClearCheckCount}/${requiredConsecutiveClearChecks}`);
+            logConCgp(`[button-injection] No modifications detected. Consecutive missing: ${consecutiveClearCheckCount}/${requiredConsecutiveClearChecks}`);
+            // Rapid checks when modifications are missing.
+            delay = 50;
         }
 
-        // Verify if the required number of consecutive clear checks has been met
+        // If we have reached the required consecutive clear checks, reinject.
         if (consecutiveClearCheckCount >= requiredConsecutiveClearChecks) {
             logConCgp('[button-injection] Required consecutive clear checks achieved. Proceeding with initialization.');
-            clearInterval(resiliencyCheckInterval);
             enforceResiliencyMeasures();
+            return;
         }
 
-        // Safety measure to prevent infinite loops
+        // Safety: if maximum iterations have been reached, decide based on current state.
         if (totalIterationsPerformed >= maximumTotalIterations) {
-            logConCgp('[button-injection] Maximum iterations reached without achieving consecutive clear checks.');
-            clearInterval(resiliencyCheckInterval);
-
-            // Only proceed if no modifications are present at this point
+            logConCgp('[button-injection] Maximum iterations reached.');
             if (!doCustomModificationsExist()) {
                 logConCgp('[button-injection] No modifications present after maximum iterations. Proceeding cautiously.');
                 enforceResiliencyMeasures();
             } else {
                 logConCgp('[button-injection] Modifications still present after maximum iterations. Aborting initialization.');
             }
+            return;
         }
-    }, intervalTimeInMilliseconds);
+
+        // Schedule the next check with the dynamic delay.
+        setTimeout(adaptiveCheck, delay);
+    }
+
+    adaptiveCheck();
 }
+
 
 /**
  * Enforces resiliency by re-initializing the extension without further resiliency checks.
