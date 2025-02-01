@@ -35,7 +35,6 @@ body {
     transition: background-color var(--transition-duration) ease;
 }
 
-
 /* Hide version container if the user is adding or copying a profile */
 body:has(#addProfileContainer:not([style*="display: none"])) #versionContainer,
 body:has(#copyProfileContainer:not([style*="display: none"])) #versionContainer {
@@ -303,7 +302,6 @@ button:active {
 .button-item:hover {
     background-color: var(--hover-bg-color);
 }
-
 
 /* Drag Handle Styling */
 .drag-handle {
@@ -581,6 +579,7 @@ body.dragging button:hover {
     box-shadow: none !important;
     cursor: default !important;
 }
+
 /* ------------------------- */
 /* Dark Theme Overrides */
 /* ------------------------- */
@@ -640,6 +639,29 @@ body.dark-theme #importProfile {
 body.dark-theme .toast {
     background: rgba(50, 50, 50, 0.9);
     color: #eee;
+}
+
+/* --- New Dark Theme Overrides for Dynamic Button Items --- */
+body.dark-theme .button-item {
+    background: #333 !important;       /* Dark background for button items */
+    border-color: #555 !important;       /* Darker border */
+    color: #eee !important;              /* Light text color */
+}
+
+body.dark-theme .button-item.separator-item {
+    background: #444 !important;         /* Slightly lighter than .button-item for separators */
+    border-color: #555 !important;
+    color: #ccc !important;
+}
+
+/* Ensure that any internal elements within .button-item also adapt */
+body.dark-theme .button-item .drag-handle,
+body.dark-theme .button-item input,
+body.dark-theme .button-item textarea,
+body.dark-theme .button-item label,
+body.dark-theme .button-item .shortcut-indicator {
+    color: #eee !important;
+    background: transparent !important;
 }
 
 /* ------------------------- */
