@@ -23,7 +23,6 @@ function exportCurrentProfile() {
         a.href = url;
         a.download = `${currentProfile.PROFILE_NAME}_profile.json`;
 
-
         // Append to the document, trigger click, and remove
         document.body.appendChild(a);
         a.click();
@@ -33,10 +32,14 @@ function exportCurrentProfile() {
         // Revoke the object URL
         URL.revokeObjectURL(url);
         logToConsole('Revoked the object URL.');
+
+        // Show a toast notification after initiating the download
+        showToast('Profile Download Initiated', 'success');
     } catch (error) {
         console.error('Error during profile export:', error);
         logToConsole(`Error during profile export: ${error.message}`);
-        alert('Failed to export profile. Please try again.');
+        // Use toast notification instead of alert
+        showToast('Failed to export profile. Please try again.', 'error');
     }
 }
 
@@ -107,7 +110,6 @@ async function handleImportProfile(event) {
     event.target.value = '';
 }
 
-
 // Function to overwrite the existing profile with the parsed profile
 async function overwriteCurrentProfile() {
     const parsedProfile = window.tempParsedProfile;
@@ -132,10 +134,12 @@ async function overwriteCurrentProfile() {
 
         updateInterface();
         logToConsole(`Profile "${parsedProfile.PROFILE_NAME}" imported and overwritten successfully.`);
-        alert(`Profile "${parsedProfile.PROFILE_NAME}" has been overwritten successfully.`);
+        // Use toast notification instead of alert
+        showToast(`Profile "${parsedProfile.PROFILE_NAME}" has been overwritten successfully.`, 'success');
     } catch (error) {
         logToConsole(`Failed to save the imported profile: ${error.message}`);
-        alert('Failed to overwrite the existing profile. Please try again.');
+        // Use toast notification instead of alert
+        showToast('Failed to overwrite the existing profile. Please try again.', 'error');
     }
 
     // Hide the confirmation div
@@ -144,7 +148,6 @@ async function overwriteCurrentProfile() {
     // Clear the temporary parsed profile
     window.tempParsedProfile = null;
 }
-
 
 // Function to cancel the import process
 function cancelImport() {
@@ -173,13 +176,14 @@ async function importProfile(parsedProfile) {
 
         updateInterface();
         logToConsole(`Profile "${parsedProfile.PROFILE_NAME}" imported successfully.`);
-        alert(`Profile "${parsedProfile.PROFILE_NAME}" has been imported successfully.`);
+        // Use toast notification instead of alert
+        showToast(`Profile "${parsedProfile.PROFILE_NAME}" has been imported successfully.`, 'success');
     } catch (error) {
         logToConsole(`Failed to save the imported profile: ${error.message}`);
-        alert('Failed to import the profile. Please try again.');
+        // Use toast notification instead of alert
+        showToast('Failed to import the profile. Please try again.', 'error');
     }
 }
-
 
 // Attach event listeners after DOM content is loaded
 document.addEventListener('DOMContentLoaded', () => {
