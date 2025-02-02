@@ -223,6 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Button management
     document.getElementById('addButton').addEventListener('click', addButton);
+    document.getElementById('clearText').addEventListener('click', clearText);
     document.getElementById('addSeparator').addEventListener('click', addSeparator);
 
     // Settings
@@ -484,4 +485,17 @@ function attachAutoSendToggleListeners() {
             logToConsole(`Updated auto-send for button at index ${index} to ${toggle.checked}`);
         });
     });
+}
+
+
+/**
+ * Clears the text in the button text input field.
+ */
+function clearText() {
+    // Clear the text input field for button template text
+    document.getElementById('buttonText').value = '';
+    logToConsole('Cleared button text input.');
+    document.getElementById('buttonIcon').value = '';
+    showToast('Button text cleared', 'info');
+    
 }
