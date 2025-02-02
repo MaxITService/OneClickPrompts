@@ -350,8 +350,6 @@ function handleDragOver(e) {
         parent.insertBefore(draggedItem, target.nextSibling);
     }
 
-    // Auto-scroll if near top/bottom
-    handleAutoScroll();
 }
 
 function handleDrop(e) {

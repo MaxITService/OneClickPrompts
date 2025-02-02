@@ -108,11 +108,9 @@ async function switchProfile(profileName) {
         if (profile) {
             await chrome.storage.sync.set({ 'currentProfile': profileName });
             logConfigurationRelatedStuff(`Switched to profile: ${profileName}`);
-            showToast(`Switched to profile: ${profileName}`, 'info');
             return profile;
         } else {
-            logConfigurationRelatedStuff(`Failed to switch to profile: ${profileName}`);
-            showToast(`Failed to switch to profile: ${profileName}`, 'error');
+            logConfigurationRelatedStuff(`Failed to switch to profile: ${profileName}`);            
             return null;
         }
     } catch (error) {
