@@ -327,14 +327,53 @@ function handleDragStart(e) {
     }
 }
 
+/**
+ * NEW: Auto-scroll helper function.
+ * Scrolls the window smoothly at a variable speed depending on the distance from the viewport edges.
+ * @param {DragEvent} e - The dragover event.
+ */
+function autoScroll(e) {
+    const scrollThreshold = 220; // Pixels from edge where scrolling starts
+    const maxScrollSpeed = 400;   // Maximum scroll speed in pixels per tick
+
+    const { innerWidth, innerHeight } = window;
+    let scrollX = 0, scrollY = 0;
+
+    // Vertical scroll: if near the top edge
+    if (e.clientY < scrollThreshold) {
+        scrollY = -maxScrollSpeed * ((scrollThreshold - e.clientY) / scrollThreshold);
+    } else if (innerHeight - e.clientY < scrollThreshold) {
+        scrollY = maxScrollSpeed * ((scrollThreshold - (innerHeight - e.clientY)) / scrollThreshold);
+    }
+
+    // Horizontal scroll: if near the left edge
+    if (e.clientX < scrollThreshold) {
+        scrollX = -maxScrollSpeed * ((scrollThreshold - e.clientX) / scrollThreshold);
+    } else if (innerWidth - e.clientX < scrollThreshold) {
+        scrollX = maxScrollSpeed * ((scrollThreshold - (innerWidth - e.clientX)) / scrollThreshold);
+    }
+
+    if (scrollX !== 0 || scrollY !== 0) {
+        window.scrollBy({
+            top: scrollY,
+            left: scrollX,
+            behavior: 'smooth'
+        });
+    }
+}
+
 function handleDragOver(e) {
     e.preventDefault();
     if (!isDragging) return;
 
     e.dataTransfer.dropEffect = 'move';
+    
+    // Call custom auto-scroll based on pointer position
+    autoScroll(e);
+
     lastDragPosition = { x: e.clientX, y: e.clientY };
 
-    // Identify potential target
+    // Identify potential target for reordering
     const target = e.target.closest('.button-item');
     if (!target || target === draggedItem) return;
 
@@ -343,13 +382,12 @@ function handleDragOver(e) {
     const offsetY = e.clientY - bounding.top;
     const isBefore = offsetY < bounding.height / 2;
 
-    // Re-insert draggedItem before or after 'target'
+    // Re-insert draggedItem before or after target based on pointer location
     if (isBefore) {
         parent.insertBefore(draggedItem, target);
     } else {
         parent.insertBefore(draggedItem, target.nextSibling);
     }
-
 }
 
 function handleDrop(e) {
@@ -358,7 +396,7 @@ function handleDrop(e) {
 
     if (!isDragging || !draggedItem) return;
 
-    // Finalize position, save the new order
+    // Finalize position and save new order
     finalizeDrag();
     logToConsole('Reordered buttons');
 }
@@ -505,5 +543,4 @@ function clearText() {
     logToConsole('Cleared button text input.');
     document.getElementById('buttonIcon').value = '';
     showToast('Button text cleared', 'info');
-    
 }
