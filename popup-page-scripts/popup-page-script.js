@@ -53,6 +53,7 @@ async function updateGlobalSettings() {
     currentProfile.enableShortcuts = document.getElementById('shortcutsToggle').checked;
     await saveCurrentProfile();
     logToConsole('Updated global settings');
+    showToast('Global settings updated', 'success');
 }
 
 /**
