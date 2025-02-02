@@ -93,7 +93,7 @@ body.dark-theme .error button:hover {
 }
 
 /* ------------------------------------------------------------------------- */
-/* Dark Theme Overrides for Miscellaneous Components                         */
+/* Additional Dark Theme Overrides for Miscellaneous Components                */
 /* ------------------------------------------------------------------------- */
 body.dark-theme .checkbox-row {
     color: #eee;
@@ -104,7 +104,7 @@ body.dark-theme .console {
     color: #ccc;
 }
 
-/* Ensure the button list uses a dark background in dark theme */
+/* Ensure the button list uses a dark background in dark mode */
 body.dark-theme #buttonList {
     background-color: #333;
 }
@@ -146,6 +146,14 @@ body.dark-theme .button-item label,
 body.dark-theme .button-item .shortcut-indicator {
     color: #eee !important;
     background: transparent !important;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Dark Theme Overrides for Dragged Button Items                             */
+/* ------------------------------------------------------------------------- */
+/* NEW: Force dragged item to have a green highlight in dark mode */
+body.dark-theme .button-item.dragging {
+    background-color: #2ecc71 !important; /* Green highlight for dragged items */
 }
 
 /* ------------------------------------------------------------------------- */
