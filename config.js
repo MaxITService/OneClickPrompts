@@ -126,23 +126,35 @@ async function getCurrentProfileConfig() {
     logConfigurationRelatedStuff('Retrieving current profile from storage');
     try {
         const result = await chrome.storage.sync.get(['currentProfile']);
-        const currentProfile = result.currentProfile;
+        const profileName = result.currentProfile;
         
-        if (currentProfile) {
-            logConfigurationRelatedStuff(`Current profile found: ${currentProfile}`);
-            const profile = await loadProfileConfig(currentProfile);
+        if (profileName) {
+            logConfigurationRelatedStuff(`Current profile found: ${profileName}`);
+            let profile = await loadProfileConfig(profileName);
             if (profile) {
+                // Ensure the profile has a 'customButtons' property
+                if (!profile.customButtons) {
+                    profile.customButtons = [];
+                    logConfigurationRelatedStuff(`Initialized missing 'customButtons' for profile: ${profileName}`);
+                }
                 return profile;
             }
         }
         
-        logConfigurationRelatedStuff('No current profile found. Creating default profile');
-        return await createDefaultProfile();
+        logConfigurationRelatedStuff('No valid current profile found. Creating default profile');
+        const defaultProfile = await createDefaultProfile();
+        // Ensure the default profile includes 'customButtons'
+        if (!defaultProfile.customButtons) {
+            defaultProfile.customButtons = [];
+            logConfigurationRelatedStuff("Initialized missing 'customButtons' for default profile");
+        }
+        return defaultProfile;
     } catch (error) {
         handleStorageError(error);
         throw new Error('Unable to retrieve current profile configuration.');
     }
 }
+
 
 // Function to list all available profiles
 async function listProfiles() {

@@ -57,19 +57,23 @@ async function switchProfile(profileName) {
             profileName: profileName
         });
 
-        // --- Added null check: If response.config is null, try to retrieve default profile ---
+        let newConfig = null;
+
+        // If the primary response is missing config, attempt to retrieve via getConfig
         if (!response || !response.config) {
-            logToConsole(`Error switching profile: received null config for profile "${profileName}". Attempting to retrieve default profile.`);
+            logToConsole(`Warning: Received null config for profile "${profileName}". Attempting to retrieve default config...`);
             const configResponse = await chrome.runtime.sendMessage({ type: 'getConfig' });
             if (configResponse && configResponse.config) {
-                currentProfile = configResponse.config;
+                newConfig = configResponse.config;
             } else {
-                logToConsole('Error retrieving default profile during switchProfile.');
+                logToConsole('Error: Unable to retrieve default profile configuration during switchProfile.');
                 return;
             }
         } else {
-            currentProfile = response.config;
+            newConfig = response.config;
         }
+
+        currentProfile = newConfig;
         updateInterface();
         logToConsole(`Switched to profile: ${profileName}`);
         updateSaveStatus();
@@ -77,6 +81,7 @@ async function switchProfile(profileName) {
         logToConsole(`Error switching profile: ${error.message}`);
     }
 }
+
 
 // -------------------------
 // 3. Add New Empty Profile
