@@ -110,6 +110,19 @@ function updateSaveStatus() {
  * Updates the entire interface based on the current profile.
  */
 function updateInterface() {
+    // --- Added guard to check if currentProfile is valid ---
+    if (!currentProfile || !currentProfile.customButtons) {
+        logToConsole('No valid current profile found. Attempting to retrieve default profile...');
+        chrome.runtime.sendMessage({ type: 'getConfig' }, (response) => {
+            if (response && response.config) {
+                currentProfile = response.config;
+                updateInterface(); // Call updateInterface again after retrieving default
+            } else {
+                logToConsole('Failed to retrieve default profile in updateInterface.');
+            }
+        });
+        return;
+    }
     // Update buttons, settings, etc. based on currentProfile
     updateButtonList();
     document.getElementById('autoSendToggle').checked = currentProfile.globalAutoSendEnabled;
@@ -267,10 +280,8 @@ document.addEventListener('DOMContentLoaded', () => {
     textareaSaverAndResizerFunc();
     attachEmojiInputListeners();
     attachAutoSendToggleListeners();
-// Call the function for your specific textarea by ID
+    // Call the function for your specific textarea by ID
     textareaInputAreaResizerFun('buttonText');
-
-
 
     // -------------------------
     // Open external links in new tabs
@@ -456,7 +467,6 @@ function textareaInputAreaResizerFun(textareaId) {
     resizeTextarea();
 }
 
-
 /**
  * Attaches input listeners to emoji input fields to update button icons.
  */
@@ -487,7 +497,6 @@ function attachAutoSendToggleListeners() {
         });
     });
 }
-
 
 /**
  * Clears the text in the button text input field.

@@ -57,7 +57,19 @@ async function switchProfile(profileName) {
             profileName: profileName
         });
 
-        currentProfile = response.config;
+        // --- Added null check: If response.config is null, try to retrieve default profile ---
+        if (!response || !response.config) {
+            logToConsole(`Error switching profile: received null config for profile "${profileName}". Attempting to retrieve default profile.`);
+            const configResponse = await chrome.runtime.sendMessage({ type: 'getConfig' });
+            if (configResponse && configResponse.config) {
+                currentProfile = configResponse.config;
+            } else {
+                logToConsole('Error retrieving default profile during switchProfile.');
+                return;
+            }
+        } else {
+            currentProfile = response.config;
+        }
         updateInterface();
         logToConsole(`Switched to profile: ${profileName}`);
         updateSaveStatus();
@@ -162,22 +174,31 @@ async function copyCurrentProfile(newProfileName) {
  * Deletes the current profile.
  */
 async function deleteCurrentProfile() {
-    if (currentProfile.PROFILE_NAME === 'Default') {
+    // --- Modified deletion logic for safety ---
+    // Check that currentProfile is defined and has a PROFILE_NAME property.
+    if (!currentProfile || !currentProfile.PROFILE_NAME) {
+        showToast('No profile is loaded to delete.', 'error');
+        return;
+    }
+
+    const profileName = currentProfile.PROFILE_NAME;
+
+    if (profileName === 'Default') {
         alert('Cannot delete Default profile');
         return;
     }
 
-    if (!confirm(`Delete profile "${currentProfile.PROFILE_NAME}"?`)) return;
+    if (!confirm(`Delete profile "${profileName}"?`)) return;
 
     try {
         await chrome.runtime.sendMessage({
             type: 'deleteProfile',
-            profileName: currentProfile.PROFILE_NAME
+            profileName: profileName
         });
 
         await loadProfiles();
-        logToConsole(`Deleted profile: ${currentProfile.PROFILE_NAME}`);
-        showToast(`Profile "${currentProfile.PROFILE_NAME}" deleted successfully.`, 'success');
+        logToConsole(`Deleted profile: ${profileName}`);
+        showToast(`Profile "${profileName}" deleted successfully.`, 'success');
     } catch (error) {
         showToast(`Error deleting profile: ${error.message}`, 'error');
         logToConsole(`Error deleting profile: ${error.message}`);
