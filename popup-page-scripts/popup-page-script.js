@@ -265,6 +265,10 @@ document.addEventListener('DOMContentLoaded', () => {
     textareaSaverAndResizerFunc();
     attachEmojiInputListeners();
     attachAutoSendToggleListeners();
+// Call the function for your specific textarea by ID
+    textareaInputAreaResizerFun('buttonText');
+
+
 
     // -------------------------
     // Open external links in new tabs
@@ -417,6 +421,39 @@ function textareaSaverAndResizerFunc() {
         });
     });
 }
+
+/**
+ * Adds an input listener to a textarea (by its ID) so that its height
+ * dynamically adjusts to fit its content.
+ *
+ * @param {string} textareaId - The ID of the textarea element.
+ */
+function textareaInputAreaResizerFun(textareaId) {
+    const textarea = document.getElementById(textareaId);
+    if (!textarea) {
+        console.error(`Textarea with id "${textareaId}" not found.`);
+        return;
+    }
+
+    // Ensure the textarea doesn't show scrollbars or allow manual resizing
+    textarea.style.overflow = 'hidden';
+    textarea.style.resize = 'none';
+
+    // Function to resize the textarea to fit its content
+    const resizeTextarea = () => {
+        // Reset the height to allow shrinking if content is removed
+        textarea.style.height = 'auto';
+        // Set the height to match the content's scrollHeight
+        textarea.style.height = textarea.scrollHeight + 'px';
+    };
+
+    // Adjust the textarea size on input events
+    textarea.addEventListener('input', resizeTextarea);
+
+    // Initial resize in case there is preset content
+    resizeTextarea();
+}
+
 
 /**
  * Attaches input listeners to emoji input fields to update button icons.

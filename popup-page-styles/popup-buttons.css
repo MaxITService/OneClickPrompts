@@ -8,6 +8,15 @@ This file is responsible for:
    individual custom button items (with hover and dragging effects), drag handles, and separator items.
 */
 
+
+/* input for creating new buttons */
+
+.text-input {
+    overflow: hidden;
+    resize: none;
+}
+
+
 /* ------------------------------------------------------------------------- */
 /* 1. Base Button Styling for All Buttons                                   */
 /* ------------------------------------------------------------------------- */
