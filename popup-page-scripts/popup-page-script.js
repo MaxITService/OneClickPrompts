@@ -13,6 +13,9 @@ let currentProfile = null;
 let isDragging = false;
 let draggedItem = null;
 
+// Global variable for debounced save timeout
+let saveTimeoutId = null;
+
 // DOM Elements
 const profileSelect = document.getElementById('profileSelect');
 const buttonList = document.getElementById('buttonList');
@@ -40,6 +43,33 @@ const cancelCopyProfileButton = document.getElementById('cancelCopyProfile');
 // Scroll interval data
 let scrollInterval = null;
 let lastDragPosition = { x: 0, y: 0 };
+
+
+// -------------------------
+// Debounced Save Function
+// -------------------------
+
+/**
+ * Debounced save function.
+ * Clears any pending save and schedules a new one 500ms in the future.
+ * This function is used on rapid-fire events (e.g., textarea input) so that
+ * saving happens only after 500ms of inactivity.
+ */
+function debouncedSaveCurrentProfile() {
+    if (saveTimeoutId !== null) {
+        clearTimeout(saveTimeoutId);
+    }
+    saveTimeoutId = setTimeout(async () => {
+        try {
+            await saveCurrentProfile(); // Calls the existing save function
+            updateSaveStatus();
+        } catch (error) {
+            logToConsole(`Error saving profile: ${error.message}`);
+        }
+        saveTimeoutId = null;
+    }, 150);
+}
+
 
 // -------------------------
 // 7. Settings Management
@@ -276,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Initialize event listeners
+    // Initialize event listeners for dynamic elements
     textareaSaverAndResizerFunc();
     attachEmojiInputListeners();
     attachAutoSendToggleListeners();
@@ -452,6 +482,7 @@ function logToConsole(message) {
 
 /**
  * Automatically resizes textareas based on their content and attaches input listeners.
+ * Modified to use debouncedSaveCurrentProfile() for throttled saving.
  */
 function textareaSaverAndResizerFunc() {
     const textareas = buttonList.querySelectorAll('textarea.text-input');
@@ -462,11 +493,14 @@ function textareaSaverAndResizerFunc() {
         textarea.addEventListener('input', () => {
             textarea.style.height = 'auto';
             textarea.style.height = `${textarea.scrollHeight}px`;
+
             // Update the corresponding button text
             const buttonItem = textarea.closest('.button-item');
             const index = parseInt(buttonItem.dataset.index);
             currentProfile.customButtons[index].text = textarea.value;
-            saveCurrentProfile();
+            
+            // Use debounced save to throttle saving
+            debouncedSaveCurrentProfile();
         });
     });
 }
@@ -484,27 +518,21 @@ function textareaInputAreaResizerFun(textareaId) {
         return;
     }
 
-    // Ensure the textarea doesn't show scrollbars or allow manual resizing
     textarea.style.overflow = 'hidden';
     textarea.style.resize = 'none';
 
-    // Function to resize the textarea to fit its content
     const resizeTextarea = () => {
-        // Reset the height to allow shrinking if content is removed
         textarea.style.height = 'auto';
-        // Set the height to match the content's scrollHeight
         textarea.style.height = textarea.scrollHeight + 'px';
     };
 
-    // Adjust the textarea size on input events
     textarea.addEventListener('input', resizeTextarea);
-
-    // Initial resize in case there is preset content
     resizeTextarea();
 }
 
 /**
  * Attaches input listeners to emoji input fields to update button icons.
+ * Modified to use debouncedSaveCurrentProfile() for throttled saving.
  */
 function attachEmojiInputListeners() {
     const emojiInputs = buttonList.querySelectorAll('input.emoji-input');
@@ -513,13 +541,14 @@ function attachEmojiInputListeners() {
             const buttonItem = input.closest('.button-item');
             const index = parseInt(buttonItem.dataset.index);
             currentProfile.customButtons[index].icon = input.value;
-            saveCurrentProfile();
+            debouncedSaveCurrentProfile();
         });
     });
 }
 
 /**
  * Attaches listeners to auto-send toggle inputs to update button settings.
+ * Modified to use debouncedSaveCurrentProfile() for throttled saving.
  */
 function attachAutoSendToggleListeners() {
     const autoSendToggles = buttonList.querySelectorAll('input.autosend-toggle');
@@ -528,7 +557,7 @@ function attachAutoSendToggleListeners() {
             const buttonItem = toggle.closest('.button-item');
             const index = parseInt(buttonItem.dataset.index);
             currentProfile.customButtons[index].autoSend = toggle.checked;
-            saveCurrentProfile();
+            debouncedSaveCurrentProfile();
             logToConsole(`Updated auto-send for button at index ${index} to ${toggle.checked}`);
         });
     });
@@ -538,7 +567,6 @@ function attachAutoSendToggleListeners() {
  * Clears the text in the button text input field.
  */
 function clearText() {
-    // Clear the text input field for button template text
     document.getElementById('buttonText').value = '';
     logToConsole('Cleared button text input.');
     document.getElementById('buttonIcon').value = '';
