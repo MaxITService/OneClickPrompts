@@ -75,6 +75,13 @@ body:has(#copyProfileContainer:not([style*="display: none"])) #versionContainer 
     width: 100%;
 }
 
+/* Notification text styling */
+#UserNotification {
+    text-align: center;
+    color: #be0000;
+    width: 100%;
+}
+
 /* ------------------------------------------------------------------------- */
 /* Container & Section Styles                                                */
 /* ------------------------------------------------------------------------- */
