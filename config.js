@@ -10,8 +10,63 @@ self.addEventListener('install', (event) => {
     event.waitUntil(self.skipWaiting());
 });
 
+// Migration helper functions
+async function checkMigrationStatus() {
+    const result = await chrome.storage.local.get(['migrationComplete']);
+    return result.migrationComplete === true;
+}
+
+async function setMigrationComplete() {
+    await chrome.storage.local.set({ migrationComplete: true });
+    logConfigurationRelatedStuff('Migration marked as complete');
+}
+
+async function migrateSyncToLocal() {
+    try {
+        // Check if migration already completed
+        if (await checkMigrationStatus()) {
+            logConfigurationRelatedStuff('Migration already completed');
+            return true;
+        }
+
+        // Get all data from sync storage
+        const syncData = await chrome.storage.sync.get(null);
+        if (Object.keys(syncData).length === 0) {
+            logConfigurationRelatedStuff('No sync data to migrate');
+            await setMigrationComplete();
+            return true;
+        }
+
+        // Copy to local storage
+        await chrome.storage.local.set(syncData);
+        
+        // Verify migration
+        const localData = await chrome.storage.local.get(null);
+        const verified = JSON.stringify(syncData) === JSON.stringify(localData);
+        
+        if (verified) {
+            // Clear sync storage after successful migration
+            await chrome.storage.sync.clear();
+            await setMigrationComplete();
+            logConfigurationRelatedStuff('Migration completed successfully');
+            return true;
+        } else {
+            throw new Error('Migration verification failed');
+        }
+    } catch (error) {
+        handleStorageError(error);
+        logConfigurationRelatedStuff('Migration failed:', error);
+        return false;
+    }
+}
+
 self.addEventListener('activate', (event) => {
-    event.waitUntil(self.clients.claim());
+    event.waitUntil(
+        (async () => {
+            await self.clients.claim();
+            await migrateSyncToLocal();
+        })()
+    );
 });
 
 // Function to handle logging with [config] prefix
@@ -40,7 +95,7 @@ async function loadDefaultConfig() {
 function handleStorageError(error) {
     if (error) {
         logConfigurationRelatedStuff('Storage error:', error);
-        if (error.message.includes('QUOTA_BYTES_PER_ITEM')) {
+        if (error.message.includes('QUOTA_BYTES')) {
             logConfigurationRelatedStuff('Storage quota exceeded. Some data may not be saved.');
         }
     }
@@ -52,7 +107,7 @@ async function createDefaultProfile() {
     logConfigurationRelatedStuff('Creating default profile');
     try {
         const defaultConfig = await loadDefaultConfig(); // Load from JSON
-        await chrome.storage.sync.set({
+        await chrome.storage.local.set({
             'currentProfile': 'Default',
             'profiles.Default': defaultConfig
         });
@@ -68,7 +123,7 @@ async function createDefaultProfile() {
 async function saveProfileConfig(profileName, config) {
     logConfigurationRelatedStuff(`Saving profile: ${profileName}`);
     try {
-        await chrome.storage.sync.set({
+        await chrome.storage.local.set({
             'currentProfile': profileName,
             [`profiles.${profileName}`]: config
         });
@@ -84,7 +139,7 @@ async function saveProfileConfig(profileName, config) {
 async function loadProfileConfig(profileName) {
     logConfigurationRelatedStuff(`Loading profile: ${profileName}`);
     try {
-        const result = await chrome.storage.sync.get([`profiles.${profileName}`]);
+        const result = await chrome.storage.local.get([`profiles.${profileName}`]);
         const profile = result[`profiles.${profileName}`];
         
         if (profile) {
@@ -106,7 +161,7 @@ async function switchProfile(profileName) {
     try {
         const profile = await loadProfileConfig(profileName);
         if (profile) {
-            await chrome.storage.sync.set({ 'currentProfile': profileName });
+            await chrome.storage.local.set({ 'currentProfile': profileName });
             logConfigurationRelatedStuff(`Switched to profile: ${profileName}`);
             return profile;
         } else {
@@ -123,7 +178,7 @@ async function switchProfile(profileName) {
 async function getCurrentProfileConfig() {
     logConfigurationRelatedStuff('Retrieving current profile from storage');
     try {
-        const result = await chrome.storage.sync.get(['currentProfile']);
+        const result = await chrome.storage.local.get(['currentProfile']);
         const profileName = result.currentProfile;
         
         if (profileName) {
@@ -157,7 +212,7 @@ async function getCurrentProfileConfig() {
 // Function to list all available profiles
 async function listProfiles() {
     try {
-        const storage = await chrome.storage.sync.get(null);
+        const storage = await chrome.storage.local.get(null);
         const profiles = Object.keys(storage)
             .filter(key => key.startsWith('profiles.'))
             .map(key => key.replace('profiles.', ''));
@@ -173,7 +228,7 @@ async function listProfiles() {
 // Function to clear all storage
 async function clearStorage() {
     try {
-        await chrome.storage.sync.clear();
+        await chrome.storage.local.clear();
         logConfigurationRelatedStuff('Storage cleared successfully');
         return true;
     } catch (error) {
@@ -193,7 +248,7 @@ async function deleteProfile(profileName) {
         }
         
         // Get current profile
-        const result = await chrome.storage.sync.get(['currentProfile']);
+        const result = await chrome.storage.local.get(['currentProfile']);
         
         // If we're deleting the current profile, switch to Default
         if (result.currentProfile === profileName) {
@@ -201,7 +256,7 @@ async function deleteProfile(profileName) {
         }
         
         // Remove the profile from storage
-        await chrome.storage.sync.remove(`profiles.${profileName}`);
+        await chrome.storage.local.remove(`profiles.${profileName}`);
         logConfigurationRelatedStuff(`Profile ${profileName} deleted successfully`);
         return true;
     } catch (error) {
@@ -263,7 +318,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case 'getTheme':
             (async () => {
                 try {
-                    const result = await chrome.storage.sync.get(['darkTheme']);
+                    const result = await chrome.storage.local.get(['darkTheme']);
                     // Default to 'light' if not set
                     const theme = result.darkTheme ? result.darkTheme : 'light';
                     logConfigurationRelatedStuff('Retrieved theme preference: ' + theme);
@@ -277,7 +332,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case 'setTheme':
             (async () => {
                 try {
-                    await chrome.storage.sync.set({ darkTheme: request.darkTheme });
+                    await chrome.storage.local.set({ darkTheme: request.darkTheme });
                     logConfigurationRelatedStuff('Set theme preference to: ' + request.darkTheme);
                     sendResponse({ success: true });
                 } catch (error) {
@@ -296,7 +351,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Listen for storage changes
 chrome.storage.onChanged.addListener((changes, namespace) => {
-    if (namespace === 'sync') {
+    if (namespace === 'local') {
         for (let [key, { oldValue, newValue }] of Object.entries(changes)) {
             logConfigurationRelatedStuff(`Storage key "${key}" changed:`, {
                 'from': oldValue,
