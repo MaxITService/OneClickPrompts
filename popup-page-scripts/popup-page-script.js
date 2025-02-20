@@ -358,7 +358,7 @@ function handleDragStart(e) {
 }
 
 /**
- * NEW: Auto-scroll helper function.
+ *  Auto-scroll helper function, activates when user drags cards near the viewport edges.
  * Scrolls the window smoothly at a variable speed depending on the distance from the viewport edges.
  * @param {DragEvent} e - The dragover event.
  */
@@ -480,95 +480,3 @@ function logToConsole(message) {
     consoleOutput.scrollTop = consoleOutput.scrollHeight;
 }
 
-/**
- * Automatically resizes textareas based on their content and attaches input listeners.
- * Modified to use debouncedSaveCurrentProfile() for throttled saving.
- */
-function textareaSaverAndResizerFunc() {
-    const textareas = buttonCardsList.querySelectorAll('textarea.text-input');
-    textareas.forEach(textarea => {
-        textarea.style.height = 'auto';
-        textarea.style.height = `${textarea.scrollHeight}px`;
-
-        textarea.addEventListener('input', () => {
-            textarea.style.height = 'auto';
-            textarea.style.height = `${textarea.scrollHeight}px`;
-
-            // Update the corresponding button text
-            const buttonItem = textarea.closest('.button-item');
-            const index = parseInt(buttonItem.dataset.index);
-            currentProfile.customButtons[index].text = textarea.value;
-            
-            // Use debounced save to throttle saving
-            debouncedSaveCurrentProfile();
-        });
-    });
-}
-
-/**
- * Adds an input listener to a textarea (by its ID) so that its height
- * dynamically adjusts to fit its content.
- *
- * @param {string} textareaId - The ID of the textarea element.
- */
-function textareaInputAreaResizerFun(textareaId) {
-    const textarea = document.getElementById(textareaId);
-    if (!textarea) {
-        console.error(`Textarea with id "${textareaId}" not found.`);
-        return;
-    }
-
-    textarea.style.overflow = 'hidden';
-    textarea.style.resize = 'none';
-
-    const resizeTextarea = () => {
-        textarea.style.height = 'auto';
-        textarea.style.height = textarea.scrollHeight + 'px';
-    };
-
-    textarea.addEventListener('input', resizeTextarea);
-    resizeTextarea();
-}
-
-/**
- * Attaches input listeners to emoji input fields to update button icons.
- * Modified to use debouncedSaveCurrentProfile() for throttled saving.
- */
-function attachEmojiInputListeners() {
-    const emojiInputs = buttonCardsList.querySelectorAll('input.emoji-input');
-    emojiInputs.forEach(input => {
-        input.addEventListener('input', () => {
-            const buttonItem = input.closest('.button-item');
-            const index = parseInt(buttonItem.dataset.index);
-            currentProfile.customButtons[index].icon = input.value;
-            debouncedSaveCurrentProfile();
-        });
-    });
-}
-
-/**
- * Attaches listeners to auto-send toggle inputs to update button settings.
- * Modified to use debouncedSaveCurrentProfile() for throttled saving.
- */
-function attachAutoSendToggleListeners() {
-    const autoSendToggles = buttonCardsList.querySelectorAll('input.autosend-toggle');
-    autoSendToggles.forEach(toggle => {
-        toggle.addEventListener('change', () => {
-            const buttonItem = toggle.closest('.button-item');
-            const index = parseInt(buttonItem.dataset.index);
-            currentProfile.customButtons[index].autoSend = toggle.checked;
-            debouncedSaveCurrentProfile();
-            logToConsole(`Updated auto-send for button at index ${index} to ${toggle.checked}`);
-        });
-    });
-}
-
-/**
- * Clears the text in the button text input field.
- */
-function clearText() {
-    document.getElementById('buttonText').value = '';
-    logToConsole('Cleared button text input.');
-    document.getElementById('buttonIcon').value = '';
-    showToast('Button text cleared', 'info');
-}

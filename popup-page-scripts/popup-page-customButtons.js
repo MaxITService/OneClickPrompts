@@ -1,9 +1,19 @@
 // popup-page-customButtons.js
-// instructions for the AI: do not remove comments! MUST NOT REMOVE COMMENTS.
-// This file creates elements that represent custom buttons adn separators for the extension.
-// This file contains only dependencies.
+// The extension adds custom buttons to webpage, and needs to manage them via the popup page.
+// This file contains functions to create, update, delete custom buttons and separators, that will
+// be used in the actual web page, but this popup manages their existance and position, by representing them
+// as cards in  <div id="buttonCardsList" ...> </div>
+// This file creates elements that represent custom buttons (card like elements)
+// Button cards contain: emoji input, text input, auto-send toggle, delete button, that are
+// used to create custom buttons for the extension. 
+// and separators for mostly visual funciton (separatprs behave like button cards with less stuff)
+// separator cards contain: visuals, delete button. 
+// version: 1.0
+
+
+
 // -------------------------
-// Create Button Element Function
+// Create Button Element - this is start of everything, there can be zero to infinite buttons
 // -------------------------
 
 /**
@@ -12,7 +22,7 @@
  * @param {number} index - The index of the button in the customButtons array.
  * @returns {HTMLElement} - The button item element.
  */
-function createButtonElement(button, index) {
+function createButtonCardElement(button, index) {
     const buttonItem = document.createElement('div');
     buttonItem.className = 'button-item';
     buttonItem.dataset.index = index;
@@ -49,13 +59,13 @@ function createButtonElement(button, index) {
 
 
 /**
- * Updates the list of custom buttons in the interface.
+ * Updates the list of custom button cards in the buttonCardsList.
  */
 function updatebuttonCardsList() {
     buttonCardsList.innerHTML = '';
     if (currentProfile.customButtons && currentProfile.customButtons.length > 0) {
         currentProfile.customButtons.forEach((button, index) => {
-            const buttonElement = createButtonElement(button, index);
+            const buttonElement = createButtonCardElement(button, index);
             buttonCardsList.appendChild(buttonElement);
         });
     } else {
@@ -71,8 +81,22 @@ function updatebuttonCardsList() {
     attachAutoSendToggleListeners();
 }
 
+// -------------------------
+// management section for buttons, where user can add button card with:
+//  specific emoji, text, auto-send toggle or clear it and start over.
+
 /**
- * Adds a new custom button to the current profile.
+ * Clears the text in the button text input field. Used only for adding new button.
+ */
+function clearText() {
+    document.getElementById('buttonText').value = '';
+    logToConsole('Cleared button text input.');
+    document.getElementById('buttonIcon').value = '';
+    showToast('Button text cleared', 'info');
+}
+
+/**
+ * Adds a new custom button and related card to the current profile.
  */
 async function addButton() {
     const icon = document.getElementById('buttonIcon').value || '✨';
@@ -90,9 +114,12 @@ async function addButton() {
     logToConsole('Added new button');
 }
 
+
+// Section for managing buttons and separators, where user can add, delete, move or update them.
 /**
  * Adds a separator to the current profile.
  */
+
 async function addSeparator() {
     currentProfile.customButtons.push({ separator: true });
     await saveCurrentProfile();
@@ -110,3 +137,94 @@ async function deleteButton(index) {
     updatebuttonCardsList();
     logToConsole('Deleted button');
 }
+
+
+
+
+// -------------------------
+// Section that controls what happens inside cards of buttons and separators:
+
+/**
+ * Adds an input listener to a textarea (by its ID) so that its height
+ * dynamically adjusts to fit its content.
+ *
+ * @param {string} textareaId - The ID of the textarea element.
+ */
+function textareaInputAreaResizerFun(textareaId) {
+    const textarea = document.getElementById(textareaId);
+    if (!textarea) {
+        console.error(`Textarea with id "${textareaId}" not found.`);
+        return;
+    }
+
+    textarea.style.overflow = 'hidden';
+    textarea.style.resize = 'none';
+
+    const resizeTextarea = () => {
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+    };
+
+    textarea.addEventListener('input', resizeTextarea);
+    resizeTextarea();
+}
+
+/**
+ * Attaches input listeners to emoji input fields to update button icons.
+ * Modified to use debouncedSaveCurrentProfile() for throttled saving.
+ */
+function attachEmojiInputListeners() {
+    const emojiInputs = buttonCardsList.querySelectorAll('input.emoji-input');
+    emojiInputs.forEach(input => {
+        input.addEventListener('input', () => {
+            const buttonItem = input.closest('.button-item');
+            const index = parseInt(buttonItem.dataset.index);
+            currentProfile.customButtons[index].icon = input.value;
+            debouncedSaveCurrentProfile();
+        });
+    });
+}
+
+/**
+ * Attaches listeners to auto-send toggle inputs to update button settings.
+ * Modified to use debouncedSaveCurrentProfile() for throttled saving.
+ */
+function attachAutoSendToggleListeners() {
+    const autoSendToggles = buttonCardsList.querySelectorAll('input.autosend-toggle');
+    autoSendToggles.forEach(toggle => {
+        toggle.addEventListener('change', () => {
+            const buttonItem = toggle.closest('.button-item');
+            const index = parseInt(buttonItem.dataset.index);
+            currentProfile.customButtons[index].autoSend = toggle.checked;
+            debouncedSaveCurrentProfile();
+            logToConsole(`Updated auto-send for button at index ${index} to ${toggle.checked}`);
+        });
+    });
+}
+
+
+/**
+ * Automatically resizes textareas based on their content and attaches input listeners.
+ * Modified to use debouncedSaveCurrentProfile() for throttled saving.
+ */
+function textareaSaverAndResizerFunc() {
+    const textareas = buttonCardsList.querySelectorAll('textarea.text-input');
+    textareas.forEach(textarea => {
+        textarea.style.height = 'auto';
+        textarea.style.height = `${textarea.scrollHeight}px`;
+
+        textarea.addEventListener('input', () => {
+            textarea.style.height = 'auto';
+            textarea.style.height = `${textarea.scrollHeight}px`;
+
+            // Update the corresponding button text
+            const buttonItem = textarea.closest('.button-item');
+            const index = parseInt(buttonItem.dataset.index);
+            currentProfile.customButtons[index].text = textarea.value;
+            
+            // Use debounced save to throttle saving
+            debouncedSaveCurrentProfile();
+        });
+    });
+}
+
