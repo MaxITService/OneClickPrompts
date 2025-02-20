@@ -18,7 +18,7 @@ let saveTimeoutId = null;
 
 // DOM Elements
 const profileSelect = document.getElementById('profileSelect');
-const buttonList = document.getElementById('buttonList');
+const buttonCardsList = document.getElementById('buttonCardsList');
 const consoleOutput = document.getElementById('console');
 const saveStatus = document.getElementById('saveStatus');
 
@@ -154,7 +154,7 @@ function updateInterface() {
         return;
     }
     // Update buttons, settings, etc. based on currentProfile
-    updateButtonList();
+    updatebuttonCardsList();
     document.getElementById('autoSendToggle').checked = currentProfile.globalAutoSendEnabled;
     document.getElementById('shortcutsToggle').checked = currentProfile.enableShortcuts;
     // Clear input fields
@@ -276,14 +276,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('revertDefault').addEventListener('click', revertToDefault);
 
     // Drag and drop events
-    buttonList.addEventListener('dragstart', handleDragStart);
-    buttonList.addEventListener('dragover', handleDragOver);
-    buttonList.addEventListener('drop', handleDrop);
-    // Listen to dragend on the entire document as well, in case user drops outside the buttonList
+    buttonCardsList.addEventListener('dragstart', handleDragStart);
+    buttonCardsList.addEventListener('dragover', handleDragOver);
+    buttonCardsList.addEventListener('drop', handleDrop);
+    // Listen to dragend on the entire document as well, in case user drops outside the buttonCardsList
     document.addEventListener('dragend', handleDragEnd);
 
     // Button list event delegation for delete buttons
-    buttonList.addEventListener('click', async (e) => {
+    buttonCardsList.addEventListener('click', async (e) => {
         if (e.target.classList.contains('delete-button')) {
             const buttonItem = e.target.closest('.button-item');
             const index = parseInt(buttonItem.dataset.index);
@@ -434,7 +434,7 @@ function handleDrop(e) {
 function handleDragEnd(e) {
     if (!isDragging || !draggedItem) return;
 
-    // If user drops outside the buttonList, finalize
+    // If user drops outside the buttonCardsList, finalize
     finalizeDrag();
 }
 
@@ -455,12 +455,12 @@ function finalizeDrag() {
     scrollInterval = null;
 
     // Rebuild the customButtons array in new order
-    const newOrder = Array.from(buttonList.children).map(child => parseInt(child.dataset.index));
+    const newOrder = Array.from(buttonCardsList.children).map(child => parseInt(child.dataset.index));
     currentProfile.customButtons = newOrder.map(index => currentProfile.customButtons[index]);
 
     // Save changes and rebuild UI
     saveCurrentProfile();
-    updateButtonList();
+    updatebuttonCardsList();
 }
 
 // -------------------------
@@ -485,7 +485,7 @@ function logToConsole(message) {
  * Modified to use debouncedSaveCurrentProfile() for throttled saving.
  */
 function textareaSaverAndResizerFunc() {
-    const textareas = buttonList.querySelectorAll('textarea.text-input');
+    const textareas = buttonCardsList.querySelectorAll('textarea.text-input');
     textareas.forEach(textarea => {
         textarea.style.height = 'auto';
         textarea.style.height = `${textarea.scrollHeight}px`;
@@ -535,7 +535,7 @@ function textareaInputAreaResizerFun(textareaId) {
  * Modified to use debouncedSaveCurrentProfile() for throttled saving.
  */
 function attachEmojiInputListeners() {
-    const emojiInputs = buttonList.querySelectorAll('input.emoji-input');
+    const emojiInputs = buttonCardsList.querySelectorAll('input.emoji-input');
     emojiInputs.forEach(input => {
         input.addEventListener('input', () => {
             const buttonItem = input.closest('.button-item');
@@ -551,7 +551,7 @@ function attachEmojiInputListeners() {
  * Modified to use debouncedSaveCurrentProfile() for throttled saving.
  */
 function attachAutoSendToggleListeners() {
-    const autoSendToggles = buttonList.querySelectorAll('input.autosend-toggle');
+    const autoSendToggles = buttonCardsList.querySelectorAll('input.autosend-toggle');
     autoSendToggles.forEach(toggle => {
         toggle.addEventListener('change', () => {
             const buttonItem = toggle.closest('.button-item');

@@ -105,7 +105,7 @@ body.dark-theme .console {
 }
 
 /* Ensure the button list uses a dark background in dark mode */
-body.dark-theme #buttonList {
+body.dark-theme #buttonCardsList {
     background-color: #333;
 }
 

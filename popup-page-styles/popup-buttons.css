@@ -64,7 +64,7 @@ button.danger:hover {
 /* ------------------------------------------------------------------------- */
 
 /* Container for the custom button list */
-#buttonList {
+#buttonCardsList {
     border: 1px solid var(--border-color);
     border-radius: 4px;
     padding: 8px;

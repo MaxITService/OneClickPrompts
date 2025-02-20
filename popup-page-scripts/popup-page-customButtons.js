@@ -51,18 +51,18 @@ function createButtonElement(button, index) {
 /**
  * Updates the list of custom buttons in the interface.
  */
-function updateButtonList() {
-    buttonList.innerHTML = '';
+function updatebuttonCardsList() {
+    buttonCardsList.innerHTML = '';
     if (currentProfile.customButtons && currentProfile.customButtons.length > 0) {
         currentProfile.customButtons.forEach((button, index) => {
             const buttonElement = createButtonElement(button, index);
-            buttonList.appendChild(buttonElement);
+            buttonCardsList.appendChild(buttonElement);
         });
     } else {
         const emptyMessage = document.createElement('div');
         emptyMessage.textContent = 'No custom buttons. Add buttons using the buttons above.';
         emptyMessage.className = 'empty-message';
-        buttonList.appendChild(emptyMessage);
+        buttonCardsList.appendChild(emptyMessage);
     }
 
     // After updating the list, attach event listeners
@@ -86,7 +86,7 @@ async function addButton() {
     });
 
     await saveCurrentProfile();
-    updateButtonList();
+    updatebuttonCardsList();
     logToConsole('Added new button');
 }
 
@@ -96,7 +96,7 @@ async function addButton() {
 async function addSeparator() {
     currentProfile.customButtons.push({ separator: true });
     await saveCurrentProfile();
-    updateButtonList();
+    updatebuttonCardsList();
     logToConsole('Added separator');
 }
 
@@ -107,6 +107,6 @@ async function addSeparator() {
 async function deleteButton(index) {
     currentProfile.customButtons.splice(index, 1);
     await saveCurrentProfile();
-    updateButtonList();
+    updatebuttonCardsList();
     logToConsole('Deleted button');
 }
