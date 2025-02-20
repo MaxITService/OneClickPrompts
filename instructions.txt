@@ -1,0 +1,5 @@
+Project name: OneClickPrompts
+Type: JS Chrome extension
+Instructions for AI, must obey for every code file in project:
+For all the code:
+Do not remove comments, unless associated code 
