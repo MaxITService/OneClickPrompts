@@ -57,7 +57,7 @@ function debouncedSaveCurrentProfile() {
             await saveCurrentProfile(); // Calls the existing save function
             updateSaveStatus();
         } catch (error) {
-            logToConsole(`Error saving profile: ${error.message}`);
+            logToGUIConsole(`Error saving profile: ${error.message}`);
         }
         saveTimeoutId = null;
     }, 150);
@@ -75,7 +75,7 @@ async function updateGlobalSettings() {
     currentProfile.globalAutoSendEnabled = document.getElementById('autoSendToggle').checked;
     currentProfile.enableShortcuts = document.getElementById('shortcutsToggle').checked;
     await saveCurrentProfile();
-    logToConsole('Updated global settings');
+    logToGUIConsole('Updated global settings');
     showToast('Global settings updated', 'success');
 }
 
@@ -91,10 +91,10 @@ async function revertToDefault() {
         await saveCurrentProfile();
         updateInterface();
         showToast('Reverted to default settings successfully.', 'success');
-        logToConsole('Reverted to default settings');
+        logToGUIConsole('Reverted to default settings');
     } catch (error) {
         showToast(`Error reverting to default: ${error.message}`, 'error');
-        logToConsole(`Error reverting to default: ${error.message}`);
+        logToGUIConsole(`Error reverting to default: ${error.message}`);
     }
 }
 
@@ -116,7 +116,7 @@ async function saveCurrentProfile() {
         updateSaveStatus();
         return true;
     } catch (error) {
-        logToConsole(`Error saving profile: ${error.message}`);
+        logToGUIConsole(`Error saving profile: ${error.message}`);
         return false;
     }
 }
@@ -135,13 +135,13 @@ function updateSaveStatus() {
 function updateInterface() {
     // --- Added guard to check if currentProfile is valid ---
     if (!currentProfile || !currentProfile.customButtons) {
-        logToConsole('No valid current profile found. Attempting to retrieve default profile...');
+        logToGUIConsole('No valid current profile found. Attempting to retrieve default profile...');
         chrome.runtime.sendMessage({ type: 'getConfig' }, (response) => {
             if (response && response.config) {
                 currentProfile = response.config;
                 updateInterface(); // Call updateInterface again after retrieving default
             } else {
-                logToConsole('Failed to retrieve default profile in updateInterface.');
+                logToGUIConsole('Failed to retrieve default profile in updateInterface.');
             }
         });
         return;
@@ -197,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
             addProfileInput.placeholder = "Enter profile name here";
             addProfileInput.style.borderColor = 'var(--danger-color)';
             showToast('Profile name cannot be empty.', 'error');
-            logToConsole('Save Add Profile failed: Empty input.');
+            logToGUIConsole('Save Add Profile failed: Empty input.');
             return;
         }
         addProfileInput.classList.remove('input-error');
@@ -221,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
             copyProfileInput.placeholder = "Enter new profile name here";
             copyProfileInput.style.borderColor = 'var(--danger-color)';
             showToast('Profile name cannot be empty.', 'error');
-            logToConsole('Save Copy Profile failed: Empty input.');
+            logToGUIConsole('Save Copy Profile failed: Empty input.');
             return;
         }
         copyProfileInput.classList.remove('input-error');
@@ -332,7 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
  * Logs a message to the user-visible console with a timestamp.
  * @param {string} message - The message to log.
  */
-function logToConsole(message) {
+function logToGUIConsole(message) {
     const timestamp = new Date().toLocaleTimeString();
     const logEntry = document.createElement('div');
     logEntry.textContent = `${timestamp}: ${message}`;

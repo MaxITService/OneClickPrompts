@@ -40,9 +40,9 @@ async function loadProfiles() {
         profileSelect.value = currentProfile.PROFILE_NAME;
 
         updateInterface();
-        logToConsole(`Loaded profile: ${currentProfile.PROFILE_NAME}`);
+        logToGUIConsole(`Loaded profile: ${currentProfile.PROFILE_NAME}`);
     } catch (error) {
-        logToConsole(`Error loading profiles: ${error.message}`);
+        logToGUIConsole(`Error loading profiles: ${error.message}`);
     }
 }
 
@@ -63,13 +63,13 @@ async function switchProfile(profileName) {
         if (configResponse && configResponse.config) {
             currentProfile = configResponse.config;
             updateInterface();
-            logToConsole(`Switched to profile: ${profileName}`);
+            logToGUIConsole(`Switched to profile: ${profileName}`);
             updateSaveStatus();
         } else {
-            logToConsole(`Error: Unable to retrieve configuration after switching to profile "${profileName}".`);
+            logToGUIConsole(`Error: Unable to retrieve configuration after switching to profile "${profileName}".`);
         }
     } catch (error) {
-        logToConsole(`Error switching profile: ${error.message}`);
+        logToGUIConsole(`Error switching profile: ${error.message}`);
     }
 }
 
@@ -88,7 +88,7 @@ async function addNewEmptyProfile(profileName) {
     const trimmedProfileName = profileName.trim();
     if (trimmedProfileName === "") {
         showToast('Profile name cannot be empty.', 'error');
-        logToConsole('Profile creation failed: Empty name provided.');
+        logToGUIConsole('Profile creation failed: Empty name provided.');
         return;
     }
 
@@ -96,7 +96,7 @@ async function addNewEmptyProfile(profileName) {
     const existingProfiles = Array.from(profileSelect.options).map(option => option.value);
     if (existingProfiles.includes(trimmedProfileName)) {
         showToast('A profile with this name already exists.', 'error');
-        logToConsole(`Profile creation failed: "${trimmedProfileName}" already exists.`);
+        logToGUIConsole(`Profile creation failed: "${trimmedProfileName}" already exists.`);
         return;
     }
 
@@ -113,10 +113,10 @@ async function addNewEmptyProfile(profileName) {
         profileSelect.value = trimmedProfileName;
         await switchProfile(trimmedProfileName);
         showToast(`Profile "${trimmedProfileName}" added successfully.`, 'success');
-        logToConsole(`Created new empty profile: ${trimmedProfileName}`);
+        logToGUIConsole(`Created new empty profile: ${trimmedProfileName}`);
     } catch (error) {
         showToast(`Error creating profile: ${error.message}`, 'error');
-        logToConsole(`Error creating profile: ${error.message}`);
+        logToGUIConsole(`Error creating profile: ${error.message}`);
     }
 }
 
@@ -133,7 +133,7 @@ async function copyCurrentProfile(newProfileName) {
     const trimmedProfileName = newProfileName.trim();
     if (trimmedProfileName === "") {
         showToast('Profile name cannot be empty.', 'error');
-        logToConsole('Profile copy failed: Empty name provided.');
+        logToGUIConsole('Profile copy failed: Empty name provided.');
         return;
     }
 
@@ -141,7 +141,7 @@ async function copyCurrentProfile(newProfileName) {
     const existingProfiles = Array.from(profileSelect.options).map(option => option.value);
     if (existingProfiles.includes(trimmedProfileName)) {
         showToast('A profile with this name already exists.', 'error');
-        logToConsole(`Profile copy failed: "${trimmedProfileName}" already exists.`);
+        logToGUIConsole(`Profile copy failed: "${trimmedProfileName}" already exists.`);
         return;
     }
 
@@ -160,10 +160,10 @@ async function copyCurrentProfile(newProfileName) {
         profileSelect.value = trimmedProfileName;
         await switchProfile(trimmedProfileName);
         showToast(`Profile duplicated as "${trimmedProfileName}" successfully.`, 'success');
-        logToConsole(`Copied profile to new profile: ${trimmedProfileName}`);
+        logToGUIConsole(`Copied profile to new profile: ${trimmedProfileName}`);
     } catch (error) {
         showToast(`Error copying profile: ${error.message}`, 'error');
-        logToConsole(`Error copying profile: ${error.message}`);
+        logToGUIConsole(`Error copying profile: ${error.message}`);
     }
 }
 
@@ -194,10 +194,10 @@ async function deleteCurrentProfile() {
         });
 
         await loadProfiles();
-        logToConsole(`Deleted profile: ${profileName}`);
+        logToGUIConsole(`Deleted profile: ${profileName}`);
         showToast(`Profile "${profileName}" deleted successfully.`, 'success');
     } catch (error) {
         showToast(`Error deleting profile: ${error.message}`, 'error');
-        logToConsole(`Error deleting profile: ${error.message}`);
+        logToGUIConsole(`Error deleting profile: ${error.message}`);
     }
 }

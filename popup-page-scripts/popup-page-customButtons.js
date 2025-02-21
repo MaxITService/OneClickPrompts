@@ -87,7 +87,7 @@ function updatebuttonCardsList() {
  */
 function clearText() {
     document.getElementById('buttonText').value = '';
-    logToConsole('Cleared button text input.');
+    logToGUIConsole('Cleared button text input.');
     document.getElementById('buttonIcon').value = '';
     showToast('Button text cleared', 'info');
 }
@@ -108,7 +108,7 @@ async function addButton() {
 
     await saveCurrentProfile();
     updatebuttonCardsList();
-    logToConsole('Added new button');
+    logToGUIConsole('Added new button');
 }
 
 
@@ -120,7 +120,7 @@ async function addSeparator() {
     currentProfile.customButtons.push({ separator: true });
     await saveCurrentProfile();
     updatebuttonCardsList();
-    logToConsole('Added separator');
+    logToGUIConsole('Added separator');
 }
 
 /**
@@ -131,7 +131,7 @@ async function deleteButton(index) {
     currentProfile.customButtons.splice(index, 1);
     await saveCurrentProfile();
     updatebuttonCardsList();
-    logToConsole('Deleted button');
+    logToGUIConsole('Deleted button');
 }
 
 
@@ -216,7 +216,7 @@ function handleDrop(e) {
 
     if (!isDragging || !draggedItem) return;
     finalizeDrag();
-    logToConsole('Reordered buttons');
+    logToGUIConsole('Reordered buttons');
 }
 
 function handleDragEnd(e) {
@@ -297,7 +297,7 @@ function attachAutoSendToggleListeners() {
             const index = parseInt(buttonItem.dataset.index);
             currentProfile.customButtons[index].autoSend = toggle.checked;
             debouncedSaveCurrentProfile();
-            logToConsole(`Updated auto-send for button at index ${index} to ${toggle.checked}`);
+            logToGUIConsole(`Updated auto-send for button at index ${index} to ${toggle.checked}`);
         });
     });
 }
