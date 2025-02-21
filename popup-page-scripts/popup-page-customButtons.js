@@ -62,7 +62,7 @@ function createButtonCardElement(button, index) {
  * Updates the list of custom button cards in the buttonCardsList.
  */
 function updatebuttonCardsList() {
-    buttonCardsList.innerHTML = '';
+    buttonCardsList.innerHTML = ''; // This already removes old listeners
     if (currentProfile.customButtons && currentProfile.customButtons.length > 0) {
         currentProfile.customButtons.forEach((button, index) => {
             const buttonElement = createButtonCardElement(button, index);
@@ -79,7 +79,6 @@ function updatebuttonCardsList() {
     textareaSaverAndResizerFunc();
     attachEmojiInputListeners();
     attachAutoSendToggleListeners();
-    attachDragAndDropListeners();
 }
 
 // -------------------------
@@ -246,19 +245,6 @@ function finalizeDrag() {
 
     saveCurrentProfile();
     updatebuttonCardsList();
-}
-
-/**
- * Attaches drag and drop event listeners to button items.
- */
-function attachDragAndDropListeners() {
-    const buttonItems = buttonCardsList.querySelectorAll('.button-item');
-    buttonItems.forEach(item => {
-        item.addEventListener('dragstart', handleDragStart);
-        item.addEventListener('dragover', handleDragOver);
-        item.addEventListener('drop', handleDrop);
-        item.addEventListener('dragend', handleDragEnd);
-    });
 }
 
 
