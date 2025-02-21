@@ -10,8 +10,6 @@
 // separator cards contain: visuals, delete button. 
 // version: 1.0
 
-
-
 // -------------------------
 // Create Button Element - this is start of everything, there can be zero to infinite buttons
 // -------------------------
@@ -55,7 +53,6 @@ function createButtonCardElement(button, index) {
 
     return buttonItem;
 }
-
 
 
 /**
@@ -119,7 +116,6 @@ async function addButton() {
 /**
  * Adds a separator to the current profile.
  */
-
 async function addSeparator() {
     currentProfile.customButtons.push({ separator: true });
     await saveCurrentProfile();
@@ -145,7 +141,6 @@ async function deleteButton(index) {
 
 let isDragging = false;
 let draggedItem = null;
-let scrollInterval = null;
 let lastDragPosition = { x: 0, y: 0 };
 
 function handleDragStart(e) {
@@ -237,8 +232,7 @@ function finalizeDrag() {
     }
 
     document.body.classList.remove('dragging');
-    clearInterval(scrollInterval);
-    scrollInterval = null;
+    // Removed clearInterval call as scrollInterval is unused.
 
     const newOrder = Array.from(buttonCardsList.children).map(child => parseInt(child.dataset.index));
     currentProfile.customButtons = newOrder.map(index => currentProfile.customButtons[index]);
@@ -248,11 +242,8 @@ function finalizeDrag() {
 }
 
 
-
-
 // -------------------------
 // Section that controls what happens inside cards of buttons and separators:
-
 /**
  * Adds an input listener to a textarea (by its ID) so that its height
  * dynamically adjusts to fit its content.
@@ -310,7 +301,6 @@ function attachAutoSendToggleListeners() {
         });
     });
 }
-
 
 /**
  * Automatically resizes textareas based on their content and attaches input listeners.
