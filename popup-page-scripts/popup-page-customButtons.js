@@ -79,6 +79,7 @@ function updatebuttonCardsList() {
     textareaSaverAndResizerFunc();
     attachEmojiInputListeners();
     attachAutoSendToggleListeners();
+    attachDragAndDropListeners();
 }
 
 // -------------------------
@@ -136,6 +137,128 @@ async function deleteButton(index) {
     await saveCurrentProfile();
     updatebuttonCardsList();
     logToConsole('Deleted button');
+}
+
+
+// -------------------------
+// Drag and Drop Functionality
+// -------------------------
+
+let isDragging = false;
+let draggedItem = null;
+let scrollInterval = null;
+let lastDragPosition = { x: 0, y: 0 };
+
+function handleDragStart(e) {
+    // Only allow dragging via drag-handle or the entire separator
+    if (e.target.classList.contains('drag-handle') || e.target.classList.contains('separator-item')) {
+        isDragging = true;
+        draggedItem = e.target.closest('.button-item');
+        draggedItem.classList.add('dragging');
+        document.body.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+
+        const img = new Image();
+        img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
+        e.dataTransfer.setDragImage(img, 0, 0);
+    } else {
+        e.preventDefault();
+    }
+}
+
+function autoScroll(e) {
+    const scrollThreshold = 220;
+    const maxScrollSpeed = 400;
+    const { innerWidth, innerHeight } = window;
+    let scrollX = 0, scrollY = 0;
+
+    if (e.clientY < scrollThreshold) {
+        scrollY = -maxScrollSpeed * ((scrollThreshold - e.clientY) / scrollThreshold);
+    } else if (innerHeight - e.clientY < scrollThreshold) {
+        scrollY = maxScrollSpeed * ((scrollThreshold - (innerHeight - e.clientY)) / scrollThreshold);
+    }
+
+    if (e.clientX < scrollThreshold) {
+        scrollX = -maxScrollSpeed * ((scrollThreshold - e.clientX) / scrollThreshold);
+    } else if (innerWidth - e.clientX < scrollThreshold) {
+        scrollX = maxScrollSpeed * ((scrollThreshold - (innerWidth - e.clientX)) / scrollThreshold);
+    }
+
+    if (scrollX !== 0 || scrollY !== 0) {
+        window.scrollBy({
+            top: scrollY,
+            left: scrollX,
+            behavior: 'smooth'
+        });
+    }
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    if (!isDragging) return;
+
+    e.dataTransfer.dropEffect = 'move';
+    autoScroll(e);
+    lastDragPosition = { x: e.clientX, y: e.clientY };
+
+    const target = e.target.closest('.button-item');
+    if (!target || target === draggedItem) return;
+
+    const bounding = target.getBoundingClientRect();
+    const parent = target.parentNode;
+    const offsetY = e.clientY - bounding.top;
+    const isBefore = offsetY < bounding.height / 2;
+
+    if (isBefore) {
+        parent.insertBefore(draggedItem, target);
+    } else {
+        parent.insertBefore(draggedItem, target.nextSibling);
+    }
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!isDragging || !draggedItem) return;
+    finalizeDrag();
+    logToConsole('Reordered buttons');
+}
+
+function handleDragEnd(e) {
+    if (!isDragging || !draggedItem) return;
+    finalizeDrag();
+}
+
+function finalizeDrag() {
+    isDragging = false;
+    if (draggedItem) {
+        draggedItem.classList.remove('dragging');
+        draggedItem = null;
+    }
+
+    document.body.classList.remove('dragging');
+    clearInterval(scrollInterval);
+    scrollInterval = null;
+
+    const newOrder = Array.from(buttonCardsList.children).map(child => parseInt(child.dataset.index));
+    currentProfile.customButtons = newOrder.map(index => currentProfile.customButtons[index]);
+
+    saveCurrentProfile();
+    updatebuttonCardsList();
+}
+
+/**
+ * Attaches drag and drop event listeners to button items.
+ */
+function attachDragAndDropListeners() {
+    const buttonItems = buttonCardsList.querySelectorAll('.button-item');
+    buttonItems.forEach(item => {
+        item.addEventListener('dragstart', handleDragStart);
+        item.addEventListener('dragover', handleDragOver);
+        item.addEventListener('drop', handleDrop);
+        item.addEventListener('dragend', handleDragEnd);
+    });
 }
 
 
@@ -227,4 +350,3 @@ function textareaSaverAndResizerFunc() {
         });
     });
 }
-

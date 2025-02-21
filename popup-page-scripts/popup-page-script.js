@@ -10,8 +10,6 @@
 
 // State management
 let currentProfile = null;
-let isDragging = false;
-let draggedItem = null;
 
 // Global variable for debounced save timeout
 let saveTimeoutId = null;
@@ -39,11 +37,6 @@ const copyProfileInput = document.getElementById('copyProfileInput');
 // New DOM Elements for Cancel Actions
 const cancelAddProfileButton = document.getElementById('cancelAddProfile');
 const cancelCopyProfileButton = document.getElementById('cancelCopyProfile');
-
-// Scroll interval data
-let scrollInterval = null;
-let lastDragPosition = { x: 0, y: 0 };
-
 
 // -------------------------
 // Debounced Save Function
@@ -275,11 +268,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('shortcutsToggle').addEventListener('change', updateGlobalSettings);
     document.getElementById('revertDefault').addEventListener('click', revertToDefault);
 
-    // Drag and drop events
+    // Drag and drop events - attach them but implementation is in customButtons.js
     buttonCardsList.addEventListener('dragstart', handleDragStart);
     buttonCardsList.addEventListener('dragover', handleDragOver);
     buttonCardsList.addEventListener('drop', handleDrop);
-    // Listen to dragend on the entire document as well, in case user drops outside the buttonCardsList
     document.addEventListener('dragend', handleDragEnd);
 
     // Button list event delegation for delete buttons
@@ -330,138 +322,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
-
-// -------------------------
-// 11. Drag and Drop Handlers
-// -------------------------
-
-function handleDragStart(e) {
-    // Only allow dragging via drag-handle or the entire separator
-    if (e.target.classList.contains('drag-handle') || e.target.classList.contains('separator-item')) {
-        isDragging = true;
-        draggedItem = e.target.closest('.button-item');
-        draggedItem.classList.add('dragging');
-
-        // **Added Functionality: Add 'dragging' class to body to disable hover effects**
-        document.body.classList.add('dragging');
-
-        e.dataTransfer.effectAllowed = 'move';
-
-        // A transparent image for drag image
-        const img = new Image();
-        img.src =
-            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
-        e.dataTransfer.setDragImage(img, 0, 0);
-    } else {
-        e.preventDefault();
-    }
-}
-
-/**
- *  Auto-scroll helper function, activates when user drags cards near the viewport edges.
- * Scrolls the window smoothly at a variable speed depending on the distance from the viewport edges.
- * @param {DragEvent} e - The dragover event.
- */
-function autoScroll(e) {
-    const scrollThreshold = 220; // Pixels from edge where scrolling starts
-    const maxScrollSpeed = 400;   // Maximum scroll speed in pixels per tick
-
-    const { innerWidth, innerHeight } = window;
-    let scrollX = 0, scrollY = 0;
-
-    // Vertical scroll: if near the top edge
-    if (e.clientY < scrollThreshold) {
-        scrollY = -maxScrollSpeed * ((scrollThreshold - e.clientY) / scrollThreshold);
-    } else if (innerHeight - e.clientY < scrollThreshold) {
-        scrollY = maxScrollSpeed * ((scrollThreshold - (innerHeight - e.clientY)) / scrollThreshold);
-    }
-
-    // Horizontal scroll: if near the left edge
-    if (e.clientX < scrollThreshold) {
-        scrollX = -maxScrollSpeed * ((scrollThreshold - e.clientX) / scrollThreshold);
-    } else if (innerWidth - e.clientX < scrollThreshold) {
-        scrollX = maxScrollSpeed * ((scrollThreshold - (innerWidth - e.clientX)) / scrollThreshold);
-    }
-
-    if (scrollX !== 0 || scrollY !== 0) {
-        window.scrollBy({
-            top: scrollY,
-            left: scrollX,
-            behavior: 'smooth'
-        });
-    }
-}
-
-function handleDragOver(e) {
-    e.preventDefault();
-    if (!isDragging) return;
-
-    e.dataTransfer.dropEffect = 'move';
-    
-    // Call custom auto-scroll based on pointer position
-    autoScroll(e);
-
-    lastDragPosition = { x: e.clientX, y: e.clientY };
-
-    // Identify potential target for reordering
-    const target = e.target.closest('.button-item');
-    if (!target || target === draggedItem) return;
-
-    const bounding = target.getBoundingClientRect();
-    const parent = target.parentNode;
-    const offsetY = e.clientY - bounding.top;
-    const isBefore = offsetY < bounding.height / 2;
-
-    // Re-insert draggedItem before or after target based on pointer location
-    if (isBefore) {
-        parent.insertBefore(draggedItem, target);
-    } else {
-        parent.insertBefore(draggedItem, target.nextSibling);
-    }
-}
-
-function handleDrop(e) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (!isDragging || !draggedItem) return;
-
-    // Finalize position and save new order
-    finalizeDrag();
-    logToConsole('Reordered buttons');
-}
-
-function handleDragEnd(e) {
-    if (!isDragging || !draggedItem) return;
-
-    // If user drops outside the buttonCardsList, finalize
-    finalizeDrag();
-}
-
-/**
- * Stop any scrolling and finalize the new button order
- */
-function finalizeDrag() {
-    isDragging = false;
-    if (draggedItem) {
-        draggedItem.classList.remove('dragging');
-        draggedItem = null;
-    }
-
-    // **Added Functionality: Remove 'dragging' class from body to re-enable hover effects**
-    document.body.classList.remove('dragging');
-
-    clearInterval(scrollInterval);
-    scrollInterval = null;
-
-    // Rebuild the customButtons array in new order
-    const newOrder = Array.from(buttonCardsList.children).map(child => parseInt(child.dataset.index));
-    currentProfile.customButtons = newOrder.map(index => currentProfile.customButtons[index]);
-
-    // Save changes and rebuild UI
-    saveCurrentProfile();
-    updatebuttonCardsList();
-}
 
 // -------------------------
 // 12. Utility Functions
