@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "OneClickPrompts",
   "description": "One Click Prompts for ChatGPT, Claude, Copilot, DeepSeek, Ai Studio",
-  "version": "0.0.1.3",
+  "version": "0.0.1.4",
   
   "icons": {
     "16": "icon16.png",
@@ -39,7 +39,8 @@
         "https://claude.ai/*",
         "https://copilot.microsoft.com/*",
         "https://chat.deepseek.com/*",
-        "https://aistudio.google.com/*"
+        "https://aistudio.google.com/*",
+        "https://grok.com/*"
       ],
       "js": [
         "log.js",
@@ -50,6 +51,7 @@
         "buttons-clicking-claude.js",
         "buttons-clicking-deepseek.js",
         "buttons-clicking-aistudio.js",
+        "buttons-clicking-grok.js",
         "buttons.js",
         "buttons-init.js",
         "interface.js",

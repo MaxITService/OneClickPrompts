@@ -3,5 +3,6 @@ Type: JS Chrome extension
 Instructions for AI, must obey for every code file in project:
 For all the code:
 Do not remove comments, unless associated code.
-When writing new comments, write them in their final form.
+When writing new comments, write them in their final form. (not "added a new function...")
 Ask, before introducing new files, unless asked to do it.
+Write full CHANGED files, from start to finish not just changes, assume files that do not need change are FOR REFERENCE ONLY!
