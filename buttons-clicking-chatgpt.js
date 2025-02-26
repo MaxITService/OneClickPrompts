@@ -215,11 +215,19 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
         logConCgp('[buttons] handleMessageInsertion called.');
         const initialState = isEditorInInitialState(editorArea);
 
+        // Threshold for using direct insertion instead of simulated typing for large prompts.
+        const LARGE_PROMPT_THRESHOLD = 200;
+
         if (initialState) {
-            logConCgp('[buttons] Editor is in initial state. Simulating typing.');
-            // Simulate typing to activate the editor and insert text
-            simulateTypingIntoProseMirror(editorArea, customText);
-            logConCgp('[buttons] Custom text typed into editor.');
+            // If the prompt is large, use direct insertion to improve performance.
+            if (customText.length > LARGE_PROMPT_THRESHOLD) {
+                logConCgp('[buttons] Editor is in initial state and large prompt detected. Using direct insertion.');
+                MaxExtensionUtils.insertTextIntoEditor(editorArea, customText);
+            } else {
+                logConCgp('[buttons] Editor is in initial state. Simulating typing.');
+                simulateTypingIntoProseMirror(editorArea, customText);
+            }
+            logConCgp('[buttons] Custom text inserted into editor.');
 
             // Use the promise-based helper to wait for send buttons instead of duplicating MutationObserver logic
             setTimeout(() => {
