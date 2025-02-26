@@ -6,10 +6,6 @@
    This file is a dependency. Designed to host helper functions for init.js. Manages the creation and functionality of custom send buttons within the ChatGPT extension.
    It provides utility functions to create buttons based on configuration and assigns keyboard shortcuts where applicable.
 
-   Functions:
-   - createCustomSendButton: Creates a custom send button based on provided configuration.
-   - determineShortcutKeyForButtonIndex: Assigns a shortcut key to a button based on its index.
-
    After that, tje 
 
    Usage:
@@ -138,6 +134,9 @@ function processCustomSendButtonClick(event, customText, autoSend) {
             break;
         case 'AIStudio':
             processAIStudioCustomSendButtonClick(event, customText, autoSend);
+            break;
+        case 'Grok':
+            processGrokCustomSendButtonClick(event, customText, autoSend);
             break;
         default:
             logConCgp('[buttons] Unsupported site:', activeSite);

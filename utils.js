@@ -122,6 +122,9 @@ class InjectionTargetsOnWebsite {
         } else if (currentHostname.includes('aistudio.google.com')) {
             return 'AIStudio';
         }
+        else if (currentHostname.includes('grok.com')) {
+            return 'Grok';
+        }
         // Add additional website detections here
         else {
             return 'Unknown';
@@ -210,6 +213,19 @@ class InjectionTargetsOnWebsite {
                 ],
                 buttonsContainerId: 'aistudio-custom-buttons-container'
             },
+            Grok: {
+                // Grok-specific selectors based on the provided DOM snippet
+                containers: [
+                    'div.flex.flex-col-reverse.items-center.justify-between.flex-1.w-full.gap-0'
+                ],
+                sendButtons: [
+                    'div.h-9.aspect-square.flex.flex-col.items-center.justify-center'
+                ],
+                editors: [
+                    'textarea.w-full.bg-transparent.focus\\:outline-none.text-primary'
+                ],
+                buttonsContainerId: 'grok-custom-buttons-container'
+            }
             // TODO: Add selectors for other supported websites
         };
         return selectors[site] || {};
