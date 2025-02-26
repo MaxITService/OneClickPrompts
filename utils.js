@@ -214,15 +214,19 @@ class InjectionTargetsOnWebsite {
                 buttonsContainerId: 'aistudio-custom-buttons-container'
             },
             Grok: {
-                // Grok-specific selectors based on the provided DOM snippet
+                // Updated Grok selectors: injecting custom buttons into the chat form to avoid conflicts.
+                // Use the form element as container.
                 containers: [
-                    'div.flex.flex-col-reverse.items-center.justify-between.flex-1.w-full.gap-0'
+                    'form.bottom-0.w-full.text-base.flex.flex-col.gap-2.items-center.justify-center.relative.z-10'
                 ],
+                // Use a more specific selector for the send button (submit button within that form).
                 sendButtons: [
-                    'div.h-9.aspect-square.flex.flex-col.items-center.justify-center'
+                    'form.bottom-0.w-full.text-base.flex.flex-col.gap-2.items-center.justify-center.relative.z-10 button[type="submit"].group'
                 ],
+                // Editors remain as before.
                 editors: [
-                    'textarea.w-full.bg-transparent.focus\\:outline-none.text-primary'
+                    'textarea.w-full.bg-transparent.focus\\:outline-none.text-primary',
+                    'textarea.w-full.px-2.\\@\\[480px\\]\\/input\\:px-3.pt-5.mb-5.bg-transparent.focus\\:outline-none.text-primary.align-bottom'
                 ],
                 buttonsContainerId: 'grok-custom-buttons-container'
             }
