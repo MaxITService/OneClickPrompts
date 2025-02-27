@@ -42,9 +42,18 @@ function processGrokCustomSendButtonClick(event, customText, autoSend) {
         if (customText.length > LARGE_PROMPT_THRESHOLD) {
             logConCgp('[grok] Editor is in initial state and large prompt detected. Using direct insertion.');
             if (editorArea.value !== undefined) {
+                // For textarea elements, set value and move cursor to the end.
                 editorArea.value = customText;
+                editorArea.focus();
+                editorArea.selectionStart = editorArea.value.length;
+                editorArea.selectionEnd = editorArea.value.length;
+                logConCgp('[grok] Cursor moved to the end of textarea after direct insertion.');
             } else {
+                // For contenteditable elements, set innerText and use the utility to move the cursor.
                 editorArea.innerText = customText;
+                if (window.MaxExtensionUtils && typeof window.MaxExtensionUtils.moveCursorToEnd === 'function') {
+                    window.MaxExtensionUtils.moveCursorToEnd(editorArea);
+                }
             }
         } else {
             logConCgp('[grok] Editor is in initial state. Simulating typing.');
@@ -70,7 +79,7 @@ function processGrokCustomSendButtonClick(event, customText, autoSend) {
                     }
                     editorArea.dispatchEvent(evt);
                     if (type === 'input') {
-                        // Append the character to the textarea's value
+                        // Append the character to the textarea's value or innerText.
                         if (editorArea.value !== undefined) {
                             editorArea.value += char;
                         } else {
@@ -91,8 +100,8 @@ function processGrokCustomSendButtonClick(event, customText, autoSend) {
         logConCgp('[grok] Custom text appended.');
     }
 
-    // Move the cursor to the end of the editor using the utility function.
-    if (window.MaxExtensionUtils && typeof window.MaxExtensionUtils.moveCursorToEnd === 'function') {
+    // For non-textarea contentEditable elements, ensure the cursor is moved to the end.
+    if (editorArea.value === undefined && window.MaxExtensionUtils && typeof window.MaxExtensionUtils.moveCursorToEnd === 'function') {
         window.MaxExtensionUtils.moveCursorToEnd(editorArea);
     }
 
