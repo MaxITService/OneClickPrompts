@@ -223,6 +223,8 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
             if (customText.length > LARGE_PROMPT_THRESHOLD) {
                 logConCgp('[buttons] Editor is in initial state and large prompt detected. Using direct insertion.');
                 MaxExtensionUtils.insertTextIntoEditor(editorArea, customText);
+                // Move the cursor to the end after direct insertion.
+                MaxExtensionUtils.moveCursorToEnd(editorArea);
             } else {
                 logConCgp('[buttons] Editor is in initial state. Simulating typing.');
                 simulateTypingIntoProseMirror(editorArea, customText);
