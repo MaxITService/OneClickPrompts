@@ -1,9 +1,3 @@
-// buttons-clicking-grok.js
-// version 1.0
-// This file handles what happens after clicking on the custom button on grok.com page.
-// It processes the custom send button click event for Grok by inserting custom text into the editor
-// and auto-sending the message if the global auto-send flag is enabled.
-
 'use strict';
 
 /**
@@ -26,9 +20,12 @@ function processGrokCustomSendButtonClick(event, customText, autoSend) {
         return;
     }
 
+    // Determine if the editor is a textarea/input (has a "value" property) or a contenteditable element.
+    const isTextArea = (editorArea.value !== undefined);
+
     // Check if the editor is in its initial state (i.e. empty)
     const isEditorInInitialState = () => {
-        const currentText = editorArea.value ? editorArea.value.trim() : editorArea.innerText.trim();
+        const currentText = isTextArea ? editorArea.value.trim() : editorArea.innerText.trim();
         const isInitial = currentText === '';
         logConCgp('[grok] Editor initial state check:', isInitial);
         return isInitial;
@@ -37,23 +34,25 @@ function processGrokCustomSendButtonClick(event, customText, autoSend) {
     // Threshold for large prompt; if exceeded, use direct insertion instead of simulating keystrokes.
     const LARGE_PROMPT_THRESHOLD = 200;
 
-    // Insert custom text into the editor: simulate typing if in initial state; else, append text. THIS IS NEEDED FOR AUTOSIZING EDITORS!
     if (isEditorInInitialState()) {
         if (customText.length > LARGE_PROMPT_THRESHOLD) {
             logConCgp('[grok] Editor is in initial state and large prompt detected. Using direct insertion.');
-            if (editorArea.value !== undefined) {
+            if (isTextArea) {
                 // For textarea elements, set value and move cursor to the end.
                 editorArea.value = customText;
                 editorArea.focus();
-                editorArea.selectionStart = editorArea.value.length;
-                editorArea.selectionEnd = editorArea.value.length;
-                logConCgp('[grok] Cursor moved to the end of textarea after direct insertion.');
+                editorArea.setSelectionRange(editorArea.value.length, editorArea.value.length);
+                logConCgp('[grok] Direct insertion complete for textarea.');
             } else {
-                // For contenteditable elements, set innerText and use the utility to move the cursor.
+                // For contenteditable elements, set innerText and then move the cursor to the end.
                 editorArea.innerText = customText;
-                if (window.MaxExtensionUtils && typeof window.MaxExtensionUtils.moveCursorToEnd === 'function') {
-                    window.MaxExtensionUtils.moveCursorToEnd(editorArea);
-                }
+                logConCgp('[grok] Direct insertion complete for contenteditable.');
+                setTimeout(() => {
+                    if (window.MaxExtensionUtils && typeof window.MaxExtensionUtils.moveCursorToEnd === 'function') {
+                        window.MaxExtensionUtils.moveCursorToEnd(editorArea);
+                        logConCgp('[grok] Cursor moved to the end of contenteditable after direct insertion.');
+                    }
+                }, 50);
             }
         } else {
             logConCgp('[grok] Editor is in initial state. Simulating typing.');
@@ -79,8 +78,7 @@ function processGrokCustomSendButtonClick(event, customText, autoSend) {
                     }
                     editorArea.dispatchEvent(evt);
                     if (type === 'input') {
-                        // Append the character to the textarea's value or innerText.
-                        if (editorArea.value !== undefined) {
+                        if (isTextArea) {
                             editorArea.value += char;
                         } else {
                             editorArea.innerText += char;
@@ -88,28 +86,43 @@ function processGrokCustomSendButtonClick(event, customText, autoSend) {
                     }
                 }
             }
+            // After simulating typing, ensure the cursor is positioned at the end.
+            if (isTextArea) {
+                editorArea.focus();
+                editorArea.setSelectionRange(editorArea.value.length, editorArea.value.length);
+                logConCgp('[grok] Simulated typing complete. Cursor set for textarea.');
+            } else {
+                setTimeout(() => {
+                    if (window.MaxExtensionUtils && typeof window.MaxExtensionUtils.moveCursorToEnd === 'function') {
+                        window.MaxExtensionUtils.moveCursorToEnd(editorArea);
+                        logConCgp('[grok] Simulated typing complete. Cursor moved to end for contenteditable.');
+                    }
+                }, 50);
+            }
         }
         logConCgp('[grok] Custom text inserted into editor.');
     } else {
         logConCgp('[grok] Editor already has content. Appending custom text.');
-        if (editorArea.value !== undefined) {
+        if (isTextArea) {
             editorArea.value += customText;
+            editorArea.focus();
+            editorArea.setSelectionRange(editorArea.value.length, editorArea.value.length);
         } else {
             editorArea.innerText += customText;
+            setTimeout(() => {
+                if (window.MaxExtensionUtils && typeof window.MaxExtensionUtils.moveCursorToEnd === 'function') {
+                    window.MaxExtensionUtils.moveCursorToEnd(editorArea);
+                }
+            }, 50);
         }
         logConCgp('[grok] Custom text appended.');
-    }
-
-    // For non-textarea contentEditable elements, ensure the cursor is moved to the end.
-    if (editorArea.value === undefined && window.MaxExtensionUtils && typeof window.MaxExtensionUtils.moveCursorToEnd === 'function') {
-        window.MaxExtensionUtils.moveCursorToEnd(editorArea);
     }
 
     // If auto-send is enabled in both the global configuration and the function parameter, initiate auto-send.
     if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
         logConCgp('[grok] Auto-send enabled. Preparing to click send button.');
         window.autoSendInterval = setInterval(() => {
-            const currentText = editorArea.value ? editorArea.value.trim() : editorArea.innerText.trim();
+            const currentText = isTextArea ? editorArea.value.trim() : editorArea.innerText.trim();
             if (currentText.length === 0) {
                 logConCgp('[grok] Editor became empty during auto-send. Stopping auto-send.');
                 clearInterval(window.autoSendInterval);
