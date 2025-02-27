@@ -34,41 +34,53 @@ function processGrokCustomSendButtonClick(event, customText, autoSend) {
         return isInitial;
     };
 
-    // Insert custom text into the editor: simulate typing if in initial state; else, append text.
+    // Threshold for large prompt; if exceeded, use direct insertion instead of simulating keystrokes.
+    const LARGE_PROMPT_THRESHOLD = 200;
+
+    // Insert custom text into the editor: simulate typing if in initial state; else, append text. THIS IS NEEDED FOR AUTOSIZING EDITORS!
     if (isEditorInInitialState()) {
-        logConCgp('[grok] Editor is in initial state. Simulating typing.');
-        editorArea.focus();
-        const eventTypes = ['keydown', 'input', 'keyup'];
-        for (const char of customText) {
-            for (const type of eventTypes) {
-                let evt;
-                if (type === 'input') {
-                    evt = new InputEvent(type, {
-                        data: char,
-                        inputType: 'insertText',
-                        bubbles: true,
-                        cancelable: true
-                    });
-                } else {
-                    evt = new KeyboardEvent(type, {
-                        key: char,
-                        code: `Key${char.toUpperCase()}`,
-                        bubbles: true,
-                        cancelable: true
-                    });
-                }
-                editorArea.dispatchEvent(evt);
-                if (type === 'input') {
-                    // Append the character to the textarea's value
-                    if (editorArea.value !== undefined) {
-                        editorArea.value += char;
+        if (customText.length > LARGE_PROMPT_THRESHOLD) {
+            logConCgp('[grok] Editor is in initial state and large prompt detected. Using direct insertion.');
+            if (editorArea.value !== undefined) {
+                editorArea.value = customText;
+            } else {
+                editorArea.innerText = customText;
+            }
+        } else {
+            logConCgp('[grok] Editor is in initial state. Simulating typing.');
+            editorArea.focus();
+            const eventTypes = ['keydown', 'input', 'keyup'];
+            for (const char of customText) {
+                for (const type of eventTypes) {
+                    let evt;
+                    if (type === 'input') {
+                        evt = new InputEvent(type, {
+                            data: char,
+                            inputType: 'insertText',
+                            bubbles: true,
+                            cancelable: true
+                        });
                     } else {
-                        editorArea.innerText += char;
+                        evt = new KeyboardEvent(type, {
+                            key: char,
+                            code: `Key${char.toUpperCase()}`,
+                            bubbles: true,
+                            cancelable: true
+                        });
+                    }
+                    editorArea.dispatchEvent(evt);
+                    if (type === 'input') {
+                        // Append the character to the textarea's value
+                        if (editorArea.value !== undefined) {
+                            editorArea.value += char;
+                        } else {
+                            editorArea.innerText += char;
+                        }
                     }
                 }
             }
         }
-        logConCgp('[grok] Custom text simulated into editor.');
+        logConCgp('[grok] Custom text inserted into editor.');
     } else {
         logConCgp('[grok] Editor already has content. Appending custom text.');
         if (editorArea.value !== undefined) {

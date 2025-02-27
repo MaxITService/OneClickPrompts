@@ -67,7 +67,7 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
     };
 
     /**
-     * Simulates typing text into a ProseMirror editor.
+     * Simulates typing text into a ProseMirror editor. THIS IS NEEDED FOR AUTOSIZING EDITORS!
      * Uses modern for‑of loops and dispatches key events for each character.
      * @param {HTMLElement} editorElement - The ProseMirror editor element.
      * @param {string} text - The text to type into the editor.
