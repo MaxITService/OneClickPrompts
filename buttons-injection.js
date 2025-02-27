@@ -1,5 +1,5 @@
 'use strict';
-// button-injection.js version 1.0
+// button-injection.js version 1.1
 /**
  * Button Injection Logic for the ChatGPT Chrome extension.
  * This file contains functions to handle custom button injection into the webpage,
@@ -8,6 +8,9 @@
 //Instructions for AI: do not remove comments!  MUST NOT REMOVE COMMENTS. This one too!
 // ALL CODE IN ALL FILES MUST USE logConCgp FOR LOGGING. NO CONSOLE LOGGING.
 
+// Constants for extended resiliency monitoring
+const EXTENDED_CHECK_INTERVAL = 15000; // 15 seconds
+const EXTENDED_CHECK_DURATION = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
 
 /**
  * Checks whether the custom buttons modifications already exist in the DOM.
@@ -59,7 +62,6 @@ function buttonBoxCheckingAndInjection(enableResiliency = true, activeWebsite) {
             window.MaxExtensionButtonsInit.createAndInsertCustomElements(targetDiv);
 
             // Always start resiliency checks when enableResiliency is true.
-            // This change removes the one-time flag (firstModificationCompleted) dependency.
             if (enableResiliency) {
                 logConCgp('[button-injection] Starting resiliency checks.');
                 commenceEnhancedResiliencyChecks();
@@ -71,9 +73,11 @@ function buttonBoxCheckingAndInjection(enableResiliency = true, activeWebsite) {
     MaxExtensionUtils.waitForElements(selectors, handleTargetDiv);
 }
 
+// Global variable to store the current resiliency check timer
+window.OneClickPropmts_currentResiliencyTimeout = null;
 
-
-
+// Global variable to store the extended monitoring observer
+window.OneClickPropmts_extendedMonitoringObserver = null;
 
 /**
  * The resiliency mechanism continuously monitors the DOM to verify that custom modifications remain intact.
@@ -81,73 +85,69 @@ function buttonBoxCheckingAndInjection(enableResiliency = true, activeWebsite) {
  * Once a predefined threshold is reached, or after a maximum number of iterations, it triggers a reinjection of the elements.
  * This approach ensures the extension maintains functionality even when the webpage dynamically resets or modifies its content.
  */
-
-// Global variable to store the current resiliency check timer
-window.OneClickPropmts_currentResiliencyTimeout = null;
-// fucntion that uses it:
 function commenceEnhancedResiliencyChecks() {
-    // Cancel any previous resiliency check
+    // Cancel any previous resiliency check and observer
     if (window.OneClickPropmts_currentResiliencyTimeout) {
         clearTimeout(window.OneClickPropmts_currentResiliencyTimeout);
         window.OneClickPropmts_currentResiliencyTimeout = null;
-        logConCgp('[button-injection] Previous resiliency check canceled due to new initialization.');
+    }
+    
+    if (window.OneClickPropmts_extendedMonitoringObserver) {
+        window.OneClickPropmts_extendedMonitoringObserver.disconnect();
+        window.OneClickPropmts_extendedMonitoringObserver = null;
     }
 
+    logConCgp('[button-injection] Previous monitoring canceled due to new initialization.');
+
     let consecutiveClearCheckCount = 0;
-    const requiredConsecutiveClearChecks = 2; // Missing for this many consecutive checks triggers reinjection
+    const requiredConsecutiveClearChecks = 2;
     const maximumTotalIterations = 30;
     let totalIterationsPerformed = 0;
 
     logConCgp('[button-injection] Beginning enhanced resiliency checks with dynamic interval...');
-    logConCgp(`[button-injection] Requires ${requiredConsecutiveClearChecks} consecutive clear checks.`);
 
-    // Adaptive check function that adjusts the delay based on the state
     function adaptiveCheck() {
         totalIterationsPerformed++;
         const modificationsExist = doCustomModificationsExist();
         let delay;
 
         if (modificationsExist) {
-            consecutiveClearCheckCount = 0; // Reset counter if modifications are present
-            // Log "everything is okay" only every 10 iterations to avoid log spam.
+            consecutiveClearCheckCount = 0;
             if (totalIterationsPerformed % 10 === 0) {
                 logConCgp(`[button-injection] Modifications detected. Total iterations: ${totalIterationsPerformed}/${maximumTotalIterations}.`);
             }
-            // Slow down the checks when modifications are present
             delay = 100;
         } else {
             consecutiveClearCheckCount++;
             logConCgp(`[button-injection] No modifications detected. Consecutive missing: ${consecutiveClearCheckCount}/${requiredConsecutiveClearChecks}`);
-            // Use a faster check interval when modifications are missing
             delay = 50;
         }
 
-        // If the required consecutive missing checks have been reached, trigger reinjection.
         if (consecutiveClearCheckCount >= requiredConsecutiveClearChecks) {
             logConCgp('[button-injection] Required consecutive clear checks achieved. Proceeding with initialization.');
             enforceResiliencyMeasures();
+            startExtendedMonitoringWithObserver();
             return;
         }
 
-        // Safety: If maximum iterations have been reached, decide based on current state.
         if (totalIterationsPerformed >= maximumTotalIterations) {
             logConCgp('[button-injection] Maximum iterations reached.');
             if (!doCustomModificationsExist()) {
                 logConCgp('[button-injection] No modifications present after maximum iterations. Proceeding cautiously.');
                 enforceResiliencyMeasures();
+                startExtendedMonitoringWithObserver();
             } else {
-                logConCgp('[button-injection] Modifications still present after maximum iterations. We had succesfully injected buttons and they stayed there. Resiliency checks will be disabled.');
+                logConCgp('[button-injection] Modifications still present after maximum iterations. Starting extended monitoring.');
+                startExtendedMonitoringWithObserver();
             }
             return;
         }
 
-        // Schedule the next check with the determined delay and store its timer.
         window.OneClickPropmts_currentResiliencyTimeout = setTimeout(adaptiveCheck, delay);
     }
 
     adaptiveCheck();
 }
-
 
 /**
  * Enforces resiliency by re-initializing the extension without further resiliency checks.
@@ -156,4 +156,40 @@ function commenceEnhancedResiliencyChecks() {
 function enforceResiliencyMeasures() {
     logConCgp('[button-injection] Enforcing resiliency measures. Re-initializing without resiliency checks.');
     buttonBoxCheckingAndInjection(false);
+}
+
+/**
+ * Starts extended monitoring using MutationObserver for more efficient DOM change detection.
+ * Monitors for 2 hours and then automatically disconnects.
+ */
+function startExtendedMonitoringWithObserver() {
+    logConCgp('[button-injection] Starting extended monitoring with MutationObserver for 2 hours');
+
+    // Clean up any existing observer
+    if (window.OneClickPropmts_extendedMonitoringObserver) {
+        window.OneClickPropmts_extendedMonitoringObserver.disconnect();
+    }
+
+    // Create new observer
+    window.OneClickPropmts_extendedMonitoringObserver = new MutationObserver((mutations) => {
+        if (!doCustomModificationsExist()) {
+            logConCgp('[button-injection] Modifications missing during extended monitoring - reinserting');
+            enforceResiliencyMeasures();
+        }
+    });
+
+    // Start observing
+    window.OneClickPropmts_extendedMonitoringObserver.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+
+    // Set up automatic cleanup after 2 hours
+    setTimeout(() => {
+        if (window.OneClickPropmts_extendedMonitoringObserver) {
+            window.OneClickPropmts_extendedMonitoringObserver.disconnect();
+            window.OneClickPropmts_extendedMonitoringObserver = null;
+            logConCgp('[button-injection] Extended monitoring period complete');
+        }
+    }, EXTENDED_CHECK_DURATION);
 }
