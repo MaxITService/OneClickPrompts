@@ -20,6 +20,7 @@
 * **Google AI Studio**
 * **Claude**
 * **Microsoft Copilot (formerly Bing Chat)**
+* **Grok.com**
 
 
 Tired of retyping the same prompts in your AI chats?  **OneClickPrompts** lets you create custom buttons for your go-to prompts, or choose from pre-defined options.  These buttons appear directly in the input field of your favorite AI chat platforms, dramatically saving you time and making your conversations smoother and more efficient, no matter where you're chatting!
