@@ -64,7 +64,10 @@ self.addEventListener('activate', (event) => {
     event.waitUntil(
         (async () => {
             await self.clients.claim();
-            await migrateSyncToLocal();
+            // Verify migration status but don't force migration
+            if (!await checkMigrationStatus()) {
+                logConfigurationRelatedStuff('Existing migration process not triggered');
+            }
         })()
     );
 });
@@ -346,6 +349,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             logConfigurationRelatedStuff('Unknown message type received:', request.type);
             sendResponse({ error: 'Unknown message type' });
             return false;
+    }
+});
+
+// ==== Welcome Page Handling ==== //
+chrome.runtime.onInstalled.addListener(async (details) => {
+    if (details.reason === 'install') {
+        // Create welcome page tab
+        chrome.tabs.create({
+            url: chrome.runtime.getURL('welcome.html')
+        });
+
+        // Preserve existing migration logic from activate event
+        const migrationSuccessful = await migrateSyncToLocal();
+        if (!migrationSuccessful) {
+            await createDefaultProfile();
+        }
     }
 });
 

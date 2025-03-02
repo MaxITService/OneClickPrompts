@@ -31,6 +31,13 @@
     "type": "module"
   },
   
+  "web_accessible_resources": [
+    {
+      "resources": ["welcome.html"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  
   "content_scripts": [
     {
       "matches": [
