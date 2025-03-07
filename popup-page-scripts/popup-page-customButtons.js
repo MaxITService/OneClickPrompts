@@ -144,19 +144,23 @@ let draggedItem = null;
 let lastDragPosition = { x: 0, y: 0 };
 
 function handleDragStart(e) {
-    // Only allow dragging via drag-handle or the entire separator
-    if (e.target.classList.contains('drag-handle') || e.target.classList.contains('separator-item')) {
+    // Define interactive elements that should not initiate dragging.
+    const interactiveTags = ['INPUT', 'TEXTAREA', 'BUTTON', 'SELECT'];
+    if (interactiveTags.includes(e.target.tagName)) {
+        // Do not initiate drag when interacting with these elements.
+        return;
+    }
+    const buttonItem = e.target.closest('.button-item');
+    if (buttonItem) {
         isDragging = true;
-        draggedItem = e.target.closest('.button-item');
-        draggedItem.classList.add('dragging');
+        draggedItem = buttonItem;
+        buttonItem.classList.add('dragging');
         document.body.classList.add('dragging');
         e.dataTransfer.effectAllowed = 'move';
 
         const img = new Image();
         img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
         e.dataTransfer.setDragImage(img, 0, 0);
-    } else {
-        e.preventDefault();
     }
 }
 
