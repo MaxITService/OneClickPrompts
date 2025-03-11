@@ -1,6 +1,6 @@
 /**
  * File: buttons-clicking-grok.js
- * Version: 1.0
+ * Version: 1.1
  *
  * Description:
  * This file implements the custom send button functionality for Grok.com. It handles the insertion
@@ -13,7 +13,7 @@
  * - simulateKeystroke: Simulates keydown, input, and keyup events for a single character while
  *   appending it to the editor. It also sets focus and positions the cursor correctly.
  * - insertWithNaturalLastSymbol: Inserts all characters except the last one via direct bulk insertion,
- *   then uses simulateKeystroke for the last character, adding an extra delay for short prompts.
+ *   then uses simulateKeystroke for the last character, adding an extra delay and re-check for short prompts.
  * - processGrokCustomSendButtonClick: Main function that determines the state of the editor,
  *   chooses the appropriate text insertion method (based on prompt size and whether the editor is empty),
  *   maintains focus and cursor positioning, and handles auto-send functionality.
@@ -23,8 +23,6 @@
  * - Relies on window.MaxExtensionUtils for utility functions (e.g., moving the cursor to the end)
  *   and globalMaxExtensionConfig for auto-send settings.
  */
-
-
 
 'use strict';
 
@@ -82,7 +80,8 @@ async function simulateKeystroke(editorArea, char, isTextArea) {
 /**
  * Inserts text into the editor by direct bulk insertion for all characters except the last one,
  * which is simulated naturally to trigger auto-resize.
- * For short prompts, an extra delay is added before the final keystroke.
+ * For short prompts, an extra delay is added before the final keystroke and a verification
+ * is performed to ensure the last character remains.
  * @param {HTMLElement} editorArea - The editor element.
  * @param {string} text - The text to insert.
  * @param {boolean} isTextArea - Whether the editor is a textarea/input.
@@ -90,14 +89,16 @@ async function simulateKeystroke(editorArea, char, isTextArea) {
  */
 async function insertWithNaturalLastSymbol(editorArea, text, isTextArea) {
     if (text.length === 0) return;
+    let lastChar;
     if (text.length === 1) {
         // For a single-character prompt, add a small extra delay before simulating.
         await new Promise(resolve => setTimeout(resolve, 100));
-        await simulateKeystroke(editorArea, text, isTextArea);
+        lastChar = text;
+        await simulateKeystroke(editorArea, lastChar, isTextArea);
     } else {
         // Insert all characters except the last in one go.
         const bulkText = text.slice(0, -1);
-        const lastChar = text.slice(-1);
+        lastChar = text.slice(-1);
         if (isTextArea) {
             editorArea.value += bulkText;
         } else {
@@ -109,12 +110,20 @@ async function insertWithNaturalLastSymbol(editorArea, text, isTextArea) {
         }
         await simulateKeystroke(editorArea, lastChar, isTextArea);
     }
+    // After inserting the last character, wait and then verify it remains.
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const currentText = isTextArea ? editorArea.value : editorArea.innerText;
+    if (!currentText.endsWith(lastChar)) {
+        logConCgp('[grok] Last character missing after insertion, reattempting keystroke.');
+        await simulateKeystroke(editorArea, lastChar, isTextArea);
+    }
 }
 
 /**
  * Processes the custom send button click for Grok.
  * Inserts custom text into the editor while ensuring the editor auto-resizes.
  * Uses natural typing simulation only for the last character.
+ * Additionally, selects the visible (active) editor in case multiple editor elements exist.
  * @param {Event} event - The click event triggered by the custom send button.
  * @param {string} customText - The custom text to be sent.
  * @param {boolean} autoSend - Flag indicating whether auto-send is enabled.
@@ -124,10 +133,14 @@ async function processGrokCustomSendButtonClick(event, customText, autoSend) {
     event.preventDefault();
     logConCgp('[grok] Custom send button clicked.');
 
-    // Locate the Grok text editor using selectors defined in InjectionTargetsOnWebsite
-    const editorArea = document.querySelector(
-        window.InjectionTargetsOnWebsite.selectors.editors.find(selector => document.querySelector(selector))
-    );
+    // Select the visible (active) editor by filtering out hidden elements.
+    const editorCandidates = window.InjectionTargetsOnWebsite.selectors.editors
+        .map(selector => document.querySelector(selector))
+        .filter(el => el && el.offsetParent !== null);
+    const editorArea = editorCandidates.length > 0
+        ? editorCandidates[editorCandidates.length - 1]
+        : document.querySelector(window.InjectionTargetsOnWebsite.selectors.editors[0]);
+    
     if (!editorArea) {
         logConCgp('[grok] Editor area not found. Aborting send process.');
         return;
@@ -173,7 +186,9 @@ async function processGrokCustomSendButtonClick(event, customText, autoSend) {
 
     // If auto-send is enabled in both the global configuration and the function parameter, initiate auto-send.
     if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
-        logConCgp('[grok] Auto-send enabled. Preparing to click send button.');
+        logConCgp('[grok] Auto-send enabled. Waiting 100ms before sending.');
+        // Added extra delay to ensure the last character is fully processed.
+        await new Promise(resolve => setTimeout(resolve, 100));
         window.autoSendInterval = setInterval(() => {
             const currentText = isTextArea ? editorArea.value.trim() : editorArea.innerText.trim();
             if (currentText.length === 0) {
