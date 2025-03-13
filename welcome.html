@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OneClickPrompts Instructions</title>
+  <link rel="icon" type="image/png" href="icon128.png">
   <style>
     /* Base Reset and Typography */
     body {
@@ -14,6 +16,7 @@
       color: #333;
       line-height: 1.6;
     }
+
     /* Container */
     .container {
       max-width: 800px;
@@ -21,6 +24,7 @@
       padding: 20px;
       box-sizing: border-box;
     }
+
     /* Section/Box styling (inspired by popup sections) */
     .section {
       margin-bottom: 24px;
@@ -28,34 +32,42 @@
       border-radius: 8px;
       padding: 16px;
       background-color: #ffffff;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     }
+
     /* Headings */
-    h1, h2 {
+    h1,
+    h2 {
       color: #7a5cc8;
       margin-bottom: 16px;
     }
+
     h1 {
       font-size: 24px;
       border-bottom: 2px solid #7a5cc8;
       padding-bottom: 10px;
     }
+
     h2 {
       font-size: 20px;
     }
+
     /* Paragraphs and Lists */
     p {
       font-size: 16px;
       margin-bottom: 16px;
     }
+
     ul {
       list-style: disc;
       margin: 16px 0;
       padding-left: 20px;
     }
+
     li {
       margin-bottom: 8px;
     }
+
     /* Image Styling */
     img {
       max-width: 100%;
@@ -64,64 +76,105 @@
       border: 1px solid #ddd;
       border-radius: 4px;
     }
+
     /* Creative DIVs inspired by popup layout */
     .instruction {
       margin-bottom: 24px;
     }
+
     .instruction img {
       margin: 10px 0;
     }
+
     /* Logo Styling in header */
     .logo {
       height: 50px;
       display: block;
       margin: 0 auto 10px;
     }
+
+    #main-title {
+      font-weight: 600;
+      /* Makes it slightly bolder */
+    }
   </style>
 </head>
+
 <body>
   <div class="container">
     <!-- Main Header -->
     <header class="section">
       <!-- Logo added here -->
       <img src="icon128.png" alt="OneClickPrompts Logo" class="logo">
-      <h1>OneClickPrompts Instructions</h1>
+      <h1 id="main-title">OneClickPrompts Instructions</h1>
     </header>
-    
+
     <!-- Instruction Section -->
     <section class="section">
       <div class="instruction">
-        <p>This is an instruction page for the Chrome extension <strong>OneClickPrompts</strong> that you have just installed. If you are seeing this page, it means that you have installed the extension for the first time or it may have appeared due to an update – our apologies.</p>
+        <p>This is an instruction page for the Chrome extension <strong>OneClickPrompts</strong> that you have just
+          installed. If you are seeing this page, it means that you have installed the extension for the first time or
+          it may have appeared due to an update – our apologies.</p>
       </div>
-      
+
       <div class="instruction">
         <h2>Pinned Extension Button</h2>
-        <p><strong>Important:</strong> You must pin the extension button. To do this, click on your extension menu, then select <em>'Pin'</em> near the icon of this extension.</p>
+        <p><strong>Important:</strong> You must pin the extension button. To do this, click on your extension menu,
+          which is this button near address bar right here:</p>
+        <img src="/welcome-page-files/extension-management-button.png" alt="Extension Management Button">
+
+        <p> (Your button may be a little bit different in different browsers. So I'm attaching next screenshot from
+          other browser) then select <em>'Pin'</em> near the icon of this extension:</p>
         <img src="/welcome-page-files/pin-extension.png" alt="Pin Extension">
       </div>
-      
+
       <div class="instruction">
-        <p>Once pinned, when you click the extension button, you will see a menu where you can edit the text for all the buttons that you add.</p>
-        <img src="/welcome-page-files/extension-ui.png" alt="Extension UI">
-        <p>In this UI, you can fully control the extension and, at the bottom, import/export profiles.</p>
+        <p>Once pinned, the extension UI button will be available constantly in your browser toolbar: when you click it
+          (green arrow), you will see a menu where you can edit the text for all the buttons that you add:</p>
+        <img src="/welcome-page-files/extension-ui-button-and-popup.png" alt="Extension UI">
+        <p>In this UI, called "popup" you can fully control the extension and, at the bottom, import/export profiles.
+          Don't forget to scroll (red arrow) down to access features. At the top you will see the profile management, so
+          profile is like a lot of buttons that are saved under this name. Buttons and separators can be dragged to be
+          reordered.</p>
       </div>
-      
+
       <div class="instruction">
         <h2>Site-Specific Activation</h2>
         <p>If you want the extension to work only on specific websites, please do the following:</p>
         <ul>
-          <li>Right-click on the extension icon in the browser toolbar.</li>
-          <img src="/welcome-page-files/right-click.png" alt="Right Click Extension">
+          <li>Right-click on the extension icon in the browser toolbar:</li>
+          <img src="/welcome-page-files/right-click-on-icon.png" alt="Right Click Extension">
           <li>From the menu, select <em>'Manage extensions'</em>.</li>
-          <img src="/welcome-page-files/manage-extensions.png" alt="Manage Extensions">
-          <li>Select the websites where you want the extension to be automatically enabled.</li>
+          <img src="/welcome-page-files/manage-extension.png" alt="Manage Extensions">
+          <li>Select the websites where you want the extension to be automatically enabled. Or just select all websites
+            at once. Sometimes after the updates this option will be disabled, so this is a good troubleshooting step if
+            extension is not activated</li>
         </ul>
       </div>
-      
+
       <div class="instruction">
-        <p><strong>Note:</strong> When updating the extension, Chrome may prompt for permission. If you click 'no', the extension may stop working.</p>
+        <p><strong>Note:</strong> When updating the extension, Chrome may prompt for permission for the extension to
+          access websites. If you click 'no', the extension may stop working.</p>
       </div>
+
+      <h2>Tips for using:</h2>
+
+      <div class="instruction">
+
+        <ul>
+          <li> A few usage tips: Tailored instructions that you enter with this extension can improve answers and
+            enhance your overall experience with chatbots.</li>
+          <li> Example: Grok does not always initiate a search, but for some questions, you might feel that the answer
+            would be better if it tried to search the web for one.</li>
+          <li> The O3 model sticks to short answers, but if you specify after your question that you want a theoretical
+            explanation, a few examples, and one related concept, you might receive a much more detailed response.</li>
+          <li>When correcting a text, a chatbot may get very creative and replace your slang or informal words with ones
+            it thinks are correct. By providing specific instructions to the chatbot, you can avoid this.</li>
+        </ul>
+      </div>
+
     </section>
   </div>
 </body>
+
 </html>
