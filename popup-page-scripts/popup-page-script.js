@@ -340,3 +340,9 @@ function logToGUIConsole(message) {
     consoleOutput.scrollTop = consoleOutput.scrollHeight;
 }
 
+document.getElementById('openWelcomePage').addEventListener('click', (e) => {
+    e.preventDefault();
+    chrome.tabs.create({
+        url: chrome.runtime.getURL('welcome.html')
+    });
+});
