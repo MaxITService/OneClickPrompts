@@ -1,0 +1,179 @@
+/* CSS Variables Definition */
+:root {
+  --primary-color: #7a5cc8;
+  --bg-color: #fff;
+  --text-color: #333;
+}
+
+/* Base styles for the page */
+body {
+  margin: 0;
+  padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg-color);
+  color: var(--text-color);
+  line-height: 1.6;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* Container */
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Styles for sections/boxes */
+.section {
+  margin-bottom: 24px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 16px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Headings */
+h1, h2 {
+  color: var(--primary-color);
+  margin-bottom: 16px;
+}
+
+h1 {
+  font-size: 24px;
+  border-bottom: 2px solid var(--primary-color);
+  padding-bottom: 10px;
+  text-align: center;
+}
+
+h2 {
+  font-size: 20px;
+}
+
+/* Paragraphs and lists */
+p {
+  font-size: 16px;
+  margin-bottom: 16px;
+}
+
+ul {
+  list-style: disc;
+  margin: 16px 0;
+  padding-left: 20px;
+}
+
+li {
+  margin-bottom: 8px;
+}
+
+/* Image styles */
+img {
+  max-width: 100%;
+  display: block;
+  margin: 16px auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+/* Instruction styles */
+.instruction {
+  margin-bottom: 24px;
+}
+
+.instruction img {
+  margin: 10px 0;
+}
+
+/* Logo styles in the header */
+.logo {
+  height: 50px;
+  display: block;
+  margin: 0 auto 10px;
+}
+
+/* Theme switcher styles */
+.switch-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  justify-content: center;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 28px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.4s;
+  border-radius: 28px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 22px;
+  width: 22px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+.switch input:checked + .slider {
+  background-color: var(--primary-color);
+}
+
+.switch input:checked + .slider:before {
+  transform: translateX(22px);
+}
+
+.switch input:focus + .slider {
+  box-shadow: 0 0 1px var(--primary-color);
+}
+
+.switch-label {
+  font-size: 16px;
+}
+
+/* Dark theme */
+body.dark-theme {
+  --bg-color: #222;
+  --text-color: #eee;
+  --primary-color: #9a79d3;
+  background: var(--bg-color);
+  color: var(--text-color);
+}
+
+body.dark-theme .section {
+  background-color: #333;
+  border-color: #444;
+  box-shadow: none;
+}
+
+body.dark-theme h1,
+body.dark-theme h2 {
+  color: var(--primary-color);
+}
+
+body.dark-theme a {
+  color: #add8e6;
+}
