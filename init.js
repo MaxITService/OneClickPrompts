@@ -35,6 +35,7 @@
 
 /**
  * This function is called first.
+ * It retrieves configuration data from the service worker and starts the initialization.
  */
 function publicStaticVoidMain() {
     // The message intended for the service worker config.js, the function will be run after response will be received.
@@ -42,12 +43,12 @@ function publicStaticVoidMain() {
         if (response && response.config) {
             logConCgp('[init] Configuration successfully loaded:', response.config);
 
-            // let all files in project access config.
+            // Let all files in the project access the configuration.
             window.globalMaxExtensionConfig = response.config;
             commenceExtensionInitialization(window.globalMaxExtensionConfig);
         } else {
             logConCgp('[init] Failed to load configuration from service worker. Initialization aborted.');
-            // STOP
+            // STOP execution if configuration is missing.
         }
     });
 }
@@ -178,23 +179,7 @@ function commenceExtensionInitialization(configurationObject) {
     });
 
     // Monkey-patch pushState and replaceState for immediate detection on state changes.
-    (function(history) {
-        const originalPushState = history.pushState;
-        history.pushState = function(state, title, url) {
-            const result = originalPushState.apply(history, arguments);
-            logConCgp('[init] pushState called. URL:', url);
-            buttonBoxCheckingAndInjection(true);
-            return result;
-        };
-
-        const originalReplaceState = history.replaceState;
-        history.replaceState = function(state, title, url) {
-            const result = originalReplaceState.apply(history, arguments);
-            logConCgp('[init] replaceState called. URL:', url);
-            buttonBoxCheckingAndInjection(true);
-            return result;
-        };
-    })(window.history);
+    patchHistoryMethods();
 
     // ----------------------------------------------------------------
     // End of Immediate Navigation Detection
@@ -208,6 +193,27 @@ function commenceExtensionInitialization(configurationObject) {
 
     // Initiate the appropriate extension script based on the active website.
     selectAndInitializeAppropriateExtensionScript();
+}
+
+/**
+ * Monkey-patches History API methods to detect immediate navigation changes.
+ * This function overrides pushState and replaceState to trigger custom injection logic.
+ */
+function patchHistoryMethods() {
+    // Avoid duplicate patching if already patched.
+    if (history.__patchedByOneClickPrompts) return;
+    history.__patchedByOneClickPrompts = true;
+
+    const methods = ['pushState', 'replaceState'];
+    methods.forEach(method => {
+        const original = history[method];
+        history[method] = function(...args) {
+            const result = original.apply(this, args);
+            logConCgp(`[init] ${method} called. URL:`, args[2]);
+            buttonBoxCheckingAndInjection(true);
+            return result;
+        };
+    });
 }
 
 // Automatically start the initialization process upon script load.
