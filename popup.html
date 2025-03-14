@@ -158,25 +158,45 @@
         </section>
 
         <!-- ===== Advanced Selector Configuration ===== -->
-        <section class="section" id="advancedSection">
-            <h2>Advanced Selector Configuration</h2>
-            <p class="section-description">Customize selectors for different websites. Only modify if you know what you're doing.</p>
-            <div class="row">
-                <select id="selectorWebsiteSelect">
-                    <option value="ChatGPT">ChatGPT</option>
-                    <option value="Claude">Claude</option>
-                    <option value="Copilot">Copilot</option>
-                    <option value="DeepSeek">DeepSeek</option>
-                    <option value="AIStudio">AIStudio</option>
-                    <option value="Grok">Grok</option>
-                </select>
+        <section class="section collapsible" id="advancedSection">
+            <div class="section-header">
+                <h2>Advanced Selector Configuration</h2>
+                <span class="toggle-icon">▶</span>
             </div>
-            <div class="row">
-                <textarea id="selectorConfig" class="selector-config-textarea" spellcheck="false"></textarea>
-            </div>
-            <div class="row">
-                <button id="saveSelectors">Save Selectors</button>
-                <button id="resetSelectors" class="danger">Reset to Defaults</button>
+            <div class="section-content">
+                <div class="manual-text">
+                    <p>Configure custom CSS selectors for different AI platforms. Required fields:</p>
+                    <ul>
+                        <li><strong>Containers:</strong> Parent elements containing the chat interface</li>
+                        <li><strong>Send Buttons:</strong> Button elements that submit messages</li>
+                        <li><strong>Editors:</strong> Text input areas for composing messages</li>
+                        <li><strong>Container ID:</strong> Unique ID for extension's button container</li>
+                    </ul>
+                    <p>Format: JSON array for containers/sendButtons/editors, string for buttonsContainerId</p>
+                    <pre><code>{
+  "containers": ["div.chat-container"],
+  "sendButtons": ["button.send"],
+  "editors": ["textarea.input"],
+  "buttonsContainerId": "custom-buttons"
+}</code></pre>
+                </div>
+                <div class="row">
+                    <select id="selectorWebsiteSelect">
+                        <option value="ChatGPT">ChatGPT</option>
+                        <option value="Claude">Claude</option>
+                        <option value="Copilot">Copilot</option>
+                        <option value="DeepSeek">DeepSeek</option>
+                        <option value="AIStudio">AIStudio</option>
+                        <option value="Grok">Grok</option>
+                    </select>
+                </div>
+                <div class="row">
+                    <textarea id="selectorConfig" class="selector-config-textarea" spellcheck="false"></textarea>
+                </div>
+                <div class="row">
+                    <button id="saveSelectors">Save Selectors</button>
+                    <button id="resetSelectors" class="danger">Reset to Defaults</button>
+                </div>
             </div>
         </section>
         <!-- ===== End Advanced Selector Configuration ===== -->

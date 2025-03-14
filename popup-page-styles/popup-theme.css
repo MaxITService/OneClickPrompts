@@ -22,6 +22,10 @@ body.dark-theme {
     --text-color: #eee;
     --separator-color: #666;
     --hover-bg-color: #333;
+    --section-header-bg: #2a2a2a;
+    --manual-bg: #1e1e1e;
+    --code-bg: #252525;
+    --text-muted: #888;
 }
 
 /* ------------------------------------------------------------------------- */

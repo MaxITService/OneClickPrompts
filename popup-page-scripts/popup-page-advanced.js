@@ -4,6 +4,22 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Set up collapsible section functionality
+    const advancedSection = document.getElementById('advancedSection');
+    const toggleIcon = advancedSection.querySelector('.toggle-icon');
+
+    // Toggle section visibility
+    advancedSection.querySelector('.section-header').addEventListener('click', () => {
+        advancedSection.classList.toggle('expanded');
+        toggleIcon.style.transform = advancedSection.classList.contains('expanded') 
+            ? 'rotate(90deg)' 
+            : 'rotate(0deg)';
+    });
+
+    // Initialize in collapsed state
+    advancedSection.classList.remove('expanded');
+    toggleIcon.style.transform = 'rotate(0deg)';
+    
     const websiteSelect = document.getElementById('selectorWebsiteSelect');
     const selectorConfig = document.getElementById('selectorConfig');
     const saveButton = document.getElementById('saveSelectors');
