@@ -14,12 +14,37 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleIcon.style.transform = advancedSection.classList.contains('expanded') 
             ? 'rotate(90deg)' 
             : 'rotate(0deg)';
+            
+        // If advanced section is collapsed, ensure help section is also collapsed
+        if (!advancedSection.classList.contains('expanded')) {
+            advancedHelpSection.classList.remove('expanded');
+            helpToggleIcon.style.transform = 'rotate(0deg)';
+        }
     });
 
     // Initialize in collapsed state
     advancedSection.classList.remove('expanded');
     toggleIcon.style.transform = 'rotate(0deg)';
     
+    // Set up help section collapsible functionality
+    const advancedHelpSection = document.getElementById('advancedHelpSection');
+    const helpToggleIcon = advancedHelpSection.querySelector('.toggle-icon');
+
+    // Toggle help section visibility
+    advancedHelpSection.querySelector('.section-header').addEventListener('click', (event) => {
+        // Prevent the click from bubbling up to the parent advanced section
+        event.stopPropagation();
+        
+        advancedHelpSection.classList.toggle('expanded');
+        helpToggleIcon.style.transform = advancedHelpSection.classList.contains('expanded') 
+            ? 'rotate(90deg)' 
+            : 'rotate(0deg)';
+    });
+
+    // Initialize help section in collapsed state
+    advancedHelpSection.classList.remove('expanded');
+    helpToggleIcon.style.transform = 'rotate(0deg)';
+
     const websiteSelect = document.getElementById('selectorWebsiteSelect');
     const selectorConfig = document.getElementById('selectorConfig');
     const saveButton = document.getElementById('saveSelectors');

@@ -164,16 +164,26 @@
                 <span class="toggle-icon">▶</span>
             </div>
             <div class="section-content">
-                <div class="text-inside-container">
-                    <p>Configure custom CSS selectors for different AI chat platforms. Each selector type can have multiple fallback options defined as an array. The extension will use the first matching selector found on the page, with subsequent entries serving as fallbacks.</p>
-                    <ul>
-                        <li><strong>Containers:</strong> The parent elements that contain the chat interface. These elements will host your custom buttons.</li>
-                        <li><strong>Send Buttons:</strong> The submit buttons that send messages. For auto-sending buttons, the extension will automatically trigger these after inserting text.</li>
-                        <li><strong>Editors:</strong> The text input areas where messages are composed. Note that the editor selector might need to be different for empty chats versus chats with existing messages.</li>
-                        <li><strong>Container ID:</strong> A unique identifier for the extension's button container. This is primarily used for internal detection and troubleshooting - modification usually isn't necessary.</li>
-                    </ul>
-                    <p>Format: JSON array for containers/sendButtons/editors, string for buttonsContainerId</p>
+                <!-- Collapsible Help Section -->
+                <div class="collapsible" id="advancedHelpSection">
+                    <div class="section-header subsection-header">
+                        <h3>Help</h3>
+                        <span class="toggle-icon">▶</span>
+                    </div>
+                    <div class="section-content">
+                        <div class="text-inside-container">
+                            <p>Configure custom CSS selectors for different AI chat platforms. Each selector type can have multiple fallback options defined as an array. The extension will use the first matching selector found on the page, with subsequent entries serving as fallbacks.</p>
+                            <ul>
+                                <li><strong>Containers:</strong> The parent elements that contain the chat interface. These elements will host your custom buttons.</li>
+                                <li><strong>Send Buttons:</strong> The submit buttons that send messages. For auto-sending buttons, the extension will automatically trigger these after inserting text.</li>
+                                <li><strong>Editors:</strong> The text input areas where messages are composed. Note that the editor selector might need to be different for empty chats versus chats with existing messages.</li>
+                                <li><strong>Container ID:</strong> A unique identifier for the extension's button container. This is primarily used for internal detection and troubleshooting - modification usually isn't necessary.</li>
+                            </ul>
+                            <p>Format: JSON array for containers/sendButtons/editors, string for buttonsContainerId</p>
+                        </div>
+                    </div>
                 </div>
+                <!-- Rest of the Advanced Section Content -->
                 <div class="row">
                     <select id="selectorWebsiteSelect">
                         <option value="ChatGPT">ChatGPT</option>
