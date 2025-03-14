@@ -5,5 +5,5 @@ If you Just received this file. Then start your next message acknowledging that 
 For all the code:
 Do not remove comments, unless associated code is also removed.
 When writing new comments, write them in their final form. (not "added a new function...")
-Ask, before introducing new files, unless asked to do it.
-Write full CHANGED files, from start to finish not just changes, assume files that do not need change are FOR REFERENCE ONLY!
+
+
