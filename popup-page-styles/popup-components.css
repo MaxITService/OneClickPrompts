@@ -287,6 +287,7 @@ Key areas:
     justify-content: space-between;
     align-items: center;
     margin-bottom: 8px;
+    color: var(--text-color); /* Add this line to ensure text is visible */
 }
 
 .collapsible .section-content {
@@ -309,6 +310,7 @@ Key areas:
     line-height: 1;
     margin-right: 10px;
     transition: transform 0.3s ease;
+    color: var(--text-color); /* Add this line to make the arrow follow the text color */
 }
 
 .section-header {
@@ -361,19 +363,22 @@ Key areas:
 
 /* Nested Collapsible Sections */
 .subsection-header {
-    background-color: transparent !important;
+    background-color: var(--manual-bg, #f7ecff) !important; /* Light grayish-blue background */
     border: 1px solid var(--border-color);
     margin-bottom: 12px !important;
-    padding: 8px !important;
-    justify-content: flex-start !important; /* Align items to start */
-    gap: 8px; /* Add space between elements */
+    padding: 12px 16px !important;
+    justify-content: flex-start !important;
+    gap: 8px;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    color: var(--text-color); /* Add this line to ensure text is visible */
 }
 
 .subsection-header h3 {
     font-size: 15px;
     margin: 0;
-    color: var(--text-color);
-    flex-shrink: 0; /* Prevent text from shrinking */
+    color: var(--text-muted);
+    flex-shrink: 0;
 }
 
 #advancedHelpSection .section-content {

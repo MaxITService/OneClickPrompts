@@ -165,6 +165,25 @@
             </div>
             <div class="section-content">
                 <!-- Collapsible Help Section -->
+
+                <!-- Rest of the Advanced Section Content -->
+                <div class="row">
+                    <select id="selectorWebsiteSelect">
+                        <option value="ChatGPT">ChatGPT</option>
+                        <option value="Claude">Claude</option>
+                        <option value="Copilot">Copilot</option>
+                        <option value="DeepSeek">DeepSeek</option>
+                        <option value="AIStudio">AIStudio</option>
+                        <option value="Grok">Grok</option>
+                    </select>
+                </div>
+                <div class="row">
+                    <textarea id="selectorConfig" class="selector-config-textarea" spellcheck="false"></textarea>
+                </div>
+                <div class="row">
+                    <button id="saveSelectors">Save Selectors</button>
+                    <button id="resetSelectors" class="danger">Reset to Defaults</button>                    
+                </div>
                 <div class="collapsible" id="advancedHelpSection">
                     <div class="section-header subsection-header">
                         <h3>Help <span class="expand-text">(click to expand)</span></h3>
@@ -183,24 +202,7 @@
                         </div>
                     </div>
                 </div>
-                <!-- Rest of the Advanced Section Content -->
-                <div class="row">
-                    <select id="selectorWebsiteSelect">
-                        <option value="ChatGPT">ChatGPT</option>
-                        <option value="Claude">Claude</option>
-                        <option value="Copilot">Copilot</option>
-                        <option value="DeepSeek">DeepSeek</option>
-                        <option value="AIStudio">AIStudio</option>
-                        <option value="Grok">Grok</option>
-                    </select>
-                </div>
-                <div class="row">
-                    <textarea id="selectorConfig" class="selector-config-textarea" spellcheck="false"></textarea>
-                </div>
-                <div class="row">
-                    <button id="saveSelectors">Save Selectors</button>
-                    <button id="resetSelectors" class="danger">Reset to Defaults</button>
-                </div>
+
             </div>
         </section>
         <!-- ===== End Advanced Selector Configuration ===== -->
