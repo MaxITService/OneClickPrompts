@@ -305,9 +305,20 @@ Key areas:
 }
 
 .toggle-icon {
-    font-size: 0.8em;
-    color: var(--text-muted, #666);
-    transition: transform 0.2s ease;
+    font-size: 20px;
+    line-height: 1;
+    margin-right: 10px;
+    transition: transform 0.3s ease;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+}
+
+.text-inside-container {
+    font-size: 14px;
+    line-height: 1.5;
 }
 
 .manual-text {
