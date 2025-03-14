@@ -314,7 +314,22 @@ Key areas:
 .section-header {
     display: flex;
     align-items: center;
+    position: relative;
 }
+
+.expand-text {
+    font-size: inherit;
+    color: inherit;
+    font-style: italic;
+    font-weight: normal;
+    transition: opacity 0.3s ease;
+}
+
+.collapsible.expanded > .section-header .expand-text {
+    opacity: 0;
+    display: none;
+}
+
 
 .text-inside-container {
     font-size: 14px;
@@ -350,12 +365,15 @@ Key areas:
     border: 1px solid var(--border-color);
     margin-bottom: 12px !important;
     padding: 8px !important;
+    justify-content: flex-start !important; /* Align items to start */
+    gap: 8px; /* Add space between elements */
 }
 
 .subsection-header h3 {
     font-size: 15px;
     margin: 0;
     color: var(--text-color);
+    flex-shrink: 0; /* Prevent text from shrinking */
 }
 
 #advancedHelpSection .section-content {

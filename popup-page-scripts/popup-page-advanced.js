@@ -8,13 +8,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const advancedSection = document.getElementById('advancedSection');
     const toggleIcon = advancedSection.querySelector('.toggle-icon');
 
-    // Toggle section visibility
-    advancedSection.querySelector('.section-header').addEventListener('click', () => {
-        advancedSection.classList.toggle('expanded');
-        toggleIcon.style.transform = advancedSection.classList.contains('expanded') 
+    function toggleSection(section, icon) {
+        section.classList.toggle('expanded');
+        icon.style.transform = section.classList.contains('expanded') 
             ? 'rotate(90deg)' 
             : 'rotate(0deg)';
-            
+    }
+
+    // Toggle section visibility
+    advancedSection.querySelector('.section-header').addEventListener('click', () => {
+        toggleSection(advancedSection, toggleIcon);
+        
         // If advanced section is collapsed, ensure help section is also collapsed
         if (!advancedSection.classList.contains('expanded')) {
             advancedHelpSection.classList.remove('expanded');
@@ -34,11 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     advancedHelpSection.querySelector('.section-header').addEventListener('click', (event) => {
         // Prevent the click from bubbling up to the parent advanced section
         event.stopPropagation();
-        
-        advancedHelpSection.classList.toggle('expanded');
-        helpToggleIcon.style.transform = advancedHelpSection.classList.contains('expanded') 
-            ? 'rotate(90deg)' 
-            : 'rotate(0deg)';
+        toggleSection(advancedHelpSection, helpToggleIcon);
     });
 
     // Initialize help section in collapsed state
