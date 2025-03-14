@@ -98,7 +98,7 @@ window.MaxExtensionUtils = {
 class InjectionTargetsOnWebsite {
     constructor() {
         this.activeSite = this.identifyActiveWebsite();
-        this.selectors = this.getSelectorsForSite(this.activeSite);
+        this.initializeSelectors();
     }
 
     /**
@@ -132,11 +132,53 @@ class InjectionTargetsOnWebsite {
     }
 
     /**
-     * Retrieves the selectors for the specified website.
+     * Initialize selectors by trying to load custom ones first, then falling back to defaults
+     */
+    async initializeSelectors() {
+        try {
+            // Try to get custom selectors first
+            const customSelectors = await this.getCustomSelectors(this.activeSite);
+            if (customSelectors) {
+                this.selectors = customSelectors;
+                logConCgp(`[utils] Using custom selectors for ${this.activeSite}`);
+            } else {
+                // Fall back to defaults
+                this.selectors = this.getDefaultSelectors(this.activeSite);
+                logConCgp(`[utils] Using default selectors for ${this.activeSite}`);
+            }
+        } catch (error) {
+            console.error('Error loading selectors:', error);
+            // Fall back to defaults on error
+            this.selectors = this.getDefaultSelectors(this.activeSite);
+        }
+    }
+
+    /**
+     * Attempts to retrieve custom selectors from storage
+     * @param {string} site - The name of the website
+     * @returns {Promise<Object|null>} - Custom selectors or null if not found
+     */
+    async getCustomSelectors(site) {
+        return new Promise((resolve) => {
+            chrome.runtime.sendMessage({
+                type: 'getCustomSelectors',
+                site: site
+            }, (response) => {
+                if (response && response.selectors) {
+                    resolve(response.selectors);
+                } else {
+                    resolve(null);
+                }
+            });
+        });
+    }
+
+    /**
+     * Retrieves the default selectors for the specified website.
      * @param {string} site - The name of the website.
      * @returns {Object} - An object containing the selectors for the site.
      */
-    getSelectorsForSite(site) {
+    getDefaultSelectors(site) {
         const selectors = {
             ChatGPT: {
                 containers: ['div.flex.w-full.flex-col:has(textarea)'],

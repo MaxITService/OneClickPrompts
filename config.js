@@ -345,7 +345,43 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 }
             })();
             return true;
-        // ----- End New Cases -----
+        // ----- Custom Selectors Cases -----
+        case 'getCustomSelectors':
+            (async () => {
+                try {
+                    const result = await chrome.storage.local.get(['customSelectors']);
+                    const customSelectors = result.customSelectors || {};
+                    logConfigurationRelatedStuff('Retrieved custom selectors for: ' + request.site);
+                    sendResponse({ selectors: customSelectors[request.site] || null });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
+            return true;
+        case 'saveCustomSelectors':
+            (async () => {
+                try {
+                    const result = await chrome.storage.local.get(['customSelectors']);
+                    const customSelectors = result.customSelectors || {};
+                    
+                    if (request.selectors) {
+                        customSelectors[request.site] = request.selectors;
+                        logConfigurationRelatedStuff('Saved custom selectors for: ' + request.site);
+                    } else {
+                        delete customSelectors[request.site];
+                        logConfigurationRelatedStuff('Removed custom selectors for: ' + request.site);
+                    }
+                    
+                    await chrome.storage.local.set({ customSelectors });
+                    sendResponse({ success: true });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
+            return true;
+        // ----- End Custom Selectors Cases -----
         default:
             logConfigurationRelatedStuff('Unknown message type received:', request.type);
             sendResponse({ error: 'Unknown message type' });

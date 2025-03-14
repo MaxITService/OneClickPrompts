@@ -235,3 +235,34 @@ Key areas:
     position: relative;
     transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* ------------------------------------------------------------------------- */
+ /* Advanced Selector Configuration                                          */
+ /* ------------------------------------------------------------------------- */
+.selector-config-textarea {
+    width: 100%;
+    height: 300px;
+    font-family: monospace;
+    white-space: pre;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    margin: 8px 0;
+    font-size: 12px;
+    line-height: 1.4;
+    resize: vertical;
+}
+
+#selectorWebsiteSelect {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--input-bg-color);
+    color: var(--text-color);
+    margin-bottom: 8px;
+}
+
+#advancedSection .row {
+    margin-bottom: 12px;
+}
