@@ -319,8 +319,13 @@ window.MaxExtensionFloatingPanel = {
         // Clear existing content in the panel
         panelContent.innerHTML = '';
         
-        // Clone buttons from the original container
+        // Clone buttons from the original container, excluding the toggle button
         Array.from(originalContainer.children).forEach(child => {
+            // Skip the toggle button (the one with 🔼 emoji)
+            if (child.tagName === 'BUTTON' && child.innerHTML === '🔼') {
+                return; // Skip this button
+            }
+            
             const clone = child.cloneNode(true);
             
             // Reattach event listeners for buttons
