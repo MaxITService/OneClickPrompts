@@ -319,33 +319,50 @@ window.MaxExtensionFloatingPanel = {
         // Clear existing content in the panel
         panelContent.innerHTML = '';
         
-        // Clone buttons from the original container, excluding the toggle button
+        // Get all the button configurations from global config
+        const buttonConfigs = globalMaxExtensionConfig.customButtons;
+        let configIndex = 0;  // Track which config we're on
+        
+        // Go through all elements in the original container
         Array.from(originalContainer.children).forEach(child => {
             // Skip the toggle button (the one with 🔼 emoji)
             if (child.tagName === 'BUTTON' && child.innerHTML === '🔼') {
-                return; // Skip this button
+                // Skip this button, but don't increment configIndex
+                return;
             }
             
+            // Clone the element
             const clone = child.cloneNode(true);
             
-            // Reattach event listeners for buttons
+            // If it's a button, attach the correct event listener
             if (clone.tagName === 'BUTTON') {
-                clone.addEventListener('click', (event) => {
-                    // Extract button data
-                    const buttonIndex = Array.from(originalContainer.children).findIndex(btn => 
-                        btn.getAttribute('data-testid') === clone.getAttribute('data-testid')
-                    );
-                    
-                    if (buttonIndex >= 0) {
-                        const buttonConfig = globalMaxExtensionConfig.customButtons[buttonIndex];
-                        if (!buttonConfig.separator) {
+                // Store the current config index to ensure it's preserved in the closure
+                const currentConfigIndex = configIndex;
+                
+                // Remove any existing click listeners
+                clone.replaceWith(clone.cloneNode(true));
+                const freshClone = clone;
+                
+                // Add a fresh click listener with the correct index
+                freshClone.addEventListener('click', (event) => {
+                    // Use the stored index to get the correct configuration
+                    if (currentConfigIndex < buttonConfigs.length) {
+                        const buttonConfig = buttonConfigs[currentConfigIndex];
+                        if (buttonConfig && !buttonConfig.separator) {
                             processCustomSendButtonClick(event, buttonConfig.text, buttonConfig.autoSend);
                         }
                     }
                 });
+                
+                // Add the button to the panel
+                panelContent.appendChild(freshClone);
+            } else {
+                // For non-buttons (like separators), just add them directly
+                panelContent.appendChild(clone);
             }
             
-            panelContent.appendChild(clone);
+            // Increment the config index for the next iteration
+            configIndex++;
         });
     },
 
