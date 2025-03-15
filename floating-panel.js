@@ -59,7 +59,8 @@ window.MaxExtensionFloatingPanel = {
         height: 400,
         posX: 100,
         posY: 100,
-        opacity: 0.7
+        opacity: 0.7,
+        isVisible: false
     },
 
     /**
@@ -67,6 +68,12 @@ window.MaxExtensionFloatingPanel = {
      * @type {Object}
      */
     currentPanelSettings: null,
+
+    /**
+     * Timer for debounced position saving.
+     * @type {number|null}
+     */
+    savePositionTimer: null,
 
     /**
      * Creates the floating panel element and appends it to the document body.
@@ -175,7 +182,7 @@ window.MaxExtensionFloatingPanel = {
                 
                 this.currentPanelSettings.width = parseInt(panel.style.width);
                 this.currentPanelSettings.height = parseInt(panel.style.height);
-                this.savePanelSettings();
+                this.debouncedSavePanelSettings();
             }
         });
         
@@ -201,7 +208,7 @@ window.MaxExtensionFloatingPanel = {
         // Update settings
         this.currentPanelSettings.posX = parseInt(this.panelElement.style.left);
         this.currentPanelSettings.posY = parseInt(this.panelElement.style.top);
-        this.savePanelSettings();
+        this.debouncedSavePanelSettings();
     },
 
     /**
@@ -238,10 +245,10 @@ window.MaxExtensionFloatingPanel = {
             document.removeEventListener('mousemove', dragElement);
             document.removeEventListener('mouseup', stopDrag);
             
-            // Save the panel position
+            // Save the panel position with debouncing
             this.currentPanelSettings.posX = parseInt(element.style.left);
             this.currentPanelSettings.posY = parseInt(element.style.top);
-            this.savePanelSettings();
+            this.debouncedSavePanelSettings();
         };
         
         // Add mousedown event listener to the handle
@@ -261,6 +268,8 @@ window.MaxExtensionFloatingPanel = {
         }
         
         this.isPanelVisible = !this.isPanelVisible;
+        this.currentPanelSettings.isVisible = this.isPanelVisible;
+        this.debouncedSavePanelSettings();
         
         if (this.isPanelVisible) {
             // Remove buttons from their original location
@@ -362,6 +371,23 @@ window.MaxExtensionFloatingPanel = {
     },
 
     /**
+     * Debounced version of savePanelSettings.
+     * Waits 150ms after the last call before actually saving.
+     */
+    debouncedSavePanelSettings: function() {
+        // Clear any existing timer
+        if (this.savePositionTimer) {
+            clearTimeout(this.savePositionTimer);
+        }
+        
+        // Set a new timer
+        this.savePositionTimer = setTimeout(() => {
+            this.savePanelSettings();
+            this.savePositionTimer = null;
+        }, 150);
+    },
+
+    /**
      * Loads panel settings from localStorage.
      * If no settings are found, default settings are used.
      */
@@ -399,12 +425,29 @@ window.MaxExtensionFloatingPanel = {
     },
 
     /**
+     * Restores the panel state based on saved settings.
+     * If the panel was previously visible, it will be shown again.
+     */
+    restorePanelState: function() {
+        if (this.currentPanelSettings.isVisible) {
+            logConCgp('[floating-panel] Restoring panel to visible state');
+            this.togglePanel();
+        }
+    },
+
+    /**
      * Initializes the floating panel functionality.
      * This method should be called when the extension is initialized.
      */
     initialize: function() {
         this.loadPanelSettings();
         this.createFloatingPanel();
+        
+        // Restore panel state after a short delay to ensure the DOM is fully loaded
+        setTimeout(() => {
+            this.restorePanelState();
+        }, 300);
+        
         logConCgp('[floating-panel] Floating panel initialized');
     }
 };
