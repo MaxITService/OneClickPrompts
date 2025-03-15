@@ -35,10 +35,11 @@
                     <p id="topExplanationText"> Your changes will be saved instantly. Reload website to apply. Pressing
                         "Shift" while pressing a key or button changes its autosend behaviour!
 
-                        
+
                         <a href="#helpSection">Go to Help Section</a>
                     </p>
-                    <p id="UserNotification">I am sorry, but due to Chrome's synced storage limits, we are no longer syncing your profiles via cloud. Export profiles manually. </p>
+                    <p id="UserNotification">I am sorry, but due to Chrome's synced storage limits, we are no longer
+                        syncing your profiles via cloud. Export profiles manually. </p>
                 </div>
             </div>
             <!-- Add Profile Input and Save/Cancel Buttons -->
@@ -164,8 +165,11 @@
                 <span class="toggle-icon">▶</span>
             </div>
             <div class="section-content">
-               
-                <div class="text-inside-container"> Select, which website you are going to edit selectors for. Selectors are pointing to a webpage location where buttons, text, and sending button should be.  </div>
+
+                <div class="text-inside-container"> Select, which website you are going to edit selectors for.
+                    Selectors are pointing to a webpage location where buttons, text, and sending button should be.
+                </div>
+                <br>
                 <!-- Rest of the Advanced Section Content -->
                 <div class="row">
                     <select id="selectorWebsiteSelect">
@@ -177,17 +181,17 @@
                         <option value="Grok">Grok</option>
                     </select>
                 </div>
-                
+
 
                 <div class="row">
                     <textarea id="selectorConfig" class="selector-config-textarea" spellcheck="false"></textarea>
                 </div>
                 <div class="row">
                     <button id="saveSelectors">Save Selectors</button>
-                    <button id="resetSelectors" class="danger">Reset to Defaults</button>                    
+                    <button id="resetSelectors" class="danger">Reset to Defaults</button>
                 </div>
 
-                 <!-- Collapsible Help Section -->
+                <!-- Collapsible Help Section -->
                 <div class="collapsible" id="advancedHelpSection">
                     <div class="section-header subsection-header">
                         <h3>Help <span class="expand-text">(click to expand)</span></h3>
@@ -195,12 +199,21 @@
                     </div>
                     <div class="section-content">
                         <div class="text-inside-container">
-                            <p>Configure custom CSS selectors for different AI chat platforms. Each selector type can have multiple fallback options defined as an array. The extension will use the first matching selector found on the page, with subsequent entries serving as fallbacks.</p>
+                            <p>Configure custom CSS selectors for different AI chat platforms. Each selector type can
+                                have multiple fallback options defined as an array. The extension will use the first
+                                matching selector found on the page, with subsequent entries serving as fallbacks.</p>
                             <ul>
-                                <li><strong>Containers:</strong> The parent elements that contain the chat interface. These elements will host your custom buttons.</li>
-                                <li><strong>Send Buttons:</strong> The submit buttons that send messages. For auto-sending buttons, the extension will automatically trigger these after inserting text.</li>
-                                <li><strong>Editors:</strong> The text input areas where messages are composed. Note that the editor selector might need to be different for empty chats versus chats with existing messages.</li>
-                                <li><strong>Container ID:</strong> A unique identifier for the extension's button container. This is primarily used for internal detection and troubleshooting - modification usually isn't necessary.</li>
+                                <li><strong>Containers:</strong> The parent elements that contain the chat interface.
+                                    These elements will host your custom buttons.</li>
+                                <li><strong>Send Buttons:</strong> The submit buttons that send messages. For
+                                    auto-sending buttons, the extension will automatically trigger these after inserting
+                                    text.</li>
+                                <li><strong>Editors:</strong> The text input areas where messages are composed. Note
+                                    that the editor selector might need to be different for empty chats versus chats
+                                    with existing messages.</li>
+                                <li><strong>Container ID:</strong> A unique identifier for the extension's button
+                                    container. This is primarily used for internal detection and troubleshooting -
+                                    modification usually isn't necessary.</li>
                             </ul>
                             <p>Format: JSON array for containers/sendButtons/editors, string for buttonsContainerId</p>
                         </div>
