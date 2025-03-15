@@ -44,6 +44,18 @@ window.MaxExtensionFloatingPanel = {
     isPanelVisible: false,
 
     /**
+     * Current active profile name.
+     * @type {string|null}
+     */
+    currentProfileName: null,
+
+    /**
+     * Available profiles list.
+     * @type {Array<string>}
+     */
+    availableProfiles: [],
+
+    /**
      * Storage key prefix for panel settings.
      * This will be combined with the hostname to create website-specific settings.
      * @type {string}
@@ -162,12 +174,25 @@ window.MaxExtensionFloatingPanel = {
             align-content: flex-start;
         `;
 
+        // Create profile switcher footer
+        const profileSwitcherContainer = document.createElement('div');
+        profileSwitcherContainer.id = 'max-extension-profile-switcher';
+        profileSwitcherContainer.style.cssText = `
+            padding: 8px 12px;
+            background-color: rgba(40, 40, 40, ${this.currentPanelSettings.opacity + 0.1});
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid rgba(100, 100, 100, 0.3);
+        `;
+
         // Add drag functionality to header
         this.makeDraggable(panel, panelHeader);
         
         // Append elements to the panel
         panel.appendChild(panelHeader);
         panel.appendChild(contentContainer);
+        panel.appendChild(profileSwitcherContainer);
         
         // Append the panel to the document body
         document.body.appendChild(panel);
@@ -188,6 +213,161 @@ window.MaxExtensionFloatingPanel = {
         
         this.panelElement = panel;
         return panel;
+    },
+
+    /**
+     * Creates the profile switcher UI inside the panel footer.
+     * Shows current profile and allows switching between profiles.
+     */
+    createProfileSwitcher: function() {
+        const switcherContainer = document.getElementById('max-extension-profile-switcher');
+        if (!switcherContainer) return;
+
+        // Clear existing content
+        switcherContainer.innerHTML = '';
+
+        // Create profile label
+        const profileLabel = document.createElement('div');
+        profileLabel.textContent = 'Profile:';
+        profileLabel.style.cssText = `
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.9);
+        `;
+
+        // Create profile selector dropdown
+        const profileSelector = document.createElement('select');
+        profileSelector.id = 'max-extension-profile-selector';
+        profileSelector.style.cssText = `
+            background-color: rgba(60, 60, 60, 1);
+            color: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(100, 100, 100, 0.5);
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            min-width: 120px;
+        `;
+
+        // Populate the dropdown with available profiles
+        this.availableProfiles.forEach(profileName => {
+            const option = document.createElement('option');
+            option.value = profileName;
+            option.textContent = profileName;
+            if (profileName === this.currentProfileName) {
+                option.selected = true;
+            }
+            profileSelector.appendChild(option);
+        });
+
+        // Add change event listener to the profile selector
+        profileSelector.addEventListener('change', (event) => {
+            const selectedProfileName = event.target.value;
+            this.switchToProfile(selectedProfileName);
+        });
+
+        // Append to the container
+        switcherContainer.appendChild(profileLabel);
+        switcherContainer.appendChild(profileSelector);
+    },
+
+    /**
+     * Handles switching to a different profile.
+     * @param {string} profileName - The name of the profile to switch to.
+     */
+    switchToProfile: function(profileName) {
+        // Guard against switching to the same profile
+        if (profileName === this.currentProfileName) return;
+
+        // Request profile switch from the service worker
+        chrome.runtime.sendMessage(
+            { type: 'switchProfile', profileName: profileName },
+            (response) => {
+                if (response.error) {
+                    console.error(`[floating-panel] Error switching to profile ${profileName}:`, response.error);
+                    return;
+                }
+
+                if (response.config) {
+                    // Update the current profile name
+                    this.currentProfileName = profileName;
+                    
+                    // Update global config with the new profile data
+                    window.globalMaxExtensionConfig = response.config;
+                    
+                    // Update UI - refresh both floating panel and original buttons
+                    this.refreshButtonsInPanel();
+                    
+                    console.log(`[floating-panel] Successfully switched to profile: ${profileName}`);
+                }
+            }
+        );
+    },
+
+    /**
+     * Refreshes the buttons in the floating panel after profile switch.
+     */
+    refreshButtonsInPanel: function() {
+        const panelContent = document.getElementById('max-extension-floating-panel-content');
+        if (!panelContent) return;
+
+        // Clear existing buttons
+        panelContent.innerHTML = '';
+
+        // Re-create buttons for the new profile
+        window.MaxExtensionButtonsInit.generateAndAppendCustomSendButtons(panelContent);
+        window.MaxExtensionButtonsInit.generateAndAppendToggles(panelContent);
+
+        // If panel is NOT visible, also update the original container
+        if (!this.isPanelVisible) {
+            // Find the original container and update it
+            const originalContainer = document.getElementById(window.InjectionTargetsOnWebsite.selectors.buttonsContainerId);
+            if (originalContainer) {
+                originalContainer.innerHTML = '';
+                window.MaxExtensionButtonsInit.generateAndAppendCustomSendButtons(originalContainer);
+                window.MaxExtensionButtonsInit.generateAndAppendToggles(originalContainer);
+            }
+        }
+    },
+
+    /**
+     * Loads available profiles from the service worker.
+     */
+    loadAvailableProfiles: function() {
+        chrome.runtime.sendMessage(
+            { type: 'listProfiles' },
+            (response) => {
+                if (response.profiles && Array.isArray(response.profiles)) {
+                    this.availableProfiles = response.profiles;
+                    console.log('[floating-panel] Available profiles loaded:', this.availableProfiles);
+                    
+                    // Get current profile
+                    this.getCurrentProfile();
+                }
+            }
+        );
+    },
+
+    /**
+     * Gets the current active profile from the service worker.
+     */
+    getCurrentProfile: function() {
+        chrome.runtime.sendMessage(
+            { type: 'getConfig' },
+            (response) => {
+                if (response.config) {
+                    // Find current profile name from storage
+                    chrome.storage.local.get(['currentProfile'], (result) => {
+                        if (result.currentProfile) {
+                            this.currentProfileName = result.currentProfile;
+                            console.log('[floating-panel] Current profile:', this.currentProfileName);
+                            
+                            // Create/update the profile switcher UI
+                            this.createProfileSwitcher();
+                        }
+                    });
+                }
+            }
+        );
     },
 
     /**
@@ -464,12 +644,11 @@ window.MaxExtensionFloatingPanel = {
     initialize: function() {
         this.loadPanelSettings();
         this.createFloatingPanel();
+        this.restorePanelState();
         
-        // Restore panel state after a short delay to ensure the DOM is fully loaded
-        setTimeout(() => {
-            this.restorePanelState();
-        }, 300);
+        // Load available profiles and initialize the profile switcher
+        this.loadAvailableProfiles();
         
-        logConCgp('[floating-panel] Floating panel initialized');
+        logConCgp('[floating-panel] Floating panel initialized.');
     }
 };

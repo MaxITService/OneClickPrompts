@@ -167,6 +167,10 @@ async function switchProfile(profileName) {
         if (profile) {
             await chrome.storage.local.set({ 'currentProfile': profileName });
             logConfigurationRelatedStuff(`Switched to profile: ${profileName}`);
+            
+            // Broadcast profile change to all tabs
+            broadcastProfileChange(profileName, profile);
+            
             return profile;
         } else {
             logConfigurationRelatedStuff(`Failed to switch to profile: ${profileName}`);            
@@ -175,6 +179,37 @@ async function switchProfile(profileName) {
     } catch (error) {
         handleStorageError(error);
         return null;
+    }
+}
+
+// Function to broadcast profile change to all tabs
+async function broadcastProfileChange(profileName, profileData) {
+    try {
+        const tabs = await chrome.tabs.query({});
+        tabs.forEach(tab => {
+            // Only send to URLs that match our content script patterns
+            if (tab.url && (
+                tab.url.includes('chat.openai.com') || 
+                tab.url.includes('grok.x.ai') || 
+                tab.url.includes('claude.ai') ||
+                tab.url.includes('o3') || 
+                tab.url.includes('x.ai')
+            )) {
+                chrome.tabs.sendMessage(tab.id, {
+                    type: 'profileChanged',
+                    profileName: profileName,
+                    config: profileData
+                }).catch(error => {
+                    // Suppress errors when content script is not running on a tab
+                    // This is normal for tabs that don't have our extension active
+                    logConfigurationRelatedStuff(`Could not send message to tab ${tab.id}: ${error.message}`);
+                });
+            }
+        });
+        logConfigurationRelatedStuff(`Broadcasted profile change (${profileName}) to all matching tabs`);
+    } catch (error) {
+        handleStorageError(error);
+        logConfigurationRelatedStuff(`Error broadcasting profile change: ${error.message}`);
     }
 }
 

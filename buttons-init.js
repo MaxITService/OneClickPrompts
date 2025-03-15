@@ -8,6 +8,7 @@
 // Functions:
 // - createAndInsertCustomElements: Creates and inserts custom buttons and toggles into the target container.
 // - generateAndAppendToggles: Creates and appends toggle switches (e.g., Auto-send, Hotkeys) to a specified container.
+// - updateButtonsForProfileChange: Updates all buttons and toggles in response to a profile change.
 //
 // Usage:
 // Ensure that `buttons.js` and `init.js` are loaded before this script to utilize button initialization functionalities.
@@ -109,5 +110,56 @@ window.MaxExtensionButtonsInit = {
             window.MaxExtensionFloatingPanel.initialize();
             logConCgp('[init] Floating panel has been initialized.');
         }
+    },
+    
+    /**
+     * Updates all buttons and toggles in response to a profile change.
+     * This refreshes both the floating panel and the original container.
+     */
+    updateButtonsForProfileChange: function() {
+        // Update buttons in the original container
+        const originalContainer = document.getElementById(window.InjectionTargetsOnWebsite.selectors.buttonsContainerId);
+        if (originalContainer) {
+            // Clear existing buttons and toggles
+            originalContainer.innerHTML = '';
+            
+            // Re-generate buttons and toggles with new profile data
+            this.generateAndAppendCustomSendButtons(originalContainer);
+            this.generateAndAppendToggles(originalContainer);
+            
+            logConCgp('[init] Updated buttons in original container for profile change.');
+        }
+        
+        // Update buttons in the floating panel if it exists and is initialized
+        if (window.MaxExtensionFloatingPanel && window.MaxExtensionFloatingPanel.panelElement) {
+            const panelContent = document.getElementById('max-extension-floating-panel-content');
+            if (panelContent) {
+                // Clear existing buttons and toggles
+                panelContent.innerHTML = '';
+                
+                // Re-generate buttons and toggles with new profile data
+                this.generateAndAppendCustomSendButtons(panelContent);
+                this.generateAndAppendToggles(panelContent);
+                
+                logConCgp('[init] Updated buttons in floating panel for profile change.');
+            }
+        }
     }
 };
+
+// Listen for profile change events
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === 'profileChanged') {
+        logConCgp('[init] Received profile change notification');
+        
+        // Update the global config with the new profile data
+        window.globalMaxExtensionConfig = message.config;
+        
+        // Update the UI components
+        window.MaxExtensionButtonsInit.updateButtonsForProfileChange();
+        
+        // Acknowledge the message
+        sendResponse({ success: true });
+    }
+    return true;
+});
