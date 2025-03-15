@@ -25,7 +25,7 @@
         <section class="section">
             <h2>Profile</h2>
             <div class="row">
-                <select id="profileSelect" title="Select profile">
+                <select id="profileSelect" title="Select profile" aria-label="Select profile">
                     <option value="default">Default Profile</option>
                 </select>
                 <button id="addProfile">Add Profile</button>
@@ -33,14 +33,12 @@
                 <button id="deleteProfile" class="danger">Delete</button>
                 <div id="versionContainer">
                     <p id="version"> Version 0.0.1.7</p>
-                    <p id="topExplanationText"> Your changes will be saved instantly. Reload website to apply. Pressing
+                    <p id="topExplanationText"> Your changes to the buttons will be saved automatically. Reload website to apply. Pressing
                         "Shift" while pressing a key or button changes its autosend behavior!
-
 
                         <a href="#helpSection">Go to Help Section</a>
                     </p>
-                    <p id="UserNotification">I am sorry, but due to Chrome's synced storage limits, we are no longer
-                        syncing your profiles via cloud. Export profiles manually. </p>
+
                 </div>
             </div>
             <!-- Add Profile Input and Save/Cancel Buttons -->
@@ -65,10 +63,10 @@
             <h2>Button Configuration</h2>
             <div class="row">
                 <label for="buttonIcon">Button Icon:</label>
-                <input type="text" id="buttonIcon" placeholder="✨" class="emoji-input" title="Button icon">
+                <input type="text" id="buttonIcon" placeholder="✨" class="emoji-input" title="Button icon" aria-label="Button icon">
                 <label for="buttonText">Button Template Text:</label>
-                <textarea id="buttonText" placeholder="Button Template Text" class="text-input" rows="1" title="Button template text"></textarea>
-                <label class="checkbox-row">
+                <textarea id="buttonText" placeholder="Button Template Text" class="text-input" rows="1" title="Button template text" aria-label="Button template text"></textarea>
+                <label class="checkbox-row" for="buttonAutoSendToggle">
                     <input type="checkbox" id="buttonAutoSendToggle" checked>
                     <span>Auto-send</span>
                 </label>
@@ -87,13 +85,13 @@
         <section class="section">
             <h2>Settings</h2>
             <div class="row">
-                <label class="checkbox-row">
+                <label class="checkbox-row" for="autoSendToggle">
                     <input type="checkbox" id="autoSendToggle">
                     <span>Enable Global Auto-send for profile. Disabling will disable auto-send everywhere.</span>
                 </label>
             </div>
             <div class="row">
-                <label class="checkbox-row">
+                <label class="checkbox-row" for="shortcutsToggle">
                     <input type="checkbox" id="shortcutsToggle">
                     <span>Enable Keyboard Shortcuts</span>
                 </label>
@@ -117,7 +115,7 @@
                 <button id="exportProfile">Export Profile</button>
                 <button id="importProfile">Import Profile</button>
                 <!-- Hidden file input for importing profile -->
-                <input type="file" id="importFileInput" accept="application/json" style="display: none;" title="Import profile file">
+                <input type="file" id="importFileInput" accept="application/json" style="display: none;" title="Import profile file" aria-label="Import profile file">
             </div>
             <!-- Confirmation Div -->
             <div id="confirmationDiv" class="confirmation" style="display: none;">
@@ -176,7 +174,7 @@
                 </div>
                 <br>
                 <!-- Rest of the Advanced Section Content -->
-                <div class="row">
+                <div class="row" >
                     <select id="selectorWebsiteSelect" title="Select website for configuration">
                         <option value="ChatGPT">ChatGPT</option>
                         <option value="Claude">Claude</option>
@@ -234,10 +232,11 @@
         <section class="section" id="themeSection">
             <h2>Theme</h2>
             <!-- iPhone-style toggle switch -->
-            <div class="switch-container">
+            <div class="switch-container" >
                 <label class="switch">
-                    <input type="checkbox" id="darkThemeToggle">
+                    <input type="checkbox" id="darkThemeToggle" aria-label="Enable Dark Theme">
                     <span class="slider round"></span>
+                    
                 </label>
                 <span class="switch-label">Enable Dark Theme</span>
             </div>
