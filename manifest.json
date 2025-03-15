@@ -62,6 +62,7 @@
         "buttons.js",
         "buttons-init.js",
         "interface.js",
+        "floating-panel.js",
         "buttons-injection.js",
         "init.js",
         "tests.js"

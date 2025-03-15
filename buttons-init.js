@@ -52,6 +52,13 @@ window.MaxExtensionButtonsInit = {
      * @param {HTMLElement} container - The DOM element to which custom buttons will be appended.
      */
     generateAndAppendCustomSendButtons: function(container) {
+        // Add floating panel toggle button at the beginning
+        if (window.MaxExtensionFloatingPanel) {
+            const floatingPanelToggleButton = window.MaxExtensionFloatingPanel.createPanelToggleButton();
+            container.appendChild(floatingPanelToggleButton);
+            logConCgp('[init] Floating panel toggle button has been created and appended.');
+        }
+
         globalMaxExtensionConfig.customButtons.forEach((buttonConfiguration, index) => {
             if (buttonConfiguration.separator) {
                 const separatorElement = MaxExtensionUtils.createSeparator();
@@ -96,5 +103,11 @@ window.MaxExtensionButtonsInit = {
 
         targetContainer.appendChild(customElementsContainer);
         logConCgp('[init] Custom elements have been inserted into the DOM.');
+        
+        // Initialize floating panel if available
+        if (window.MaxExtensionFloatingPanel) {
+            window.MaxExtensionFloatingPanel.initialize();
+            logConCgp('[init] Floating panel has been initialized.');
+        }
     }
 };
