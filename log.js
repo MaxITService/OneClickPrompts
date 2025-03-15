@@ -3,7 +3,7 @@
 // Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS.
 
 /**
- * Logging utility for the ChatGPT Buttons Chrome Extension.
+ * Logging utility for the OneClickPrompts Chrome Extension.
  * 
  * All logging should now use the logConCgp function defined in this file.
  * This ensures consistent logging format and centralized control over logging behavior.
@@ -28,6 +28,6 @@
  * @param  {...any} optionalParams - Additional parameters to log.
  */
 function logConCgp(message, ...optionalParams) {
-    console.log(`[Chatgpt-Buttons] ${message}`, ...optionalParams);
+    console.log(`[OneClickPrompts] ${message}`, ...optionalParams);
 }
 
