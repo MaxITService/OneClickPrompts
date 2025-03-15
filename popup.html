@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Max Extension Settings</title>
     <!-- Base styles: Root variables, body, container, section, and headings -->
     <link rel="stylesheet" href="/popup-page-styles/popup-base.css">
@@ -24,7 +25,7 @@
         <section class="section">
             <h2>Profile</h2>
             <div class="row">
-                <select id="profileSelect">
+                <select id="profileSelect" title="Select profile">
                     <option value="default">Default Profile</option>
                 </select>
                 <button id="addProfile">Add Profile</button>
@@ -33,7 +34,7 @@
                 <div id="versionContainer">
                     <p id="version"> Version 0.0.1.7</p>
                     <p id="topExplanationText"> Your changes will be saved instantly. Reload website to apply. Pressing
-                        "Shift" while pressing a key or button changes its autosend behaviour!
+                        "Shift" while pressing a key or button changes its autosend behavior!
 
 
                         <a href="#helpSection">Go to Help Section</a>
@@ -44,13 +45,15 @@
             </div>
             <!-- Add Profile Input and Save/Cancel Buttons -->
             <div id="addProfileContainer" class="profile-action-container" style="display: none;">
-                <input type="text" id="addProfileInput" placeholder="Enter profile name here">
+                <label for="addProfileInput">Enter profile name:</label>
+                <input type="text" id="addProfileInput" placeholder="Enter profile name here" title="New profile name">
                 <button id="saveAddProfile">Save</button>
                 <button id="cancelAddProfile" class="danger">Cancel</button>
             </div>
             <!-- Copy Profile Input and Save/Cancel Buttons -->
             <div id="copyProfileContainer" class="profile-action-container" style="display: none;">
-                <input type="text" id="copyProfileInput" placeholder="Enter new profile name here">
+                <label for="copyProfileInput">Enter new profile name:</label>
+                <input type="text" id="copyProfileInput" placeholder="Enter new profile name here" title="New profile name">
                 <button id="saveCopyProfile">Save</button>
                 <button id="cancelCopyProfile" class="danger">Cancel</button>
             </div>
@@ -61,8 +64,10 @@
         <section class="section">
             <h2>Button Configuration</h2>
             <div class="row">
-                <input type="text" id="buttonIcon" placeholder="✨" class="emoji-input">
-                <textarea id="buttonText" placeholder="Button Template Text" class="text-input" rows="1"></textarea>
+                <label for="buttonIcon">Button Icon:</label>
+                <input type="text" id="buttonIcon" placeholder="✨" class="emoji-input" title="Button icon">
+                <label for="buttonText">Button Template Text:</label>
+                <textarea id="buttonText" placeholder="Button Template Text" class="text-input" rows="1" title="Button template text"></textarea>
                 <label class="checkbox-row">
                     <input type="checkbox" id="buttonAutoSendToggle" checked>
                     <span>Auto-send</span>
@@ -112,7 +117,7 @@
                 <button id="exportProfile">Export Profile</button>
                 <button id="importProfile">Import Profile</button>
                 <!-- Hidden file input for importing profile -->
-                <input type="file" id="importFileInput" accept="application/json" style="display: none;">
+                <input type="file" id="importFileInput" accept="application/json" style="display: none;" title="Import profile file">
             </div>
             <!-- Confirmation Div -->
             <div id="confirmationDiv" class="confirmation" style="display: none;">
@@ -136,7 +141,7 @@
                     BACKUP YOUR PROFILE! I am not yet skillful enough in JS to make sure all updates will go without
                     problems</p>
                 <ul>
-                    <li>Pressing "Shift" while pressing a key or button changes its autosend behaviour! Works both with
+                    <li>Pressing "Shift" while pressing a key or button changes its autosend behavior! Works both with
                         clicks and keyboard shortcuts!</li>
                     <li>Keyboard shortcuts can be enabled in Settings section</li>
                     <li>In case of a problem: first step is to reload your browser.</li>
@@ -172,7 +177,7 @@
                 <br>
                 <!-- Rest of the Advanced Section Content -->
                 <div class="row">
-                    <select id="selectorWebsiteSelect">
+                    <select id="selectorWebsiteSelect" title="Select website for configuration">
                         <option value="ChatGPT">ChatGPT</option>
                         <option value="Claude">Claude</option>
                         <option value="Copilot">Copilot</option>
@@ -184,7 +189,8 @@
 
 
                 <div class="row">
-                    <textarea id="selectorConfig" class="selector-config-textarea" spellcheck="false"></textarea>
+                    <label for="selectorConfig">Selector configuration:</label>
+                    <textarea id="selectorConfig" class="selector-config-textarea" spellcheck="false" aria-label="Selector configuration" title="Enter selector configuration"></textarea>
                 </div>
                 <div class="row">
                     <button id="saveSelectors">Save Selectors</button>
