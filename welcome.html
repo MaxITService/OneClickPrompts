@@ -11,7 +11,7 @@
   <div class="container">
     <!-- Main Header -->
     <header class="section">
-      <!-- Logo добавлена здесь -->
+      <!-- Logo added here -->
       <img src="icon128.png" alt="OneClickPrompts Logo" class="logo">
       <h1 id="main-title">OneClickPrompts Instructions</h1>
     </header>
@@ -28,11 +28,19 @@
         <h2>Pinned Extension Button</h2>
         <p><strong>Important:</strong> You should pin the extension button, or you won't be able to access menu.  To do this, click on your extension menu,
           which is this button near address bar right here:</p>
-        <img src="/welcome-page-files/extension-management-button.png" alt="Extension Management Button">
+        <ul>
+          <li>
+            <img src="/welcome-page-files/extension-management-button.png" alt="Extension Management Button">
+          </li>
+        </ul>
 
         <p>(Your button may be a little bit different in different browsers. So I'm attaching next screenshot from
           other browser) then select <em>'Pin'</em> near the icon of this extension:</p>
-        <img src="/welcome-page-files/pin-extension.png" alt="Pin Extension">
+        <ul>
+          <li>
+            <img src="/welcome-page-files/pin-extension.png" alt="Pin Extension">
+          </li>
+        </ul>
       </div>
 
       <div class="instruction">
@@ -49,10 +57,12 @@
         <h2>Site-Specific Activation</h2>
         <p>If you want the extension to work only on specific websites, please do the following:</p>
         <ul>
-          <li>Right-click on the extension icon in the browser toolbar:</li>
-          <img src="/welcome-page-files/right-click-on-icon.png" alt="Right Click Extension">
-          <li>From the menu, select <em>'Manage extensions'</em>.</li>
-          <img src="/welcome-page-files/manage-extension.png" alt="Manage Extensions">
+          <li>Right-click on the extension icon in the browser toolbar:
+            <img src="/welcome-page-files/right-click-on-icon.png" alt="Right Click Extension">
+          </li>
+          <li>From the menu, select <em>'Manage extensions'</em>.
+            <img src="/welcome-page-files/manage-extension.png" alt="Manage Extensions">
+          </li>
           <li>Select the websites where you want the extension to be automatically enabled. Or just select all websites
             at once. Sometimes after the updates this option will be disabled, so this is a good troubleshooting step if
             extension is not activated</li>
@@ -88,10 +98,10 @@
    
     <div class="switch-container">
       <label class="switch">
-        <input type="checkbox" id="darkThemeToggle">
+        <input type="checkbox" id="darkThemeToggle" aria-label="Toggle Dark Theme">
         <span class="slider"></span>
+        <span class="switch-label">Dark Theme</span>
       </label>
-      <span class="switch-label">Dark Theme</span>
     </div>
   </div>
 
