@@ -1,6 +1,7 @@
 # OneClickPrompts Chrome Extension - Codebase Overview
 
-This document provides a high-level overview of the OneClickPrompts Chrome Extension codebase. It describes the purpose of each file and its role within the extension.
+This document provides a high-level overview of the OneClickPrompts Chrome Extension codebase. It describes the purpose of each file and its role within the extension. Extension was previously called "ChatGPT Quick Buttons for your text".
+
 
 ## Core Functionality
 
@@ -35,6 +36,18 @@ The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, C
     *   should create loop with custom buttons code from config.js file
 * The floating window, should NOT block access to buttons to be clicked, it should behave as if it's transparent (only visually opaque)
 *   Make floating window draggable
+
+### `floating-panel.js`
+
+*   **Purpose:** Implements a floating, customizable button panel for the extension.
+*   **Role:** Creates a draggable, resizable panel that can be toggled as an alternative to the inline injected buttons. Features include:
+    *   Dark, semi-transparent appearance (rgba(50, 50, 50, 0.7))
+    *   Positioning with the panel's bottom-left corner at the cursor location
+    *   Persistent state and position saved per website using localStorage
+    *   Draggable header and resizable body
+    *   Toggle button in the original injected button container
+    *   Closing via an "x" button to return to the injected buttons
+    *   Debounced saving (150ms delay) for efficient localStorage operations
 
 ### `init.js`
 
@@ -137,11 +150,15 @@ The extension operates as follows:
 1.  The user configures the extension through the popup interface (`popup.html` and `popup-page-scripts/*`).
 2.  The configuration is stored in Chrome's storage by the service worker (`config.js`).
 3.  When the user visits a supported website, the content scripts (`init.js` and its dependencies) are injected into the page.
-4.  The content scripts retrieve the configuration from the service worker and inject the custom buttons into the page (or creates floating window).
-5.  When the user clicks a custom button, the appropriate site-specific function is called to insert the text and trigger the send button.
+4.  The content scripts retrieve the configuration from the service worker and inject the custom buttons into the page.
+5.  Users can toggle between inline injected buttons and the floating panel via the toggle button (🔼).
+6.  The floating panel's position, size, and visibility state are saved per website and restored when revisiting.
+7.  When the user clicks a custom button (either in the inline container or floating panel), the appropriate site-specific function is called to insert the text and trigger the send button.
 
 ## Additional Notes
 
 *   The extension uses a resilient injection mechanism to ensure that the custom buttons remain active even when the target website dynamically updates its content.
 *   The `InjectionTargetsOnWebsite` class in `utils.js` centralizes the CSS selectors for different websites, making it easier to support new platforms.
-*   The extension uses a debounced save function to prevent excessive storage writes when the user is rapidly making changes.
+*   The floating panel provides an alternative UI that can be positioned anywhere on the screen, offering flexibility for different workflows.
+*   Button configurations are consistently applied between the inline injection and floating panel modes.
+*   The extension uses debounced saving to prevent excessive storage writes when the user is dragging or resizing the floating panel.
