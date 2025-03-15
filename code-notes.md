@@ -98,7 +98,7 @@ These scripts are responsible for the user interface in the extension's popup wi
 ### `popup-page-scripts/popup-page-welcome.js`
 
 *   **Purpose:** Provides functionality for the Welcome Page
-*   **Role:** Handles button clicks and events for welcom page
+*   **Role:** Handles button clicks and events for welcome page
 
 ### `popup-page-scripts/popup-page-profiles.js`
 
