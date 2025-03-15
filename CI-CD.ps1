@@ -7,6 +7,33 @@ $excludedFiles = @('.gitignore', 'CI-CD.ps1', '.aider.chat.history.md', '.aider.
 # Define the source directory as the current working directory
 $source = Get-Location
 
+# Initialize array for gitignore patterns
+$gitignorePatterns = @()
+
+# Check if .gitignore exists and parse it
+$gitignorePath = Join-Path $source ".gitignore"
+if (Test-Path $gitignorePath) {
+    Write-Host "Found .gitignore file, parsing patterns..."
+    try {
+        $gitignoreContent = Get-Content $gitignorePath -ErrorAction Stop
+        foreach ($line in $gitignoreContent) {
+            # Skip empty lines and comments
+            if (-not [string]::IsNullOrWhiteSpace($line) -and -not $line.StartsWith('#')) {
+                # Clean up the pattern (trim spaces, etc.)
+                $pattern = $line.Trim()
+                # Add the pattern to our list
+                $gitignorePatterns += $pattern
+                Write-Verbose "Added gitignore pattern: $pattern"
+            }
+        }
+        Write-Host "Parsed $($gitignorePatterns.Count) patterns from .gitignore"
+    }
+    catch {
+        Write-Warning "Error reading .gitignore file: $_"
+        # Continue with empty gitignore patterns
+    }
+}
+
 # Define the parent directory (one level up from the source)
 $parent = Split-Path $source -Parent
 
@@ -31,7 +58,8 @@ $failedCopies = @()
     The Test-ShouldExclude function calculates the relative path of the given FileSystemInfo object
     from the source directory and splits it into parts. If any part of the path (i.e., a directory name)
     starts with a dot or matches an entry in $excludedDirs, the item is excluded.
-    Additionally, for files, it checks if the filename is in the $excludedFiles list.
+    Additionally, for files, it checks if the filename is in the $excludedFiles list or 
+    if the file matches any pattern in the .gitignore file.
 #>
 function Test-ShouldExclude {
     param (
@@ -61,9 +89,72 @@ function Test-ShouldExclude {
     }
 
     # If the item is a file and its name is in the list of excluded files, exclude it
-    if (-not $Item.PSIsContainer -and $excludedFiles -contains $Item.Name) {
-        Write-Verbose "Excluding file: $($Item.FullName)"
-        return $true
+    if (-not $Item.PSIsContainer) {
+        # Exclude files in the excluded files list
+        if ($excludedFiles -contains $Item.Name) {
+            Write-Verbose "Excluding file: $($Item.FullName)"
+            return $true
+        }
+        
+        # Exclude files that start with a dot
+        if ($Item.Name.StartsWith('.')) {
+            Write-Verbose "Excluding file with dot prefix: $($Item.FullName)"
+            return $true
+        }
+    }
+
+    # Check against gitignore patterns if we have any
+    if ($gitignorePatterns.Count -gt 0) {
+        # Convert backslashes to forward slashes for gitignore pattern matching
+        $gitignorePath = $relativePath.Replace('\', '/')
+        
+        foreach ($pattern in $gitignorePatterns) {
+            # Skip empty patterns
+            if ([string]::IsNullOrWhiteSpace($pattern)) {
+                continue
+            }
+            
+            # Handle directory-specific patterns (ending with /)
+            $isDirPattern = $pattern.EndsWith('/')
+            if ($isDirPattern -and -not $Item.PSIsContainer) {
+                continue  # Skip directory patterns for files
+            }
+            
+            # Remove trailing slash for comparison
+            $cleanPattern = $pattern.TrimEnd('/')
+            
+            # Handle different pattern types
+            if ($cleanPattern.StartsWith('**/')) {
+                # Pattern like "**/foo" matches "foo" anywhere in the path
+                $matchPart = $cleanPattern.Substring(3)
+                if ($gitignorePath -like "*/$matchPart*" -or $gitignorePath -eq $matchPart) {
+                    Write-Verbose "Excluding due to gitignore pattern (subfolder anywhere): $cleanPattern -> $($Item.FullName)"
+                    return $true
+                }
+            }
+            elseif ($cleanPattern.EndsWith('/**')) {
+                # Pattern like "foo/**" matches everything inside "foo" directory
+                $matchPart = $cleanPattern.Substring(0, $cleanPattern.Length - 3)
+                if ($gitignorePath.StartsWith("$matchPart/")) {
+                    Write-Verbose "Excluding due to gitignore pattern (all inside): $cleanPattern -> $($Item.FullName)"
+                    return $true
+                }
+            }
+            elseif ($cleanPattern.Contains('*')) {
+                # Handle wildcards
+                if ($gitignorePath -like $cleanPattern) {
+                    Write-Verbose "Excluding due to gitignore wildcard pattern: $cleanPattern -> $($Item.FullName)"
+                    return $true
+                }
+            }
+            else {
+                # Direct match or directory path
+                if ($gitignorePath -eq $cleanPattern -or $gitignorePath.StartsWith("$cleanPattern/")) {
+                    Write-Verbose "Excluding due to gitignore exact pattern: $cleanPattern -> $($Item.FullName)"
+                    return $true
+                }
+            }
+        }
     }
 
     return $false
