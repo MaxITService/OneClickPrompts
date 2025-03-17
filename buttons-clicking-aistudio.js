@@ -14,7 +14,7 @@ function processAIStudioCustomSendButtonClick(event, customText, autoSend) {
     logConCgp('[AIStudio] Starting process with text:', customText);
 
     const injectionTargets = window.InjectionTargetsOnWebsite;
-    const aiStudioSelectors = injectionTargets.getSelectorsForSite('AIStudio');
+    const aiStudioSelectors = injectionTargets.selectors;
     
     let editorArea = null;
     // Try each editor selector until we find one that works

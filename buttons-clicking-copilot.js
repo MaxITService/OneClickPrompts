@@ -10,7 +10,7 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
     event.preventDefault();
     logConCgp('[buttons] Custom send button was clicked.');
 
-    const injectionTargets = new InjectionTargetsOnWebsite();
+    const injectionTargets = window.InjectionTargetsOnWebsite;
     const editorSelectors = injectionTargets.selectors.editors;
     const editorArea = editorSelectors.reduce((found, selector) => 
         found || document.querySelector(selector), null);
