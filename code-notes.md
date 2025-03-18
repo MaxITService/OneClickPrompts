@@ -172,6 +172,14 @@ These scripts are responsible for the user interface in the extension's popup wi
 *   **Purpose:** Contains CSS files for styling the popup page.
 *   **Role:** Defines the visual appearance of the popup, including layouts, colors, fonts, and responsive design.
 
+## Additional Files
+
+### `welcome.html` and `welcome-page-files/`
+
+*   **Purpose:** Onboarding page for new users with setup instructions and usage tips.
+*   **Role:** Displayed on first install and accessible from popup menu. Contains screenshots, styling, and theme toggle functionality.
+*   **Dependencies:** Triggered by `config.js` on install or manually via `popup-page-script.js`.
+
 ## Workflow
 
 The extension operates as follows:
