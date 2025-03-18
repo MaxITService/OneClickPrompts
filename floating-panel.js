@@ -480,6 +480,20 @@ window.MaxExtensionFloatingPanel = {
             const originalContainer = document.getElementById(window.InjectionTargetsOnWebsite.selectors.buttonsContainerId);
             if (originalContainer) {
                 originalContainer.style.display = 'flex';
+                
+                // Force a refresh of the configuration from storage and update UI
+                chrome.runtime.sendMessage({ type: 'getConfig' }, (response) => {
+                    if (response && response.config) {
+                        // Update the global config with the fresh profile data
+                        window.globalMaxExtensionConfig = response.config;
+                        
+                        // Update all buttons with the new profile
+                        if (window.MaxExtensionButtonsInit && window.MaxExtensionButtonsInit.updateButtonsForProfileChange) {
+                            window.MaxExtensionButtonsInit.updateButtonsForProfileChange();
+                            console.log('[floating-panel] Refreshed configuration and updated buttons after closing panel');
+                        }
+                    }
+                });
             }
         }
     },
