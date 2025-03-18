@@ -2,7 +2,6 @@
 
 This document provides a high-level overview of the OneClickPrompts Chrome Extension codebase. It describes the purpose of each file and its role within the extension. Extension was previously called "ChatGPT Quick Buttons for your text".
 
-
 ## Core Functionality
 
 The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, Copilot, DeepSeek, AI Studio, and Grok by adding customizable buttons that inject pre-defined prompts into the chat input area. It also includes features for managing profiles, enabling keyboard shortcuts, and customizing the user interface.
@@ -16,8 +15,22 @@ The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, C
 
 ### `config.js`
 
-*   **Purpose:** Service worker responsible for managing the extension's configuration data using Chrome's storage API.
-*   **Role:** Handles loading, saving, switching, creating, deleting, and listing profiles. Also manages settings like dark theme and floating panel state. This file is the central source of truth for all configurable extension settings.
+*   **Purpose:** Service worker script that manages extension configuration and settings.
+*   **Role:** Handles message passing between content scripts, popup pages, and storage. Key responsibilities:
+    *   Acts as a central hub for configuration management
+    *   Stores and retrieves button configurations in Chrome storage
+    *   Manages profiles (saving, loading, deleting)
+    *   Handles custom selector configurations
+    *   Manages floating panel settings across different websites
+    *   Provides unified storage for all extension settings
+    *   Implements reset functionality for various setting types
+*   **Message Handlers:**
+    *   Processes messages from content scripts and popup pages
+    *   Handles floating panel settings with message types:
+        *   'getFloatingPanelSettings': Retrieves settings for a specific website
+        *   'saveFloatingPanelSettings': Saves settings for a specific website
+        *   'resetFloatingPanelSettings': Removes all floating panel settings
+    *   Stores floating panel settings with the prefix 'floating_panel_' followed by the website hostname
 
 ### `default-config.json`
 
@@ -43,11 +56,15 @@ The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, C
 *   **Role:** Creates a draggable, resizable panel that can be toggled as an alternative to the inline injected buttons. Features include:
     *   Dark, semi-transparent appearance (rgba(50, 50, 50, 0.7))
     *   Positioning with the panel's bottom-left corner at the cursor location
-    *   Persistent state and position saved per website using localStorage
+    *   Persistent state and position saved per website using Chrome's extension storage via the service worker
     *   Draggable header and resizable body
     *   Toggle button in the original injected button container
     *   Closing via an "x" button to return to the injected buttons
-    *   Debounced saving (150ms delay) for efficient localStorage operations
+    *   Debounced saving (150ms delay) for efficient storage operations
+*   **Dependencies:**
+    *   **config.js (Service Worker):** Directly communicates with the service worker using `chrome.runtime.sendMessage` to save and load panel settings per website hostname. Sends messages with types 'getFloatingPanelSettings' and 'saveFloatingPanelSettings'.
+    *   **utils.js:** Uses utility functions for logging.
+    *   **profile-switcher.js:** For managing profile switching within the floating panel.
 
 ### `init.js`
 
@@ -137,6 +154,18 @@ These scripts are responsible for the user interface in the extension's popup wi
 
 *   **Purpose:** Handles the advanced selector configuration.
 *   **Role:** Enables users to customize CSS selectors for different AI chat platforms.
+
+### `popup-page-scripts/popup-page-floating-window-handler.js`
+
+*   **Purpose:** Handles the resetting of floating panel settings across all websites.
+*   **Role:** Provides functionality for the "Reset Floating Window Settings" button in the Settings section of the popup interface. Features include:
+    *   Clearing all floating panel settings from Chrome's extension storage
+    *   Targeting only settings with the 'floating_panel_' prefix
+    *   Providing user feedback through console logs and toast notifications
+    *   Allowing panels to naturally reset to default positions and states on next page load
+*   **Dependencies:**
+    *   **config.js (Service Worker):** Directly communicates with the service worker using `chrome.runtime.sendMessage` to reset all floating panel settings by sending a message with type 'resetFloatingPanelSettings'. The service worker handles finding and removing all relevant settings from Chrome's storage.
+    *   **popup.js:** Integrated with the popup interface to provide user feedback via toast notifications and console logging.
 
 ### `popup-page-styles/*`
 
