@@ -416,7 +416,82 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 }
             })();
             return true;
+        case 'resetAdvancedSelectors':
+            clearAdvancedSelectors().then(result => {
+                sendResponse({ success: result });
+                logConfigurationRelatedStuff('Reset advanced selectors');
+            }).catch(error => {
+                handleStorageError(error);
+                sendResponse({ error: error.message });
+            });
+            return true;
         // ----- End Custom Selectors Cases -----
+            
+        // ----- Floating Panel Settings Cases -----
+        case 'getFloatingPanelSettings':
+            if (!request.hostname) {
+                sendResponse({ error: 'Hostname is required' });
+                return true;
+            }
+            
+            const floatingPanelKey = 'floating_panel_' + request.hostname;
+            chrome.storage.local.get([floatingPanelKey], result => {
+                if (result && result[floatingPanelKey]) {
+                    sendResponse({ settings: result[floatingPanelKey] });
+                    logConfigurationRelatedStuff(`Retrieved floating panel settings for ${request.hostname}`);
+                } else {
+                    sendResponse({ settings: null });
+                    logConfigurationRelatedStuff(`No saved floating panel settings for ${request.hostname}`);
+                }
+            });
+            return true;
+            
+        case 'saveFloatingPanelSettings':
+            if (!request.hostname || !request.settings) {
+                sendResponse({ error: 'Hostname and settings are required' });
+                return true;
+            }
+            
+            const saveKey = 'floating_panel_' + request.hostname;
+            const saveData = {};
+            saveData[saveKey] = request.settings;
+            
+            chrome.storage.local.set(saveData, () => {
+                if (chrome.runtime.lastError) {
+                    handleStorageError(chrome.runtime.lastError);
+                    sendResponse({ success: false, error: chrome.runtime.lastError.message });
+                } else {
+                    sendResponse({ success: true });
+                    logConfigurationRelatedStuff(`Saved floating panel settings for ${request.hostname}`);
+                }
+            });
+            return true;
+            
+        case 'resetFloatingPanelSettings':
+            chrome.storage.local.get(null, result => {
+                const floatingPanelKeys = Object.keys(result).filter(key => 
+                    key.startsWith('floating_panel_')
+                );
+                
+                if (floatingPanelKeys.length === 0) {
+                    sendResponse({ success: true, count: 0 });
+                    logConfigurationRelatedStuff('No floating panel settings found to reset');
+                    return;
+                }
+                
+                chrome.storage.local.remove(floatingPanelKeys, () => {
+                    if (chrome.runtime.lastError) {
+                        handleStorageError(chrome.runtime.lastError);
+                        sendResponse({ success: false, error: chrome.runtime.lastError.message });
+                    } else {
+                        sendResponse({ success: true, count: floatingPanelKeys.length });
+                        logConfigurationRelatedStuff(`Reset ${floatingPanelKeys.length} floating panel settings`);
+                    }
+                });
+            });
+            return true;
+        // ----- End Floating Panel Settings Cases -----
+            
         default:
             logConfigurationRelatedStuff('Unknown message type received:', request.type);
             sendResponse({ error: 'Unknown message type' });

@@ -527,7 +527,7 @@ window.MaxExtensionFloatingPanel = {
         
         // Clear existing content in the panel
         panelContent.innerHTML = '';
-        
+
         // Get all the button configurations from global config
         const buttonConfigs = globalMaxExtensionConfig.customButtons;
         let configIndex = 0;  // Track which config we're on
@@ -619,22 +619,37 @@ window.MaxExtensionFloatingPanel = {
     },
 
     /**
-     * Loads panel settings from localStorage.
+     * Loads panel settings from Chrome's storage through the config service worker.
      * If no settings are found, default settings are used.
      */
     loadPanelSettings: function() {
         try {
-            const hostname = window.location.hostname;
-            const storageKey = this.storageKeyPrefix + hostname;
-            const savedSettings = localStorage.getItem(storageKey);
+            // Initialize with default settings immediately to avoid null references
+            this.currentPanelSettings = { ...this.defaultPanelSettings };
             
-            if (savedSettings) {
-                this.currentPanelSettings = JSON.parse(savedSettings);
-                logConCgp('[floating-panel] Loaded panel settings for ' + hostname);
-            } else {
-                this.currentPanelSettings = { ...this.defaultPanelSettings };
-                logConCgp('[floating-panel] Using default panel settings for ' + hostname);
-            }
+            const hostname = window.location.hostname;
+            
+            // Use chrome.runtime.sendMessage to get settings from config service worker
+            chrome.runtime.sendMessage({
+                type: 'getFloatingPanelSettings',
+                hostname: hostname
+            }, (response) => {
+                if (response && response.settings) {
+                    this.currentPanelSettings = response.settings;
+                    logConCgp('[floating-panel] Loaded panel settings for ' + hostname);
+                } else {
+                    // Keep the default settings we already set
+                    logConCgp('[floating-panel] Using default panel settings for ' + hostname);
+                }
+                
+                // Apply settings to panel if it exists
+                if (this.panelElement) {
+                    this.updatePanelFromSettings();
+                }
+                
+                // Restore panel visibility state after settings are loaded
+                this.restorePanelState();
+            });
         } catch (error) {
             logConCgp('[floating-panel] Error loading panel settings: ' + error.message);
             this.currentPanelSettings = { ...this.defaultPanelSettings };
@@ -642,16 +657,56 @@ window.MaxExtensionFloatingPanel = {
     },
 
     /**
-     * Saves panel settings to localStorage.
+     * Saves panel settings to Chrome's storage through the config service worker.
      */
     savePanelSettings: function() {
         try {
             const hostname = window.location.hostname;
-            const storageKey = this.storageKeyPrefix + hostname;
-            localStorage.setItem(storageKey, JSON.stringify(this.currentPanelSettings));
-            logConCgp('[floating-panel] Saved panel settings for ' + hostname);
+            
+            // Use chrome.runtime.sendMessage to save settings via config service worker
+            chrome.runtime.sendMessage({
+                type: 'saveFloatingPanelSettings',
+                hostname: hostname,
+                settings: this.currentPanelSettings
+            }, (response) => {
+                if (response && response.success) {
+                    logConCgp('[floating-panel] Saved panel settings for ' + hostname);
+                } else {
+                    logConCgp('[floating-panel] Failed to save panel settings for ' + hostname);
+                }
+            });
         } catch (error) {
             logConCgp('[floating-panel] Error saving panel settings: ' + error.message);
+        }
+    },
+    
+    /**
+     * Updates the panel's appearance and position based on current settings.
+     * Called after settings are loaded or changed.
+     */
+    updatePanelFromSettings: function() {
+        if (!this.panelElement) return;
+        
+        this.panelElement.style.width = `${this.currentPanelSettings.width}px`;
+        this.panelElement.style.height = `${this.currentPanelSettings.height}px`;
+        this.panelElement.style.left = `${this.currentPanelSettings.posX}px`;
+        this.panelElement.style.top = `${this.currentPanelSettings.posY}px`;
+        
+        // Update opacity
+        const bgOpacity = this.currentPanelSettings.opacity;
+        this.panelElement.style.backgroundColor = `rgba(50, 50, 50, ${bgOpacity})`;
+        
+        // Update header and footer opacity
+        const headerFooterOpacity = bgOpacity + 0.1;
+        const header = document.getElementById('max-extension-floating-panel-header');
+        const footer = document.getElementById('max-extension-profile-switcher');
+        
+        if (header) {
+            header.style.backgroundColor = `rgba(40, 40, 40, ${headerFooterOpacity})`;
+        }
+        
+        if (footer) {
+            footer.style.backgroundColor = `rgba(40, 40, 40, ${headerFooterOpacity})`;
         }
     },
 
@@ -671,9 +726,14 @@ window.MaxExtensionFloatingPanel = {
      * This method should be called when the extension is initialized.
      */
     initialize: function() {
-        this.loadPanelSettings();
+        // First, set default settings to avoid null reference
+        this.currentPanelSettings = { ...this.defaultPanelSettings };
+        
+        // Create the panel with default settings initially
         this.createFloatingPanel();
-        this.restorePanelState();
+        
+        // Load settings and update the panel once settings are available
+        this.loadPanelSettings();
         
         // Load available profiles and initialize the profile switcher
         this.loadAvailableProfiles();

@@ -267,6 +267,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('autoSendToggle').addEventListener('change', updateGlobalSettings);
     document.getElementById('shortcutsToggle').addEventListener('change', updateGlobalSettings);
     document.getElementById('revertDefault').addEventListener('click', revertToDefault);
+    
+    // Floating Window Settings
+    document.getElementById('resetFloatingWindowSettings').addEventListener('click', resetFloatingWindowSettings);
 
     // Drag and drop events - attach them but implementation is in customButtons.js
     buttonCardsList.addEventListener('dragstart', handleDragStart);
