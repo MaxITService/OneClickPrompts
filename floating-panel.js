@@ -184,10 +184,14 @@ window.MaxExtensionFloatingPanel = {
             justify-content: space-between;
             align-items: center;
             border-top: 1px solid rgba(100, 100, 100, 0.3);
+            cursor: move;
         `;
 
         // Add drag functionality to header
         this.makeDraggable(panel, panelHeader);
+        
+        // Also add drag functionality to the profile switcher (as a backup in case header is off-screen)
+        this.makeDraggable(panel, profileSwitcherContainer);
         
         // Append elements to the panel
         panel.appendChild(panelHeader);
@@ -247,6 +251,17 @@ window.MaxExtensionFloatingPanel = {
             cursor: pointer;
             min-width: 120px;
         `;
+        
+        // Prevent dragging when interacting with the dropdown
+        profileSelector.addEventListener('mousedown', (event) => {
+            // Stop the event from bubbling up to the container's mousedown handler
+            event.stopPropagation();
+        });
+        
+        profileSelector.addEventListener('click', (event) => {
+            // Stop the event from bubbling up to the container
+            event.stopPropagation();
+        });
 
         // Populate the dropdown with available profiles
         this.availableProfiles.forEach(profileName => {
