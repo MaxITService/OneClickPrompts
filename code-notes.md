@@ -66,6 +66,44 @@ The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, C
     *   **utils.js:** Uses utility functions for logging.
     *   **profile-switcher.js:** For managing profile switching within the floating panel.
 
+### `floating-panel-ui.js`
+
+*   **Purpose:** Contains all UI-related functionality for the floating panel.
+*   **Role:** Handles creation, layout, drag behavior, and button moving logic for the floating panel. Key functions:
+    *   `createFloatingPanel()`: Creates the panel DOM element with header, content container, and footer
+    *   `makeDraggable()`: Adds drag functionality to panel elements
+    *   `positionPanelAtCursor()`: Positions the panel relative to the cursor location
+    *   `togglePanel()`: Handles showing/hiding the panel and moving buttons between containers
+    *   `restorePanelState()`: Ensures the panel appears in the correct visibility state based on saved settings
+    *   Notable fixes:
+        *   Prevents double-toggling when panel is first created by avoiding `loadPanelSettings()` call
+        *   Only restores panel visibility if it doesn't match the desired state already
+        *   Maintains consistent state when summoning panel from toggle button
+
+### `floating-panel-settings.js`
+
+*   **Purpose:** Handles settings persistence and profile management for the floating panel.
+*   **Role:** Includes methods for loading/saving panel settings, debouncing saves, and profile switching. Key functions:
+    *   `loadPanelSettings()`: Retrieves settings from the service worker for the current hostname
+    *   `savePanelSettings()`: Sends updated settings to the service worker for storage
+    *   `debouncedSavePanelSettings()`: Waits 150ms before saving to reduce storage operations
+    *   `loadAvailableProfiles()`: Gets list of profiles from the service worker
+    *   `switchToProfile()`: Changes the current profile and refreshes floating panel content
+
+### Code File Dependencies for Floating Panel:
+
+*   **Initialization Flow:**
+    1. `floating-panel.js`: Defines the namespace and shared properties
+    2. `floating-panel-settings.js`: Adds settings-related methods to the namespace
+    3. `floating-panel-ui.js`: Adds UI-related methods to the namespace
+    4. `buttons-init.js`: Calls `initialize()` and creates toggle button
+    
+*   **Panel Summoning Process:**
+    1. Toggle button calls `togglePanel(event)`
+    2. First call creates panel without loading settings to avoid race conditions
+    3. Panel is positioned and displayed immediately
+    4. Settings are saved asynchronously
+
 ### `init.js`
 
 *   **Purpose:** Main initialization script for the content script.
