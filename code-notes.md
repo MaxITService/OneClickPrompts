@@ -43,12 +43,8 @@ The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, C
 *   **Role:** Centralizes logging through the `logConCgp` function, ensuring a consistent format and easy control over logging behavior.
 
 ### `event-handlers.js`
-*   **Purpose:** Creates floating window with buttons on the screen
-*   **Role:** floating window CSS:
-    *   should be dark theme
-    *   should create loop with custom buttons code from config.js file
-* The floating window, should NOT block access to buttons to be clicked, it should behave as if it's transparent (only visually opaque)
-*   Make floating window draggable
+*   **Purpose:** For future use, file is empty
+*   **Role:** For future use
 
 ### `floating-panel.js`
 
