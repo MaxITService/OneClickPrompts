@@ -60,7 +60,6 @@ The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, C
 *   **Dependencies:**
     *   **config.js (Service Worker):** Directly communicates with the service worker using `chrome.runtime.sendMessage` to save and load panel settings per website hostname. Sends messages with types 'getFloatingPanelSettings' and 'saveFloatingPanelSettings'.
     *   **utils.js:** Uses utility functions for logging.
-    *   **profile-switcher.js:** For managing profile switching within the floating panel.
 
 ### `floating-panel-ui-creation.js`
 
@@ -71,6 +70,9 @@ The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, C
     *   `makeDraggable()`: Enables drag functionality on an element via a handle
     *   `positionPanelAtCursor()`: Positions the panel relative to the mouse cursor
     *   `createPanelToggleButton()`: Creates the toggle button for summoning the floating panel
+*   **Dependencies:**
+    *   **floating-panel.js:** Uses the namespace and properties defined here
+    *   **utils.js:** Uses logging utilities
 
 ### `floating-panel-ui-interaction.js`
 
@@ -81,6 +83,10 @@ The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, C
     *   `updatePanelFromSettings()`: Updates the panel's appearance and position
     *   `restorePanelState()`: Restores the panel visibility based on saved settings
     *   `refreshButtonsInPanel()`: Refreshes the buttons displayed in the panel after a profile switch
+*   **Dependencies:**
+    *   **floating-panel.js:** Uses the namespace and properties defined here
+    *   **utils.js:** Uses logging utilities
+    *   **floating-panel-ui-creation.js:** Calls methods from here during panel initialization
 
 ### `floating-panel-settings.js`
 
@@ -91,6 +97,11 @@ The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, C
     *   `debouncedSavePanelSettings()`: Waits 150ms before saving to reduce storage operations
     *   `loadAvailableProfiles()`: Gets list of profiles from the service worker
     *   `switchToProfile()`: Changes the current profile and refreshes floating panel content
+*   **Dependencies:**
+    *   **floating-panel.js:** Uses the namespace and properties defined here
+    *   **floating-panel-ui-creation.js:** Calls the profile switcher creation method
+    *   **floating-panel-ui-interaction.js:** Calls methods to update the UI and refresh buttons
+    *   **config.js (Service Worker):** Communicates with the service worker for settings persistence
 
 ### Code File Dependencies for Floating Panel:
 
@@ -106,6 +117,13 @@ The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, C
     2. First call creates panel without loading settings to avoid race conditions
     3. Panel is positioned and displayed immediately
     4. Settings are saved asynchronously
+
+*   **Implementation Notes:**
+    *   The floating panel UI was split into creation and interaction files to better separate concerns
+    *   Creation methods handle the DOM structure and initial behavior setup
+    *   Interaction methods manage state transitions and dynamic behavior
+    *   All methods share the same namespace (`window.MaxExtensionFloatingPanel`) defined in `floating-panel.js`
+    *   This modular approach makes the code more maintainable while preserving functionality
 
 ### `init.js`
 
