@@ -64,7 +64,8 @@
         "interface.js",
         "floating-panel.js",
         "floating-panel-settings.js",
-        "floating-panel-ui.js",        
+        "floating-panel-ui-creation.js",
+        "floating-panel-ui-interaction.js",
         "buttons-injection.js",
         "init.js",
         "tests.js"
