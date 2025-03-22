@@ -5,6 +5,33 @@
 // This file contains all UI-related functionality for the floating panel,
 // including creation, layout, drag behavior, and button moving logic.
 // It extends the window.MaxExtensionFloatingPanel namespace with the corresponding methods.
+//
+// Key Components:
+// 1. Panel Creation - Creates the panel with header, content area, and profile switcher
+// 2. Drag Behavior - Makes the panel draggable by the header or footer
+// 3. Panel Visibility - Toggles the panel and handles state persistence
+// 4. Button Movement - Moves buttons between the original container and floating panel
+// 5. Profile Switching UI - Creates and manages the profile dropdown in the panel footer
+//
+// Key Methods:
+// - createFloatingPanel(): Creates the panel DOM structure with styling
+// - makeDraggable(): Adds drag functionality to specified elements
+// - togglePanel(): Handles panel visibility toggling and button movement
+// - moveButtonsToPanel(): Moves buttons from their original container to the panel
+// - restorePanelState(): Ensures panel visibility matches saved settings
+// - positionPanelAtCursor(): Positions the panel relative to mouse cursor
+// - createPanelToggleButton(): Creates the button that summons the floating panel
+//
+// Known Issues & Fixes:
+// - The togglePanel() method avoids loadPanelSettings() when initially creating the panel
+//   to prevent race conditions that could cause the panel to disappear after summoning
+// - restorePanelState() only toggles the panel if its current state doesn't match the desired state
+//   to prevent unintended toggling when loading settings
+//
+// Dependencies:
+// - floating-panel.js: Provides the namespace and shared properties
+// - floating-panel-settings.js: Provides settings management methods
+// - utils.js: For logging functionality
 
 'use strict';
 

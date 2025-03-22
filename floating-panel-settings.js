@@ -5,6 +5,33 @@
 // This file handles settings persistence and profile management for the floating panel.
 // It includes methods for loading/saving panel settings, debouncing saves, and profile switching.
 // These functions extend the window.MaxExtensionFloatingPanel namespace.
+//
+// Key Components:
+// 1. Settings Management - Loading and saving panel configuration per website
+// 2. Storage Integration - Communication with the config.js service worker
+// 3. Profile Management - Loading available profiles and handling profile switching
+// 4. Initialization - Setup of the floating panel system
+//
+// Key Methods:
+// - loadPanelSettings(): Fetches settings from service worker for current hostname
+// - savePanelSettings(): Stores current panel settings via service worker
+// - debouncedSavePanelSettings(): Throttles saves to improve performance
+// - loadAvailableProfiles(): Gets profile list from service worker
+// - getCurrentProfile(): Fetches and sets current active profile
+// - switchToProfile(): Changes active profile and updates panel content
+// - initialize(): Sets up the floating panel (creates UI and loads settings)
+//
+// Implementation Details:
+// - All settings are stored with the prefix 'floating_panel_' followed by hostname
+// - Settings are loaded asynchronously via chrome.runtime.sendMessage
+// - The panel uses a debounce mechanism (150ms) to avoid excessive storage writes
+// - Each website has its own panel settings (position, size, visibility)
+// - Profile switching refreshes the buttons shown in the panel
+//
+// Dependencies:
+// - floating-panel.js: Provides the namespace and shared properties
+// - floating-panel-ui.js: Provides UI update methods
+// - config.js (Service Worker): Handles persistent storage operations
 
 'use strict';
 
