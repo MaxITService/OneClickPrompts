@@ -5,6 +5,6 @@ If you Just received this file. Then start your next message acknowledging that 
 For all the code:
 Do not remove comments, unless associated code is also removed.
 When writing new comments, write them in their final form. (not "added a new function...")
-For logging: Use logConCgp for console logging. This function is located in log.js. This function is not available in pop-up or welcome pages. 
+For logging: Use logConCgp for console logging. This function is located in log.js. Frontend also has alternative logging method.
 
 
