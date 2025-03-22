@@ -109,6 +109,19 @@ window.MaxExtensionButtonsInit = {
         if (window.MaxExtensionFloatingPanel) {
             window.MaxExtensionFloatingPanel.initialize();
             logConCgp('[init] Floating panel has been initialized.');
+            
+            // Check if the floating panel should be visible after initialization
+            // and hide the default container if needed
+            setTimeout(() => {
+                if (window.MaxExtensionFloatingPanel.currentPanelSettings && 
+                    window.MaxExtensionFloatingPanel.currentPanelSettings.isVisible) {
+                    // Hide the default container if floating panel should be visible
+                    if (customElementsContainer) {
+                        customElementsContainer.style.display = 'none';
+                        logConCgp('[init] Default button container hidden because floating panel should be visible.');
+                    }
+                }
+            }, 200); // Small delay to ensure panel settings have been loaded
         }
     },
     
