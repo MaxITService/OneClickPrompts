@@ -62,19 +62,25 @@ The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, C
     *   **utils.js:** Uses utility functions for logging.
     *   **profile-switcher.js:** For managing profile switching within the floating panel.
 
-### `floating-panel-ui.js`
+### `floating-panel-ui-creation.js`
 
-*   **Purpose:** Contains all UI-related functionality for the floating panel.
-*   **Role:** Handles creation, layout, drag behavior, and button moving logic for the floating panel. Key functions:
-    *   `createFloatingPanel()`: Creates the panel DOM element with header, content container, and footer
-    *   `makeDraggable()`: Adds drag functionality to panel elements
-    *   `positionPanelAtCursor()`: Positions the panel relative to the cursor location
-    *   `togglePanel()`: Handles showing/hiding the panel and moving buttons between containers
-    *   `restorePanelState()`: Ensures the panel appears in the correct visibility state based on saved settings
-    *   Notable fixes:
-        *   Prevents double-toggling when panel is first created by avoiding `loadPanelSettings()` call
-        *   Only restores panel visibility if it doesn't match the desired state already
-        *   Maintains consistent state when summoning panel from toggle button
+*   **Purpose:** Contains UI creation and basic behavior methods for the floating panel.
+*   **Role:** Handles creation of the panel DOM structure, profile switcher, drag functionality, positioning at the cursor, and the creation of the toggle button. Key functions:
+    *   `createFloatingPanel()`: Creates the panel element with header, content container, and footer
+    *   `createProfileSwitcher()`: Builds the profile dropdown in the panel footer
+    *   `makeDraggable()`: Enables drag functionality on an element via a handle
+    *   `positionPanelAtCursor()`: Positions the panel relative to the mouse cursor
+    *   `createPanelToggleButton()`: Creates the toggle button for summoning the floating panel
+
+### `floating-panel-ui-interaction.js`
+
+*   **Purpose:** Contains UI interaction and state management methods for the floating panel.
+*   **Role:** Handles toggling panel visibility, moving buttons between containers, updating the panel appearance from settings, restoring state, and refreshing buttons. Key functions:
+    *   `togglePanel()`: Toggles the floating panel's visibility and manages button movement
+    *   `moveButtonsToPanel()`: Moves buttons from the original container to the panel
+    *   `updatePanelFromSettings()`: Updates the panel's appearance and position
+    *   `restorePanelState()`: Restores the panel visibility based on saved settings
+    *   `refreshButtonsInPanel()`: Refreshes the buttons displayed in the panel after a profile switch
 
 ### `floating-panel-settings.js`
 
@@ -91,8 +97,9 @@ The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, C
 *   **Initialization Flow:**
     1. `floating-panel.js`: Defines the namespace and shared properties
     2. `floating-panel-settings.js`: Adds settings-related methods to the namespace
-    3. `floating-panel-ui.js`: Adds UI-related methods to the namespace
-    4. `buttons-init.js`: Calls `initialize()` and creates toggle button
+    3. `floating-panel-ui-creation.js`: Adds UI creation methods to the namespace
+    4. `floating-panel-ui-interaction.js`: Adds UI interaction methods to the namespace
+    5. `buttons-init.js`: Calls `initialize()` and creates toggle button
     
 *   **Panel Summoning Process:**
     1. Toggle button calls `togglePanel(event)`

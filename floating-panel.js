@@ -4,7 +4,8 @@
 // Documentation:
 // This file implements the entry point for the OneClickPrompts floating panel.
 // It defines the window.MaxExtensionFloatingPanel namespace (with common properties)
-// and loads additional functionality split into two files: floating-panel-ui.js and floating-panel-settings.js.
+// and loads additional functionality split into separate files: floating-panel-ui-creation.js, 
+// floating-panel-ui-interaction.js, and floating-panel-settings.js.
 //
 // Structure:
 // 1. Namespace: window.MaxExtensionFloatingPanel - Global object containing all floating panel functionality
@@ -19,7 +20,8 @@
 //    - savePositionTimer: Used for debounced settings saves
 //
 // Dependencies:
-// - floating-panel-ui.js: Contains UI creation and interaction methods
+// - floating-panel-ui-creation.js: Contains UI creation methods
+// - floating-panel-ui-interaction.js: Contains UI interaction methods
 // - floating-panel-settings.js: Contains settings and profile management
 // - config.js (Service Worker): Handles persistent storage of panel settings
 //

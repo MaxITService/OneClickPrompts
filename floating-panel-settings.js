@@ -30,7 +30,8 @@
 //
 // Dependencies:
 // - floating-panel.js: Provides the namespace and shared properties
-// - floating-panel-ui.js: Provides UI update methods
+// - floating-panel-ui-creation.js: Provides UI creation methods
+// - floating-panel-ui-interaction.js: Provides UI interaction methods
 // - config.js (Service Worker): Handles persistent storage operations
 
 'use strict';
