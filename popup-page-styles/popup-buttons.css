@@ -104,12 +104,19 @@ button.danger:hover {
 
 /* Styling when a button item is being dragged */
 .button-item.dragging {
-    transform: scale(0.8);               /* Shrinks to 80% while dragging */
-    background-color: #d4f8d4 !important;  /* Light green highlight */
+    /* Existing styles */
+    transform: scale(0.8);
+    background-color: #d4f8d4 !important;
     opacity: 0.8;
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     cursor: grabbing;
     z-index: 2;
+
+    /* Ensure transform transitions don't conflict horribly */
+    /* The scale is applied instantly, the FLIP transform handles position */
+    /* We might need to combine scale and translate in the FLIP transform */
+    /* Let's adjust the FLIP logic slightly */
+    will-change: transform, opacity; /* Keep will-change */
 }
 
 /* ------------------------------------------------------------------------- */

@@ -193,7 +193,7 @@ function autoScroll(e) {
 
 function handleDragOver(e) {
     e.preventDefault();
-    if (!isDragging) return;
+    if (!isDragging || !draggedItem) return; // Added check for draggedItem
 
     e.dataTransfer.dropEffect = 'move';
     autoScroll(e);
@@ -205,15 +205,18 @@ function handleDragOver(e) {
 
     const parent = target.parentNode;
     // --- Get ALL child elements BEFORE the DOM change ---
-    // Convert HTMLCollection to an array for easier handling
     const children = Array.from(parent.children);
 
-    // --- FLIP: First - Record the starting positions of ALL elements (except the dragged one) ---
+    // --- FLIP: First - Record the starting positions ---
     const firstPositions = new Map();
+    let firstDraggedRect = null; // Store draggedItem's initial position
+
     children.forEach(child => {
-        // Exclude the dragged item itself from animation calculations
-        if (child !== draggedItem) {
-            firstPositions.set(child, child.getBoundingClientRect());
+        const rect = child.getBoundingClientRect();
+        if (child === draggedItem) {
+            firstDraggedRect = rect; // Record initial position of dragged item
+        } else {
+            firstPositions.set(child, rect); // Record for background items
         }
     });
 
@@ -222,63 +225,96 @@ function handleDragOver(e) {
     const offsetY = e.clientY - bounding.top;
     const isBefore = offsetY < bounding.height / 2;
 
-    // Remember the current siblings to avoid inserting the item relative to itself
     const currentNextSibling = draggedItem.nextSibling;
     const currentPreviousSibling = draggedItem.previousSibling;
 
+    let domChanged = false; // Flag to track if DOM was actually modified
     if (isBefore) {
-         // Insert ONLY if the target is not the current next sibling
         if (target !== currentNextSibling) {
             parent.insertBefore(draggedItem, target);
+            domChanged = true;
         }
     } else {
-        // Insert ONLY if the target is not the current previous sibling
         if (target !== currentPreviousSibling) {
-           parent.insertBefore(draggedItem, target.nextSibling);
+            parent.insertBefore(draggedItem, target.nextSibling);
+            domChanged = true;
         }
     }
     // --- END of DOM change ---
 
+    // --- Only proceed with animations if the DOM actually changed ---
+    if (domChanged) {
+        // --- FLIP: Last, Invert, Play for BACKGROUND items ---
+        children.forEach(child => {
+            if (child !== draggedItem && firstPositions.has(child)) {
+                const firstRect = firstPositions.get(child);
+                const lastRect = child.getBoundingClientRect(); // Last
 
-    // --- FLIP: Last, Invert, Play This is for items that are not dragged, the ones at the background ---
-    children.forEach(child => {
-        // Again, process only elements that are NOT the dragged item
-        if (child !== draggedItem && firstPositions.has(child)) {
-            const firstRect = firstPositions.get(child);
-            // --- Last: Get the new positions AFTER the DOM change ---
-            const lastRect = child.getBoundingClientRect();
+                const deltaX = firstRect.left - lastRect.left;
+                const deltaY = firstRect.top - lastRect.top;
 
-            // --- Invert: Calculate the offset and apply the inverse transform ---
-            const deltaX = firstRect.left - lastRect.left;
-            const deltaY = firstRect.top - lastRect.top;
+                if (deltaX !== 0 || deltaY !== 0) {
+                    child.style.transition = 'transform 0s'; // Invert (No transition)
+                    child.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+                    child.offsetWidth; // Force reflow
 
-            // If the element actually moved
-            if (deltaX !== 0 || deltaY !== 0) {
-                // Apply the inverse transform WITHOUT animation
-                child.style.transition = 'transform 0s';
-                child.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+                    child.style.transition = 'transform 200ms ease-in-out'; // Play
+                    child.style.transform = '';
 
-                // --- Important: Force the browser to recalculate styles ---
-                // Reading offsetWidth forces the browser to apply the styles immediately
-                child.offsetWidth;
-
-                // --- Play: Enable the animation and remove the transform ---
-                child.style.transition = 'transform 200ms ease-in-out'; // Set your desired duration and easing
-                child.style.transform = ''; // Animate back to the natural position (transform: none)
-
-                // --- Cleanup (Recommended): Remove the transition after animation completes ---
-                // so it doesn't interfere with subsequent operations or other styles
-                child.addEventListener('transitionend', () => {
+                    child.addEventListener('transitionend', () => {
+                        child.style.transition = '';
+                    }, { once: true });
+                } else {
                     child.style.transition = '';
-                }, { once: true }); // Executes once and removes itself
+                    child.style.transform = '';
+                }
+            }
+        });
+
+        // --- FLIP: Last, Invert, Play for DRAGGED item ---
+        if (firstDraggedRect) { // Ensure we recorded the initial position
+            const lastDraggedRect = draggedItem.getBoundingClientRect(); // Last
+
+            const deltaDraggedX = firstDraggedRect.left - lastDraggedRect.left;
+            const deltaDraggedY = firstDraggedRect.top - lastDraggedRect.top;
+
+             // Check if the element's calculated position actually changed
+            if (deltaDraggedX !== 0 || deltaDraggedY !== 0) {
+                // Apply inverse transform immediately WITHOUT transition
+                draggedItem.style.transition = 'transform 0s';
+                draggedItem.style.transform = `translate(${deltaDraggedX}px, ${deltaDraggedY}px)`;
+
+                // Force reflow is crucial here
+                draggedItem.offsetWidth;
+
+                // Play: Apply transition and animate back to natural position (transform: '')
+                // Use a slightly shorter duration as it's actively moving
+                draggedItem.style.transition = 'transform 150ms ease-out';
+                draggedItem.style.transform = '';
+
+                // Cleanup: Remove transition after animation.
+                // NOTE: This might be problematic due to rapid 'dragover' events.
+                // A flag or debouncing might be needed for robust cleanup.
+                // For simplicity here, we'll use 'once', but be aware it might
+                // get interrupted by the next dragover event.
+                draggedItem.addEventListener('transitionend', () => {
+                     // Only remove transition if it hasn't been reset by another dragover
+                     if (draggedItem.style.transition.includes('150ms')) {
+                         draggedItem.style.transition = '';
+                     }
+                }, { once: true });
 
             } else {
-                // If the element didn't move, ensure it has no animation styles
-                child.style.transition = '';
-                child.style.transform = '';
+                 // If it didn't move position-wise, ensure no leftover styles
+                 // Check if a transition is currently active from a previous move
+                 // If not, clear styles. If yes, let it finish.
+                 if (!draggedItem.style.transition.includes('150ms')) {
+                    draggedItem.style.transition = '';
+                    draggedItem.style.transform = '';
+                 }
             }
         }
-    });
+    } // end if(domChanged)
 }
 
 function handleDrop(e) {
