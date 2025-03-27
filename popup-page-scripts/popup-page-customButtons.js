@@ -272,48 +272,41 @@ function handleDragOver(e) {
         });
 
         // --- FLIP: Last, Invert, Play for DRAGGED item ---
-        if (firstDraggedRect) { // Ensure we recorded the initial position
-            const lastDraggedRect = draggedItem.getBoundingClientRect(); // Last
+        if (firstDraggedRect) {
+            const lastDraggedRect = draggedItem.getBoundingClientRect();
 
+            // Calculate delta based on the TOP-LEFT corner
             const deltaDraggedX = firstDraggedRect.left - lastDraggedRect.left;
             const deltaDraggedY = firstDraggedRect.top - lastDraggedRect.top;
 
-             // Check if the element's calculated position actually changed
+            // Define the transform states explicitly
+            const invertTransform = `translate(${deltaDraggedX}px, ${deltaDraggedY}px) scale(0.8)`;
+            const playTransform = 'scale(0.8)'; // Target state (scaled, at natural position)
+
+            // Check if the element's calculated position actually needs to change
             if (deltaDraggedX !== 0 || deltaDraggedY !== 0) {
-                // Apply inverse transform immediately WITHOUT transition
-                draggedItem.style.transition = 'transform 0s';
-                draggedItem.style.transform = `translate(${deltaDraggedX}px, ${deltaDraggedY}px)`;
+                // Invert: Apply transform immediately, ensuring NO transition happens
+                draggedItem.style.transition = 'none'; // Explicitly disable transitions
+                draggedItem.style.transform = invertTransform;
 
                 // Force reflow is crucial here
                 draggedItem.offsetWidth;
 
-                // Play: Apply transition and animate back to natural position (transform: '')
-                // Use a slightly shorter duration as it's actively moving
+                // Play: Enable transition ONLY for the transform property,
+                // and set the target transform state.
                 draggedItem.style.transition = 'transform 150ms ease-out';
-                draggedItem.style.transform = '';
+                draggedItem.style.transform = playTransform;
 
-                // Cleanup: Remove transition after animation.
-                // NOTE: This might be problematic due to rapid 'dragover' events.
-                // A flag or debouncing might be needed for robust cleanup.
-                // For simplicity here, we'll use 'once', but be aware it might
-                // get interrupted by the next dragover event.
-                draggedItem.addEventListener('transitionend', () => {
-                     // Only remove transition if it hasn't been reset by another dragover
-                     if (draggedItem.style.transition.includes('150ms')) {
-                         draggedItem.style.transition = '';
-                     }
-                }, { once: true });
+                // Cleanup will implicitly happen on the next dragover or dragend.
 
             } else {
-                 // If it didn't move position-wise, ensure no leftover styles
-                 // Check if a transition is currently active from a previous move
-                 // If not, clear styles. If yes, let it finish.
-                 if (!draggedItem.style.transition.includes('150ms')) {
-                    draggedItem.style.transition = '';
-                    draggedItem.style.transform = '';
-                 }
+                // If DOM position didn't change, ensure it still has the correct base dragging transform
+                // and importantly, ensure no transition is active from a previous interrupted move.
+                 draggedItem.style.transition = 'none'; // Remove any potentially active transition
+                 draggedItem.style.transform = playTransform; // Ensure the scale(0.8) is applied
             }
         }
+
     } // end if(domChanged)
 }
 
