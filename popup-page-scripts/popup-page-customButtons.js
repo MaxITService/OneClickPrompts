@@ -271,7 +271,7 @@ function handleDragOver(e) {
             }
         });
 
-        // --- FLIP: Last, Invert, Play for DRAGGED item ---
+        // --- FLIP: Last, Invert, Play for DRAGGED item, it moves to new position smoothly --- 
         if (firstDraggedRect) {
             const lastDraggedRect = draggedItem.getBoundingClientRect();
 
