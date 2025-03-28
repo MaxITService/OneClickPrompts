@@ -209,6 +209,14 @@ These scripts are responsible for the user interface in the extension's popup wi
 
 *   **Purpose:** Handles the advanced selector configuration.
 *   **Role:** Enables users to customize CSS selectors for different AI chat platforms.
+*   **Implementation:**
+    *   Provides a user interface for viewing and editing selectors for each supported website
+    *   Retrieves default selectors directly from the `InjectionTargetsOnWebsite` class in `utils.js`
+    *   Maintains a single source of truth for selector definitions, eliminating duplication
+    *   Allows saving custom selectors which override the defaults on a per-site basis
+*   **Dependencies:**
+    *   **utils.js:** Uses the `getDefaultSelectors` method to retrieve the canonical selector definitions
+    *   **config.js (Service Worker):** Communicates with the service worker to save and load custom selectors
 
 ### `popup-page-scripts/popup-page-floating-window-handler.js`
 

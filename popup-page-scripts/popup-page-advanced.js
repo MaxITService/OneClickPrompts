@@ -81,113 +81,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Helper function to get default selectors for a site
     function getDefaultSelectorsForSite(site) {
-        // This replicates the default selector structure from utils.js
-        const defaultSelectors = {
-            ChatGPT: {
-                containers: ['div.flex.w-full.flex-col:has(textarea)'],
-                sendButtons: [
-                    'button[data-testid="send-button"]',
-                    'button.send-button-class',
-                    'button[type="submit"]'
-                ],
-                editors: ['div.ProseMirror#prompt-textarea', 'div.ProseMirror'],
-                buttonsContainerId: 'chatgpt-custom-buttons-container'
-            },
-            Claude: {
-                containers: [
-                    'div.flex.flex-col.bg-bg-000.rounded-2xl',
-                    'div.flex.flex-col.bg-bg-000.gap-1\\.5'
-                ],
-                sendButtons: ['button[aria-label="Send Message"]'],
-                editors: ['div.ProseMirror[contenteditable="true"]'],
-                buttonsContainerId: 'claude-custom-buttons-container'
-            },
-            Copilot: {
-                containers: ['div.shadow-composer-input'],
-                sendButtons: [
-                    'button.rounded-submitButton[title="Submit message"]',
-                    'button[type="button"][title="Submit message"]'
-                ],
-                editors: [
-                    'div.shadow-composer-input textarea#userInput',
-                    'textarea#userInput[placeholder="Message Copilot"]'
-                ],
-                buttonsContainerId: 'copilot-custom-buttons-container'
-            },
-            DeepSeek: {
-                containers: [
-                    'div.dd442025',
-                    '[class*="editorContainer"]'
-                ],
-                sendButtons: [
-                    'div.bf38813a [role="button"]',
-                    'button:has(svg)',
-                    '[aria-label*="Send"]',
-                    '[data-testid="send-button"]'
-                ],
-                editors: [
-                    'textarea#chat-input',
-                    'div.b13855df',
-                    '[contenteditable="true"]'
-                ],
-                buttonsContainerId: 'deepseek-custom-buttons-container'
-            },
-            AIStudio: {
-                containers: [
-                    'section.chunk-editor-main',
-                    'footer',
-                    'ms-chunk-editor-menu',
-                    'body > app-root > div > div > div.layout-wrapper > div > span > ms-prompt-switcher > ms-chunk-editor > section > footer'
-                ],
-                sendButtons: [
-                    'button.run-button[type="submit"]',
-                    'button[aria-label="Run"]',
-                    'run-button button[type="submit"]',
-                    'footer > div.input-wrapper > div:nth-child(3) > run-button > button'
-                ],
-                editors: [
-                    'ms-autosize-textarea textarea[aria-label="User text input"]',
-                    'textarea.textarea.gmat-body-medium[aria-label="Type something"]',
-                    'footer > div.input-wrapper > div.text-wrapper > ms-chunk-input > section > ms-text-chunk > ms-autosize-textarea'
-                ],
-                buttonsContainerId: 'aistudio-custom-buttons-container'
-            },
-            Grok: {
-                containers: [
-                    'form.bottom-0.w-full.text-base.flex.flex-col.gap-2.items-center.justify-center.relative.z-10'
-                ],
-                sendButtons: [
-                    'form.bottom-0.w-full.text-base.flex.flex-col.gap-2.items-center.justify-center.relative.z-10 button[type="submit"].group'
-                ],
-                editors: [
-                    'textarea.w-full.bg-transparent.focus\\:outline-none.text-primary',
-                    'textarea.w-full.px-2.\\@\\[480px\\]\\/input\\:px-3.pt-5.mb-5.bg-transparent.focus\\:outline-none.text-primary.align-bottom'
-                ],
-                buttonsContainerId: 'grok-custom-buttons-container'
-            },
-            Gemini: {
-                containers: [
-                    'input-container', 
-                    'main'
-                ],
-                sendButtons: [
-                    'button.send-button[aria-label="Send message"]',
-                    'button[aria-label="Send message"][aria-disabled="false"]'
-                ],
-                editors: [
-                    'div.ql-editor[contenteditable="true"]',
-                    'rich-textarea div.ql-editor'
-                ],
-                buttonsContainerId: 'gemini-custom-buttons-container'
-            }
-        };
-        
-        return defaultSelectors[site] || {
-            containers: [],
-            sendButtons: [],
-            editors: [],
-            buttonsContainerId: site.toLowerCase() + '-custom-buttons-container'
-        };
+        // Use the getDefaultSelectors method from utils.js
+        if (window.InjectionTargetsOnWebsite) {
+            return window.InjectionTargetsOnWebsite.getDefaultSelectors(site);
+        } else {
+            // Fallback if InjectionTargetsOnWebsite is not available
+            return {
+                containers: [],
+                sendButtons: [],
+                editors: [],
+                buttonsContainerId: site.toLowerCase() + '-custom-buttons-container'
+            };
+        }
     }
 
     // Save the current selector configuration
