@@ -45,7 +45,7 @@ window.MaxExtensionUtils = {
         editorDiv.focus();
 
         // Escape HTML entities in the text
-        const escapedText = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const escapedText = text.replace(/</g, '<').replace(/>/g, '>');
 
         // Update the innerHTML directly
         editorDiv.innerHTML = `<p>${escapedText}</p>`;
@@ -91,7 +91,7 @@ window.MaxExtensionUtils = {
 
 /**
  * InjectionTargetsOnWebsite
- * 
+ *
  * Centralizes all selectors and identifiers for different websites.
  * Currently implemented for ChatGPT and other sites. Other websites can be added as needed.
  */
@@ -124,6 +124,9 @@ class InjectionTargetsOnWebsite {
         }
         else if (currentHostname.includes('grok.com')) {
             return 'Grok';
+        }
+        else if (currentHostname.includes('gemini.google.com')) { // Added Gemini detection
+            return 'Gemini';
         }
         // Add additional website detections here
         else {
@@ -271,7 +274,22 @@ class InjectionTargetsOnWebsite {
                     'textarea.w-full.px-2.\\@\\[480px\\]\\/input\\:px-3.pt-5.mb-5.bg-transparent.focus\\:outline-none.text-primary.align-bottom'
                 ],
                 buttonsContainerId: 'grok-custom-buttons-container'
-            }
+            },
+            Gemini: { 
+                 containers: [
+                    'input-container', // The main container holding input and disclaimer
+                    'main' // Fallback if input-container structure changes significantly
+                 ],
+                 sendButtons: [
+                     'button.send-button[aria-label="Send message"]', // Primary send button
+                     'button[aria-label="Send message"][aria-disabled="false"]' // Explicitly enabled state
+                 ],
+                 editors: [
+                     'div.ql-editor[contenteditable="true"]', // Quill editor div
+                     'rich-textarea div.ql-editor' // More specific path
+                 ],
+                 buttonsContainerId: 'gemini-custom-buttons-container' // Unique ID
+             }
             // TODO: Add selectors for other supported websites
         };
         return selectors[site] || {};

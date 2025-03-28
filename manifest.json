@@ -3,14 +3,14 @@
   "name": "OneClickPrompts",
   "description": "One Click Prompts for ChatGPT, Claude, Copilot, DeepSeek, Ai Studio",
   "version": "0.0.2.0",
-  
+
   "icons": {
     "16": "icon16.png",
     "32": "icon32.png",
     "48": "icon48.png",
     "128": "icon128.png"
   },
-  
+
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -21,23 +21,23 @@
     },
     "default_title": "OneClickPrompts: Open User Interface"
   },
-  
+
   "permissions": [
     "storage"
   ],
-  
+
   "background": {
     "service_worker": "config.js",
     "type": "module"
   },
-  
+
   "web_accessible_resources": [
     {
       "resources": ["welcome.html"],
       "matches": ["<all_urls>"]
     }
   ],
-  
+
   "content_scripts": [
     {
       "matches": [
@@ -47,7 +47,8 @@
         "https://copilot.microsoft.com/*",
         "https://chat.deepseek.com/*",
         "https://aistudio.google.com/*",
-        "https://grok.com/*"
+        "https://grok.com/*",
+        "https://gemini.google.com/*" 
       ],
       "js": [
         "log.js",
@@ -59,6 +60,7 @@
         "buttons-clicking-deepseek.js",
         "buttons-clicking-aistudio.js",
         "buttons-clicking-grok.js",
+        "buttons-clicking-gemini.js",  
         "buttons.js",
         "buttons-init.js",
         "interface.js",
