@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "OneClickPrompts",
-  "description": "One Click Prompts for ChatGPT, Claude, Copilot, DeepSeek, Ai Studio",
-  "version": "0.0.2.0",
+  "description": "One Click Prompts for ChatGPT, Claude, Copilot, DeepSeek, Ai Studio, Grok, Gemini",
+  "version": "0.0.2.1",
 
   "icons": {
     "16": "icon16.png",
