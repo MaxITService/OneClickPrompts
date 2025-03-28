@@ -164,6 +164,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     'textarea.w-full.px-2.\\@\\[480px\\]\\/input\\:px-3.pt-5.mb-5.bg-transparent.focus\\:outline-none.text-primary.align-bottom'
                 ],
                 buttonsContainerId: 'grok-custom-buttons-container'
+            },
+            Gemini: {
+                containers: [
+                    'input-container', 
+                    'main'
+                ],
+                sendButtons: [
+                    'button.send-button[aria-label="Send message"]',
+                    'button[aria-label="Send message"][aria-disabled="false"]'
+                ],
+                editors: [
+                    'div.ql-editor[contenteditable="true"]',
+                    'rich-textarea div.ql-editor'
+                ],
+                buttonsContainerId: 'gemini-custom-buttons-container'
             }
         };
         
