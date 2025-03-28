@@ -2,7 +2,7 @@
 
 # Define exclusions
 $excludedDirs = @('Promo')   # Additional directories to exclude
-$excludedFiles = @('.gitignore', 'CI-CD.ps1', '.aider.chat.history.md', '.aider.input.history', 'notes.txt', 'instructions.txt')  # Files to exclude
+$excludedFiles = @('.gitignore', 'CI-CD.ps1', '.aider.chat.history.md', '.aider.input.history', 'notes.txt', 'instructions.txt', 'Full_logo.png')  # Files to exclude
 
 # Define the source directory as the current working directory
 $source = Get-Location
