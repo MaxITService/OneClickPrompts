@@ -4,7 +4,7 @@ This document provides a high-level overview of the OneClickPrompts Chrome Exten
 
 ## Core Functionality
 
-The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, Copilot, DeepSeek, AI Studio, and Grok by adding customizable buttons that inject pre-defined prompts into the chat input area. It also includes features for managing profiles, enabling keyboard shortcuts, and customizing the user interface.
+The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, Copilot, DeepSeek, AI Studio, Gemini, and Grok by adding customizable buttons that inject pre-defined prompts into the chat input area. It also includes features for managing profiles, enabling keyboard shortcuts, and customizing the user interface.
 
 ## File Descriptions
 
@@ -111,7 +111,7 @@ The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, C
     3. `floating-panel-ui-creation.js`: Adds UI creation methods to the namespace
     4. `floating-panel-ui-interaction.js`: Adds UI interaction methods to the namespace
     5. `buttons-init.js`: Calls `initialize()` and creates toggle button
-    
+
 *   **Panel Summoning Process:**
     1. Toggle button calls `togglePanel(event)`
     2. First call creates panel without loading settings to avoid race conditions
@@ -150,7 +150,7 @@ The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, C
 *   **Purpose:** Handles the injection of custom buttons into the webpage.
 *   **Role:** Checks for existing modifications, injects the custom buttons, and implements a resiliency mechanism to re-inject the elements if they disappear due to dynamic page updates.
 
-### `buttons-clicking-chatgpt.js`, `buttons-clicking-claude.js`, `buttons-clicking-copilot.js`, `buttons-clicking-deepseek.js`, `buttons-clicking-aistudio.js`, `buttons-clicking-grok.js`
+### `buttons-clicking-chatgpt.js`, `buttons-clicking-claude.js`, `buttons-clicking-copilot.js`, `buttons-clicking-deepseek.js`, `buttons-clicking-aistudio.js`, `buttons-clicking-grok.js`, `buttons-clicking-gemini.js`
 
 *   **Purpose:** Site-specific logic for handling custom send button clicks.
 *   **Role:** Each file contains the code necessary to insert text into the appropriate input area and trigger the send button on its respective website.

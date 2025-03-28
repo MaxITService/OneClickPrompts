@@ -18,6 +18,7 @@
 * **ChatGPT**
 * **DeepSeek Chat**
 * **Google AI Studio**
+* **Google Gemini**
 * **Claude**
 * **Microsoft Copilot (formerly Bing Chat)**
 * **Grok.com**
@@ -29,8 +30,8 @@ Tired of retyping the same prompts in your AI chats?  **OneClickPrompts** lets y
 
 ## Key Features
 
-- One-Click Prompt Insertion: Instantly add your custom prompts to ChatGPT, DeepSeek Chat, Google AI Studio, Claude, Copilot, and more with a single click.
-- Multi-Platform Support:  Works seamlessly across ChatGPT, DeepSeek Chat, Google AI Studio, Claude, and Copilot (and growing!).
+- One-Click Prompt Insertion: Instantly add your custom prompts to ChatGPT, DeepSeek Chat, Google AI Studio, Claude, Copilot, Gemini, and more with a single click.
+- Multi-Platform Support:  Works seamlessly across ChatGPT, DeepSeek Chat, Google AI Studio, Claude, Copilot, Gemini, and Grok (and growing!).
 - Customizable Buttons:  Easily create buttons for any prompt you use regularly.
 - Prompt Profiles: Organize your buttons into profiles for different tasks, projects, AI platforms, or writing styles.
 - Visual Icons & Emojis:  Personalize buttons with emojis or characters for quick visual recognition.
@@ -54,4 +55,3 @@ If you encounter any issues, simply reload your browser. For persistent problems
 **Do whatever you like!**  Attribution is appreciated – a link back to me and the Chrome Web Store listing would be great.  Pull requests with improvements are welcome!
 
 ---
-
