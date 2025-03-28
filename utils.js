@@ -1,6 +1,6 @@
 // utils.js
 // Version: 1.1
-// Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS.
+// Both backend and popup are using this file
 
 'use strict';
 
