@@ -198,7 +198,13 @@ class InjectionTargetsOnWebsite {
                     'div.flex.flex-col.bg-bg-000.rounded-2xl',
                     'div.flex.flex-col.bg-bg-000.gap-1\\.5'
                 ],
-                sendButtons: ['button[aria-label="Send Message"]'],
+                sendButtons: [
+                    'button.bg-accent-main-000.text-oncolor-100', // most specific: key classes (language-independent)
+                    'button[type="button"].bg-accent-main-000', // fallback: type and main class
+                    'button[type="button"]', // generic fallback
+                    'button[type="button"][aria-label="Send message"].bg-accent-main-000.text-oncolor-100', // fallback: type, aria-label, and key classes (language-dependent)
+                    'button[type="button"][aria-label="Send message"]', // fallback: type and aria-label (language-dependent)
+                ],
                 editors: ['div.ProseMirror[contenteditable="true"]'],
                 buttonsContainerId: 'claude-custom-buttons-container'
             },
