@@ -259,19 +259,25 @@ class InjectionTargetsOnWebsite {
                 buttonsContainerId: 'aistudio-custom-buttons-container'
             },
             Grok: {
-                // Updated Grok selectors: injecting custom buttons into the chat form to avoid conflicts.
-                // Use the form element as container.
+                // Updated selectors for new Grok UI (April 2025)
+                // Container: the chat form (unique structure)
                 containers: [
-                    'form.bottom-0.w-full.text-base.flex.flex-col.gap-2.items-center.justify-center.relative.z-10'
+                    'form.bottom-0.w-full.text-base.flex.flex-col.gap-2.items-center.justify-center.relative.z-10',
+                    'form.w-full.flex-col.items-center.justify-center', // fallback if classes change
+                    'form[method][class*="gap-2"][class*="flex-col"]' // fallback for structure
                 ],
-                // Use a more specific selector for the send button (submit button within that form).
+                // Send button: submit button at the bottom of the chat form
                 sendButtons: [
-                    'form.bottom-0.w-full.text-base.flex.flex-col.gap-2.items-center.justify-center.relative.z-10 button[type="submit"].group'
+                    'form.bottom-0.w-full.text-base.flex.flex-col.gap-2.items-center.justify-center.relative.z-10 button[type="submit"]',
+                    'form button[type="submit"].group', // fallback if .group class remains
+                    'form button[type="submit"]' // fallback: any submit button in form
                 ],
-                // Editors remain as before.
+                // Editor: textarea inside the chat form, with new class structure
                 editors: [
-                    'textarea.w-full.bg-transparent.focus\\:outline-none.text-primary',
-                    'textarea.w-full.px-2.\\@\\[480px\\]\\/input\\:px-3.pt-5.mb-5.bg-transparent.focus\\:outline-none.text-primary.align-bottom'
+                    'form.bottom-0.w-full.text-base.flex.flex-col.gap-2.items-center.justify-center.relative.z-10 textarea[aria-label="Ask Grok anything"]',
+                    'textarea[aria-label="Ask Grok anything"]',
+                    'textarea.w-full.px-2', // fallback for px-2 class
+                    'textarea' // fallback: any textarea
                 ],
                 buttonsContainerId: 'grok-custom-buttons-container'
             },
