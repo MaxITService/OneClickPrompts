@@ -203,14 +203,29 @@ class InjectionTargetsOnWebsite {
                 buttonsContainerId: 'claude-custom-buttons-container'
             },
             Copilot: {
-                containers: ['div.shadow-composer-input'],
-                sendButtons: [
-                    'button.rounded-submitButton[title="Submit message"]',
-                    'button[type="button"][title="Submit message"]'
+                // Updated Copilot selectors (April 2025)
+                // Container: new Copilot chat composer container
+                containers: [
+                    'div.w-expanded-composer.max-w-chat.bg-gradient-to-b', // main composer container
+                    'div.relative.max-h-full.w-expanded-composer', // fallback: outermost
+                    'div.flex.grow.flex-col.overflow-hidden', // fallback: inner flex container
+                    'div.shadow-composer-input' // legacy fallback
                 ],
+                // Editor: textarea for user input
                 editors: [
-                    'div.shadow-composer-input textarea#userInput',
-                    'textarea#userInput[placeholder="Message Copilot"]'
+                    'textarea#userInput.block.min-h-user-input.w-full', // most specific
+                    'textarea#userInput', // fallback by id
+                    'textarea.block.min-h-user-input', // fallback by class
+                    'textarea[placeholder="Message Copilot"]', // fallback by placeholder
+                    'textarea' // generic fallback
+                ],
+                // Send button: Copilot's submit button (non-ARIA, non-language-dependent)
+                sendButtons: [
+                    'button[type="button"][data-testid="submit-button"]', // primary: matches Copilot's new submit button
+                    'button[type="button"].rounded-submitButton[title="Submit message"]', // matches class and title
+                    'button[type="button"][title="Submit message"]', // fallback by type and title
+                    'button.rounded-submitButton', // fallback by class only
+                    'button[type="submit"]', // legacy fallback
                 ],
                 buttonsContainerId: 'copilot-custom-buttons-container'
             },
