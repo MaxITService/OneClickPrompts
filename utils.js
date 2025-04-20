@@ -242,9 +242,9 @@ class InjectionTargetsOnWebsite {
                 ],
                 sendButtons: [
                     'div.bf38813a [role="button"]', // Main send button
-                    'button:has(svg)', // Any button with icon
                     '[aria-label*="Send"]', // ARIA fallback
-                    '[data-testid="send-button"]' // Test ID fallback
+                    '[data-testid="send-button"]', // Test ID fallback
+                    'button:has(svg)' // Any button with icon
                 ],
                 editors: [
                     'textarea#chat-input', // Textarea editor
