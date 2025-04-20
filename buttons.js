@@ -36,6 +36,7 @@ window.MaxExtensionButtons = {
      */
     createCustomSendButton: function (buttonConfig, buttonIndex, onClickHandler) {
         const customButtonElement = document.createElement('button');
+        customButtonElement.type = 'button'; // Prevent form being defaut type, that is "submit".
         customButtonElement.innerHTML = buttonConfig.icon;
         customButtonElement.setAttribute('data-testid', `custom-send-button-${buttonIndex}`);
 

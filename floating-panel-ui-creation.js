@@ -261,6 +261,7 @@ window.MaxExtensionFloatingPanel.positionPanelAtCursor = function(event) {
  */
 window.MaxExtensionFloatingPanel.createPanelToggleButton = function() {
     const toggleButton = document.createElement('button');
+    toggleButton.type = 'button'; // Prevent form submission!
     toggleButton.innerHTML = '🔼';
     toggleButton.style.cssText = `
         background-color: transparent;
