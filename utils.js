@@ -254,31 +254,33 @@ class InjectionTargetsOnWebsite {
                 buttonsContainerId: 'deepseek-custom-buttons-container'
             },
             AIStudio: {
-                containers: [
-                    // Primary selectors (ARIA-based)
-                    'section.chunk-editor-main',
-                    'footer',
-                    'ms-chunk-editor-menu',
-                    // Fallback selectors (DOM path)
-                    'body > app-root > div > div > div.layout-wrapper > div > span > ms-prompt-switcher > ms-chunk-editor > section > footer'
-                ],
-                sendButtons: [
-                    // Primary selectors (ARIA-based)
-                    'button.run-button[type="submit"]',
-                    'button[aria-label="Run"]',
-                    'run-button button[type="submit"]',
-                    // Fallback selectors (DOM path)
-                    'footer > div.input-wrapper > div:nth-child(3) > run-button > button'
-                ],
-                editors: [
-                    // Primary selectors (ARIA-based)
-                    'ms-autosize-textarea textarea[aria-label="User text input"]',
-                    'textarea.textarea.gmat-body-medium[aria-label="Type something"]',
-                    // Fallback selectors (DOM path)
-                    'footer > div.input-wrapper > div.text-wrapper > ms-chunk-input > section > ms-text-chunk > ms-autosize-textarea'
-                ],
-                buttonsContainerId: 'aistudio-custom-buttons-container'
-            },
+    containers: [
+        'div.prompt-input-wrapper',
+        'div.prompt-input-wrapper-container',
+        'section.text-and-attachments-wrapper',
+        'section.chunk-editor-main',
+        'footer',
+        'ms-chunk-editor-menu',
+        'body > app-root > div > div > div.layout-wrapper > div > span > ms-prompt-switcher > ms-chunk-editor > section > footer'
+    ],
+    sendButtons: [
+        'button.run-button[type="submit"]',
+        'button[aria-label="Run"]',
+        'run-button button[type="submit"]',
+        'button.run-button',
+        'footer > div.input-wrapper > div:nth-child(3) > run-button > button'
+    ],
+    editors: [
+        'textarea.textarea.gmat-body-medium[aria-label="Type something or pick one from prompt gallery"]',
+        'textarea.textarea.gmat-body-medium[aria-label="Type something"]',
+        'ms-autosize-textarea textarea.textarea.gmat-body-medium',
+        'ms-autosize-textarea.empty textarea.textarea',
+        'ms-autosize-textarea textarea[aria-label="User text input"]',
+        'textarea.textarea.gmat-body-medium[aria-label="Type something"]',
+        'footer > div.input-wrapper > div.text-wrapper > ms-chunk-input > section > ms-text-chunk > ms-autosize-textarea'
+    ],
+    buttonsContainerId: 'aistudio-custom-buttons-container'
+},
             Grok: {
                 // Updated selectors for new Grok UI (April 2025)
                 // Container: the chat form (unique structure)
