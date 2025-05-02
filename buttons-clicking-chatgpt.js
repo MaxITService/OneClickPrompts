@@ -244,20 +244,15 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
             }, 500); // Delay to allow the editor to update
         } else {
             logConCgp('[buttons] Editor is already in active state. Proceeding with existing logic.');
-            // Retrieve existing text in the editor
-            const existingText = editorArea.innerText;
-            logConCgp('[buttons] Current text in editor:', existingText);
 
-            // Concatenate existing text with custom text exactly as provided
-            const newText = `${existingText}${customText}`;
-            logConCgp('[buttons] Combined text to be inserted:', newText);
-
-            // Insert the new text into the editor using the external utility methods
-            MaxExtensionUtils.insertTextIntoEditor(editorArea, newText);
-            // Move cursor to the end after insertion
-            MaxExtensionUtils.moveCursorToEnd(editorArea);
+            // --- MODIFICATION START ---
+            // Use the paste simulation utility to append the text
+            MaxExtensionUtils.simulatePaste(editorArea, customText);
+            logConCgp('[buttons] Custom text appended via simulated paste.');
+            // --- MODIFICATION END ---
 
             // Proceed to handle send buttons immediately
+            // Note: simulatePaste includes focusing and moving cursor, so no extra calls needed here.
             handleSendButtons(originalSendButtons);
         }
     };

@@ -86,6 +86,36 @@ window.MaxExtensionUtils = {
             margin: 0 8px;
         `;
         return separator;
+    },
+
+    // Function to simulate pasting text into a contenteditable element
+    simulatePaste: function (element, textToPaste) {
+        element.focus();
+        logConCgp('[utils] Attempting to simulate paste.');
+
+        // Ensure cursor is at the end
+        this.moveCursorToEnd(element);
+
+        // Create a DataTransfer object
+        const dataTransfer = new DataTransfer();
+        dataTransfer.setData('text/plain', textToPaste);
+
+        // Create and dispatch the paste event
+        const pasteEvent = new ClipboardEvent('paste', {
+            clipboardData: dataTransfer,
+            bubbles: true,
+            cancelable: true,
+            composed: true
+        });
+
+        element.dispatchEvent(pasteEvent);
+        logConCgp('[utils] Paste event dispatched with text:', textToPaste);
+
+        // Small delay might be needed for the editor to process the paste
+        setTimeout(() => {
+            this.moveCursorToEnd(element); // Ensure cursor is at the end after paste
+            logConCgp('[utils] Cursor moved to end after paste simulation.');
+        }, 50); // 50ms delay
     }
 };
 
