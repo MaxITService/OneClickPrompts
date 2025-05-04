@@ -46,6 +46,12 @@ Tired of retyping the same prompts in your AI chats?  **OneClickPrompts** lets y
 2. Open Settings: Click the OneClickPrompts icon in your Chrome toolbar.
 3. Create & Customize: Add profiles, create custom buttons with your favorite prompts, and personalize them with icons.
 
+## AI generated codebase overview - DeepWiki
+
+[Link to codebase overview](https://deepwiki.com/MaxITService/ChatGPT-Quick-Buttons-for-your-text/1-oneclickprompts-extension-overview)
+{{ ... }}
+May be not 100% accurate but gives idea about what is happening
+
 ## Troubleshooting
 
 If you encounter any issues, simply reload your browser. For persistent problems, please don't hesitate to reach out for support.  Uninstalling the extension is clean and leaves no trace.
