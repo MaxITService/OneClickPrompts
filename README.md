@@ -1,6 +1,6 @@
 # [OneClickPrompts:  Your Quick Prompt Companion for Multiple AI Chats!](https://chromewebstore.google.com/detail/chatgpt-quick-buttons-for/iiofmimaakhhoiablomgcjpilebnndbf)
 
-
+[![Hits](https://hits.sh/github.com/MaxITService/ChatGPT-Quick-Buttons-for-your-text.svg?style=flat)](https://hits.sh/github.com/MaxITService/Console2Ai/)
 
 ---
 **[>>>➡️Install OneClickPrompts from Chrome Web Store<<<](https://chromewebstore.google.com/detail/chatgpt-quick-buttons-for/iiofmimaakhhoiablomgcjpilebnndbf)**
