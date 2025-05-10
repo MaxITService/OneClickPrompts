@@ -214,13 +214,33 @@ class InjectionTargetsOnWebsite {
     getDefaultSelectors(site) {
         const selectors = {
             ChatGPT: {
-                containers: ['div.flex.w-full.flex-col:has(textarea)'],
-                sendButtons: [
-                    'button[data-testid="send-button"]',
-                    'button.send-button-class',
-                    'button[type="submit"]'
+                // Updated May 2025 for new ChatGPT UI
+                containers: [
+
+
+                    'form[data-type="unified-composer"] > div.rounded-\\[28px\\]',               
+                    'div.flex.basis-auto.flex-col.shrink.min-\\[510px\\]\\:max-\\[768px\\]\\:mt-\\[25dvh\\]\\!',
+                    'div#conversation-header-actions',              
+                    'div.relative.flex.w-full.items-end.px-3.py-3',
+                    'div.relative.flex.w-full.items-end',    
+                    'div.flex.w-full.items-end',
+                    'div.flex.w-full.flex-col:has(textarea#prompt-textarea)',
+                    'div.flex.w-full.flex-col:has(textarea)',
+                    'main.flex.flex-col.items-center'
                 ],
-                editors: ['div.ProseMirror#prompt-textarea', 'div.ProseMirror'],
+                sendButtons: [
+                    'button[aria-label="Send message"]', // new main send button
+                    'button[data-testid="send-button"]', // legacy/testid fallback
+                    'button[type="submit"]', // generic fallback
+                    'button.send-button-class' // legacy fallback
+                ],
+                editors: [
+                    'div.ProseMirror#prompt-textarea[contenteditable="true"]', // new main editor
+                    'div.ProseMirror[contenteditable="true"]', // fallback
+                    'div[contenteditable="true"].ProseMirror', // fallback
+                    'div.ProseMirror', // legacy fallback
+                    'textarea', // ultimate fallback
+                ],
                 buttonsContainerId: 'chatgpt-custom-buttons-container'
             },
             Claude: {
