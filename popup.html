@@ -1,265 +1,391 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Max Extension Settings</title>
     <!-- Base styles: Root variables, body, container, section, and headings -->
-    <link rel="stylesheet" href="/popup-page-styles/popup-base.css">
+    <link rel="stylesheet" href="/popup-page-styles/popup-base.css" />
     <!-- Layout styles: Row layouts, form controls, and profile action containers -->
-    <link rel="stylesheet" href="/popup-page-styles/popup-layout.css">
+    <link rel="stylesheet" href="/popup-page-styles/popup-layout.css" />
     <!-- Custom buttons: Button list container, button items, drag handles, and separators -->
-    <link rel="stylesheet" href="/popup-page-styles/popup-buttons.css">
+    <link rel="stylesheet" href="/popup-page-styles/popup-buttons.css" />
     <!-- UI Components: Console, save status, export/import buttons, confirmation & error dialogs, and toast notifications -->
-    <link rel="stylesheet" href="/popup-page-styles/popup-components.css">
+    <link rel="stylesheet" href="/popup-page-styles/popup-components.css" />
     <!-- Toggle switch styles: iPhone-style toggle switches -->
-    <link rel="stylesheet" href="/popup-page-styles/popup-toggle.css">
+    <link rel="stylesheet" href="/popup-page-styles/popup-toggle.css" />
     <!-- Theme overrides: Dark mode styles -->
-    <link rel="stylesheet" href="/popup-page-styles/popup-theme.css">
-</head>
+    <link rel="stylesheet" href="/popup-page-styles/popup-theme.css" />
+  </head>
 
-<body>
+  <body>
     <div class="container">
-        <!-- Profile Section -->
-        <section class="section">
-            <h2>Profile</h2>
-            <div class="row">
-                <select id="profileSelect" title="Select profile" aria-label="Select profile">
-                    <option value="default">Default Profile</option>
-                </select>
-                <button id="addProfile">Add Profile</button>
-                <button id="copyProfile">Duplicate Current Profile To A New One</button>
-                <button id="deleteProfile" class="danger">Delete</button>
-                <div id="versionContainer">
-                    <p id="version"> Version 0.0.2.6</p>
-                    <p id="topExplanationText"> Your changes to the buttons will be saved automatically. Reload website to apply. Pressing
-                        "Shift" while pressing a key or button changes its autosend behavior!
+      <!-- Profile Section -->
+      <section class="section">
+        <h2>Profile</h2>
+        <div class="row">
+          <select
+            id="profileSelect"
+            title="Select profile"
+            aria-label="Select profile"
+          >
+            <option value="default">Default Profile</option>
+          </select>
+          <button id="addProfile">Add Profile</button>
+          <button id="copyProfile">
+            Duplicate Current Profile To A New One
+          </button>
+          <button id="deleteProfile" class="danger">Delete</button>
 
-                        <a href="#helpSection">Go to Help Section</a>
-                    </p>
+          <div id="versionContainer">
+            <p id="version">Version 0.0.2.6</p>
+            <p id="topExplanationText">
+              Your changes to the buttons will be saved automatically. Reload
+              website to apply. Pressing "Shift" while pressing a key or button
+              changes its autosend behavior!
 
-                </div>
-            </div>
-            <!-- Add Profile Input and Save/Cancel Buttons -->
-            <div id="addProfileContainer" class="profile-action-container" style="display: none;">
-                <label for="addProfileInput">Enter profile name:</label>
-                <input type="text" id="addProfileInput" placeholder="Enter profile name here" title="New profile name">
-                <button id="saveAddProfile">Save</button>
-                <button id="cancelAddProfile" class="danger">Cancel</button>
-            </div>
-            <!-- Copy Profile Input and Save/Cancel Buttons -->
-            <div id="copyProfileContainer" class="profile-action-container" style="display: none;">
-                <label for="copyProfileInput">Enter new profile name:</label>
-                <input type="text" id="copyProfileInput" placeholder="Enter new profile name here" title="New profile name">
-                <button id="saveCopyProfile">Save</button>
-                <button id="cancelCopyProfile" class="danger">Cancel</button>
-            </div>
-        </section>
+              <a href="#helpSection">Go to Help Section</a>
+            </p>
+            <button id="open-in-tab-button">
+              ↗️ Expand this page to new tab
+            </button>
+          </div>
+        </div>
+        <!-- Add Profile Input and Save/Cancel Buttons -->
+        <div
+          id="addProfileContainer"
+          class="profile-action-container"
+          style="display: none"
+        >
+          <label for="addProfileInput">Enter profile name:</label>
+          <input
+            type="text"
+            id="addProfileInput"
+            placeholder="Enter profile name here"
+            title="New profile name"
+          />
+          <button id="saveAddProfile">Save</button>
+          <button id="cancelAddProfile" class="danger">Cancel</button>
+        </div>
+        <!-- Copy Profile Input and Save/Cancel Buttons -->
+        <div
+          id="copyProfileContainer"
+          class="profile-action-container"
+          style="display: none"
+        >
+          <label for="copyProfileInput">Enter new profile name:</label>
+          <input
+            type="text"
+            id="copyProfileInput"
+            placeholder="Enter new profile name here"
+            title="New profile name"
+          />
+          <button id="saveCopyProfile">Save</button>
+          <button id="cancelCopyProfile" class="danger">Cancel</button>
+        </div>
+      </section>
 
-        <div id="saveStatus" class="small-hoovering-text">Last saved: Never</div>
-        <!-- Button Configuration via button cards (buttons have their UI - each on card that is added dynamically) -->
-        <section class="section">
-            <h2>Button Configuration</h2>
-            <div class="row">                
-                <input type="text" id="buttonIcon" placeholder="✨" class="emoji-input" title="Button icon" aria-label="Button icon">
-                
-                <textarea id="buttonText" placeholder="Button Template Text" class="text-input" rows="1" title="Button template text" aria-label="Button template text"></textarea>
-                <label class="checkbox-row" for="buttonAutoSendToggle">
-                    <input type="checkbox" id="buttonAutoSendToggle" checked>
-                    <span>Auto-send</span>
-                </label>
-            </div>
-            <div class="row">
-                <button id="addButton">Add Button</button>
-                <button id="clearText">Clear Text</button>
-                <button id="addSeparator">Add Separator</button>
-            </div>
-            <div id="buttonCardsList" data-draggable="true">
-                <!-- Button cards added dynamically here -->
-            </div>
-        </section>
+      <div id="saveStatus" class="small-hoovering-text">Last saved: Never</div>
+      <!-- Button Configuration via button cards (buttons have their UI - each on card that is added dynamically) -->
+      <section class="section">
+        <h2>Button Configuration</h2>
+        <div class="row">
+          <input
+            type="text"
+            id="buttonIcon"
+            placeholder="✨"
+            class="emoji-input"
+            title="Button icon"
+            aria-label="Button icon"
+          />
 
-        <!-- Settings -->
-        <section class="section">
-            <h2>Settings</h2>
-            <div class="row">
-                <label class="checkbox-row" for="autoSendToggle">
-                    <input type="checkbox" id="autoSendToggle">
-                    <span>Enable Global Auto-send for profile. Disabling will disable auto-send everywhere.</span>
-                </label>
-            </div>
-            <div class="row">
-                <label class="checkbox-row" for="shortcutsToggle">
-                    <input type="checkbox" id="shortcutsToggle">
-                    <span>Enable Keyboard Shortcuts</span>
-                </label>
-            </div>
-            <div class="row">
-                <button id="revertDefault" class="danger">Revert Current Profile to Default</button>
-            </div>
-            <div class="row">
-                <button id="resetFloatingWindowSettings">Reset Floating Window Settings for all pages</button>
-            </div>
-        </section>
+          <textarea
+            id="buttonText"
+            placeholder="Button Template Text"
+            class="text-input"
+            rows="1"
+            title="Button template text"
+            aria-label="Button template text"
+          ></textarea>
+          <label class="checkbox-row" for="buttonAutoSendToggle">
+            <input type="checkbox" id="buttonAutoSendToggle" checked />
+            <span>Auto-send</span>
+          </label>
+        </div>
+        <div class="row">
+          <button id="addButton">Add Button</button>
+          <button id="clearText">Clear Text</button>
+          <button id="addSeparator">Add Separator</button>
+        </div>
+        <div id="buttonCardsList" data-draggable="true">
+          <!-- Button cards added dynamically here -->
+        </div>
+      </section>
 
+      <!-- Settings -->
+      <section class="section">
+        <h2>Settings</h2>
+        <div class="row">
+          <label class="checkbox-row" for="autoSendToggle">
+            <input type="checkbox" id="autoSendToggle" />
+            <span
+              >Enable Global Auto-send for profile. Disabling will disable
+              auto-send everywhere.</span
+            >
+          </label>
+        </div>
+        <div class="row">
+          <label class="checkbox-row" for="shortcutsToggle">
+            <input type="checkbox" id="shortcutsToggle" />
+            <span>Enable Keyboard Shortcuts</span>
+          </label>
+        </div>
+        <div class="row">
+          <button id="revertDefault" class="danger">
+            Revert Current Profile to Default
+          </button>
+        </div>
+        <div class="row">
+          <button id="resetFloatingWindowSettings">
+            Reset Floating Window Settings for all pages
+          </button>
+        </div>
+      </section>
 
-        <!-- Console -->
-        <section class="section">
-            <h2>Console</h2>
-            <div id="console" class="console"></div>
-        </section>
+      <!-- Console -->
+      <section class="section">
+        <h2>Console</h2>
+        <div id="console" class="console"></div>
+      </section>
 
-        <!-- Backup Section -->
-        <section class="section" id="backupSection">
-            <h2>Backup &amp; Restore</h2>
-            <div class="row">
-                <button id="exportProfile">Export Profile</button>
-                <button id="importProfile">Import Profile</button>
-                <!-- Hidden file input for importing profile -->
-                <input type="file" id="importFileInput" accept="application/json" style="display: none;" title="Import profile file" aria-label="Import profile file">
-            </div>
-            <!-- Confirmation Div -->
-            <div id="confirmationDiv" class="confirmation" style="display: none;">
-                <p>File loaded successfully. But profile with the same name exists in a system. Do you want to overwrite
-                    currently existing profile?</p>
-                <button id="confirmOverwrite">Yes</button>
-                <button id="cancelOverwrite">No</button>
-            </div>
-            <!-- Error Message Div -->
-            <div id="errorDiv" class="error" style="display: none;">
-                <p>Error loading file. Please ensure the file is a valid JSON profile.</p>
-            </div>
-        </section>
+      <!-- Backup Section -->
+      <section class="section" id="backupSection">
+        <h2>Backup &amp; Restore</h2>
+        <div class="row">
+          <button id="exportProfile">Export Profile</button>
+          <button id="importProfile">Import Profile</button>
+          <!-- Hidden file input for importing profile -->
+          <input
+            type="file"
+            id="importFileInput"
+            accept="application/json"
+            style="display: none"
+            title="Import profile file"
+            aria-label="Import profile file"
+          />
+        </div>
+        <!-- Confirmation Div -->
+        <div id="confirmationDiv" class="confirmation" style="display: none">
+          <p>
+            File loaded successfully. But profile with the same name exists in a
+            system. Do you want to overwrite currently existing profile?
+          </p>
+          <button id="confirmOverwrite">Yes</button>
+          <button id="cancelOverwrite">No</button>
+        </div>
+        <!-- Error Message Div -->
+        <div id="errorDiv" class="error" style="display: none">
+          <p>
+            Error loading file. Please ensure the file is a valid JSON profile.
+          </p>
+        </div>
+      </section>
 
-        <!-- Help Section -->
-        <section class="section" id="helpSection">
-            <h2>Help</h2>
-            <div class="text-inside-container">
-                <p>Some information:</p>
-                <p>ABSOLUTELY DO BACKUP YOUR PROFILE! IN CASE OF UPDATE, YOU MAY LOSE YOUR BUTTONS - ANYTIME. BE SURE TO
-                    BACKUP YOUR PROFILE! I am not yet skillful enough in JS to make sure all updates will go without
-                    problems</p>
-                <ul>
-                    <li>Pressing "Shift" while pressing a key or button changes its autosend behavior! Works both with
-                        clicks and keyboard shortcuts!</li>
-                    <li>Keyboard shortcuts can be enabled in Settings section</li>
-                    <li>In case of a problem: first step is to reload your browser.</li>
-                    <li>In case something stopped working completely: The websites often change their structure. My
-                        extension
-                        therefore addresses elements that are not longer present. Therefore, when I notice this, I need
-                        to make an update, and then it takes time for Google to approve it.</li>
-                    <li>In case something is not working: try to use English version of the websites. LLMs do not care
-                        about language, so you can use any language you want in chat, while keeping interface language
-                        English. I only test on English languages of webpages, because I have to work and have no spare
-                        time.</li>
-                    <li>If buttons disappear, first step is to refresh the page, 
-                        then try pressing "Reset Floating Window Settings for all pages" up here in this popup.
-                    You can open an issue on Github: 
-                    <a href="https://github.com/MaxITService/ChatGPT-Quick-Buttons-for-your-text/issues">
-                        Issues page</a>
-                        Or email me at forpphotos@gmail.com
-                    </li>
-                    <li>In case absolutely nothing works, do the following:
-                        <ul>
-                            <li>Export all the profiles you need to JSON files</li>
-                            <li>Uninstall extension</li>
-                            <li>Install extension again and test if it's working with default profiles</li>
-                            <li>Import your saved profiles and test again</li>
-                        </ul>
-                    </li>
-                    <li><a href="https://github.com/MaxITService/ChatGPT-Quick-Buttons-for-your-text">Github: you can
-                            provide code you want to see in app here.</a></li>
-                    <li><a href="https://buymeacoffee.com/netstaff">Donation link. If you are very rich, please send me
-                            huge amount of money, thank you!</a></li>
-                    <li>Introducing changes faster than once in second causes saving issues</li>
-                    <li><a href="#" id="openWelcomePage">Open Welcome page (the one with instructions) again</a></li>
-                </ul>
-            </div>
-        </section>
+      <!-- Help Section -->
+      <section class="section" id="helpSection">
+        <h2>Help</h2>
+        <div class="text-inside-container">
+          <p>Some information:</p>
+          <p>
+            ABSOLUTELY DO BACKUP YOUR PROFILE! IN CASE OF UPDATE, YOU MAY LOSE
+            YOUR BUTTONS - ANYTIME. BE SURE TO BACKUP YOUR PROFILE! I am not yet
+            skillful enough in JS to make sure all updates will go without
+            problems
+          </p>
+          <ul>
+            <li>
+              Pressing "Shift" while pressing a key or button changes its
+              autosend behavior! Works both with clicks and keyboard shortcuts!
+            </li>
+            <li>Keyboard shortcuts can be enabled in Settings section</li>
+            <li>In case of a problem: first step is to reload your browser.</li>
+            <li>
+              In case something stopped working completely: The websites often
+              change their structure. My extension therefore addresses elements
+              that are not longer present. Therefore, when I notice this, I need
+              to make an update, and then it takes time for Google to approve
+              it.
+            </li>
+            <li>
+              In case something is not working: try to use English version of
+              the websites. LLMs do not care about language, so you can use any
+              language you want in chat, while keeping interface language
+              English. I only test on English languages of webpages, because I
+              have to work and have no spare time.
+            </li>
+            <li>
+              If buttons disappear, first step is to refresh the page, then try
+              pressing "Reset Floating Window Settings for all pages" up here in
+              this popup. You can open an issue on Github:
+              <a
+                href="https://github.com/MaxITService/ChatGPT-Quick-Buttons-for-your-text/issues"
+              >
+                Issues page</a
+              >
+              Or email me at forpphotos@gmail.com
+            </li>
+            <li>
+              In case absolutely nothing works, do the following:
+              <ul>
+                <li>Export all the profiles you need to JSON files</li>
+                <li>Uninstall extension</li>
+                <li>
+                  Install extension again and test if it's working with default
+                  profiles
+                </li>
+                <li>Import your saved profiles and test again</li>
+              </ul>
+            </li>
+            <li>
+              <a
+                href="https://github.com/MaxITService/ChatGPT-Quick-Buttons-for-your-text"
+                >Github: you can provide code you want to see in app here.</a
+              >
+            </li>
+            <li>
+              <a href="https://buymeacoffee.com/netstaff"
+                >Donation link. If you are very rich, please send me huge amount
+                of money, thank you!</a
+              >
+            </li>
+            <li>
+              Introducing changes faster than once in second causes saving
+              issues
+            </li>
+            <li>
+              <a href="#" id="openWelcomePage"
+                >Open Welcome page (the one with instructions) again</a
+              >
+            </li>
+          </ul>
+        </div>
+      </section>
 
-        <!-- ===== Advanced Selector Configuration ===== -->
-        <section class="section collapsible" id="advancedSection">
-            <div class="section-header">
-                <h2>Advanced Selector Configuration <span class="expand-text">(click to expand)</span></h2>
-                <span class="toggle-icon">▶</span>
+      <!-- ===== Advanced Selector Configuration ===== -->
+      <section class="section collapsible" id="advancedSection">
+        <div class="section-header">
+          <h2>
+            Advanced Selector Configuration
+            <span class="expand-text">(click to expand)</span>
+          </h2>
+          <span class="toggle-icon">▶</span>
+        </div>
+        <div class="section-content">
+          <div class="text-inside-container">
+            Select, which website you are going to edit selectors for. Selectors
+            are pointing to a webpage location where buttons, text, and sending
+            button should be.
+          </div>
+          <br />
+          <div class="row">
+            <select
+              id="selectorWebsiteSelect"
+              title="Select website for configuration"
+            >
+              <option value="ChatGPT">ChatGPT</option>
+              <option value="Claude">Claude</option>
+              <option value="Copilot">Copilot</option>
+              <option value="DeepSeek">DeepSeek</option>
+              <option value="AIStudio">AIStudio</option>
+              <option value="Grok">Grok</option>
+              <option value="Gemini">Gemini</option>
+            </select>
+          </div>
+
+          <div class="row">
+            <label for="selectorConfig">Selector configuration:</label>
+            <textarea
+              id="selectorConfig"
+              class="selector-config-textarea"
+              spellcheck="false"
+              aria-label="Selector configuration"
+              title="Enter selector configuration"
+            ></textarea>
+          </div>
+          <div class="row">
+            <button id="saveSelectors">Save Selectors</button>
+            <button id="resetSelectors" class="danger">
+              Reset to Defaults
+            </button>
+          </div>
+
+          <!-- Collapsible Help Section -->
+          <div class="collapsible" id="advancedHelpSection">
+            <div class="section-header subsection-header">
+              <h3>Help <span class="expand-text">(click to expand)</span></h3>
+              <span class="toggle-icon">▶</span>
             </div>
             <div class="section-content">
-
-                <div class="text-inside-container"> Select, which website you are going to edit selectors for.
-                    Selectors are pointing to a webpage location where buttons, text, and sending button should be.
-                </div>
-                <br>
-                <div class="row" >
-                    <select id="selectorWebsiteSelect" title="Select website for configuration">
-                        <option value="ChatGPT">ChatGPT</option>
-                        <option value="Claude">Claude</option>
-                        <option value="Copilot">Copilot</option>
-                        <option value="DeepSeek">DeepSeek</option>
-                        <option value="AIStudio">AIStudio</option>
-                        <option value="Grok">Grok</option>
-                        <option value="Gemini">Gemini</option>
-                    </select>
-                </div>
-
-
-                <div class="row">
-                    <label for="selectorConfig">Selector configuration:</label>
-                    <textarea id="selectorConfig" class="selector-config-textarea" spellcheck="false" aria-label="Selector configuration" title="Enter selector configuration"></textarea>
-                </div>
-                <div class="row">
-                    <button id="saveSelectors">Save Selectors</button>
-                    <button id="resetSelectors" class="danger">Reset to Defaults</button>
-                </div>
-
-                <!-- Collapsible Help Section -->
-                <div class="collapsible" id="advancedHelpSection">
-                    <div class="section-header subsection-header">
-                        <h3>Help <span class="expand-text">(click to expand)</span></h3>
-                        <span class="toggle-icon">▶</span>
-                    </div>
-                    <div class="section-content">
-                        <div class="text-inside-container">
-                            <p>Configure custom CSS selectors for different AI chat platforms. Each selector type can
-                                have multiple fallback options defined as an array. The extension will use the first
-                                matching selector found on the page, with subsequent entries serving as fallbacks.</p>
-                            <ul>
-                                <li><strong>Containers:</strong> The parent elements that contain the chat interface.
-                                    These elements will host your custom buttons.</li>
-                                <li><strong>Send Buttons:</strong> The submit buttons that send messages. For
-                                    auto-sending buttons, the extension will automatically trigger these after inserting
-                                    text.</li>
-                                <li><strong>Editors:</strong> The text input areas where messages are composed. Note
-                                    that the editor selector might need to be different for empty chats versus chats
-                                    with existing messages.</li>
-                                <li><strong>Container ID:</strong> A unique identifier for the extension's button
-                                    container. This is primarily used for internal detection and troubleshooting -
-                                    modification usually isn't necessary.</li>
-                            </ul>
-                            <p>Format: JSON array for containers/sendButtons/editors, string for buttonsContainerId</p>
-                        </div>
-                    </div>
-                </div>
-
+              <div class="text-inside-container">
+                <p>
+                  Configure custom CSS selectors for different AI chat
+                  platforms. Each selector type can have multiple fallback
+                  options defined as an array. The extension will use the first
+                  matching selector found on the page, with subsequent entries
+                  serving as fallbacks.
+                </p>
+                <ul>
+                  <li>
+                    <strong>Containers:</strong> The parent elements that
+                    contain the chat interface. These elements will host your
+                    custom buttons.
+                  </li>
+                  <li>
+                    <strong>Send Buttons:</strong> The submit buttons that send
+                    messages. For auto-sending buttons, the extension will
+                    automatically trigger these after inserting text.
+                  </li>
+                  <li>
+                    <strong>Editors:</strong> The text input areas where
+                    messages are composed. Note that the editor selector might
+                    need to be different for empty chats versus chats with
+                    existing messages.
+                  </li>
+                  <li>
+                    <strong>Container ID:</strong> A unique identifier for the
+                    extension's button container. This is primarily used for
+                    internal detection and troubleshooting - modification
+                    usually isn't necessary.
+                  </li>
+                </ul>
+                <p>
+                  Format: JSON array for containers/sendButtons/editors, string
+                  for buttonsContainerId
+                </p>
+              </div>
             </div>
-        </section>
-        <!-- ===== End Advanced Selector Configuration ===== -->
+          </div>
+        </div>
+      </section>
+      <!-- ===== End Advanced Selector Configuration ===== -->
 
-        <!-- =====  Theme Section (Dark Theme Toggle) ===== -->
-        <section class="section" id="themeSection">
-            <h2>Theme</h2>
-            <!-- iPhone-style toggle switch -->
-            <div class="switch-container" >
-                <label class="switch">
-                    <input type="checkbox" id="darkThemeToggle" aria-label="Enable Dark Theme">
-                    <span class="slider round"></span>
-                    
-                </label>
-                <span class="switch-label">Enable Dark Theme</span>
-            </div>
-        </section>
-        <!-- ===== End Theme Section ===== -->
-
+      <!-- =====  Theme Section (Dark Theme Toggle) ===== -->
+      <section class="section" id="themeSection">
+        <h2>Theme</h2>
+        <!-- iPhone-style toggle switch -->
+        <div class="switch-container">
+          <label class="switch">
+            <input
+              type="checkbox"
+              id="darkThemeToggle"
+              aria-label="Enable Dark Theme"
+            />
+            <span class="slider round"></span>
+          </label>
+          <span class="switch-label">Enable Dark Theme</span>
+        </div>
+      </section>
+      <!-- ===== End Theme Section ===== -->
     </div>
 
     <!-- Toast Notification Container -->
@@ -278,6 +404,5 @@
     <script src="/popup-page-scripts/popup-page-advanced.js"></script>
     <!-- Floating Window Settings Handler script -->
     <script src="/popup-page-scripts/popup-page-floating-window-handler.js"></script>
-</body>
-
+  </body>
 </html>

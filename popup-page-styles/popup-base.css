@@ -47,7 +47,7 @@ body {
     transition: background-color var(--transition-duration) ease;
 }
 
-/* Hide version container when the user is adding or copying a profile */
+/* Hide version container when the user is adding or copying a profile, as this space is used for that functionality at that sequence */
 body:has(#addProfileContainer:not([style*="display: none"])) #versionContainer,
 body:has(#copyProfileContainer:not([style*="display: none"])) #versionContainer {
     opacity: 0;
@@ -58,21 +58,21 @@ body:has(#copyProfileContainer:not([style*="display: none"])) #versionContainer 
 #versionContainer {
     opacity: 1;
     pointer-events: auto;
+    text-align: center;
     transition: opacity 0.5s ease;
 }
 
 /* Centered version text styling */
 #version {
-    text-align: center;
     color: #666666;
     width: 100%;
 }
 
 /* Explanation text styling */
 #topExplanationText {
-    text-align: center;
     color: #666666;
     width: 100%;
+    margin-bottom: 12px; /* Reduces space below the paragraph, above the button */
 }
 
 /* Notification text styling */
@@ -139,3 +139,4 @@ h2:hover {
     color: #6a4abd;
     transition: color var(--transition-duration-release) ease;
 }
+

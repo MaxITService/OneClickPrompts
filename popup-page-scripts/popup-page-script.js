@@ -38,6 +38,9 @@ const copyProfileInput = document.getElementById('copyProfileInput');
 const cancelAddProfileButton = document.getElementById('cancelAddProfile');
 const cancelCopyProfileButton = document.getElementById('cancelCopyProfile');
 
+// Open in Tab Button
+const openInTabButton = document.getElementById('open-in-tab-button');
+
 // -------------------------
 // Debounced Save Function
 // -------------------------
@@ -164,6 +167,19 @@ function updateInterface() {
 // -------------------------
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Check if the page is opened in a tab and apply appropriate styling
+    const urlParams = new URLSearchParams(window.location.search);
+    const isTab = urlParams.get('isTab') === 'true';
+    
+    if (isTab) {
+        // Hide the "Open in New Tab" button when already in a tab
+        if (openInTabButton) {
+            openInTabButton.style.display = 'none';
+        }
+        // Add tab-mode class to body for centering
+        document.body.classList.add('tab-mode');
+    }
+    
     loadProfiles();
 
     // Profile management
@@ -300,6 +316,18 @@ document.addEventListener('DOMContentLoaded', () => {
             copyProfileInput.classList.remove('input-error');
         }
     });
+
+    // Open in New Tab Button Click
+    if (openInTabButton) {
+        openInTabButton.addEventListener('click', () => {
+            // Open popup.html in a new tab with isTab parameter
+            chrome.tabs.create({
+                url: chrome.runtime.getURL('popup.html?isTab=true')
+            });
+            // Close the popup window
+            window.close();
+        });
+    }
 
     // Initialize event listeners for dynamic elements
     textareaSaverAndResizerFunc();
