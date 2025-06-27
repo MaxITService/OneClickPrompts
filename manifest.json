@@ -21,6 +21,7 @@
     },
     "default_title": "OneClickPrompts: Open User Interface"
   },
+  "options_page": "popup.html",
 
   "permissions": [
     "storage"
