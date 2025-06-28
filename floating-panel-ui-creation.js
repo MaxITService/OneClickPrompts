@@ -118,6 +118,9 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = function() {
         cursor: move;
     `;
 
+    // --- Create and insert Queue Section ---
+    const queueSection = this.createQueueSection();
+
     // Add drag functionality to header and profile switcher (backup if header is off-screen)
     this.makeDraggable(panel, panelHeader);
     this.makeDraggable(panel, profileSwitcherContainer);
@@ -125,6 +128,7 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = function() {
     // Append elements to the panel
     panel.appendChild(panelHeader);
     panel.appendChild(contentContainer);
+    panel.appendChild(queueSection);
     panel.appendChild(profileSwitcherContainer);
 
     // Append the panel to the document body
@@ -135,9 +139,9 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = function() {
 
     // Add resize event listener to save dimensions
     panel.addEventListener('mouseup', () => {
-        if (panel.style.width !== `${this.currentPanelSettings.width}px` || 
+        if (panel.style.width !== `${this.currentPanelSettings.width}px` ||
             panel.style.height !== `${this.currentPanelSettings.height}px`) {
-            
+
             this.currentPanelSettings.width = parseInt(panel.style.width);
             this.currentPanelSettings.height = parseInt(panel.style.height);
             this.debouncedSavePanelSettings();
@@ -151,7 +155,7 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = function() {
 /**
  * Creates the profile switcher UI inside the panel footer.
  */
-window.MaxExtensionFloatingPanel.createProfileSwitcher = function() {
+window.MaxExtensionFloatingPanel.createProfileSwitcher = function () {
     const switcherContainer = document.getElementById('max-extension-profile-switcher');
     if (!switcherContainer) return;
 
@@ -179,7 +183,7 @@ window.MaxExtensionFloatingPanel.createProfileSwitcher = function() {
         cursor: pointer;
         min-width: 120px;
     `;
-    
+
     // Prevent dragging when interacting with the dropdown
     profileSelector.addEventListener('mousedown', (event) => {
         event.stopPropagation();
@@ -213,10 +217,10 @@ window.MaxExtensionFloatingPanel.createProfileSwitcher = function() {
 /**
  * Makes an element draggable using a given handle element.
  */
-window.MaxExtensionFloatingPanel.makeDraggable = function(element, handle) {
+window.MaxExtensionFloatingPanel.makeDraggable = function (element, handle) {
     let offsetX = 0;
     let offsetY = 0;
-    
+
     const startDrag = (e) => {
         e.preventDefault();
         offsetX = e.clientX - element.getBoundingClientRect().left;
@@ -224,13 +228,13 @@ window.MaxExtensionFloatingPanel.makeDraggable = function(element, handle) {
         document.addEventListener('mousemove', dragElement);
         document.addEventListener('mouseup', stopDrag);
     };
-    
+
     const dragElement = (e) => {
         e.preventDefault();
         element.style.left = (e.clientX - offsetX) + 'px';
         element.style.top = (e.clientY - offsetY) + 'px';
     };
-    
+
     const stopDrag = () => {
         document.removeEventListener('mousemove', dragElement);
         document.removeEventListener('mouseup', stopDrag);
@@ -238,14 +242,116 @@ window.MaxExtensionFloatingPanel.makeDraggable = function(element, handle) {
         this.currentPanelSettings.posY = parseInt(element.style.top);
         this.debouncedSavePanelSettings();
     };
-    
+
     handle.addEventListener('mousedown', startDrag);
 };
 
 /**
+ * Creates the queue section UI inside the floating panel.
+ */
+window.MaxExtensionFloatingPanel.createQueueSection = function () {
+    const queueSection = document.createElement('div');
+    queueSection.id = 'max-extension-queue-section';
+    queueSection.style.cssText = `
+        padding: 8px 12px;
+        background-color: rgba(60, 60, 60, ${this.currentPanelSettings.opacity + 0.1});
+        border-top: 1px solid rgba(100, 100, 100, 0.3);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    `;
+
+    // Prevent dragging when interacting with the queue section
+    queueSection.addEventListener('mousedown', (event) => {
+        event.stopPropagation();
+    });
+
+    // --- Controls ---
+    const controlsContainer = document.createElement('div');
+    controlsContainer.style.cssText = 'display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;';
+
+    // 1. Queue Mode Toggle
+    this.queueModeToggle = MaxExtensionInterface.createToggle(
+        'enableQueueMode', // ID must match localStorage key
+        'Enable Queue Mode',
+        globalMaxExtensionConfig.enableQueueMode || false,
+        (state) => {
+            globalMaxExtensionConfig.enableQueueMode = state;
+            // Logic to show/hide queue UI elements based on state can be added here
+        }
+    );
+    this.queueModeToggle.style.margin = '0'; // Override default margins from createToggle
+    this.queueModeToggle.title = 'When enabled, clicking buttons adds them to a queue instead of sending immediately.';
+
+    // 2. Delay Input
+    const delayContainer = document.createElement('div');
+    delayContainer.style.cssText = 'display: flex; align-items: center; gap: 4px;';
+
+    const delayLabel = document.createElement('label');
+    delayLabel.htmlFor = 'max-extension-queue-delay-input';
+    delayLabel.textContent = 'Delay (s):';
+    delayLabel.style.fontSize = '12px';
+
+    this.delayInputElement = document.createElement('input');
+    this.delayInputElement.id = 'max-extension-queue-delay-input';
+    this.delayInputElement.type = 'number';
+    this.delayInputElement.value = globalMaxExtensionConfig.queueDelaySeconds || 15;
+    this.delayInputElement.min = "0";
+    this.delayInputElement.title = "Delay in seconds between sending each queued prompt.";
+    this.delayInputElement.style.cssText = `
+        width: 50px;
+        background-color: rgba(80, 80, 80, 1);
+        color: white;
+        border: 1px solid #666;
+        border-radius: 4px;
+        padding: 2px 4px;
+        font-size: 12px;
+    `;
+    this.delayInputElement.addEventListener('change', (event) => {
+        const delay = parseInt(event.target.value, 10);
+        if (!isNaN(delay) && delay >= 0) {
+            globalMaxExtensionConfig.queueDelaySeconds = delay;
+            // The config will be saved on the next profile save action
+        }
+    });
+
+    delayContainer.appendChild(delayLabel);
+    delayContainer.appendChild(this.delayInputElement);
+
+    // 3. Play and Reset buttons
+    const actionButtonsContainer = document.createElement('div');
+    actionButtonsContainer.style.cssText = 'display: flex; gap: 8px;';
+
+    this.playQueueButton = document.createElement('button');
+    this.playQueueButton.innerHTML = '▶️';
+    this.playQueueButton.title = 'Start sending the queued prompts.';
+    this.playQueueButton.style.cssText = 'background: none; border: none; font-size: 18px; cursor: pointer; display: none; padding: 0; color: white;';
+
+    this.resetQueueButton = document.createElement('button');
+    this.resetQueueButton.innerHTML = '🔄';
+    this.resetQueueButton.title = 'Clear all prompts from the queue.';
+    this.resetQueueButton.style.cssText = 'background: none; border: none; font-size: 18px; cursor: pointer; display: none; padding: 0; color: white;';
+
+    actionButtonsContainer.appendChild(this.playQueueButton);
+    actionButtonsContainer.appendChild(this.resetQueueButton);
+
+    controlsContainer.appendChild(this.queueModeToggle);
+    controlsContainer.appendChild(delayContainer);
+    controlsContainer.appendChild(actionButtonsContainer);
+
+    // --- Queue Display Area ---
+    this.queueDisplayArea = document.createElement('div');
+    this.queueDisplayArea.id = 'max-extension-queue-display';
+    this.queueDisplayArea.style.cssText = `min-height: 30px; background-color: rgba(40, 40, 40, 0.5); border-radius: 4px; padding: 6px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;`;
+    queueSection.appendChild(controlsContainer);
+    queueSection.appendChild(this.queueDisplayArea);
+    this.queueSectionElement = queueSection;
+    return queueSection;
+};
+/**
  * Positions the floating panel at the mouse cursor's position.
  */
-window.MaxExtensionFloatingPanel.positionPanelAtCursor = function(event) {
+window.MaxExtensionFloatingPanel.positionPanelAtCursor = function (event) {
     if (!this.panelElement) return;
     const cursorX = event.clientX;
     const cursorY = event.clientY;
@@ -259,7 +365,7 @@ window.MaxExtensionFloatingPanel.positionPanelAtCursor = function(event) {
 /**
  * Creates a toggle button for the floating panel.
  */
-window.MaxExtensionFloatingPanel.createPanelToggleButton = function() {
+window.MaxExtensionFloatingPanel.createPanelToggleButton = function () {
     const toggleButton = document.createElement('button');
     toggleButton.type = 'button'; // Prevent form submission!
     toggleButton.innerHTML = '🔼';
@@ -273,10 +379,11 @@ window.MaxExtensionFloatingPanel.createPanelToggleButton = function() {
         margin-bottom: 5px;
     `;
     toggleButton.title = 'Toggle floating button panel';
-    
+
     toggleButton.addEventListener('click', (event) => {
         this.togglePanel(event);
     });
-    
+
     return toggleButton;
 };
+

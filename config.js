@@ -40,11 +40,11 @@ async function migrateSyncToLocal() {
 
         // Copy to local storage
         await chrome.storage.local.set(syncData);
-        
+
         // Verify migration
         const localData = await chrome.storage.local.get(null);
         const verified = JSON.stringify(syncData) === JSON.stringify(localData);
-        
+
         if (verified) {
             // Clear sync storage after successful migration
             await chrome.storage.sync.clear();
@@ -145,7 +145,7 @@ async function loadProfileConfig(profileName) {
     try {
         const result = await chrome.storage.local.get([`profiles.${profileName}`]);
         const profile = result[`profiles.${profileName}`];
-        
+
         if (profile) {
             logConfigurationRelatedStuff(`Profile ${profileName} loaded successfully`);
             return profile;
@@ -167,13 +167,13 @@ async function switchProfile(profileName) {
         if (profile) {
             await chrome.storage.local.set({ 'currentProfile': profileName });
             logConfigurationRelatedStuff(`Switched to profile: ${profileName}`);
-            
+
             // Broadcast profile change to all tabs
             broadcastProfileChange(profileName, profile);
-            
+
             return profile;
         } else {
-            logConfigurationRelatedStuff(`Failed to switch to profile: ${profileName}`);            
+            logConfigurationRelatedStuff(`Failed to switch to profile: ${profileName}`);
             return null;
         }
     } catch (error) {
@@ -189,10 +189,10 @@ async function broadcastProfileChange(profileName, profileData) {
         tabs.forEach(tab => {
             // Only send to URLs that match our content script patterns
             if (tab.url && (
-                tab.url.includes('chat.openai.com') || 
-                tab.url.includes('grok.x.ai') || 
+                tab.url.includes('chat.openai.com') ||
+                tab.url.includes('grok.x.ai') ||
                 tab.url.includes('claude.ai') ||
-                tab.url.includes('o3') || 
+                tab.url.includes('o3') ||
                 tab.url.includes('x.ai')
             )) {
                 chrome.tabs.sendMessage(tab.id, {
@@ -219,7 +219,7 @@ async function getCurrentProfileConfig() {
     try {
         const result = await chrome.storage.local.get(['currentProfile']);
         const profileName = result.currentProfile;
-        
+
         if (profileName) {
             logConfigurationRelatedStuff(`Current profile found: ${profileName}`);
             let profile = await loadProfileConfig(profileName);
@@ -229,16 +229,25 @@ async function getCurrentProfileConfig() {
                     profile.customButtons = [];
                     logConfigurationRelatedStuff(`Initialized missing 'customButtons' for profile: ${profileName}`);
                 }
+                // Ensure queue settings exist for backward compatibility
+                if (typeof profile.queueDelaySeconds === 'undefined') {
+                    profile.queueDelaySeconds = 15; // Default delay in seconds
+                    logConfigurationRelatedStuff(`Initialized missing 'queueDelaySeconds' for profile: ${profileName}`);
+                }
                 return profile;
             }
         }
-        
+
         logConfigurationRelatedStuff('No valid current profile found. Creating default profile');
         const defaultProfile = await createDefaultProfile();
         // Ensure the default profile includes 'customButtons'
         if (!defaultProfile.customButtons) {
             defaultProfile.customButtons = [];
             logConfigurationRelatedStuff("Initialized missing 'customButtons' for default profile");
+        }
+        if (typeof defaultProfile.queueDelaySeconds === 'undefined') {
+            defaultProfile.queueDelaySeconds = 15;
+            logConfigurationRelatedStuff("Initialized missing 'queueDelaySeconds' for default profile");
         }
         return defaultProfile;
     } catch (error) {
@@ -255,7 +264,7 @@ async function listProfiles() {
         const profiles = Object.keys(storage)
             .filter(key => key.startsWith('profiles.'))
             .map(key => key.replace('profiles.', ''));
-        
+
         logConfigurationRelatedStuff('Available profiles:', profiles);
         return profiles;
     } catch (error) {
@@ -285,15 +294,15 @@ async function deleteProfile(profileName) {
             logConfigurationRelatedStuff('Cannot delete Default profile');
             return false;
         }
-        
+
         // Get current profile
         const result = await chrome.storage.local.get(['currentProfile']);
-        
+
         // If we're deleting the current profile, switch to Default
         if (result.currentProfile === profileName) {
             await switchProfile('Default');
         }
-        
+
         // Remove the profile from storage
         await chrome.storage.local.remove(`profiles.${profileName}`);
         logConfigurationRelatedStuff(`Profile ${profileName} deleted successfully`);
@@ -399,7 +408,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 try {
                     const result = await chrome.storage.local.get(['customSelectors']);
                     const customSelectors = result.customSelectors || {};
-                    
+
                     if (request.selectors) {
                         customSelectors[request.site] = request.selectors;
                         logConfigurationRelatedStuff('Saved custom selectors for: ' + request.site);
@@ -407,7 +416,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         delete customSelectors[request.site];
                         logConfigurationRelatedStuff('Removed custom selectors for: ' + request.site);
                     }
-                    
+
                     await chrome.storage.local.set({ customSelectors });
                     sendResponse({ success: true });
                 } catch (error) {
@@ -426,14 +435,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             });
             return true;
         // ----- End Custom Selectors Cases -----
-            
+
         // ----- Floating Panel Settings Cases -----
         case 'getFloatingPanelSettings':
             if (!request.hostname) {
                 sendResponse({ error: 'Hostname is required' });
                 return true;
             }
-            
+
             const floatingPanelKey = 'floating_panel_' + request.hostname;
             chrome.storage.local.get([floatingPanelKey], result => {
                 if (result && result[floatingPanelKey]) {
@@ -445,17 +454,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 }
             });
             return true;
-            
+
         case 'saveFloatingPanelSettings':
             if (!request.hostname || !request.settings) {
                 sendResponse({ error: 'Hostname and settings are required' });
                 return true;
             }
-            
+
             const saveKey = 'floating_panel_' + request.hostname;
             const saveData = {};
             saveData[saveKey] = request.settings;
-            
+
             chrome.storage.local.set(saveData, () => {
                 if (chrome.runtime.lastError) {
                     handleStorageError(chrome.runtime.lastError);
@@ -466,19 +475,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 }
             });
             return true;
-            
+
         case 'resetFloatingPanelSettings':
             chrome.storage.local.get(null, result => {
-                const floatingPanelKeys = Object.keys(result).filter(key => 
+                const floatingPanelKeys = Object.keys(result).filter(key =>
                     key.startsWith('floating_panel_')
                 );
-                
+
                 if (floatingPanelKeys.length === 0) {
                     sendResponse({ success: true, count: 0 });
                     logConfigurationRelatedStuff('No floating panel settings found to reset');
                     return;
                 }
-                
+
                 chrome.storage.local.remove(floatingPanelKeys, () => {
                     if (chrome.runtime.lastError) {
                         handleStorageError(chrome.runtime.lastError);
@@ -491,7 +500,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             });
             return true;
         // ----- End Floating Panel Settings Cases -----
-            
+
         default:
             logConfigurationRelatedStuff('Unknown message type received:', request.type);
             sendResponse({ error: 'Unknown message type' });
@@ -526,3 +535,4 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
         }
     }
 });
+

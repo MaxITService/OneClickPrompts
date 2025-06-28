@@ -6,7 +6,7 @@
 
 window.MaxExtensionInterface = {
     // Function to create a toggle checkbox
-    createToggle: function(id, labelText, initialState, onChangeCallback) {
+    createToggle: function (id, labelText, initialState, onChangeCallback) {
         const toggleContainer = document.createElement('div');
         toggleContainer.style.cssText = `
             display: flex;
@@ -38,7 +38,7 @@ window.MaxExtensionInterface = {
     },
 
     // Function to initialize toggle states from localStorage
-    loadToggleStates: function() {
+    loadToggleStates: function () {
         const savedAutoSendState = localStorage.getItem('globalAutoSendEnabled');
         if (savedAutoSendState !== null) {
             globalMaxExtensionConfig.globalAutoSendEnabled = savedAutoSendState === 'true';
@@ -48,5 +48,12 @@ window.MaxExtensionInterface = {
         if (savedHotkeysState !== null) {
             globalMaxExtensionConfig.enableShortcuts = savedHotkeysState === 'true';
         }
+
+        // Load queue mode state from localStorage
+        const savedQueueModeState = localStorage.getItem('enableQueueMode');
+        if (savedQueueModeState !== null) {
+            globalMaxExtensionConfig.enableQueueMode = savedQueueModeState === 'true';
+        }
     }
 };
+
