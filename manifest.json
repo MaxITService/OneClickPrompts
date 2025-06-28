@@ -23,16 +23,12 @@
   },
   "options_page": "popup.html",
 
-  "permissions": [
-    "storage"
-  ],
+  "permissions": ["storage"],
 
   "background": {
     "service_worker": "config.js",
     "type": "module"
   },
-
-
 
   "content_scripts": [
     {
@@ -44,7 +40,7 @@
         "https://chat.deepseek.com/*",
         "https://aistudio.google.com/*",
         "https://grok.com/*",
-        "https://gemini.google.com/*" 
+        "https://gemini.google.com/*"
       ],
       "js": [
         "log.js",
@@ -56,14 +52,15 @@
         "buttons-clicking-deepseek.js",
         "buttons-clicking-aistudio.js",
         "buttons-clicking-grok.js",
-        "buttons-clicking-gemini.js",  
+        "buttons-clicking-gemini.js",
         "buttons.js",
         "buttons-init.js",
         "interface.js",
         "floating-panel.js",
-        "floating-panel-settings.js",
+        "floating-panel-ui-queue.js",
         "floating-panel-ui-creation.js",
         "floating-panel-ui-interaction.js",
+        "floating-panel-settings.js",
         "buttons-injection.js",
         "init.js",
         "tests.js"
