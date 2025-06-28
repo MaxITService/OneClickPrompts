@@ -96,27 +96,58 @@ window.MaxExtensionFloatingPanel.createQueueSection = function () {
     this.playQueueButton = document.createElement('button');
     this.playQueueButton.innerHTML = '▶️';
     this.playQueueButton.title = 'Start sending the queued prompts.';
-    this.playQueueButton.style.cssText = 'background: none; border: none; font-size: 18px; cursor: pointer; display: none; padding: 0; color: white;';
+    this.playQueueButton.style.cssText = 'background: none; border: none; font-size: 18px; cursor: pointer; padding: 0; color: white;';
 
     this.resetQueueButton = document.createElement('button');
     this.resetQueueButton.innerHTML = '🔄';
     this.resetQueueButton.title = 'Clear all prompts from the queue.';
-    this.resetQueueButton.style.cssText = 'background: none; border: none; font-size: 18px; cursor: pointer; display: none; padding: 0; color: white;';
+    this.resetQueueButton.style.cssText = 'background: none; border: none; font-size: 18px; cursor: pointer; padding: 0; color: white;';
 
     actionButtonsContainer.appendChild(this.playQueueButton);
     actionButtonsContainer.appendChild(this.resetQueueButton);
 
-    controlsContainer.appendChild(this.queueModeToggle);
-    controlsContainer.appendChild(delayContainer);
-    controlsContainer.appendChild(actionButtonsContainer);
-
     // --- Queue Display Area ---
     this.queueDisplayArea = document.createElement('div');
     this.queueDisplayArea.id = 'max-extension-queue-display';
-    this.queueDisplayArea.style.cssText = `min-height: 30px; background-color: rgba(40, 40, 40, 0.5); border-radius: 4px; padding: 6px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;`;
+    this.queueDisplayArea.style.cssText = `min-height: 30px; background-color: rgba(40, 40, 40, 0.5); border-radius: 4px; padding: 6px; display: none; flex-wrap: wrap; gap: 6px; align-items: center;`;
+
+    // --- Expandable Section for other controls ---
+    const expandableSection = document.createElement('div');
+    expandableSection.style.display = 'contents'; // Use 'contents' to not disrupt parent's flex layout.
+    expandableSection.appendChild(delayContainer);
+    expandableSection.appendChild(actionButtonsContainer);
+
+    // 1. Queue Mode Toggle (controls the expandable section)
+    const isQueueEnabled = globalMaxExtensionConfig.enableQueueMode || false;
+    this.queueModeToggle = MaxExtensionInterface.createToggle(
+        'enableQueueMode', // ID must match localStorage key
+        'Enable Queue Mode',
+        isQueueEnabled,
+        (state) => {
+            globalMaxExtensionConfig.enableQueueMode = state;
+            expandableSection.style.display = state ? 'contents' : 'none';
+            this.queueDisplayArea.style.display = state ? 'flex' : 'none';
+        }
+    );
+    this.queueModeToggle.style.margin = '0'; // Override default margins from createToggle
+    this.queueModeToggle.title = 'When enabled, clicking buttons adds them to a queue instead of sending immediately.';
+
+    // Set initial visibility based on config
+    if (isQueueEnabled) {
+        expandableSection.style.display = 'contents';
+        this.queueDisplayArea.style.display = 'flex';
+    } else {
+        expandableSection.style.display = 'none';
+        this.queueDisplayArea.style.display = 'none';
+    }
+
+    controlsContainer.appendChild(this.queueModeToggle);
+    controlsContainer.appendChild(expandableSection);
+
     queueSection.appendChild(controlsContainer);
     queueSection.appendChild(this.queueDisplayArea);
     this.queueSectionElement = queueSection;
     return queueSection;
 };
+
 
