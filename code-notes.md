@@ -1,4 +1,5 @@
 // code-notes.md
+
 # OneClickPrompts Chrome Extension - Codebase Overview
 
 This document provides a high-level overview of the OneClickPrompts Chrome Extension codebase. It describes the purpose of each file and its role within the extension. Extension was previously called "ChatGPT Quick Buttons for your text".
@@ -87,10 +88,20 @@ The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, C
 
 ### `floating-panel-ui-queue.js`
 
-- **Purpose:** Initializes the interactive elements within the floating panel's queue section.
-- **Role:** This script finds the pre-existing queue elements loaded from `floating-panel.html` and attaches the necessary JavaScript logic and event handlers. It no longer creates the DOM elements itself. Key functions:
+- **Purpose:** Initializes the interactive elements within the floating panel's queue section and handles rendering the queue's visual state.
+- **Role:** This script finds the pre-existing queue elements loaded from `floating-panel.html` and attaches the necessary JavaScript logic and event handlers. It is responsible for all direct DOM manipulation of the queue UI. Key functions:
   - `initializeQueueSection()`: Finds the queue toggle, delay input, and control buttons in the DOM and wires up their functionality.
-- **Dependencies:** `floating-panel.html` (relies on its structure), `interface.js` (uses `createToggle`).
+  - `renderQueueDisplay()`: Clears and redraws the list of queued prompt icons.
+  - `updateQueueControlsState()`: Manages the enabled/disabled state and icons of the play/pause and reset buttons.
+- **Dependencies:** `floating-panel.html`, `interface.js`, `floating-panel-queue-engine.js`.
+
+### `floating-panel-ui-engine.js`
+
+- **Purpose:** Contains the core state management and execution logic for the prompt queue.
+- **Role:** This script is UI-agnostic and manages the `promptQueue` array, the sending process, timers, and state flags (`isQueueRunning`). It provides the backend functionality for the queue feature. Key functions:
+  - `addToQueue()`, `removeFromQueue()`, `startQueue()`, `pauseQueue()`, `resetQueue()`: Manage the queue's lifecycle.
+  - `processNextQueueItem()`: The core loop that sends a prompt and sets a timer for the next.
+- **Dependencies:** `floating-panel.js`, `floating-panel-ui-queue.js` (calls UI update functions).
 
 ### `floating-panel-settings.js`
 
@@ -139,7 +150,7 @@ The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, C
 ### `buttons.js`
 
 - **Purpose:** Manages the creation and functionality of custom send buttons.
-- **Role:** Creates button elements based on configuration, assigns keyboard shortcuts, and handles click events across different supported sites. It decides which site-specific functions are called.
+- **Role:** Creates button elements based on configuration, assigns keyboard shortcuts, and handles click events across different supported sites. It decides which site-specific functions are called. It also contains the logic to divert clicks to the prompt queue when Queue Mode is active in the floating panel.
 
 ### `buttons-init.js`
 
@@ -253,7 +264,9 @@ The extension operates as follows:
 4.  The content scripts retrieve the configuration from the service worker and inject the custom buttons into the page.
 5.  Users can toggle between inline injected buttons and the floating panel via the toggle button (🔼).
 6.  The floating panel's position, size, and visibility state are saved per website and restored when revisiting.
-7.  When the user clicks a custom button (either in the inline container or floating panel), the appropriate site-specific function is called to insert the text and trigger the send button.
+7.  When the user clicks a custom button:
+    - If the floating panel is active and Queue Mode is on, the prompt is added to a queue. The queue sends prompts sequentially with a configurable delay.
+    - Otherwise, the appropriate site-specific function is called to insert the text and trigger the send button.
 
 ## Additional Notes
 

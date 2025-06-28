@@ -103,6 +103,19 @@ window.MaxExtensionButtons = {
  * @param {boolean} autoSend - Flag indicating whether to automatically send the message
  */
 function processCustomSendButtonClick(event, customText, autoSend) {
+    // Check if we are in queue mode in the floating panel.
+    // This check must be first.
+    if (window.MaxExtensionFloatingPanel && window.MaxExtensionFloatingPanel.isPanelVisible && globalMaxExtensionConfig.enableQueueMode) {
+        const buttonConfig = {
+            icon: event.target.innerHTML,
+            text: customText,
+            autoSend: autoSend
+        };
+        // Add to queue and stop further processing. The engine handles the rest.
+        window.MaxExtensionFloatingPanel.addToQueue(buttonConfig);
+        return;
+    }
+
     event.preventDefault();
     logConCgp('[buttons] Custom send button clicked');
 

@@ -52,8 +52,8 @@ window.MaxExtensionInterface = {
         // Load queue mode state from localStorage
         const savedQueueModeState = localStorage.getItem('enableQueueMode');
         if (savedQueueModeState !== null) {
+            // This ensures that the global config reflects the stored toggle state on load
             globalMaxExtensionConfig.enableQueueMode = savedQueueModeState === 'true';
         }
     }
 };
-

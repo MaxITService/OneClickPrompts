@@ -52,12 +52,16 @@ window.MaxExtensionFloatingPanel = {
 
     // Prompt Queue properties
     promptQueue: [],
+    isQueueRunning: false,
+    queueTimerId: null,
     queueSectionElement: null,
     queueDisplayArea: null,
     playQueueButton: null,
+    pauseQueueButton: null, // This might be the same as play button
     resetQueueButton: null,
     delayInputElement: null,
-    queueModeToggle: null
+    queueModeToggle: null,
+    QUEUE_MAX_SIZE: 10
 };
 
 // No need to load files: they are imported in manifest.json

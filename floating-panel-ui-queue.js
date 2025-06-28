@@ -8,6 +8,8 @@
 //
 // Methods included:
 // - initializeQueueSection(): Wires up the DOM structure for the queue UI.
+// - renderQueueDisplay(): Updates the visual display of queued items.
+// - updateQueueControlsState(): Manages the state of play/pause/reset buttons.
 //
 // Dependencies:
 // - floating-panel.js: Provides the namespace and shared properties.
@@ -31,7 +33,7 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
     this.queueDisplayArea = document.getElementById('max-extension-queue-display');
 
     if (!this.queueSectionElement) {
-        logConCgp('[floating-panel] Queue section element not found in the DOM.');
+        logConCgp('[floating-panel-queue] Queue section element not found in the DOM.');
         return;
     }
 
@@ -41,13 +43,16 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
     });
 
     // Set initial values and event listeners for controls
-    this.delayInputElement.value = globalMaxExtensionConfig.queueDelaySeconds || 15;
+    this.delayInputElement.value = globalMaxExtensionConfig.queueDelayMinutes || 5;
     this.delayInputElement.addEventListener('change', (event) => {
-        const delay = parseInt(event.target.value, 10);
-        if (!isNaN(delay) && delay >= 0) {
-            globalMaxExtensionConfig.queueDelaySeconds = delay;
-            // The config will be saved on the next profile save action
+        let delay = parseInt(event.target.value, 10);
+        if (isNaN(delay) || delay < 2) {
+            delay = 2; // Enforce minimum delay
+            event.target.value = delay;
         }
+        globalMaxExtensionConfig.queueDelayMinutes = delay;
+        logConCgp(`[floating-panel-queue] Queue delay set to ${delay} minutes.`);
+        // Note: The config is saved with the profile, or upon panel settings save.
     });
 
     // Create and insert the Queue Mode toggle
@@ -63,10 +68,69 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         }
     );
     this.queueModeToggle.style.margin = '0';
+    this.queueModeToggle.querySelector('label').style.fontSize = '12px';
     this.queueModeToggle.title = 'When enabled, clicking buttons adds them to a queue instead of sending immediately.';
     togglePlaceholder.appendChild(this.queueModeToggle);
 
     // Set initial visibility of controls based on config
     expandableSection.style.display = isQueueEnabled ? 'contents' : 'none';
     this.queueDisplayArea.style.display = isQueueEnabled ? 'flex' : 'none';
+
+    // Attach event listeners to buttons
+    this.playQueueButton.addEventListener('click', () => {
+        if (this.isQueueRunning) {
+            this.pauseQueue();
+        } else {
+            this.startQueue();
+        }
+    });
+
+    this.resetQueueButton.addEventListener('click', () => {
+        this.resetQueue();
+    });
+
+    // Initial state update for controls
+    this.updateQueueControlsState();
+};
+
+/**
+ * Renders the queue display area with the current items in the queue.
+ */
+window.MaxExtensionFloatingPanel.renderQueueDisplay = function () {
+    if (!this.queueDisplayArea) return;
+
+    this.queueDisplayArea.innerHTML = ''; // Clear previous items
+    this.promptQueue.forEach((item, index) => {
+        const queuedItemElement = document.createElement('button');
+        queuedItemElement.className = 'max-extension-queued-item';
+        queuedItemElement.innerHTML = item.icon;
+        queuedItemElement.title = `Click to remove: ${item.text}`;
+        queuedItemElement.addEventListener('click', () => {
+            this.removeFromQueue(index);
+        });
+        this.queueDisplayArea.appendChild(queuedItemElement);
+    });
+};
+
+/**
+ * Updates the state (icon, disabled status) of the queue control buttons.
+ */
+window.MaxExtensionFloatingPanel.updateQueueControlsState = function () {
+    if (!this.playQueueButton || !this.resetQueueButton) return;
+
+    const hasItems = this.promptQueue.length > 0;
+
+    // Play/Pause Button
+    if (this.isQueueRunning) {
+        this.playQueueButton.innerHTML = '⏸️'; // Pause icon
+        this.playQueueButton.title = 'Pause the queue.';
+        this.playQueueButton.disabled = false;
+    } else {
+        this.playQueueButton.innerHTML = '▶️'; // Play icon
+        this.playQueueButton.title = 'Start sending the queued prompts.';
+        this.playQueueButton.disabled = !hasItems; // Disabled if no items
+    }
+
+    // Reset Button
+    this.resetQueueButton.disabled = !hasItems && !this.isQueueRunning;
 };

@@ -230,9 +230,13 @@ async function getCurrentProfileConfig() {
                     logConfigurationRelatedStuff(`Initialized missing 'customButtons' for profile: ${profileName}`);
                 }
                 // Ensure queue settings exist for backward compatibility
-                if (typeof profile.queueDelaySeconds === 'undefined') {
-                    profile.queueDelaySeconds = 15; // Default delay in seconds
-                    logConfigurationRelatedStuff(`Initialized missing 'queueDelaySeconds' for profile: ${profileName}`);
+                if (typeof profile.queueDelayMinutes === 'undefined') {
+                    profile.queueDelayMinutes = 5; // Default delay in minutes
+                    logConfigurationRelatedStuff(`Initialized missing 'queueDelayMinutes' for profile: ${profileName}`);
+                }
+                if (typeof profile.enableQueueMode === 'undefined') {
+                    profile.enableQueueMode = false;
+                    logConfigurationRelatedStuff(`Initialized missing 'enableQueueMode' for profile: ${profileName}`);
                 }
                 return profile;
             }
@@ -245,9 +249,13 @@ async function getCurrentProfileConfig() {
             defaultProfile.customButtons = [];
             logConfigurationRelatedStuff("Initialized missing 'customButtons' for default profile");
         }
-        if (typeof defaultProfile.queueDelaySeconds === 'undefined') {
-            defaultProfile.queueDelaySeconds = 15;
-            logConfigurationRelatedStuff("Initialized missing 'queueDelaySeconds' for default profile");
+        if (typeof defaultProfile.queueDelayMinutes === 'undefined') {
+            defaultProfile.queueDelayMinutes = 5;
+            logConfigurationRelatedStuff("Initialized missing 'queueDelayMinutes' for default profile");
+        }
+        if (typeof defaultProfile.enableQueueMode === 'undefined') {
+            defaultProfile.enableQueueMode = false;
+            logConfigurationRelatedStuff("Initialized missing 'enableQueueMode' for default profile");
         }
         return defaultProfile;
     } catch (error) {
@@ -535,4 +543,3 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
         }
     }
 });
-

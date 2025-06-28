@@ -23,12 +23,12 @@
 
       <div class="expandable-queue-controls">
         <div class="delay-container">
-          <label for="max-extension-queue-delay-input">Delay (s):</label>
+          <label for="max-extension-queue-delay-input">Delay (min):</label>
           <input
             id="max-extension-queue-delay-input"
             type="number"
-            min="0"
-            title="Delay in seconds between sending each queued prompt."
+            min="2"
+            title="Delay in minutes between sending each queued prompt. Minimum 2 minutes."
           />
         </div>
         <div class="action-buttons-container">
@@ -47,7 +47,10 @@
         </div>
       </div>
     </div>
-    <div id="max-extension-queue-display">
+    <div
+      id="max-extension-queue-display"
+      title="Queued prompts. Click an icon to remove it from the queue."
+    >
       <!-- Queued items will be shown here -->
     </div>
   </div>

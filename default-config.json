@@ -4,6 +4,8 @@
   "globalAutoSendEnabled": true,
   "enableShortcuts": true,
   "firstModificationDone": false,
+  "enableQueueMode": false,
+  "queueDelayMinutes": 5,
   "customButtons": [
     {
       "icon": "🧠",
