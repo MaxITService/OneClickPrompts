@@ -1,5 +1,4 @@
-// floating-panel-settings.js
-// Version: 1.0
+// Version: 1.1
 //
 // Documentation:
 // This file handles settings persistence and profile management for the floating panel.
@@ -19,7 +18,7 @@
 // - loadAvailableProfiles(): Gets profile list from service worker
 // - getCurrentProfile(): Fetches and sets current active profile
 // - switchToProfile(): Changes active profile and updates panel content
-// - initialize(): Sets up the floating panel (creates UI and loads settings)
+// - initialize(): Sets up the floating panel by creating UI and loading settings
 //
 // Implementation Details:
 // - All settings are stored with the prefix 'floating_panel_' followed by hostname
@@ -41,7 +40,7 @@
  * Debounced version of savePanelSettings.
  * Waits 150ms after the last call before actually saving.
  */
-window.MaxExtensionFloatingPanel.debouncedSavePanelSettings = function() {
+window.MaxExtensionFloatingPanel.debouncedSavePanelSettings = function () {
     if (this.savePositionTimer) {
         clearTimeout(this.savePositionTimer);
     }
@@ -55,31 +54,37 @@ window.MaxExtensionFloatingPanel.debouncedSavePanelSettings = function() {
  * Loads panel settings from Chrome's storage via the config service worker.
  * If no settings are found, default settings are used.
  */
-window.MaxExtensionFloatingPanel.loadPanelSettings = function() {
+window.MaxExtensionFloatingPanel.loadPanelSettings = function () {
     try {
         // Initialize with default settings immediately to avoid null references.
         this.currentPanelSettings = { ...this.defaultPanelSettings };
         const hostname = window.location.hostname;
-        
+
         // Request settings from the service worker.
         chrome.runtime.sendMessage({
             type: 'getFloatingPanelSettings',
             hostname: hostname
         }, (response) => {
+            if (chrome.runtime.lastError) {
+                logConCgp('[floating-panel] Error loading panel settings:', chrome.runtime.lastError.message);
+                this.currentPanelSettings = { ...this.defaultPanelSettings };
+                return;
+            }
+
             if (response && response.settings) {
                 this.currentPanelSettings = response.settings;
                 logConCgp('[floating-panel] Loaded panel settings for ' + hostname);
             } else {
                 logConCgp('[floating-panel] Using default panel settings for ' + hostname);
             }
-            
+
             // Apply settings to panel if it exists.
             if (this.panelElement) {
                 this.updatePanelFromSettings();
             }
-            
+
             // Restore panel visibility state after settings are loaded.
-            this.restorePanelState();
+            this.restorePanelState(); // This is now async, but we don't need to await it.
         });
     } catch (error) {
         logConCgp('[floating-panel] Error loading panel settings: ' + error.message);
@@ -90,7 +95,7 @@ window.MaxExtensionFloatingPanel.loadPanelSettings = function() {
 /**
  * Saves panel settings to Chrome's storage via the config service worker.
  */
-window.MaxExtensionFloatingPanel.savePanelSettings = function() {
+window.MaxExtensionFloatingPanel.savePanelSettings = function () {
     try {
         const hostname = window.location.hostname;
         chrome.runtime.sendMessage({
@@ -98,10 +103,10 @@ window.MaxExtensionFloatingPanel.savePanelSettings = function() {
             hostname: hostname,
             settings: this.currentPanelSettings
         }, (response) => {
-            if (response && response.success) {
+            if (chrome.runtime.lastError) {
+                logConCgp('[floating-panel] Failed to save panel settings:', chrome.runtime.lastError.message);
+            } else if (response && response.success) {
                 logConCgp('[floating-panel] Saved panel settings for ' + hostname);
-            } else {
-                logConCgp('[floating-panel] Failed to save panel settings for ' + hostname);
             }
         });
     } catch (error) {
@@ -112,11 +117,11 @@ window.MaxExtensionFloatingPanel.savePanelSettings = function() {
 /**
  * Loads available profiles from the service worker.
  */
-window.MaxExtensionFloatingPanel.loadAvailableProfiles = function() {
+window.MaxExtensionFloatingPanel.loadAvailableProfiles = function () {
     chrome.runtime.sendMessage(
         { type: 'listProfiles' },
         (response) => {
-            if (response.profiles && Array.isArray(response.profiles)) {
+            if (response && response.profiles && Array.isArray(response.profiles)) {
                 this.availableProfiles = response.profiles;
                 console.log('[floating-panel] Available profiles loaded:', this.availableProfiles);
                 // After loading profiles, get the current profile.
@@ -129,11 +134,11 @@ window.MaxExtensionFloatingPanel.loadAvailableProfiles = function() {
 /**
  * Gets the current active profile from the service worker.
  */
-window.MaxExtensionFloatingPanel.getCurrentProfile = function() {
+window.MaxExtensionFloatingPanel.getCurrentProfile = function () {
     chrome.runtime.sendMessage(
         { type: 'getConfig' },
         (response) => {
-            if (response.config) {
+            if (response && response.config) {
                 // Retrieve current profile name from storage.
                 chrome.storage.local.get(['currentProfile'], (result) => {
                     if (result.currentProfile) {
@@ -151,7 +156,7 @@ window.MaxExtensionFloatingPanel.getCurrentProfile = function() {
 /**
  * Handles switching to a different profile.
  */
-window.MaxExtensionFloatingPanel.switchToProfile = function(profileName) {
+window.MaxExtensionFloatingPanel.switchToProfile = function (profileName) {
     // Prevent switching to the same profile.
     if (profileName === this.currentProfileName) return;
     chrome.runtime.sendMessage(
@@ -175,16 +180,21 @@ window.MaxExtensionFloatingPanel.switchToProfile = function(profileName) {
 
 /**
  * Initializes the floating panel functionality.
- * (This method calls both UI creation and settings loading.)
+ * It now uses .then() to handle the asynchronous creation of the panel from the HTML template.
  */
-window.MaxExtensionFloatingPanel.initialize = function() {
-    // Set default panel settings.
+window.MaxExtensionFloatingPanel.initialize = function () {
     this.currentPanelSettings = { ...this.defaultPanelSettings };
-    // Create the floating panel (UI).
-    this.createFloatingPanel();
-    // Load saved settings.
-    this.loadPanelSettings();
-    // Load available profiles.
-    this.loadAvailableProfiles();
-    logConCgp('[floating-panel] Floating panel initialized.');
+
+    // createFloatingPanel is async. We use .then() to ensure subsequent actions
+    // only run after the panel has been created and added to the DOM.
+    this.createFloatingPanel().then(() => {
+        if (this.panelElement) {
+            // Load saved settings (which will apply them and restore state).
+            this.loadPanelSettings();
+            // Load available profiles (which will populate the switcher).
+            this.loadAvailableProfiles();
+        }
+    });
+
+    logConCgp('[floating-panel] Floating panel initialization process started.');
 };

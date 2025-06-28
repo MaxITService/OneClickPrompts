@@ -1,4 +1,3 @@
-// floating-panel.js
 // Version: 1.0
 //
 // Documentation:

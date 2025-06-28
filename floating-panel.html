@@ -1,0 +1,59 @@
+<div id="max-extension-floating-panel">
+  <!-- Header for dragging and closing -->
+  <div id="max-extension-floating-panel-header">
+    <div id="max-extension-panel-title">OneClickPrompts</div>
+    <button
+      id="max-extension-panel-close-btn"
+      title="Close panel and return to injected buttons"
+    >
+      ×
+    </button>
+  </div>
+
+  <!-- Container for prompt buttons -->
+  <div id="max-extension-floating-panel-content">
+    <!-- Buttons will be moved here by JS -->
+  </div>
+
+  <!-- Queue Section -->
+  <div id="max-extension-queue-section">
+    <div class="controls-container">
+      <!-- Toggle will be inserted here by JS -->
+      <div id="max-extension-queue-toggle-placeholder"></div>
+
+      <div class="expandable-queue-controls">
+        <div class="delay-container">
+          <label for="max-extension-queue-delay-input">Delay (s):</label>
+          <input
+            id="max-extension-queue-delay-input"
+            type="number"
+            min="0"
+            title="Delay in seconds between sending each queued prompt."
+          />
+        </div>
+        <div class="action-buttons-container">
+          <button
+            id="max-extension-play-queue-btn"
+            title="Start sending the queued prompts."
+          >
+            ▶️
+          </button>
+          <button
+            id="max-extension-reset-queue-btn"
+            title="Clear all prompts from the queue."
+          >
+            🔄
+          </button>
+        </div>
+      </div>
+    </div>
+    <div id="max-extension-queue-display">
+      <!-- Queued items will be shown here -->
+    </div>
+  </div>
+
+  <!-- Footer for profile switching -->
+  <div id="max-extension-profile-switcher">
+    <!-- Profile switcher will be created here by JS -->
+  </div>
+</div>

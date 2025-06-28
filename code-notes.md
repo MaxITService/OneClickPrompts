@@ -1,3 +1,4 @@
+// code-notes.md
 # OneClickPrompts Chrome Extension - Codebase Overview
 
 This document provides a high-level overview of the OneClickPrompts Chrome Extension codebase. It describes the purpose of each file and its role within the extension. Extension was previously called "ChatGPT Quick Buttons for your text".
@@ -11,7 +12,7 @@ The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, C
 ### `manifest.json`
 
 - **Purpose:** Defines the extension's metadata, permissions, background service worker, and content scripts.
-- **Role:** This is the central configuration file that tells Chrome how to load and run the extension. It specifies which JavaScript files to inject into which websites.
+- **Role:** This is the central configuration file that tells Chrome how to load and run the extension. It specifies which JavaScript and CSS files to inject into which websites and makes resources like HTML templates (`floating-panel.html`) accessible to the content scripts.
 
 ### `config.js`
 
@@ -49,95 +50,81 @@ The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, C
 
 ### `floating-panel.js`
 
-- **Purpose:** Implements a floating, customizable button panel for the extension.
-- **Role:** Creates a draggable, resizable panel that can be toggled as an alternative to the inline injected buttons. Features include:
-  - Dark, semi-transparent appearance (rgba(50, 50, 50, 0.7))
-  - Positioning with the panel's bottom-left corner at the cursor location
-  - Persistent state and position saved per website using Chrome's extension storage via the service worker
-  - Draggable header and resizable body
-  - Toggle button in the original injected button container
-  - Closing via an "x" button to return to the injected buttons
-  - Debounced saving (150ms delay) for efficient storage operations
-- **Dependencies:**
-  - **config.js (Service Worker):** Directly communicates with the service worker using `chrome.runtime.sendMessage` to save and load panel settings per website hostname. Sends messages with types 'getFloatingPanelSettings' and 'saveFloatingPanelSettings'.
-  - **utils.js:** Uses utility functions for logging.
+- **Purpose:** Implements the entry point for the OneClickPrompts floating panel.
+- **Role:** Defines the `window.MaxExtensionFloatingPanel` namespace, which acts as a global object containing all shared properties and functions for the floating panel. This includes references to the panel element, its visibility state, current settings, and profile information.
+
+### `floating-panel.html`
+
+- **Purpose:** Provides the static HTML structure for the floating panel.
+- **Role:** This file defines the panel's complete DOM structure, including the header, content area, queue section, and footer. It is fetched asynchronously by `floating-panel-ui-creation.js` and injected into the page, cleanly separating the panel's structure from its behavior.
+
+### `floating-panel.css`
+
+- **Purpose:** Provides all the styling for the floating panel.
+- **Role:** This file contains all CSS rules that define the visual appearance of the floating panel, including its layout, colors, fonts, and opacity. It is injected directly into the web page by the extension's manifest.
 
 ### `floating-panel-ui-creation.js`
 
-- **Purpose:** Contains UI creation and basic behavior methods for the floating panel.
-- **Role:** Handles creation of the panel DOM structure, profile switcher, drag functionality, positioning at the cursor, and the creation of the toggle button. Key functions:
-  - `createFloatingPanel()`: Creates the panel element with header, content container, and footer
-  - `createProfileSwitcher()`: Builds the profile dropdown in the panel footer
-  - `makeDraggable()`: Enables drag functionality on an element via a handle
-  - `positionPanelAtCursor()`: Positions the panel relative to the mouse cursor
-  - `createPanelToggleButton()`: Creates the toggle button for summoning the floating panel
-- **Dependencies:**
-  - **floating-panel.js:** Uses the namespace and properties defined here
-  - **utils.js:** Uses logging utilities
+- **Purpose:** Handles fetching the panel's HTML template, injecting it into the DOM, and setting up its core interactive behaviors.
+- **Role:** This script is responsible for loading the visual structure of the panel from `floating-panel.html`. Key functions:
+  - `createFloatingPanel()`: Fetches `floating-panel.html` asynchronously, appends it to the document body, and attaches initial event listeners (e.g., for the close button). It then calls `initializeQueueSection` to wire up the queue controls.
+  - `createProfileSwitcher()`: Builds the profile dropdown in the panel footer.
+  - `makeDraggable()`: Enables drag functionality on the panel's header and footer.
+  - `positionPanelAtCursor()`: Positions the panel relative to the mouse cursor.
+  - `createPanelToggleButton()`: Creates the toggle button used to summon the floating panel.
+- **Dependencies:** `floating-panel.html`, `floating-panel-ui-queue.js`.
 
 ### `floating-panel-ui-interaction.js`
 
 - **Purpose:** Contains UI interaction and state management methods for the floating panel.
 - **Role:** Handles toggling panel visibility, moving buttons between containers, updating the panel appearance from settings, restoring state, and refreshing buttons. Key functions:
-  - `togglePanel()`: Toggles the floating panel's visibility and manages button movement
-  - `moveButtonsToPanel()`: Moves buttons from the original container to the panel
-  - `updatePanelFromSettings()`: Updates the panel's appearance and position
-  - `restorePanelState()`: Restores the panel visibility based on saved settings
-  - `refreshButtonsInPanel()`: Refreshes the buttons displayed in the panel after a profile switch
-- **Dependencies:**
-- **floating-panel.js:** Uses the namespace and properties defined here
-- **utils.js:** Uses logging utilities
-- **floating-panel-ui-creation.js:** Calls methods from here during panel initialization
+  - `togglePanel()`: An `async` function that toggles the floating panel's visibility. It handles the initial asynchronous creation of the panel via `createFloatingPanel` on the first click.
+  - `moveButtonsToPanel()`: Moves buttons from the original container to the panel.
+  - `updatePanelFromSettings()`: Updates the panel’s dynamic styles (like position, size, and opacity).
+  - `restorePanelState()`: Restores the panel visibility based on saved settings.
+  - `refreshButtonsInPanel()`: Refreshes the buttons displayed in the panel after a profile switch.
+- **Dependencies:** `floating-panel.js`, `floating-panel-ui-creation.js`.
 
 ### `floating-panel-ui-queue.js`
 
-- **Purpose:** Contains UI creation logic for the prompt queue section within the floating panel.
-- **Role:** Creates the controls (toggle, delay input, play/reset buttons) and the display area for queued items. This function extends the `window.MaxExtensionFloatingPanel` namespace. Key functions:
-  - `createQueueSection()`: Creates the DOM structure for the queue UI.
-- **Dependencies:**
-  - **floating-panel.js:** Uses the namespace and properties defined here
-  - **interface.js:** Provides UI creation helpers like `createToggle`
-  - **config.js:** Provides configuration values like `enableQueueMode`
+- **Purpose:** Initializes the interactive elements within the floating panel's queue section.
+- **Role:** This script finds the pre-existing queue elements loaded from `floating-panel.html` and attaches the necessary JavaScript logic and event handlers. It no longer creates the DOM elements itself. Key functions:
+  - `initializeQueueSection()`: Finds the queue toggle, delay input, and control buttons in the DOM and wires up their functionality.
+- **Dependencies:** `floating-panel.html` (relies on its structure), `interface.js` (uses `createToggle`).
 
 ### `floating-panel-settings.js`
 
 - **Purpose:** Handles settings persistence and profile management for the floating panel.
 - **Role:** Includes methods for loading/saving panel settings, debouncing saves, and profile switching. Key functions:
-  - `loadPanelSettings()`: Retrieves settings from the service worker for the current hostname
-  - `savePanelSettings()`: Sends updated settings to the service worker for storage
-  - `debouncedSavePanelSettings()`: Waits 150ms before saving to reduce storage operations
-  - `loadAvailableProfiles()`: Gets list of profiles from the service worker
-  - `switchToProfile()`: Changes the current profile and refreshes floating panel content
-- **Dependencies:**
-  - **floating-panel.js:** Uses the namespace and properties defined here
-  - **floating-panel-ui-creation.js:** Calls the profile switcher creation method
-  - **floating-panel-ui-interaction.js:** Calls methods to update the UI and refresh buttons
-  - **config.js (Service Worker):** Communicates with the service worker for settings persistence
+  - `initialize()`: The main entry point for the floating panel system. It asynchronously calls `createFloatingPanel` and then loads settings and profiles once the panel is in the DOM.
+  - `loadPanelSettings()`: Retrieves settings from the service worker for the current hostname.
+  - `savePanelSettings()`: Sends updated settings to the service worker for storage.
+  - `debouncedSavePanelSettings()`: Waits 150ms before saving to reduce storage operations.
+  - `loadAvailableProfiles()`: Gets a list of profiles from the service worker.
+  - `switchToProfile()`: Changes the current profile and refreshes floating panel content.
+- **Dependencies:** `floating-panel-ui-creation.js`, `floating-panel-ui-interaction.js`, `config.js`.
 
 ### Code File Dependencies for Floating Panel:
 
 - **Initialization Flow:**
 
-  1. `floating-panel.js`: Defines the namespace and shared properties
-  2. `floating-panel-ui-queue.js`: Adds queue creation methods to the namespace
-  3. `floating-panel-ui-creation.js`: Adds panel creation methods to the namespace
-  4. `floating-panel-ui-interaction.js`: Adds interaction methods to the namespace
-  5. `floating-panel-settings.js`: Adds settings methods to the namespace
-  6. `buttons-init.js`: Calls `initialize()` and creates the toggle button
+  1.  `buttons-init.js`: Calls `MaxExtensionFloatingPanel.initialize()` and creates the toggle button (🔼).
+  2.  `initialize()` in `floating-panel-settings.js` starts the process by calling the `async` function `createFloatingPanel()`.
+  3.  `createFloatingPanel()` in `floating-panel-ui-creation.js` fetches `floating-panel.html`, injects it into the page, attaches core event listeners, and then calls `initializeQueueSection()`.
+  4.  `initializeQueueSection()` in `floating-panel-ui-queue.js` finds the queue elements within the injected HTML and attaches their specific logic.
+  5.  Once `createFloatingPanel()` completes, the `.then()` block in `initialize()` executes, which calls `loadPanelSettings()` and `loadAvailableProfiles()` to populate the now-existing panel with data and restore its state.
 
 - **Panel Summoning Process:**
 
-  1. Toggle button calls `togglePanel(event)`
-  2. First call creates panel without loading settings to avoid race conditions
-  3. Panel is positioned and displayed immediately
-  4. Settings are saved asynchronously
+  1.  The toggle button calls the `async` function `togglePanel(event)`.
+  2.  On the first call, `togglePanel` awaits the completion of `createFloatingPanel` to ensure the panel is fully built and initialized.
+  3.  The panel is then positioned, displayed, and buttons are moved into it.
 
 - **Implementation Notes:**
-  - The floating panel UI was split into creation and interaction files to better separate concerns
-  - Creation methods handle the DOM structure and initial behavior setup
-  - Interaction methods manage state transitions and dynamic behavior
-  - All methods share the same namespace (`window.MaxExtensionFloatingPanel`) defined in `floating-panel.js`
-  - This modular approach makes the code more maintainable while preserving functionality
+  - The floating panel's UI has been refactored to use an HTML template (`floating-panel.html`) and an external stylesheet (`floating-panel.css`).
+  - This approach separates concerns: structure (HTML), presentation (CSS), and behavior (JavaScript), leading to more maintainable code.
+  - JavaScript files that previously created DOM elements now fetch the template or find elements within it and attach functionality.
+  - The initialization process is now asynchronous to handle the fetching of the HTML file.
 
 ### `init.js`
 

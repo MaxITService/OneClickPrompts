@@ -1,0 +1,146 @@
+/* Main Panel Container */
+#max-extension-floating-panel {
+    position: fixed;
+    border: 1px solid #444;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    z-index: 10000;
+    overflow: hidden;
+    resize: both;
+    pointer-events: auto;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Panel Header */
+#max-extension-floating-panel-header {
+    padding: 8px 12px;
+    cursor: move;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+}
+
+#max-extension-panel-title {
+    font-weight: bold;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+#max-extension-panel-close-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0 5px;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Panel Content Area */
+#max-extension-floating-panel-content {
+    flex: 1;
+    padding: 10px;
+    overflow-y: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-content: flex-start;
+}
+
+/* Queue Section */
+#max-extension-queue-section {
+    padding: 8px 12px;
+    border-top: 1px solid rgba(100, 100, 100, 0.3);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#max-extension-queue-section .controls-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+#max-extension-queue-section .expandable-queue-controls {
+    display: contents;
+    /* Ensures children are treated as direct children of the flex container */
+}
+
+#max-extension-queue-section .delay-container {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+#max-extension-queue-section .delay-container label {
+    font-size: 12px;
+}
+
+#max-extension-queue-delay-input {
+    width: 50px;
+    background-color: rgba(80, 80, 80, 1);
+    color: white;
+    border: 1px solid #666;
+    border-radius: 4px;
+    padding: 2px 4px;
+    font-size: 12px;
+}
+
+#max-extension-queue-section .action-buttons-container {
+    display: flex;
+    gap: 8px;
+}
+
+#max-extension-queue-section .action-buttons-container button {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0;
+    color: white;
+}
+
+#max-extension-queue-display {
+    min-height: 30px;
+    background-color: rgba(40, 40, 40, 0.5);
+    border-radius: 4px;
+    padding: 6px;
+    display: none;
+    /* Initially hidden */
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+/* Profile Switcher Footer */
+#max-extension-profile-switcher {
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(100, 100, 100, 0.3);
+    cursor: move;
+}
+
+#max-extension-profile-switcher div {
+    /* Label */
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+#max-extension-profile-selector {
+    background-color: rgba(60, 60, 60, 1);
+    color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(100, 100, 100, 0.5);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+    cursor: pointer;
+    min-width: 120px;
+}
