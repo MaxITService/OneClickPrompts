@@ -156,6 +156,24 @@
     background-color: rgba(255, 0, 0, 0.3);
 }
 
+#max-extension-queue-progress-container {
+    height: 4px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+    overflow: hidden;
+    display: none;
+    /* Hidden by default */
+}
+
+#max-extension-queue-progress-bar {
+    height: 100%;
+    width: 100%;
+    background-color: white;
+    /* Changed from green to white */
+    border-radius: 2px;
+}
+
+
 /* Profile Switcher Footer */
 #max-extension-profile-switcher {
     padding: 8px 12px;

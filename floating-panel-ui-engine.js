@@ -66,6 +66,12 @@ window.MaxExtensionFloatingPanel.startQueue = function () {
     }
     this.isQueueRunning = true;
     logConCgp('[queue-engine] Queue started.');
+
+    // Show progress bar container when queue starts
+    if (this.queueProgressContainer) {
+        this.queueProgressContainer.style.display = 'block';
+    }
+
     this.updateQueueControlsState();
     this.processNextQueueItem();
 };
@@ -80,6 +86,14 @@ window.MaxExtensionFloatingPanel.pauseQueue = function () {
         this.queueTimerId = null;
     }
     logConCgp('[queue-engine] Queue paused.');
+
+    // Freeze the progress bar
+    if (this.queueProgressBar) {
+        const computedWidth = window.getComputedStyle(this.queueProgressBar).width;
+        this.queueProgressBar.style.transition = 'none';
+        this.queueProgressBar.style.width = computedWidth;
+    }
+
     this.updateQueueControlsState();
 };
 
@@ -90,6 +104,16 @@ window.MaxExtensionFloatingPanel.resetQueue = function () {
     this.pauseQueue(); // Stop any running timers and set isQueueRunning to false
     this.promptQueue = [];
     logConCgp('[queue-engine] Queue reset.');
+
+    // Hide and reset progress bar
+    if (this.queueProgressBar) {
+        this.queueProgressBar.style.transition = 'none';
+        this.queueProgressBar.style.width = '100%';
+    }
+    if (this.queueProgressContainer) {
+        this.queueProgressContainer.style.display = 'none';
+    }
+
     this.renderQueueDisplay();
     this.updateQueueControlsState(); // This will disable buttons as needed
 };
@@ -138,10 +162,34 @@ window.MaxExtensionFloatingPanel.processNextQueueItem = function () {
             logConCgp(`[queue-engine] Waiting for ${delayMin} minutes before next item.`);
         }
 
+        // Start the progress bar animation
+        if (this.queueProgressBar) {
+            // Reset to full width instantly, then start the transition
+            this.queueProgressBar.style.transition = 'none';
+            this.queueProgressBar.style.width = '100%';
+
+            // Force reflow to apply the reset before starting transition
+            setTimeout(() => {
+                this.queueProgressBar.style.transition = `width ${delayMs / 1000}s linear`;
+                this.queueProgressBar.style.width = '0%';
+            }, 20);
+        }
+
         this.queueTimerId = setTimeout(() => this.processNextQueueItem(), delayMs);
     } else {
         logConCgp('[queue-engine] All items have been sent.');
         this.pauseQueue(); // Queue finished, so pause/stop
+
+        // Hide progress bar after a short delay to let animation finish
+        setTimeout(() => {
+            if (this.queueProgressContainer && !this.isQueueRunning) {
+                this.queueProgressContainer.style.display = 'none';
+                if (this.queueProgressBar) {
+                    this.queueProgressBar.style.transition = 'none';
+                    this.queueProgressBar.style.width = '100%';
+                }
+            }
+        }, 1000); // Wait 1 second after finish to hide
     }
 };
 

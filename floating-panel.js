@@ -56,6 +56,8 @@ window.MaxExtensionFloatingPanel = {
     queueTimerId: null,
     queueSectionElement: null,
     queueDisplayArea: null,
+    queueProgressContainer: null,
+    queueProgressBar: null,
     playQueueButton: null,
     pauseQueueButton: null, // This might be the same as play button
     resetQueueButton: null,

@@ -32,6 +32,8 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
     this.playQueueButton = document.getElementById('max-extension-play-queue-btn');
     this.resetQueueButton = document.getElementById('max-extension-reset-queue-btn');
     this.queueDisplayArea = document.getElementById('max-extension-queue-display');
+    this.queueProgressContainer = document.getElementById('max-extension-queue-progress-container');
+    this.queueProgressBar = document.getElementById('max-extension-queue-progress-bar');
 
     if (!this.queueSectionElement) {
         logConCgp('[floating-panel-queue] Queue section element not found in the DOM.');
@@ -166,4 +168,9 @@ window.MaxExtensionFloatingPanel.updateQueueControlsState = function () {
 
     // Reset Button
     this.resetQueueButton.disabled = !hasItems && !this.isQueueRunning;
+
+    // Hide progress bar if queue is empty and not running
+    if (this.queueProgressContainer && !this.isQueueRunning && !hasItems) {
+        this.queueProgressContainer.style.display = 'none';
+    }
 };
