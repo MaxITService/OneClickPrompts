@@ -125,8 +125,19 @@ window.MaxExtensionFloatingPanel.processNextQueueItem = function () {
 
     // If there are more items, set a timeout for the next one
     if (this.promptQueue.length > 0) {
-        const delayMs = (globalMaxExtensionConfig.queueDelayMinutes || 5) * 60 * 1000;
-        logConCgp(`[queue-engine] Waiting for ${delayMs / 1000 / 60} minutes before next item.`);
+        const unit = globalMaxExtensionConfig.queueDelayUnit || 'min';
+        let delayMs;
+
+        if (unit === 'sec') {
+            const delaySec = globalMaxExtensionConfig.queueDelaySeconds || 300;
+            delayMs = delaySec * 1000;
+            logConCgp(`[queue-engine] Waiting for ${delaySec} seconds before next item.`);
+        } else { // 'min'
+            const delayMin = globalMaxExtensionConfig.queueDelayMinutes || 5;
+            delayMs = delayMin * 60 * 1000;
+            logConCgp(`[queue-engine] Waiting for ${delayMin} minutes before next item.`);
+        }
+
         this.queueTimerId = setTimeout(() => this.processNextQueueItem(), delayMs);
     } else {
         logConCgp('[queue-engine] All items have been sent.');

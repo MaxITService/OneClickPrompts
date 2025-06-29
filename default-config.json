@@ -6,6 +6,8 @@
   "firstModificationDone": false,
   "enableQueueMode": false,
   "queueDelayMinutes": 5,
+  "queueDelaySeconds": 300,
+  "queueDelayUnit": "min",
   "customButtons": [
     {
       "icon": "🧠",

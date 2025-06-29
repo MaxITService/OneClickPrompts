@@ -28,6 +28,7 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
     const togglePlaceholder = document.getElementById('max-extension-queue-toggle-placeholder');
     const expandableSection = this.queueSectionElement.querySelector('.expandable-queue-controls');
     this.delayInputElement = document.getElementById('max-extension-queue-delay-input');
+    this.delayUnitToggle = document.getElementById('max-extension-delay-unit-toggle');
     this.playQueueButton = document.getElementById('max-extension-play-queue-btn');
     this.resetQueueButton = document.getElementById('max-extension-reset-queue-btn');
     this.queueDisplayArea = document.getElementById('max-extension-queue-display');
@@ -42,18 +43,50 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         event.stopPropagation();
     });
 
-    // Set initial values and event listeners for controls
-    this.delayInputElement.value = globalMaxExtensionConfig.queueDelayMinutes || 5;
+    // --- DELAY INPUT AND UNIT TOGGLE LOGIC ---
+
+    const updateDelayUI = () => {
+        const unit = globalMaxExtensionConfig.queueDelayUnit || 'min';
+        if (unit === 'sec') {
+            this.delayUnitToggle.textContent = 'sec';
+            this.delayInputElement.value = globalMaxExtensionConfig.queueDelaySeconds;
+            this.delayInputElement.title = "Delay in seconds between sending each queued prompt. Minimum 2 seconds.";
+        } else {
+            this.delayUnitToggle.textContent = 'min';
+            this.delayInputElement.value = globalMaxExtensionConfig.queueDelayMinutes;
+            this.delayInputElement.title = "Delay in minutes between sending each queued prompt. Minimum 2 minutes.";
+        }
+    };
+
+    // Set initial state from config
+    updateDelayUI();
+
+    // Add listener for unit toggle
+    this.delayUnitToggle.addEventListener('click', (event) => {
+        event.preventDefault();
+        globalMaxExtensionConfig.queueDelayUnit = (globalMaxExtensionConfig.queueDelayUnit === 'min') ? 'sec' : 'min';
+        updateDelayUI();
+        // The config is saved when profile settings are saved.
+    });
+
+    // Add listener for input value changes
     this.delayInputElement.addEventListener('change', (event) => {
         let delay = parseInt(event.target.value, 10);
         if (isNaN(delay) || delay < 2) {
-            delay = 2; // Enforce minimum delay
+            delay = 2;
             event.target.value = delay;
         }
-        globalMaxExtensionConfig.queueDelayMinutes = delay;
-        logConCgp(`[floating-panel-queue] Queue delay set to ${delay} minutes.`);
-        // Note: The config is saved with the profile, or upon panel settings save.
+
+        if (globalMaxExtensionConfig.queueDelayUnit === 'sec') {
+            globalMaxExtensionConfig.queueDelaySeconds = delay;
+            logConCgp(`[floating-panel-queue] Queue delay set to ${delay} seconds.`);
+        } else {
+            globalMaxExtensionConfig.queueDelayMinutes = delay;
+            logConCgp(`[floating-panel-queue] Queue delay set to ${delay} minutes.`);
+        }
     });
+
+    // --- END DELAY LOGIC ---
 
     // Create and insert the Queue Mode toggle
     const isQueueEnabled = globalMaxExtensionConfig.enableQueueMode || false;

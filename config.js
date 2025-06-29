@@ -234,6 +234,14 @@ async function getCurrentProfileConfig() {
                     profile.queueDelayMinutes = 5; // Default delay in minutes
                     logConfigurationRelatedStuff(`Initialized missing 'queueDelayMinutes' for profile: ${profileName}`);
                 }
+                if (typeof profile.queueDelaySeconds === 'undefined') {
+                    profile.queueDelaySeconds = 300; // Default delay in seconds
+                    logConfigurationRelatedStuff(`Initialized missing 'queueDelaySeconds' for profile: ${profileName}`);
+                }
+                if (typeof profile.queueDelayUnit === 'undefined') {
+                    profile.queueDelayUnit = 'min'; // Default unit is minutes
+                    logConfigurationRelatedStuff(`Initialized missing 'queueDelayUnit' for profile: ${profileName}`);
+                }
                 if (typeof profile.enableQueueMode === 'undefined') {
                     profile.enableQueueMode = false;
                     logConfigurationRelatedStuff(`Initialized missing 'enableQueueMode' for profile: ${profileName}`);
@@ -252,6 +260,14 @@ async function getCurrentProfileConfig() {
         if (typeof defaultProfile.queueDelayMinutes === 'undefined') {
             defaultProfile.queueDelayMinutes = 5;
             logConfigurationRelatedStuff("Initialized missing 'queueDelayMinutes' for default profile");
+        }
+        if (typeof defaultProfile.queueDelaySeconds === 'undefined') {
+            defaultProfile.queueDelaySeconds = 300;
+            logConfigurationRelatedStuff("Initialized missing 'queueDelaySeconds' for default profile");
+        }
+        if (typeof defaultProfile.queueDelayUnit === 'undefined') {
+            defaultProfile.queueDelayUnit = 'min';
+            logConfigurationRelatedStuff("Initialized missing 'queueDelayUnit' for default profile");
         }
         if (typeof defaultProfile.enableQueueMode === 'undefined') {
             defaultProfile.enableQueueMode = false;
