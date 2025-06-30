@@ -261,3 +261,13 @@
     margin: 0;
     /* Reset any custom margin */
 }
+
+/* Style all checkboxes inside your panel */
+#max-extension-floating-panel input[type="checkbox"] {
+    accent-color: #444; /* Modern browsers support this */
+    background-color: rgba(60, 60, 60, 1);
+    border: 1px solid #888;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
