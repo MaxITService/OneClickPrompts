@@ -31,11 +31,22 @@
           >
             <option value="default">Default Profile</option>
           </select>
-          <button id="addProfile">Add Profile</button>
-          <button id="copyProfile">
+          <button id="addProfile" title="Create a new, empty profile.">
+            Add Profile
+          </button>
+          <button
+            id="copyProfile"
+            title="Duplicate the current profile with all its buttons and settings to new profile that you will name."
+          >
             Duplicate Current Profile To A New One
           </button>
-          <button id="deleteProfile" class="danger">Delete</button>
+          <button
+            id="deleteProfile"
+            class="danger"
+            title="Delete the currently selected profile. The 'Default' profile cannot be deleted."
+          >
+            Delete
+          </button>
 
           <div id="versionContainer">
             <p id="version">Version 0.0.2.6</p>
@@ -46,7 +57,10 @@
 
               <a href="#helpSection">Go to Help Section</a>
             </p>
-            <button id="open-in-tab-button">
+            <button
+              id="open-in-tab-button"
+              title="Open this settings page in a new browser tab for more space."
+            >
               ↗️ Expand this page to new tab
             </button>
           </div>
@@ -64,8 +78,19 @@
             placeholder="Enter profile name here"
             title="New profile name"
           />
-          <button id="saveAddProfile">Save</button>
-          <button id="cancelAddProfile" class="danger">Cancel</button>
+          <button
+            id="saveAddProfile"
+            title="Save the new profile with the name entered above."
+          >
+            Save
+          </button>
+          <button
+            id="cancelAddProfile"
+            class="danger"
+            title="Cancel creating a new profile and hide this input."
+          >
+            Cancel
+          </button>
         </div>
         <!-- Copy Profile Input and Save/Cancel Buttons -->
         <div
@@ -95,27 +120,46 @@
             id="buttonIcon"
             placeholder="✨"
             class="emoji-input"
-            title="Button icon"
+            title="Button icon that will be clickable in the chat interface, or you may have text here or multiple emojis. (Emoji menu Win+. Or you may ask AI for them and copy)"
             aria-label="Button icon"
           />
 
           <textarea
             id="buttonText"
-            placeholder="Button Template Text"
+            placeholder="Button Template Text To be Inserted"
             class="text-input"
             rows="1"
-            title="Button template text"
+            title="This will be inserting text into the chat input when the button is clicked, into textbox after your text"
             aria-label="Button template text"
           ></textarea>
-          <label class="checkbox-row" for="buttonAutoSendToggle">
+          <label
+            class="checkbox-row"
+            for="buttonAutoSendToggle"
+            title="If checked, clicking the new button will automatically send the prompt. This setting can be overridden by the global auto-send toggle below."
+          >
             <input type="checkbox" id="buttonAutoSendToggle" checked />
             <span>Auto-send</span>
           </label>
         </div>
         <div class="row">
-          <button id="addButton">Add Button</button>
-          <button id="clearText">Clear Text</button>
-          <button id="addSeparator">Add Separator</button>
+          <button
+            id="addButton"
+            title="Add a new prompt button using the icon, text, and auto-send setting from above."
+          >
+            Add Button
+          </button>
+          <button
+            id="clearText"
+            title="Clear the icon and text fields for adding a new button."
+          >
+            Clear Text
+          </button>
+          <button
+            id="addSeparator"
+            title="Add a visual separator to the button list to organize your prompts."
+          >
+            Add Separator
+          </button>
         </div>
         <div id="buttonCardsList" data-draggable="true">
           <!-- Button cards added dynamically here -->
@@ -126,7 +170,11 @@
       <section class="section">
         <h2>Settings</h2>
         <div class="row">
-          <label class="checkbox-row" for="autoSendToggle">
+          <label
+            class="checkbox-row"
+            for="autoSendToggle"
+            title="Global setting for this profile. If unchecked, no buttons will auto-send, overriding individual button settings."
+          >
             <input type="checkbox" id="autoSendToggle" />
             <span
               >Enable Global Auto-send for profile. Disabling will disable
@@ -135,18 +183,29 @@
           </label>
         </div>
         <div class="row">
-          <label class="checkbox-row" for="shortcutsToggle">
+          <label
+            class="checkbox-row"
+            for="shortcutsToggle"
+            title="Enable or disable keyboard shortcuts (Alt+1 through Alt+0) for the first 10 buttons in this profile, so you can press keyboard instead of clicking them. If disabled, you can still click buttons with mouse."
+          >
             <input type="checkbox" id="shortcutsToggle" />
             <span>Enable Keyboard Shortcuts</span>
           </label>
         </div>
         <div class="row">
-          <button id="revertDefault" class="danger">
+          <button
+            id="revertDefault"
+            class="danger"
+            title="Reset all buttons and settings in the current profile back to the extension's defaults."
+          >
             Revert Current Profile to Default
           </button>
         </div>
         <div class="row">
-          <button id="resetFloatingWindowSettings">
+          <button
+            id="resetFloatingWindowSettings"
+            title="Reset the position, size, and visibility of the floating panel on all websites."
+          >
             Reset Floating Window Settings for all pages
           </button>
         </div>
@@ -162,8 +221,18 @@
       <section class="section" id="backupSection">
         <h2>Backup &amp; Restore</h2>
         <div class="row">
-          <button id="exportProfile">Export Profile</button>
-          <button id="importProfile">Import Profile</button>
+          <button
+            id="exportProfile"
+            title="Download the current profile's settings as a JSON backup file. You can then import this file to another computer or restore in case of data loss."
+          >
+            Export Profile
+          </button>
+          <button
+            id="importProfile"
+            title="Import a profile's settings from a JSON backup file."
+          >
+            Import Profile
+          </button>
           <!-- Hidden file input for importing profile -->
           <input
             type="file"
@@ -177,8 +246,7 @@
         <!-- Confirmation Div -->
         <div id="confirmationDiv" class="confirmation" style="display: none">
           <p>
-            File loaded successfully. But profile with the same name exists in a
-            system. Do you want to overwrite currently existing profile?
+            File loaded successfully, but a profile with the same name already exists in the system. Do you want to overwrite the existing profile?
           </p>
           <button id="confirmOverwrite">Yes</button>
           <button id="cancelOverwrite">No</button>
@@ -320,8 +388,17 @@
             ></textarea>
           </div>
           <div class="row">
-            <button id="saveSelectors">Save Selectors</button>
-            <button id="resetSelectors" class="danger">
+            <button
+              id="saveSelectors"
+              title="Save your custom CSS selectors for the selected website."
+            >
+              Save Selectors
+            </button>
+            <button
+              id="resetSelectors"
+              class="danger"
+              title="Revert the CSS selectors for the selected website to the extension's defaults."
+            >
               Reset to Defaults
             </button>
           </div>
@@ -412,4 +489,5 @@
     <!-- Floating Window Settings Handler script -->
     <script src="/popup-page-scripts/popup-page-floating-window-handler.js"></script>
   </body>
+</html>
 </html>
