@@ -32,7 +32,7 @@
 
 'use strict';
 
-// Define the namespace and shared properties.
+// Define the namespace for the floating panel and its properties.
 window.MaxExtensionFloatingPanel = {
     panelElement: null,
     isPanelVisible: false,
@@ -59,11 +59,16 @@ window.MaxExtensionFloatingPanel = {
     queueProgressContainer: null,
     queueProgressBar: null,
     playQueueButton: null,
-    pauseQueueButton: null, // This might be the same as play button
     resetQueueButton: null,
     delayInputElement: null,
     queueModeToggle: null,
     QUEUE_MAX_SIZE: 10
 };
+
+// Define a separate namespace for global, non-profile settings.
+window.MaxExtensionGlobalSettings = {
+    acceptedQueueTOS: false
+};
+
 
 // No need to load files: they are imported in manifest.json

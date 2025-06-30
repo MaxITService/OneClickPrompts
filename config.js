@@ -386,6 +386,36 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 sendResponse({ error: error.message });
             });
             return true;
+        // ----- Global Settings Cases -----
+        case 'getGlobalSettings':
+            (async () => {
+                try {
+                    const result = await chrome.storage.local.get(['globalSettings']);
+                    const settings = result.globalSettings || { acceptedQueueTOS: false };
+                    // Ensure the setting exists with a default value
+                    if (typeof settings.acceptedQueueTOS === 'undefined') {
+                        settings.acceptedQueueTOS = false;
+                    }
+                    logConfigurationRelatedStuff('Retrieved global settings:', settings);
+                    sendResponse({ settings });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message, settings: { acceptedQueueTOS: false } });
+                }
+            })();
+            return true;
+        case 'saveGlobalSettings':
+            (async () => {
+                try {
+                    await chrome.storage.local.set({ globalSettings: request.settings });
+                    logConfigurationRelatedStuff('Saved global settings:', request.settings);
+                    sendResponse({ success: true });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
+            return true;
         // ----- New Cases for Dark Theme Support -----
         case 'getTheme':
             (async () => {

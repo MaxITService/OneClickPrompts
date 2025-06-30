@@ -115,6 +115,62 @@ window.MaxExtensionFloatingPanel.savePanelSettings = function () {
 };
 
 /**
+ * Loads global (non-profile) settings from the service worker.
+ */
+window.MaxExtensionFloatingPanel.loadGlobalSettings = function () {
+    chrome.runtime.sendMessage({ type: 'getGlobalSettings' }, (response) => {
+        if (chrome.runtime.lastError) {
+            logConCgp('[floating-panel] Error loading global settings:', chrome.runtime.lastError.message);
+            return;
+        }
+        if (response && response.settings) {
+            window.MaxExtensionGlobalSettings = response.settings;
+            logConCgp('[floating-panel] Loaded global settings:', response.settings);
+        }
+    });
+};
+
+/**
+ * Saves global (non-profile) settings via the service worker.
+ */
+window.MaxExtensionFloatingPanel.saveGlobalSettings = function () {
+    chrome.runtime.sendMessage({
+        type: 'saveGlobalSettings',
+        settings: window.MaxExtensionGlobalSettings
+    }, (response) => {
+        if (chrome.runtime.lastError) {
+            logConCgp('[floating-panel] Failed to save global settings:', chrome.runtime.lastError.message);
+        } else if (response && response.success) {
+            logConCgp('[floating-panel] Global settings saved successfully.');
+        }
+    });
+};
+
+
+/**
+ * Saves the current global config to storage for the active profile.
+ */
+window.MaxExtensionFloatingPanel.saveCurrentProfileConfig = function () {
+    if (!this.currentProfileName || !window.globalMaxExtensionConfig) {
+        logConCgp('[floating-panel] Cannot save profile: profile name or config not available.');
+        return;
+    }
+    chrome.runtime.sendMessage({
+        type: 'saveConfig',
+        profileName: this.currentProfileName,
+        config: window.globalMaxExtensionConfig
+    }, (response) => {
+        if (chrome.runtime.lastError) {
+            logConCgp('[floating-panel] Failed to save current profile config:', chrome.runtime.lastError.message);
+        } else if (response && response.success) {
+            logConCgp('[floating-panel] Current profile config saved successfully.');
+        } else {
+            logConCgp('[floating-panel] Failed to save current profile config. Response:', response);
+        }
+    });
+};
+
+/**
  * Loads available profiles from the service worker.
  */
 window.MaxExtensionFloatingPanel.loadAvailableProfiles = function () {
@@ -184,6 +240,7 @@ window.MaxExtensionFloatingPanel.switchToProfile = function (profileName) {
  */
 window.MaxExtensionFloatingPanel.initialize = function () {
     this.currentPanelSettings = { ...this.defaultPanelSettings };
+    this.loadGlobalSettings(); // Load global settings like TOS acceptance
 
     // createFloatingPanel is async. We use .then() to ensure subsequent actions
     // only run after the panel has been created and added to the DOM.

@@ -34,6 +34,9 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
     this.queueDisplayArea = document.getElementById('max-extension-queue-display');
     this.queueProgressContainer = document.getElementById('max-extension-queue-progress-container');
     this.queueProgressBar = document.getElementById('max-extension-queue-progress-bar');
+    const tosWarningContainer = document.getElementById('max-extension-queue-tos-warning');
+    const tosAcceptButton = document.getElementById('max-extension-tos-accept-btn');
+    const tosDeclineButton = document.getElementById('max-extension-tos-decline-btn');
 
     if (!this.queueSectionElement) {
         logConCgp('[floating-panel-queue] Queue section element not found in the DOM.');
@@ -45,33 +48,28 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         event.stopPropagation();
     });
 
-    // --- DELAY INPUT AND UNIT TOGGLE LOGIC ---
-
+    // --- DELAY INPUT AND UNIT TOGGLE LOGIC (Profile-specific) ---
     const updateDelayUI = () => {
-        const unit = globalMaxExtensionConfig.queueDelayUnit || 'min';
+        const unit = window.globalMaxExtensionConfig.queueDelayUnit || 'min';
         if (unit === 'sec') {
             this.delayUnitToggle.textContent = 'sec';
-            this.delayInputElement.value = globalMaxExtensionConfig.queueDelaySeconds;
+            this.delayInputElement.value = window.globalMaxExtensionConfig.queueDelaySeconds;
             this.delayInputElement.title = "Delay in seconds between sending each queued prompt. Minimum 2 seconds.";
         } else {
             this.delayUnitToggle.textContent = 'min';
-            this.delayInputElement.value = globalMaxExtensionConfig.queueDelayMinutes;
+            this.delayInputElement.value = window.globalMaxExtensionConfig.queueDelayMinutes;
             this.delayInputElement.title = "Delay in minutes between sending each queued prompt. Minimum 2 minutes.";
         }
     };
-
-    // Set initial state from config
     updateDelayUI();
 
-    // Add listener for unit toggle
     this.delayUnitToggle.addEventListener('click', (event) => {
         event.preventDefault();
-        globalMaxExtensionConfig.queueDelayUnit = (globalMaxExtensionConfig.queueDelayUnit === 'min') ? 'sec' : 'min';
+        window.globalMaxExtensionConfig.queueDelayUnit = (window.globalMaxExtensionConfig.queueDelayUnit === 'min') ? 'sec' : 'min';
         updateDelayUI();
-        // The config is saved when profile settings are saved.
+        this.saveCurrentProfileConfig(); // Save to profile
     });
 
-    // Add listener for input value changes
     this.delayInputElement.addEventListener('change', (event) => {
         let delay = parseInt(event.target.value, 10);
         if (isNaN(delay) || delay < 2) {
@@ -79,39 +77,72 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
             event.target.value = delay;
         }
 
-        if (globalMaxExtensionConfig.queueDelayUnit === 'sec') {
-            globalMaxExtensionConfig.queueDelaySeconds = delay;
-            logConCgp(`[floating-panel-queue] Queue delay set to ${delay} seconds.`);
+        if (window.globalMaxExtensionConfig.queueDelayUnit === 'sec') {
+            window.globalMaxExtensionConfig.queueDelaySeconds = delay;
         } else {
-            globalMaxExtensionConfig.queueDelayMinutes = delay;
-            logConCgp(`[floating-panel-queue] Queue delay set to ${delay} minutes.`);
+            window.globalMaxExtensionConfig.queueDelayMinutes = delay;
         }
+        this.saveCurrentProfileConfig(); // Save to profile
     });
 
-    // --- END DELAY LOGIC ---
+    // --- TOS Confirmation (Global) and Queue Toggle (Profile-specific) ---
+    const isQueueEnabled = window.globalMaxExtensionConfig.enableQueueMode || false;
 
-    // Create and insert the Queue Mode toggle
-    const isQueueEnabled = globalMaxExtensionConfig.enableQueueMode || false;
+    const toggleCallback = (state) => {
+        // Check global TOS setting first
+        if (state && !window.MaxExtensionGlobalSettings.acceptedQueueTOS) {
+            tosWarningContainer.style.display = 'block';
+            this.queueModeToggle.style.display = 'none'; // Hide toggle
+            this.queueModeToggle.querySelector('input').checked = false; // Uncheck it
+            return;
+        }
+
+        // If TOS is accepted, proceed with profile setting
+        window.globalMaxExtensionConfig.enableQueueMode = state;
+        expandableSection.style.display = state ? 'contents' : 'none';
+        this.queueDisplayArea.style.display = state ? 'flex' : 'none';
+        this.saveCurrentProfileConfig(); // Save to profile
+    };
+
     this.queueModeToggle = MaxExtensionInterface.createToggle(
         'enableQueueMode',
         'Enable Queue Mode',
         isQueueEnabled,
-        (state) => {
-            globalMaxExtensionConfig.enableQueueMode = state;
-            expandableSection.style.display = state ? 'contents' : 'none';
-            this.queueDisplayArea.style.display = state ? 'flex' : 'none';
-        }
+        toggleCallback
     );
     this.queueModeToggle.style.margin = '0';
     this.queueModeToggle.querySelector('label').style.fontSize = '12px';
     this.queueModeToggle.title = 'When enabled, clicking buttons adds them to a queue instead of sending immediately.';
     togglePlaceholder.appendChild(this.queueModeToggle);
 
-    // Set initial visibility of controls based on config
     expandableSection.style.display = isQueueEnabled ? 'contents' : 'none';
     this.queueDisplayArea.style.display = isQueueEnabled ? 'flex' : 'none';
 
-    // Attach event listeners to buttons
+    // TOS Button Listeners
+    tosAcceptButton.addEventListener('click', () => {
+        // 1. Update global setting
+        window.MaxExtensionGlobalSettings.acceptedQueueTOS = true;
+        this.saveGlobalSettings(); // Save global setting
+
+        // 2. Update profile setting to enable queue
+        window.globalMaxExtensionConfig.enableQueueMode = true;
+        this.saveCurrentProfileConfig(); // Save profile setting
+
+        // 3. Update UI
+        tosWarningContainer.style.display = 'none';
+        this.queueModeToggle.style.display = ''; // Show toggle again
+        this.queueModeToggle.querySelector('input').checked = true;
+        expandableSection.style.display = 'contents';
+        this.queueDisplayArea.style.display = 'flex';
+    });
+
+    tosDeclineButton.addEventListener('click', () => {
+        tosWarningContainer.style.display = 'none';
+        this.queueModeToggle.style.display = ''; // Show toggle again
+    });
+
+
+    // Attach event listeners to queue action buttons
     this.playQueueButton.addEventListener('click', () => {
         if (this.isQueueRunning) {
             this.pauseQueue();
@@ -124,7 +155,6 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         this.resetQueue();
     });
 
-    // Initial state update for controls
     this.updateQueueControlsState();
 };
 
