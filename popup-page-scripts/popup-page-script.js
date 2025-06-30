@@ -170,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check if the page is opened in a tab and apply appropriate styling
     const urlParams = new URLSearchParams(window.location.search);
     const isTab = urlParams.get('isTab') === 'true';
-    
+
     if (isTab) {
         // Hide the "Open in New Tab" button when already in a tab
         if (openInTabButton) {
@@ -179,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Add tab-mode class to body for centering
         document.body.classList.add('tab-mode');
     }
-    
+
     loadProfiles();
 
     // Profile management
@@ -283,9 +283,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('autoSendToggle').addEventListener('change', updateGlobalSettings);
     document.getElementById('shortcutsToggle').addEventListener('change', updateGlobalSettings);
     document.getElementById('revertDefault').addEventListener('click', revertToDefault);
-    
-    // Floating Window Settings
-    document.getElementById('resetFloatingWindowSettings').addEventListener('click', resetFloatingWindowSettings);
 
     // Drag and drop events - attach them but implementation is in customButtons.js
     buttonCardsList.addEventListener('dragstart', handleDragStart);

@@ -23,10 +23,10 @@ Key areas:
     --text-muted: #666;
 }
 
- /* ------------------------------------------------------------------------- */
- /* Console Styling                                                           */
- /* ------------------------------------------------------------------------- */
- .console {
+/* ------------------------------------------------------------------------- */
+/* Console Styling                                                           */
+/* ------------------------------------------------------------------------- */
+.console {
     font-family: Consolas, monospace;
     padding: 8px;
     border: 1px solid var(--border-color);
@@ -47,8 +47,8 @@ Key areas:
 }
 
 /* ------------------------------------------------------------------------- */
- /* Save Status Styling                                                       */
- /* ------------------------------------------------------------------------- */
+/* Save Status Styling                                                       */
+/* ------------------------------------------------------------------------- */
 .small-hoovering-text {
     text-align: right;
     color: #666666;
@@ -58,14 +58,22 @@ Key areas:
 }
 
 @keyframes saveStatusFade {
-    0% { opacity: 1; }
-    90% { opacity: 1; }
-    100% { opacity: 0.6; }
+    0% {
+        opacity: 1;
+    }
+
+    90% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0.6;
+    }
 }
 
 /* ------------------------------------------------------------------------- */
- /* Profile Selection Dropdown Styling                                        */
- /* ------------------------------------------------------------------------- */
+/* Profile Selection Dropdown Styling                                        */
+/* ------------------------------------------------------------------------- */
 #profileSelect {
     flex: 1;
     background-repeat: no-repeat;
@@ -84,8 +92,8 @@ Key areas:
 }
 
 /* ------------------------------------------------------------------------- */
- /* Empty Message for Button List                                             */
- /* ------------------------------------------------------------------------- */
+/* Empty Message for Button List                                             */
+/* ------------------------------------------------------------------------- */
 .empty-message {
     padding: 10px;
     color: #888;
@@ -95,8 +103,8 @@ Key areas:
 }
 
 /* ------------------------------------------------------------------------- */
- /* Export and Import Buttons                                                 */
- /* ------------------------------------------------------------------------- */
+/* Export and Import Buttons                                                 */
+/* ------------------------------------------------------------------------- */
 #exportProfile,
 #importProfile {
     padding: 8px 16px;
@@ -120,8 +128,8 @@ Key areas:
 }
 
 /* ------------------------------------------------------------------------- */
- /* Confirmation Dialog Styling                                               */
- /* ------------------------------------------------------------------------- */
+/* Confirmation Dialog Styling                                               */
+/* ------------------------------------------------------------------------- */
 .confirmation {
     margin-top: 16px;
     padding: 16px;
@@ -158,8 +166,8 @@ Key areas:
 }
 
 /* ------------------------------------------------------------------------- */
- /* Error Dialog Styling                                                      */
- /* ------------------------------------------------------------------------- */
+/* Error Dialog Styling                                                      */
+/* ------------------------------------------------------------------------- */
 .error {
     margin-top: 16px;
     padding: 16px;
@@ -196,8 +204,8 @@ Key areas:
 }
 
 /* ------------------------------------------------------------------------- */
- /* Toast Notification Styles                                                 */
- /* ------------------------------------------------------------------------- */
+/* Toast Notification Styles                                                 */
+/* ------------------------------------------------------------------------- */
 .toast-container {
     position: fixed;
     bottom: 20px;
@@ -216,7 +224,7 @@ Key areas:
     transition: var(--toast-transition);
     min-width: 200px;
     max-width: 300px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 .toast.show {
@@ -237,16 +245,16 @@ Key areas:
 }
 
 /* ------------------------------------------------------------------------- */
- /* Wrapper for the Button List (if needed)                                  */
- /* ------------------------------------------------------------------------- */
+/* Wrapper for the Button List (if needed)                                  */
+/* ------------------------------------------------------------------------- */
 .button-list-wrapper {
     position: relative;
     transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ------------------------------------------------------------------------- */
- /* Advanced Selector Configuration                                          */
- /* ------------------------------------------------------------------------- */
+/* Advanced Selector Configuration                                          */
+/* ------------------------------------------------------------------------- */
 .selector-config-textarea {
     width: 100%;
     height: 300px;
@@ -276,8 +284,8 @@ Key areas:
 }
 
 /* ------------------------------------------------------------------------- */
- /* Collapsible Sections                                                     */
- /* ------------------------------------------------------------------------- */
+/* Collapsible Sections                                                     */
+/* ------------------------------------------------------------------------- */
 .collapsible .section-header {
     cursor: pointer;
     padding: 10px;
@@ -287,7 +295,8 @@ Key areas:
     justify-content: space-between;
     align-items: center;
     margin-bottom: 8px;
-    color: var(--text-color); /* Add this line to ensure text is visible */
+    color: var(--text-color);
+    /* Add this line to ensure text is visible */
 }
 
 .collapsible .section-content {
@@ -310,7 +319,8 @@ Key areas:
     line-height: 1;
     margin-right: 10px;
     transition: transform 0.3s ease;
-    color: var(--text-color); /* Add this line to make the arrow follow the text color */
+    color: var(--text-color);
+    /* Add this line to make the arrow follow the text color */
 }
 
 .section-header {
@@ -327,7 +337,7 @@ Key areas:
     transition: opacity 0.3s ease;
 }
 
-.collapsible.expanded > .section-header .expand-text {
+.collapsible.expanded>.section-header .expand-text {
     opacity: 0;
     display: none;
 }
@@ -363,7 +373,8 @@ Key areas:
 
 /* Nested Collapsible Sections */
 .subsection-header {
-    background-color: var(--manual-bg, #f7ecff) !important; /* Light grayish-blue background */
+    background-color: var(--manual-bg, #f7ecff) !important;
+    /* Light grayish-blue background */
     border: 1px solid var(--border-color);
     margin-bottom: 12px !important;
     padding: 12px 16px !important;
@@ -371,7 +382,8 @@ Key areas:
     gap: 8px;
     border-radius: 6px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    color: var(--text-color); /* Add this line to ensure text is visible */
+    color: var(--text-color);
+    /* Add this line to ensure text is visible */
 }
 
 .subsection-header h3 {
@@ -384,9 +396,41 @@ Key areas:
 #advancedHelpSection .section-content {
     border: none;
     padding: 0 10px 10px 10px;
-    display: none; /* Ensure content is hidden by default */
+    display: none;
+    /* Ensure content is hidden by default */
 }
 
 #advancedHelpSection.expanded .section-content {
     display: block;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Floating Window Settings List                                             */
+/* ------------------------------------------------------------------------- */
+.floating-sites-list {
+    margin: 16px 0;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    background-color: #fff;
+    /* Light mode background */
+}
+
+.floating-site-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.floating-site-item:last-child {
+    border-bottom: none;
+}
+
+.floating-site-item span { 
+    font-size: 1.1em;
+    /* Responsive, scales with parent font size */
 }

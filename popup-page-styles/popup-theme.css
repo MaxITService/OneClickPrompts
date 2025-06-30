@@ -15,7 +15,8 @@ Key areas:
 /* Global Dark Theme Overrides                                               */
 /* ------------------------------------------------------------------------- */
 body.dark-theme {
-    --primary-color: #9a79d3; /* Violet used for primary elements in dark mode */
+    --primary-color: #9a79d3;
+    /* Violet used for primary elements in dark mode */
     --danger-color: #d16c6c;
     --border-color: #444;
     --bg-color: #222;
@@ -71,21 +72,31 @@ body.dark-theme button.danger:hover {
 /* ------------------------------------------------------------------------- */
 body.dark-theme .confirmation,
 body.dark-theme .error {
-    background-color: #333;       /* Dark background for dialogs */
-    color: #fff;                  /* Light text for dialogs */
-    border: 1px solid #555;       /* Dark border */
+    background-color: #333;
+    /* Dark background for dialogs */
+    color: #fff;
+    /* Light text for dialogs */
+    border: 1px solid #555;
+    /* Dark border */
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-    padding: 1em;                 /* Consistent spacing */
-    border-radius: 4px;           /* Rounded corners */
+    padding: 1em;
+    /* Consistent spacing */
+    border-radius: 4px;
+    /* Rounded corners */
 }
 
 body.dark-theme .confirmation button,
 body.dark-theme .error button {
-    background-color: #444;       /* Dark button background */
-    color: #fff;                  /* Light button text */
-    border: 1px solid #666;       /* Button border */
-    padding: 0.5em 1em;           /* Button padding */
-    border-radius: 4px;           /* Rounded corners */
+    background-color: #444;
+    /* Dark button background */
+    color: #fff;
+    /* Light button text */
+    border: 1px solid #666;
+    /* Button border */
+    padding: 0.5em 1em;
+    /* Button padding */
+    border-radius: 4px;
+    /* Rounded corners */
     cursor: pointer;
 }
 
@@ -131,13 +142,17 @@ body.dark-theme .toast {
 /* Dark Theme Overrides for Dynamic Button Items                             */
 /* ------------------------------------------------------------------------- */
 body.dark-theme .button-item {
-    background: #333 !important;       /* Dark background for button items */
-    border-color: #555 !important;       /* Darker border */
-    color: #eee !important;              /* Light text color */
+    background: #333 !important;
+    /* Dark background for button items */
+    border-color: #555 !important;
+    /* Darker border */
+    color: #eee !important;
+    /* Light text color */
 }
 
 body.dark-theme .button-item.separator-item {
-    background: #444 !important;         /* Slightly lighter than .button-item for separators */
+    background: #444 !important;
+    /* Slightly lighter than .button-item for separators */
     border-color: #555 !important;
     color: #ccc !important;
 }
@@ -157,7 +172,8 @@ body.dark-theme .button-item .shortcut-indicator {
 /* ------------------------------------------------------------------------- */
 /* NEW: Force dragged item to have a green highlight in dark mode */
 body.dark-theme .button-item.dragging {
-    background-color: #2ecc71 !important; /* Green highlight for dragged items */
+    background-color: #2ecc71 !important;
+    /* Green highlight for dragged items */
 }
 
 /* ------------------------------------------------------------------------- */
@@ -175,4 +191,8 @@ body.dark-theme a {
 
 body.dark-theme a:hover {
     color: #9acfea;
+}
+
+body.dark-theme .floating-sites-list {
+    background-color: #333;
 }

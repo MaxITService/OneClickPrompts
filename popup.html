@@ -201,13 +201,35 @@
             Revert Current Profile to Default
           </button>
         </div>
-        <div class="row">
-          <button
-            id="resetFloatingWindowSettings"
-            title="Reset the position, size, and visibility of the floating panel on all websites."
-          >
-            Reset Floating Window Settings for all pages
-          </button>
+        <!-- Floating Window Settings -->
+        <div class="collapsible" id="floatingWindowSettingsSection">
+          <div class="section-header">
+            <h2>
+              Floating Window Settings
+              <span class="expand-text">(click to expand)</span>
+            </h2>
+            <span class="toggle-icon">▶</span>
+          </div>
+          <div class="section-content">
+            <div class="text-inside-container">
+              <p>
+                Reset the position, size, and visibility of the floating panel. This can fix issues if the panel becomes stuck or invisible.
+              </p>
+            </div>
+            <div id="floatingWindowSitesList" class="floating-sites-list">
+              <!-- Site-specific reset buttons will be added here dynamically -->
+              <p class="empty-message" style="display: none;">No saved settings found for any website.</p>
+            </div>
+            <div class="row" style="margin-top: 16px;">
+              <button
+                id="resetAllFloatingWindowSettings"
+                class="danger"
+                title="Reset floating window settings for ALL websites."
+              >
+                Reset settings for all websites
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 

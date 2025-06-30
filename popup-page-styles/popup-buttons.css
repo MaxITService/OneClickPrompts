@@ -31,8 +31,8 @@ button {
     cursor: pointer;
     font-size: 14px;
     transition: background var(--transition-duration) ease,
-                transform 0.2s ease,
-                color var(--transition-duration) ease;
+        transform 0.2s ease,
+        color var(--transition-duration) ease;
     position: relative;
     overflow: hidden;
 }
@@ -108,7 +108,7 @@ button.danger:hover {
     transform: scale(0.8);
     background-color: #d4f8d4 !important;
     opacity: 0.8;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     cursor: grabbing;
     z-index: 2;
 
@@ -116,7 +116,8 @@ button.danger:hover {
     /* The scale is applied instantly, the FLIP transform handles position */
     /* We might need to combine scale and translate in the FLIP transform */
     /* Let's adjust the FLIP logic slightly */
-    will-change: transform, opacity; /* Keep will-change */
+    will-change: transform, opacity;
+    /* Keep will-change */
 }
 
 /* ------------------------------------------------------------------------- */
@@ -156,5 +157,13 @@ button.danger:hover {
 
 .button-item.separator-item.dragging {
     opacity: 0.7;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Small Button Variant                                                      */
+/* ------------------------------------------------------------------------- */
+button.small {
+    padding: 4px 8px;
+    font-size: 12px;
 }

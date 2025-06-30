@@ -553,6 +553,40 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 });
             });
             return true;
+
+        case 'getFloatingPanelHostnames':
+            chrome.storage.local.get(null, result => {
+                if (chrome.runtime.lastError) {
+                    handleStorageError(chrome.runtime.lastError);
+                    sendResponse({ success: false, error: chrome.runtime.lastError.message });
+                    return;
+                }
+                const hostnames = Object.keys(result)
+                    .filter(key => key.startsWith('floating_panel_'))
+                    .map(key => key.replace('floating_panel_', ''));
+
+                sendResponse({ success: true, hostnames: hostnames });
+                logConfigurationRelatedStuff(`Found ${hostnames.length} hostnames with floating panel settings.`);
+            });
+            return true;
+
+        case 'resetFloatingPanelSettingsForHostname':
+            if (!request.hostname) {
+                sendResponse({ error: 'Hostname is required' });
+                return true;
+            }
+
+            const keyToRemove = 'floating_panel_' + request.hostname;
+            chrome.storage.local.remove(keyToRemove, () => {
+                if (chrome.runtime.lastError) {
+                    handleStorageError(chrome.runtime.lastError);
+                    sendResponse({ success: false, error: chrome.runtime.lastError.message });
+                } else {
+                    sendResponse({ success: true });
+                    logConfigurationRelatedStuff(`Reset floating panel settings for ${request.hostname}`);
+                }
+            });
+            return true;
         // ----- End Floating Panel Settings Cases -----
 
         default:
