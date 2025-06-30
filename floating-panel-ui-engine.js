@@ -140,7 +140,8 @@ window.MaxExtensionFloatingPanel.processNextQueueItem = function () {
     if (sendFunction) {
         // A mock event object is sufficient for the send functions
         const mockEvent = { preventDefault: () => { } };
-        sendFunction(mockEvent, item.text, item.autoSend);
+        // Always force auto-send for queued items by passing `true`, overriding the button's individual setting.
+        sendFunction(mockEvent, item.text, true);
     } else {
         logConCgp('[queue-engine] No send function found for this site. Stopping queue.');
         this.resetQueue();
