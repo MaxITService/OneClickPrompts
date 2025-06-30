@@ -34,8 +34,9 @@
           <input
             id="max-extension-queue-delay-input"
             type="number"
-            min="2"
-            title="Delay in minutes between sending each queued prompt. Minimum 2 minutes."
+            min="1"
+            max="64000"
+            title="Delay in minutes between sending each queued prompt. Min: 1, Max: 64000."
           />
         </div>
         <div class="action-buttons-container">

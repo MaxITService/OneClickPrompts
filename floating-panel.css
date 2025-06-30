@@ -100,13 +100,17 @@
 }
 
 #max-extension-queue-delay-input {
-    width: 50px;
+    min-width: 50px;
+    /* Set a minimum width so it doesn't get too small */
+    max-width: 100px;
+    /* Set a maximum width to prevent breaking the layout */
     background-color: rgba(80, 80, 80, 1);
     color: white;
     border: 1px solid #666;
     border-radius: 4px;
     padding: 2px 4px;
     font-size: 12px;
+    /* The fixed 'width' property is removed to allow dynamic sizing */
 }
 
 #max-extension-queue-section .action-buttons-container {
@@ -238,4 +242,22 @@
     font-size: 12px;
     cursor: pointer;
     min-width: 120px;
+}
+
+/* === ADDED TO RESTORE NUMBER INPUT SPINNERS === */
+/* This rule ensures the up/down arrows are visible on the queue delay input */
+#max-extension-queue-delay-input {
+    appearance: textfield;
+    -moz-appearance: textfield;
+    /* For Firefox */
+}
+
+#max-extension-queue-delay-input::-webkit-inner-spin-button,
+#max-extension-queue-delay-input::-webkit-outer-spin-button {
+    -webkit-appearance: auto;
+    /* For Chrome, Safari, Edge */
+    opacity: 1;
+    /* Make sure they are not transparent */
+    margin: 0;
+    /* Reset any custom margin */
 }

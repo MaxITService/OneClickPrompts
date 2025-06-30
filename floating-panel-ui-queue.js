@@ -54,11 +54,15 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         if (unit === 'sec') {
             this.delayUnitToggle.textContent = 'sec';
             this.delayInputElement.value = window.globalMaxExtensionConfig.queueDelaySeconds;
-            this.delayInputElement.title = "Delay in seconds between sending each queued prompt. Minimum 2 seconds.";
-        } else {
+            this.delayInputElement.min = 15;
+            this.delayInputElement.max = 64000;
+            this.delayInputElement.title = "Delay in seconds between sending each queued prompt. Min: 15, Max: 64000.";
+        } else { // 'min'
             this.delayUnitToggle.textContent = 'min';
             this.delayInputElement.value = window.globalMaxExtensionConfig.queueDelayMinutes;
-            this.delayInputElement.title = "Delay in minutes between sending each queued prompt. Minimum 2 minutes.";
+            this.delayInputElement.min = 1;
+            this.delayInputElement.max = 64000;
+            this.delayInputElement.title = "Delay in minutes between sending each queued prompt. Min: 1, Max: 64000.";
         }
     };
     updateDelayUI();
@@ -72,14 +76,20 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
 
     this.delayInputElement.addEventListener('change', (event) => {
         let delay = parseInt(event.target.value, 10);
-        if (isNaN(delay) || delay < 2) {
-            delay = 2;
-            event.target.value = delay;
-        }
+        const unit = window.globalMaxExtensionConfig.queueDelayUnit || 'min';
+        const minDelay = (unit === 'sec') ? 15 : 1;
+        const maxDelay = 64000;
 
-        if (window.globalMaxExtensionConfig.queueDelayUnit === 'sec') {
+        if (isNaN(delay) || delay < minDelay) {
+            delay = minDelay;
+        } else if (delay > maxDelay) {
+            delay = maxDelay;
+        }
+        event.target.value = delay;
+
+        if (unit === 'sec') {
             window.globalMaxExtensionConfig.queueDelaySeconds = delay;
-        } else {
+        } else { // 'min'
             window.globalMaxExtensionConfig.queueDelayMinutes = delay;
         }
         this.saveCurrentProfileConfig(); // Save to profile
