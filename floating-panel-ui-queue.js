@@ -72,6 +72,7 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         window.globalMaxExtensionConfig.queueDelayUnit = (window.globalMaxExtensionConfig.queueDelayUnit === 'min') ? 'sec' : 'min';
         updateDelayUI();
         this.saveCurrentProfileConfig(); // Save to profile
+        this.recalculateRunningTimer(); // Recalculate timer if it's running
     });
 
     this.delayInputElement.addEventListener('change', (event) => {
@@ -93,6 +94,7 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
             window.globalMaxExtensionConfig.queueDelayMinutes = delay;
         }
         this.saveCurrentProfileConfig(); // Save to profile
+        this.recalculateRunningTimer(); // Recalculate timer if it's running
     });
 
     // --- TOS Confirmation (Global) and Queue Toggle (Profile-specific) ---
@@ -194,6 +196,7 @@ window.MaxExtensionFloatingPanel.updateQueueControlsState = function () {
     if (!this.playQueueButton || !this.resetQueueButton) return;
 
     const hasItems = this.promptQueue.length > 0;
+    const isPaused = this.remainingTimeOnPause > 0;
 
     // Play/Pause Button
     if (this.isQueueRunning) {
@@ -203,11 +206,11 @@ window.MaxExtensionFloatingPanel.updateQueueControlsState = function () {
     } else {
         this.playQueueButton.innerHTML = '▶️'; // Play icon
         this.playQueueButton.title = 'Start sending the queued prompts.';
-        this.playQueueButton.disabled = !hasItems; // Disabled if no items
+        this.playQueueButton.disabled = !hasItems && !isPaused; // Disabled if no items and not paused
     }
 
     // Reset Button
-    this.resetQueueButton.disabled = !hasItems && !this.isQueueRunning;
+    this.resetQueueButton.disabled = !hasItems && !this.isQueueRunning && !isPaused;
 
     // Hide progress bar if queue is empty and not running
     if (this.queueProgressContainer && !this.isQueueRunning && !hasItems) {

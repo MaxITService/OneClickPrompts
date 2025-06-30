@@ -9,9 +9,10 @@
 // Methods included:
 // - addToQueue(buttonConfig): Adds a prompt to the queue.
 // - removeFromQueue(index): Removes a prompt from the queue by its index.
-// - startQueue(): Begins the sequential sending process.
-// - pauseQueue(): Pauses the sending process.
-// - resetQueue(): Stops and clears the entire queue.
+// - startQueue(): Begins or resumes the sequential sending process.
+// - pauseQueue(): Pauses the sending process, remembering the elapsed time.
+// - resetQueue(): Stops and clears the entire queue and resets timer state.
+// - recalculateRunningTimer(): Adjusts the current timer and progress bar when the delay is changed.
 // - processNextQueueItem(): The core function that sends one item and sets a timer for the next.
 // - getSiteSpecificSendFunction(): A helper to determine which site-specific send function to use.
 //
@@ -28,7 +29,6 @@
 window.MaxExtensionFloatingPanel.addToQueue = function (buttonConfig) {
     if (this.promptQueue.length >= this.QUEUE_MAX_SIZE) {
         logConCgp('[queue-engine] Queue is full. Cannot add more prompts.');
-        // Optional: Add visual feedback for the user
         if (this.queueDisplayArea) {
             this.queueDisplayArea.style.borderColor = 'red';
             setTimeout(() => {
@@ -58,40 +58,77 @@ window.MaxExtensionFloatingPanel.removeFromQueue = function (index) {
 };
 
 /**
- * Starts the queue processing.
+ * Starts or resumes the queue processing.
  */
 window.MaxExtensionFloatingPanel.startQueue = function () {
-    if (this.isQueueRunning || this.promptQueue.length === 0) {
+    // Prevent starting if already running, or if there's nothing to do.
+    if (this.isQueueRunning || (this.promptQueue.length === 0 && this.remainingTimeOnPause <= 0)) {
         return;
     }
     this.isQueueRunning = true;
-    logConCgp('[queue-engine] Queue started.');
+    this.updateQueueControlsState();
 
-    // Show progress bar container when queue starts
     if (this.queueProgressContainer) {
         this.queueProgressContainer.style.display = 'block';
     }
 
-    this.updateQueueControlsState();
-    this.processNextQueueItem();
+    // If we have remaining time, we are resuming a paused timer.
+    if (this.remainingTimeOnPause > 0) {
+        logConCgp(`[queue-engine] Resuming queue with ${this.remainingTimeOnPause}ms remaining.`);
+
+        const elapsedTimeBeforePause = this.currentTimerDelay - this.remainingTimeOnPause;
+        const progressPercentage = (elapsedTimeBeforePause / this.currentTimerDelay) * 100;
+
+        // Restore the conceptual start time for accurate future calculations.
+        this.timerStartTime = Date.now() - elapsedTimeBeforePause;
+
+        // Resume progress bar animation from its paused state.
+        if (this.queueProgressBar) {
+            this.queueProgressBar.style.transition = 'none';
+            this.queueProgressBar.style.width = `${progressPercentage}%`;
+            void this.queueProgressBar.offsetWidth; // Force reflow
+            this.queueProgressBar.style.transition = `width ${this.remainingTimeOnPause / 1000}s linear`;
+            this.queueProgressBar.style.width = '100%';
+        }
+
+        this.queueTimerId = setTimeout(() => {
+            this.remainingTimeOnPause = 0; // Clear the remainder state
+            this.processNextQueueItem();
+        }, this.remainingTimeOnPause);
+
+    } else {
+        // This is a fresh start, so process the first item immediately.
+        logConCgp('[queue-engine] Queue started.');
+        this.processNextQueueItem();
+    }
 };
 
 /**
- * Pauses the queue processing.
+ * Pauses the queue processing and saves the remaining time.
  */
 window.MaxExtensionFloatingPanel.pauseQueue = function () {
     this.isQueueRunning = false;
+
     if (this.queueTimerId) {
         clearTimeout(this.queueTimerId);
         this.queueTimerId = null;
-    }
-    logConCgp('[queue-engine] Queue paused.');
 
-    // Freeze the progress bar
+        const elapsedTime = Date.now() - this.timerStartTime;
+        // Ensure remaining time doesn't go negative if the timer fires slightly late.
+        this.remainingTimeOnPause = (elapsedTime < this.currentTimerDelay)
+            ? this.currentTimerDelay - elapsedTime
+            : 0;
+
+        logConCgp(`[queue-engine] Queue paused. Remaining time: ${this.remainingTimeOnPause}ms`);
+    } else {
+        logConCgp('[queue-engine] Queue paused.');
+    }
+
+    // Freeze the progress bar at its current position.
     if (this.queueProgressBar) {
         const computedWidth = window.getComputedStyle(this.queueProgressBar).width;
-        this.queueProgressBar.style.transition = 'none';
-        this.queueProgressBar.style.width = computedWidth;
+        this.queueProgressBar.style.transition = 'none'; // Stop animation
+        this.queueProgressBar.style.width = computedWidth; // Freeze at current width
     }
 
     this.updateQueueControlsState();
@@ -103,19 +140,80 @@ window.MaxExtensionFloatingPanel.pauseQueue = function () {
 window.MaxExtensionFloatingPanel.resetQueue = function () {
     this.pauseQueue(); // Stop any running timers and set isQueueRunning to false
     this.promptQueue = [];
+    // Reset all timer-related state.
+    this.remainingTimeOnPause = 0;
+    this.timerStartTime = 0;
+    this.currentTimerDelay = 0;
     logConCgp('[queue-engine] Queue reset.');
 
-    // Hide and reset progress bar
+    // Hide and reset progress bar to 0%.
     if (this.queueProgressBar) {
         this.queueProgressBar.style.transition = 'none';
-        this.queueProgressBar.style.width = '100%';
+        this.queueProgressBar.style.width = '0%';
     }
     if (this.queueProgressContainer) {
         this.queueProgressContainer.style.display = 'none';
     }
 
     this.renderQueueDisplay();
-    this.updateQueueControlsState(); // This will disable buttons as needed
+    this.updateQueueControlsState();
+};
+
+/**
+ * Recalculates the running timer when the delay value is changed.
+ * This function adjusts the progress bar and timer to reflect the new total delay.
+ */
+window.MaxExtensionFloatingPanel.recalculateRunningTimer = function () {
+    // Only act if a timer is currently running.
+    if (!this.isQueueRunning || !this.queueTimerId) {
+        return;
+    }
+
+    logConCgp('[queue-engine] Recalculating timer due to delay change.');
+
+    clearTimeout(this.queueTimerId);
+
+    // Calculate how much time has passed on the current timer.
+    const elapsedTime = Date.now() - this.timerStartTime;
+
+    // Get the new total delay from the configuration.
+    const unit = globalMaxExtensionConfig.queueDelayUnit || 'min';
+    let newTotalDelayMs;
+    if (unit === 'sec') {
+        newTotalDelayMs = (globalMaxExtensionConfig.queueDelaySeconds || 300) * 1000;
+    } else { // 'min'
+        newTotalDelayMs = (globalMaxExtensionConfig.queueDelayMinutes || 5) * 60 * 1000;
+    }
+
+    // If time is up with the new delay, process next item.
+    if (elapsedTime >= newTotalDelayMs) {
+        logConCgp('[queue-engine] New delay is less than elapsed time. Processing next item.');
+        this.remainingTimeOnPause = 0;
+        this.processNextQueueItem();
+    } else {
+        // Otherwise, set a new timer for the adjusted remaining time.
+        const newRemainingTime = newTotalDelayMs - elapsedTime;
+        logConCgp(`[queue-engine] New remaining time is ${newRemainingTime}ms.`);
+
+        // Update the total delay for this timer, critical for subsequent actions.
+        this.currentTimerDelay = newTotalDelayMs;
+
+        this.queueTimerId = setTimeout(() => this.processNextQueueItem(), newRemainingTime);
+
+        // Instantly update the progress bar to reflect the new reality.
+        if (this.queueProgressBar) {
+            const newProgressPercentage = (elapsedTime / newTotalDelayMs) * 100;
+
+            // Set the new progress instantly.
+            this.queueProgressBar.style.transition = 'none';
+            this.queueProgressBar.style.width = `${newProgressPercentage}%`;
+            void this.queueProgressBar.offsetWidth; // Force reflow to apply the new width.
+
+            // Animate to 100% over the new remaining time.
+            this.queueProgressBar.style.transition = `width ${newRemainingTime / 1000}s linear`;
+            this.queueProgressBar.style.width = '100%';
+        }
+    }
 };
 
 /**
@@ -128,19 +226,17 @@ window.MaxExtensionFloatingPanel.processNextQueueItem = function () {
 
     if (this.promptQueue.length === 0) {
         logConCgp('[queue-engine] Queue is empty. Stopping.');
-        this.pauseQueue(); // Effectively stops and resets the UI
+        this.pauseQueue();
         return;
     }
 
-    const item = this.promptQueue.shift(); // Get the first item and remove it
-    this.renderQueueDisplay(); // Update UI to show the item is gone
+    const item = this.promptQueue.shift();
+    this.renderQueueDisplay();
     logConCgp(`[queue-engine] Sending item:`, item.text);
 
     const sendFunction = this.getSiteSpecificSendFunction();
     if (sendFunction) {
-        // A mock event object is sufficient for the send functions
         const mockEvent = { preventDefault: () => { } };
-        // Always force auto-send for queued items by passing `true`, overriding the button's individual setting.
         sendFunction(mockEvent, item.text, true);
     } else {
         logConCgp('[queue-engine] No send function found for this site. Stopping queue.');
@@ -148,11 +244,10 @@ window.MaxExtensionFloatingPanel.processNextQueueItem = function () {
         return;
     }
 
-    // If there are more items, set a timeout for the next one
+    // If there are more items, set a timeout for the next one.
     if (this.promptQueue.length > 0) {
         const unit = globalMaxExtensionConfig.queueDelayUnit || 'min';
         let delayMs;
-
         if (unit === 'sec') {
             const delaySec = globalMaxExtensionConfig.queueDelaySeconds || 300;
             delayMs = delaySec * 1000;
@@ -163,34 +258,39 @@ window.MaxExtensionFloatingPanel.processNextQueueItem = function () {
             logConCgp(`[queue-engine] Waiting for ${delayMin} minutes before next item.`);
         }
 
-        // Start the progress bar animation
+        // Start the progress bar animation from 0% to 100%.
         if (this.queueProgressBar) {
-            // Reset to full width instantly, then start the transition
             this.queueProgressBar.style.transition = 'none';
-            this.queueProgressBar.style.width = '100%';
+            this.queueProgressBar.style.width = '0%';
 
-            // Force reflow to apply the reset before starting transition
             setTimeout(() => {
                 this.queueProgressBar.style.transition = `width ${delayMs / 1000}s linear`;
-                this.queueProgressBar.style.width = '0%';
+                this.queueProgressBar.style.width = '100%';
             }, 20);
         }
 
+        this.timerStartTime = Date.now();
+        this.currentTimerDelay = delayMs;
+        this.remainingTimeOnPause = 0; // Ensure reset for a new timer.
         this.queueTimerId = setTimeout(() => this.processNextQueueItem(), delayMs);
     } else {
         logConCgp('[queue-engine] All items have been sent.');
-        this.pauseQueue(); // Queue finished, so pause/stop
+        // Visually complete the progress bar.
+        if (this.queueProgressBar) {
+            this.queueProgressBar.style.transition = 'none';
+            this.queueProgressBar.style.width = '100%';
+        }
+        this.pauseQueue(); // Queue finished, so pause/stop.
 
-        // Hide progress bar after a short delay to let animation finish
+        // Hide progress bar after a short delay.
         setTimeout(() => {
             if (this.queueProgressContainer && !this.isQueueRunning) {
                 this.queueProgressContainer.style.display = 'none';
                 if (this.queueProgressBar) {
-                    this.queueProgressBar.style.transition = 'none';
-                    this.queueProgressBar.style.width = '100%';
+                    this.queueProgressBar.style.width = '0%'; // Reset for next time.
                 }
             }
-        }, 1000); // Wait 1 second after finish to hide
+        }, 1000);
     }
 };
 
