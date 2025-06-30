@@ -54,9 +54,9 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         if (unit === 'sec') {
             this.delayUnitToggle.textContent = 'sec';
             this.delayInputElement.value = window.globalMaxExtensionConfig.queueDelaySeconds;
-            this.delayInputElement.min = 15;
+            this.delayInputElement.min = 10;
             this.delayInputElement.max = 64000;
-            this.delayInputElement.title = "Delay in seconds between sending each queued prompt. Min: 15, Max: 64000.";
+            this.delayInputElement.title = "Delay in seconds between sending each queued prompt. Min: 10, Max: 64000.";
         } else { // 'min'
             this.delayUnitToggle.textContent = 'min';
             this.delayInputElement.value = window.globalMaxExtensionConfig.queueDelayMinutes;
@@ -77,7 +77,7 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
     this.delayInputElement.addEventListener('change', (event) => {
         let delay = parseInt(event.target.value, 10);
         const unit = window.globalMaxExtensionConfig.queueDelayUnit || 'min';
-        const minDelay = (unit === 'sec') ? 15 : 1;
+        const minDelay = (unit === 'sec') ? 10 : 1;
         const maxDelay = 64000;
 
         if (isNaN(delay) || delay < minDelay) {
