@@ -24,6 +24,7 @@
       <section class="section">
         <h2>Profile</h2>
         <div class="row">
+          <label for="profileSelect" id="currentProfileLabel" class="profile-context-label" style="display: none;">Your current profile:</label>
           <select
             id="profileSelect"
             title="Select profile"
@@ -71,7 +72,7 @@
           class="profile-action-container"
           style="display: none"
         >
-          <label for="addProfileInput">Enter profile name:</label>
+          <label for="addProfileInput">Enter new profile name:</label>
           <input
             type="text"
             id="addProfileInput"
@@ -98,12 +99,12 @@
           class="profile-action-container"
           style="display: none"
         >
-          <label for="copyProfileInput">Enter new profile name:</label>
+          <label for="copyProfileInput">Enter duplicate profile name:</label>
           <input
             type="text"
             id="copyProfileInput"
-            placeholder="Enter new profile name here"
-            title="New profile name"
+            placeholder="Enter duplicate profile name here"
+            title="Name for the duplicated profile"
           />
           <button id="saveCopyProfile">Save</button>
           <button id="cancelCopyProfile" class="danger">Cancel</button>

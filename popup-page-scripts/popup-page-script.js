@@ -16,6 +16,7 @@ let saveTimeoutId = null;
 
 // DOM Elements
 const profileSelect = document.getElementById('profileSelect');
+const currentProfileLabel = document.getElementById('currentProfileLabel');
 const buttonCardsList = document.getElementById('buttonCardsList');
 const consoleOutput = document.getElementById('console');
 const saveStatus = document.getElementById('saveStatus');
@@ -193,6 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
         copyProfileContainer.style.display = 'none';
         deleteProfileButton.style.display = 'none'; // Hide delete button during add
         profileSelect.disabled = true; // Lock profile selector
+        currentProfileLabel.style.display = 'inline-block';
     });
 
     // Copy Profile Button Click
@@ -203,6 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
         addProfileContainer.style.display = 'none';
         deleteProfileButton.style.display = 'none'; // Hide delete button during copy
         profileSelect.disabled = true; // Lock profile selector
+        currentProfileLabel.style.display = 'inline-block';
     });
 
     // Save Add Profile Button Click
@@ -227,6 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
         copyProfileButton.style.display = 'inline-block';
         deleteProfileButton.style.display = 'inline-block'; // Show delete button after add
         profileSelect.disabled = false; // Unlock profile selector
+        currentProfileLabel.style.display = 'none';
     });
 
     // Save Copy Profile Button Click
@@ -251,6 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
         addProfileButton.style.display = 'inline-block';
         deleteProfileButton.style.display = 'inline-block'; // Show delete button after copy
         profileSelect.disabled = false; // Unlock profile selector
+        currentProfileLabel.style.display = 'none';
     });
 
     // Delete Profile Button Click
@@ -263,6 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
         copyProfileButton.style.display = 'inline-block';
         deleteProfileButton.style.display = 'inline-block'; // Show delete button
         profileSelect.disabled = false; // Unlock profile selector
+        currentProfileLabel.style.display = 'none';
     });
 
     // Cancel Copy Profile Button Click
@@ -272,6 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
         copyProfileButton.style.display = 'inline-block';
         deleteProfileButton.style.display = 'inline-block'; // Show delete button
         profileSelect.disabled = false; // Unlock profile selector
+        currentProfileLabel.style.display = 'none';
     });
 
     // Button management

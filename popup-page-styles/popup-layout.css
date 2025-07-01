@@ -105,3 +105,10 @@ select:focus {
     background: #cccccc;
     cursor: not-allowed;
 }
+
+/* Label for providing context to the profile selector when it's disabled */
+.profile-context-label {
+    align-self: center;
+    margin-right: 8px;
+    font-weight: 500;
+}
