@@ -151,8 +151,30 @@ window.MaxExtensionFloatingPanel.makeDraggable = function (element, handle) {
 
     const dragElement = (e) => {
         e.preventDefault();
-        element.style.left = (e.clientX - offsetX) + 'px';
-        element.style.top = (e.clientY - offsetY) + 'px';
+
+        // Calculate the new position
+        let newLeft = e.clientX - offsetX;
+        let newTop = e.clientY - offsetY;
+
+        // Get viewport dimensions
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        // Get panel dimensions
+        const panelWidth = element.offsetWidth;
+        const panelHeight = element.offsetHeight;
+
+        // Constrain the horizontal position (left)
+        newLeft = Math.max(0, newLeft);
+        newLeft = Math.min(newLeft, viewportWidth - panelWidth);
+
+        // Constrain the vertical position (top)
+        newTop = Math.max(0, newTop);
+        newTop = Math.min(newTop, viewportHeight - panelHeight);
+
+        // Apply the constrained position
+        element.style.left = newLeft + 'px';
+        element.style.top = newTop + 'px';
     };
 
     const stopDrag = () => {
