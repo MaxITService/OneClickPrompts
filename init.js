@@ -34,183 +34,163 @@
 'use strict';
 
 /**
- * This function is called first.
- * It retrieves configuration data from the service worker and starts the initialization.
+ * Main entry point. Retrieves configuration and then starts the async initialization.
  */
 function publicStaticVoidMain() {
-    // The message intended for the service worker config.js, the function will be run after response will be received.
     chrome.runtime.sendMessage({ type: 'getConfig' }, (response) => {
+        if (chrome.runtime.lastError) {
+            logConCgp('[init] Error loading configuration:', chrome.runtime.lastError.message);
+            return;
+        }
         if (response && response.config) {
             logConCgp('[init] Configuration successfully loaded:', response.config);
-
-            // Let all files in the project access the configuration.
-            window.globalMaxExtensionConfig = response.config;
-            commenceExtensionInitialization(window.globalMaxExtensionConfig);
+            commenceExtensionInitialization(response.config);
         } else {
             logConCgp('[init] Failed to load configuration from service worker. Initialization aborted.');
-            // STOP execution if configuration is missing.
         }
     });
 }
 
 /**
- * Initializes the extension using the provided configuration.
- * @param {Object} configurationObject - The configuration object retrieved from the service worker.
+ * Initializes the extension using an async "decide-first" approach.
+ * @param {Object} configurationObject - The configuration object.
  */
-function commenceExtensionInitialization(configurationObject) {
-
-    logConCgp('[init] Configuration has been received:', configurationObject);
-
-    /**
-     * Selects the correct initialization path based on the active website and sets up keyboard shortcuts if enabled.
-     * Injects custom elements into the webpage accordingly.
-     */
-    function selectAndInitializeAppropriateExtensionScript() {
-        logConCgp('[init] InitScript invoked. Detecting active website...');
-
-        const activeWebsite = window.InjectionTargetsOnWebsite.activeSite;
-        logConCgp('[init] Active website detected:', activeWebsite);
-
-        // Initialize button injection logic (moved to separate file "buttons-injection.js")
-        buttonBoxCheckingAndInjection(true, activeWebsite);
-
-        // Enable keyboard shortcuts if configured and on ChatGPT
-        if (activeWebsite === 'ChatGPT' && window.globalMaxExtensionConfig.enableShortcuts) {
-            window.addEventListener('keydown', manageKeyboardShortcutEvents);
-            logConCgp('[init] Keyboard shortcuts have been enabled and event listener added for ChatGPT.');
-        }
-    }
+async function commenceExtensionInitialization(configurationObject) {
+    logConCgp('[init] Async initialization started.');
+    window.globalMaxExtensionConfig = configurationObject;
 
     /**
-     * Manages keyboard shortcut events to trigger custom send buttons on the webpage.
-     * Listens for Alt+[1-10] key presses and simulates button clicks.
-     * If Shift is also pressed, it inverts the autoSend flag for this press only.
-     * @param {KeyboardEvent} event - The keyboard event object.
+     * Helper to get panel visibility setting from storage, wrapped in a Promise.
+     * @returns {Promise<boolean>} - True if the panel should be visible.
      */
-    function manageKeyboardShortcutEvents(event) {
-        if (!globalMaxExtensionConfig.enableShortcuts) return;
-
-        // Only handle events where Alt is pressed and the key is a digit [1-10]
-        if (
-            event.altKey &&
-            !event.ctrlKey &&
-            !event.metaKey &&
-            event.code.startsWith('Digit')
-        ) {
-            let pressedKey = event.code.replace('Digit', '');
-            if (pressedKey === '0') pressedKey = '10';
-
-            const targetButton = document.querySelector(`button[data-shortcut-key="${pressedKey}"]`);
-            if (targetButton) {
-                event.preventDefault();
-                // Create a new MouseEvent with shiftKey set based on the current event
-                const clickEvent = new MouseEvent('click', {
-                    bubbles: true,
-                    cancelable: true,
-                    view: window,
-                    shiftKey: event.shiftKey
-                });
-                targetButton.dispatchEvent(clickEvent);
-            } else {
-                logConCgp('[init] No button found for the pressed shortcut key:', pressedKey);
-            }
-        }
-    }
-
-    /**
-     * Debounces a function to limit how often it can be executed.
-     * @param {Function} func - The function to debounce.
-     * @param {number} delay - The debounce delay in milliseconds.
-     * @returns {Function} - The debounced function.
-     * @description Helper function that limits the rate at which a function can fire.
-     */
-    function debounceFunctionExecution(func, delay) {
-        let timeoutIdentifier;
-        return function (...argumentsList) {
-            clearTimeout(timeoutIdentifier);
-            timeoutIdentifier = setTimeout(() => func.apply(this, argumentsList), delay);
-        };
-    }
-
-    /**
-     * Handle navigation changes in Single Page Applications by re-initializing the extension.
-     * Ensures custom elements are present on the webpage after URL changes.
-     * Function will be called once after last trigger.
-     *
-     * NOTE: Reduced debounce delay from 1000ms to 100ms to remove visible injection delay.
-     */
-    const debouncedEnhancedInitialization = debounceFunctionExecution(() => {
-        logConCgp('[init] URL change detected. Attempting to initialize extension...');
-        commenceExtensionInitialization(window.globalMaxExtensionConfig);
-    }, 100);
-
-    /**
-     * Observes changes to the URL in Single Page Applications and triggers a callback upon changes.
-     * @param {Function} callback - The function to execute when a URL change is detected.
-     * @description Helper function that monitors URL changes using MutationObserver.
-     */
-    function resilientStartAndRetryOnSPANavigation(callback) {
-        let previousUrl = location.href;
-        const urlChangeObserver = new MutationObserver(() => {
-            const currentUrl = location.href;
-            if (currentUrl !== previousUrl) {
-                previousUrl = currentUrl;
-                callback();
-            }
+    async function getFloatingPanelVisibility() {
+        return new Promise(resolve => {
+            const hostname = window.location.hostname;
+            chrome.runtime.sendMessage({ type: 'getFloatingPanelSettings', hostname: hostname }, response => {
+                if (chrome.runtime.lastError) {
+                    logConCgp('[init] Error getting panel settings:', chrome.runtime.lastError.message);
+                    resolve(false);
+                    return;
+                }
+                resolve(response?.settings?.isVisible || false);
+            });
         });
-
-        urlChangeObserver.observe(document, { subtree: true, childList: true });
     }
 
-    // ----------------------------------------------------------------
-    // NEW: Immediate SPA Navigation Detection using History API events.
-    // ----------------------------------------------------------------
+    const shouldPanelBeVisible = await getFloatingPanelVisibility();
 
-    // Listen to popstate event (back/forward navigation)
-    window.addEventListener('popstate', () => {
-        logConCgp('[init] popstate event detected. Triggering injection.');
+    if (shouldPanelBeVisible) {
+        logConCgp('[init] Decide-first: Panel should be visible. Creating panel and buttons directly.');
+        if (window.MaxExtensionFloatingPanel) {
+            await window.MaxExtensionFloatingPanel.createFloatingPanel();
+            const panelContent = document.getElementById('max-extension-floating-panel-content');
+            const panel = window.MaxExtensionFloatingPanel.panelElement;
+
+            if (panel && panelContent) {
+                // Create buttons directly in the panel. No flicker.
+                window.MaxExtensionButtonsInit.createAndInsertCustomElements(panelContent);
+
+                // Manually make panel visible and set state.
+                panel.style.display = 'flex';
+                window.MaxExtensionFloatingPanel.isPanelVisible = true;
+            } else {
+                logConCgp('[init] Decide-first: Failed to create panel. Falling back to inline injection.');
+                buttonBoxCheckingAndInjection(true); // Fallback
+            }
+        }
+    } else {
+        logConCgp('[init] Decide-first: Panel is hidden. Using standard inline injection.');
         buttonBoxCheckingAndInjection(true);
-    });
+    }
 
-    // Listen to hashchange event (if URL hash changes)
-    window.addEventListener('hashchange', () => {
-        logConCgp('[init] hashchange event detected. Triggering injection.');
-        buttonBoxCheckingAndInjection(true);
-    });
+    // After the initial decision and creation, initialize the full floating panel system.
+    // This loads settings, profiles, and attaches event listeners.
+    if (window.MaxExtensionFloatingPanel) {
+        window.MaxExtensionFloatingPanel.initialize();
+        logConCgp('[init] Floating panel system initialized in a controlled manner.');
+    }
 
-    // Monkey-patch pushState and replaceState for immediate detection on state changes.
-    patchHistoryMethods();
+    // --- All subsequent logic for shortcuts and SPA navigation remains the same ---
+    const activeWebsite = window.InjectionTargetsOnWebsite.activeSite;
+    if (activeWebsite === 'ChatGPT' && window.globalMaxExtensionConfig.enableShortcuts) {
+        window.addEventListener('keydown', manageKeyboardShortcutEvents);
+        logConCgp('[init] Keyboard shortcuts have been enabled and event listener added for ChatGPT.');
+    }
 
-    // ----------------------------------------------------------------
-    // End of Immediate Navigation Detection
-    // ----------------------------------------------------------------
-
-    // Begin monitoring URL changes to handle SPA navigation using MutationObserver as a fallback.
     resilientStartAndRetryOnSPANavigation(() => {
         logConCgp('[init] Path change detected via MutationObserver. Re-initializing script...');
+        const debouncedEnhancedInitialization = debounceFunctionExecution(() => {
+            publicStaticVoidMain();
+        }, 100);
         debouncedEnhancedInitialization();
     });
 
-    // Initiate the appropriate extension script based on the active website.
-    selectAndInitializeAppropriateExtensionScript();
+    patchHistoryMethods();
 }
 
 /**
- * Monkey-patches History API methods to detect immediate navigation changes.
- * This function overrides pushState and replaceState to trigger custom injection logic.
+ * Manages keyboard shortcut events to trigger custom send buttons on the webpage.
+ * @param {KeyboardEvent} event - The keyboard event object.
+ */
+function manageKeyboardShortcutEvents(event) {
+    if (!globalMaxExtensionConfig.enableShortcuts) return;
+    if (event.altKey && !event.ctrlKey && !event.metaKey && event.code.startsWith('Digit')) {
+        let pressedKey = event.code.replace('Digit', '');
+        if (pressedKey === '0') pressedKey = '10';
+        const targetButton = document.querySelector(`button[data-shortcut-key="${pressedKey}"]`);
+        if (targetButton) {
+            event.preventDefault();
+            const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true, view: window, shiftKey: event.shiftKey });
+            targetButton.dispatchEvent(clickEvent);
+        } else {
+            logConCgp('[init] No button found for the pressed shortcut key:', pressedKey);
+        }
+    }
+}
+
+/**
+ * Debounces a function to limit how often it can be executed.
+ * @param {Function} func - The function to debounce.
+ * @param {number} delay - The debounce delay in milliseconds.
+ * @returns {Function} - The debounced function.
+ */
+function debounceFunctionExecution(func, delay) {
+    let timeoutIdentifier;
+    return function (...argumentsList) {
+        clearTimeout(timeoutIdentifier);
+        timeoutIdentifier = setTimeout(() => func.apply(this, argumentsList), delay);
+    };
+}
+
+/**
+ * Observes changes to the URL in Single Page Applications.
+ * @param {Function} callback - The function to execute when a URL change is detected.
+ */
+function resilientStartAndRetryOnSPANavigation(callback) {
+    let previousUrl = location.href;
+    const urlChangeObserver = new MutationObserver(() => {
+        const currentUrl = location.href;
+        if (currentUrl !== previousUrl) {
+            previousUrl = currentUrl;
+            callback();
+        }
+    });
+    urlChangeObserver.observe(document, { subtree: true, childList: true });
+}
+
+/**
+ * Monkey-patches History API methods for immediate navigation detection.
  */
 function patchHistoryMethods() {
-    // Avoid duplicate patching if already patched.
     if (history.__patchedByOneClickPrompts) return;
     history.__patchedByOneClickPrompts = true;
-
     const methods = ['pushState', 'replaceState'];
     methods.forEach(method => {
         const original = history[method];
         history[method] = function(...args) {
             const result = original.apply(this, args);
             logConCgp(`[init] ${method} called. URL:`, args[2]);
-            buttonBoxCheckingAndInjection(true);
+            publicStaticVoidMain(); // Re-run the full initialization logic
             return result;
         };
     });

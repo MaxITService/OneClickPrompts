@@ -83,8 +83,7 @@ window.MaxExtensionFloatingPanel.loadPanelSettings = function () {
                 this.updatePanelFromSettings();
             }
 
-            // Restore panel visibility state after settings are loaded.
-            this.restorePanelState(); // This is now async, but we don't need to await it.
+            // Initial panel state restoration is now handled by init.js (the Director).
         });
     } catch (error) {
         logConCgp('[floating-panel] Error loading panel settings: ' + error.message);
@@ -223,11 +222,9 @@ window.MaxExtensionFloatingPanel.switchToProfile = function (profileName) {
                 return;
             }
             if (response.config) {
-                // Update the current profile name and global config.
-                this.currentProfileName = profileName;
-                window.globalMaxExtensionConfig = response.config;
-                // Refresh buttons in the panel.
-                this.refreshButtonsInPanel();
+                // The service worker now broadcasts the profile change to all tabs.
+                // The listener in `buttons-init.js` will handle updating the UI.
+                // No need to call refreshButtonsInPanel() here anymore.
                 console.log(`[floating-panel] Successfully switched to profile: ${profileName}`);
             }
         }
@@ -242,11 +239,11 @@ window.MaxExtensionFloatingPanel.initialize = function () {
     this.currentPanelSettings = { ...this.defaultPanelSettings };
     this.loadGlobalSettings(); // Load global settings like TOS acceptance
 
-    // createFloatingPanel is async. We use .then() to ensure subsequent actions
-    // only run after the panel has been created and added to the DOM.
+    // If panel was already created by the director (init.js), this will do nothing.
+    // Otherwise, this will create the panel if the user toggles it on later.
     this.createFloatingPanel().then(() => {
         if (this.panelElement) {
-            // Load saved settings (which will apply them and restore state).
+            // Load saved settings (which will apply them).
             this.loadPanelSettings();
             // Load available profiles (which will populate the switcher).
             this.loadAvailableProfiles();

@@ -45,6 +45,12 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
         const closeButton = document.getElementById('max-extension-panel-close-btn');
         const profileSwitcherContainer = document.getElementById('max-extension-profile-switcher');
 
+        // Ensure settings object exists before trying to access its properties.
+        // This prevents errors on initial load if settings haven't been initialized yet.
+        if (!this.currentPanelSettings) {
+            this.currentPanelSettings = { ...this.defaultPanelSettings };
+        }
+
         // Apply initial dynamic styles that can't be in the CSS file
         this.updatePanelFromSettings();
 
@@ -56,8 +62,8 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
 
         // Resize listener
         panel.addEventListener('mouseup', () => {
-            if (panel.style.width !== `${this.currentPanelSettings.width}px` ||
-                panel.style.height !== `${this.currentPanelSettings.height}px`) {
+            if (this.currentPanelSettings && (panel.style.width !== `${this.currentPanelSettings.width}px` ||
+                panel.style.height !== `${this.currentPanelSettings.height}px`)) {
 
                 this.currentPanelSettings.width = parseInt(panel.style.width);
                 this.currentPanelSettings.height = parseInt(panel.style.height);

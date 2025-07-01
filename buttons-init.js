@@ -79,8 +79,9 @@ window.MaxExtensionButtonsInit = {
      */
     createAndInsertCustomElements: function(targetContainer) {
         // Prevent duplication by checking if the container already exists using dynamic selector
-        if (doCustomModificationsExist()) {
-            logConCgp('[init] Custom buttons container already exists. Skipping creation.');
+        const existingContainer = document.getElementById(window.InjectionTargetsOnWebsite.selectors.buttonsContainerId);
+        if (existingContainer && existingContainer.parentElement === targetContainer) {
+            logConCgp('[init] Custom buttons container already exists in this target. Skipping creation.');
             return;
         }
 
@@ -104,25 +105,6 @@ window.MaxExtensionButtonsInit = {
 
         targetContainer.appendChild(customElementsContainer);
         logConCgp('[init] Custom elements have been inserted into the DOM.');
-        
-        // Initialize floating panel if available
-        if (window.MaxExtensionFloatingPanel) {
-            window.MaxExtensionFloatingPanel.initialize();
-            logConCgp('[init] Floating panel has been initialized.');
-            
-            // Check if the floating panel should be visible after initialization
-            // and hide the default container if needed
-            setTimeout(() => {
-                if (window.MaxExtensionFloatingPanel.currentPanelSettings && 
-                    window.MaxExtensionFloatingPanel.currentPanelSettings.isVisible) {
-                    // Hide the default container if floating panel should be visible
-                    if (customElementsContainer) {
-                        customElementsContainer.style.display = 'none';
-                        logConCgp('[init] Default button container hidden because floating panel should be visible.');
-                    }
-                }
-            }, 200); // Small delay to ensure panel settings have been loaded
-        }
     },
     
     /**

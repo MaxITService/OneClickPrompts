@@ -78,13 +78,10 @@ The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, C
 ### `floating-panel-ui-interaction.js`
 
 - **Purpose:** Contains UI interaction and state management methods for the floating panel.
-- **Role:** Handles toggling panel visibility, moving buttons between containers, updating the panel appearance from settings, restoring state, and refreshing buttons. Key functions:
-  - `togglePanel()`: An `async` function that toggles the floating panel's visibility. It handles the initial asynchronous creation of the panel via `createFloatingPanel` on the first click.
-  - `moveButtonsToPanel()`: Moves buttons from the original container to the panel.
+- **Role:** Handles toggling panel visibility and updating the panel appearance from settings. The old "hide and clone" mechanism has been completely replaced.
+- **Key functions:**
+  - `togglePanel()`: An `async` function that toggles the floating panel's visibility using a **"destroy and re-create"** mechanism. When toggled ON, it destroys the inline buttons and re-creates them inside the panel. When toggled OFF, it does the reverse.
   - `updatePanelFromSettings()`: Updates the panel’s dynamic styles (like position, size, and opacity).
-  - `restorePanelState()`: Restores the panel visibility based on saved settings.
-  - `refreshButtonsInPanel()`: Refreshes the buttons displayed in the panel after a profile switch.
-- **Dependencies:** `floating-panel.js`, `floating-panel-ui-creation.js`.
 
 ### `floating-panel-ui-queue.js`
 
@@ -107,40 +104,41 @@ The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, C
 
 - **Purpose:** Handles settings persistence and profile management for the floating panel.
 - **Role:** Includes methods for loading/saving panel settings, debouncing saves, and profile switching. Key functions:
-  - `initialize()`: The main entry point for the floating panel system. It asynchronously calls `createFloatingPanel` and then loads settings and profiles once the panel is in the DOM.
+  - `initialize()`: The main entry point for the floating panel system. It is called by the "Director" (`init.js`) after the initial UI has been rendered. It loads settings and profiles for the (now-existing) panel.
   - `loadPanelSettings()`: Retrieves settings from the service worker for the current hostname.
   - `savePanelSettings()`: Sends updated settings to the service worker for storage.
   - `debouncedSavePanelSettings()`: Waits 150ms before saving to reduce storage operations.
   - `loadAvailableProfiles()`: Gets a list of profiles from the service worker.
-  - `switchToProfile()`: Changes the current profile and refreshes floating panel content.
+  - `switchToProfile()`: Changes the current profile and triggers a global refresh of the buttons.
 - **Dependencies:** `floating-panel-ui-creation.js`, `floating-panel-ui-interaction.js`, `config.js`.
 
 ### Code File Dependencies for Floating Panel:
 
-- **Initialization Flow:**
+- **Initialization Flow (New "Decide First, Then Create" Architecture):**
 
-  1.  `buttons-init.js`: Calls `MaxExtensionFloatingPanel.initialize()` and creates the toggle button (🔼).
-  2.  `initialize()` in `floating-panel-settings.js` starts the process by calling the `async` function `createFloatingPanel()`.
-  3.  `createFloatingPanel()` in `floating-panel-ui-creation.js` fetches `floating-panel.html`, injects it into the page, attaches core event listeners, and then calls `initializeQueueSection()`.
-  4.  `initializeQueueSection()` in `floating-panel-ui-queue.js` finds the queue elements within the injected HTML and attaches their specific logic.
-  5.  Once `createFloatingPanel()` completes, the `.then()` block in `initialize()` executes, which calls `loadPanelSettings()` and `loadAvailableProfiles()` to populate the now-existing panel with data and restore its state.
+  1.  `init.js` (The Director) starts the `async` initialization process.
+  2.  `init.js` asynchronously checks the saved visibility state for the floating panel for the current website.
+  3.  **If the panel should be visible:**
+      - `init.js` calls `MaxExtensionFloatingPanel.createFloatingPanel()` to build the panel structure.
+      - `init.js` then calls `MaxExtensionButtonsInit.createAndInsertCustomElements()` to populate the panel's content area directly.
+      - The panel is made visible. There is no "inline" button creation step, preventing UI flicker.
+  4.  **If the panel should be hidden:**
+      - `init.js` proceeds with the traditional `buttonBoxCheckingAndInjection` flow to inject the buttons directly into their inline location on the page.
+  5.  Finally, `init.js` calls `MaxExtensionFloatingPanel.initialize()`. This function loads all settings, populates the profile switcher, and attaches all necessary event listeners to the panel system, which is now in a known state.
 
-- **Panel Summoning Process:**
+- **Panel Toggling Process (User-driven):**
 
-  1.  The toggle button calls the `async` function `togglePanel(event)`.
-  2.  On the first call, `togglePanel` awaits the completion of `createFloatingPanel` to ensure the panel is fully built and initialized.
-  3.  The panel is then positioned, displayed, and buttons are moved into it.
+  1.  The user clicks the toggle button (🔼), which calls the `async` function `togglePanel(event)`.
+  2.  `togglePanel` now implements a **"destroy and re-create"** logic. If turning the panel ON, it finds and destroys the inline buttons, then creates a new set of buttons inside the panel. If turning OFF, it does the reverse. This is more reliable than the old "hide and clone" method.
 
 - **Implementation Notes:**
-  - The floating panel's UI has been refactored to use an HTML template (`floating-panel.html`) and an external stylesheet (`floating-panel.css`).
-  - This approach separates concerns: structure (HTML), presentation (CSS), and behavior (JavaScript), leading to more maintainable code.
-  - JavaScript files that previously created DOM elements now fetch the template or find elements within it and attach functionality.
-  - The initialization process is now asynchronous to handle the fetching of the HTML file.
+  - The architecture now separates the initial rendering decision from subsequent user interactions, leading to better performance and reliability.
+  - The UI flicker is eliminated because buttons are only ever created once in their correct, final location during initial page load.
 
 ### `init.js`
 
-- **Purpose:** Main initialization script for the content script.
-- **Role:** Retrieves configuration from the service worker (`config.js`), detects the active website, injects the UI (`buttons-injection.js`), and manages keyboard shortcuts. Also handles Single Page Application (SPA) navigation to ensure the UI remains active.
+- **Purpose:** Main initialization script for the content script. It acts as the **Director** of the initial UI setup.
+- **Role:** Implements a **"decide first, then create"** architecture to prevent UI flicker. It asynchronously checks if the floating panel should be visible for the current site *before* rendering any buttons. Based on this setting, it either injects the buttons into the traditional inline location (via `buttons-injection.js`) or directly into the floating panel, which it creates on demand. It also orchestrates the initialization of the full floating panel system in a controlled sequence to prevent race conditions.
 
 ### `interface.js`
 
@@ -154,13 +152,13 @@ The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, C
 
 ### `buttons-init.js`
 
-- **Purpose:** Handles the initial creation and insertion of custom buttons and toggles into the target container.
-- **Role:** Prevents duplication and ensures that the custom UI elements are added to the page only once.
+- **Purpose:** Acts as a **UI Factory**. It contains the logic to generate a complete set of buttons and toggles.
+- **Role:** It is called by the "Director" (`init.js`) to populate a specified container, which can be either the inline injection point or the floating panel's content area. It is no longer responsible for making decisions about panel visibility.
 
 ### `buttons-injection.js`
 
-- **Purpose:** Handles the injection of custom buttons into the webpage.
-- **Role:** Checks for existing modifications, injects the custom buttons, and implements a resiliency mechanism to re-inject the elements if they disappear due to dynamic page updates.
+- **Purpose:** Handles the injection of custom buttons into the webpage for the **inline mode**.
+- **Role:** This script is now primarily used when `init.js` decides that the floating panel should be hidden on initial load. It finds the correct injection point on the page and implements a resiliency mechanism to re-inject the elements if they disappear due to dynamic page updates.
 
 ### `buttons-clicking-chatgpt.js`, `buttons-clicking-claude.js`, `buttons-clicking-copilot.js`, `buttons-clicking-deepseek.js`, `buttons-clicking-aistudio.js`, `buttons-clicking-grok.js`, `buttons-clicking-gemini.js`
 
@@ -260,9 +258,9 @@ The extension operates as follows:
 
 1.  The user configures the extension through the popup interface (`popup.html` and `popup-page-scripts/*`).
 2.  The configuration is stored in Chrome's storage by the service worker (`config.js`).
-3.  When the user visits a supported website, the content scripts (`init.js` and its dependencies) are injected into the page.
-4.  The content scripts retrieve the configuration from the service worker and inject the custom buttons into the page.
-5.  Users can toggle between inline injected buttons and the floating panel via the toggle button (🔼).
+3.  When the user visits a supported website, the content scripts are injected into the page.
+4.  The main content script (`init.js`) first checks if the floating panel should be visible. It then creates the custom buttons directly in the correct location (either inline or inside the newly created floating panel) to prevent any visual flicker.
+5.  When the user toggles the panel's visibility, the buttons are destroyed from their current location and re-created in the new one.
 6.  The floating panel's position, size, and visibility state are saved per website and restored when revisiting.
 7.  When the user clicks a custom button:
     - If the floating panel is active and Queue Mode is on, the prompt is added to a queue. The queue sends prompts sequentially with a configurable delay.
