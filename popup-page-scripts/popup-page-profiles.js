@@ -89,7 +89,7 @@ async function addNewEmptyProfile(profileName) {
     if (trimmedProfileName === "") {
         showToast('Profile name cannot be empty.', 'error');
         logToGUIConsole('Profile creation failed: Empty name provided.');
-        return;
+        return false;
     }
 
     // Check if profile name already exists
@@ -97,7 +97,7 @@ async function addNewEmptyProfile(profileName) {
     if (existingProfiles.includes(trimmedProfileName)) {
         showToast('A profile with this name already exists.', 'error');
         logToGUIConsole(`Profile creation failed: "${trimmedProfileName}" already exists.`);
-        return;
+        return false;
     }
 
     try {
@@ -114,9 +114,11 @@ async function addNewEmptyProfile(profileName) {
         await switchProfile(trimmedProfileName);
         showToast(`Profile "${trimmedProfileName}" added successfully.`, 'success');
         logToGUIConsole(`Created new empty profile: ${trimmedProfileName}`);
+        return true;
     } catch (error) {
         showToast(`Error creating profile: ${error.message}`, 'error');
         logToGUIConsole(`Error creating profile: ${error.message}`);
+        return false;
     }
 }
 
@@ -134,7 +136,7 @@ async function copyCurrentProfile(newProfileName) {
     if (trimmedProfileName === "") {
         showToast('Profile name cannot be empty.', 'error');
         logToGUIConsole('Profile copy failed: Empty name provided.');
-        return;
+        return false;
     }
 
     // Check if profile name already exists
@@ -142,7 +144,7 @@ async function copyCurrentProfile(newProfileName) {
     if (existingProfiles.includes(trimmedProfileName)) {
         showToast('A profile with this name already exists.', 'error');
         logToGUIConsole(`Profile copy failed: "${trimmedProfileName}" already exists.`);
-        return;
+        return false;
     }
 
     try {
@@ -161,9 +163,11 @@ async function copyCurrentProfile(newProfileName) {
         await switchProfile(trimmedProfileName);
         showToast(`Profile duplicated as "${trimmedProfileName}" successfully.`, 'success');
         logToGUIConsole(`Copied profile to new profile: ${trimmedProfileName}`);
+        return true;
     } catch (error) {
         showToast(`Error copying profile: ${error.message}`, 'error');
         logToGUIConsole(`Error copying profile: ${error.message}`);
+        return false;
     }
 }
 
@@ -201,3 +205,4 @@ async function deleteCurrentProfile() {
         logToGUIConsole(`Error deleting profile: ${error.message}`);
     }
 }
+

@@ -209,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Save Add Profile Button Click
-    saveAddProfileButton.addEventListener('click', () => {
+    saveAddProfileButton.addEventListener('click', async () => {
         const profileName = addProfileInput.value;
         if (profileName.trim() === "") {
             addProfileInput.classList.add('input-error');
@@ -220,21 +220,28 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         addProfileInput.classList.remove('input-error');
-        addNewEmptyProfile(profileName);
-        // Reset and hide input
-        addProfileInput.value = '';
-        addProfileInput.style.borderColor = '';
-        addProfileContainer.style.display = 'none';
-        // Show both "Add Profile" and "Duplicate Profile" buttons
-        addProfileButton.style.display = 'inline-block';
-        copyProfileButton.style.display = 'inline-block';
-        deleteProfileButton.style.display = 'inline-block'; // Show delete button after add
-        profileSelect.disabled = false; // Unlock profile selector
-        currentProfileLabel.style.display = 'none';
+        const success = await addNewEmptyProfile(profileName);
+
+        if (success) {
+            // Reset and hide input
+            addProfileInput.value = '';
+            addProfileInput.style.borderColor = '';
+            addProfileContainer.style.display = 'none';
+            // Show both "Add Profile" and "Duplicate Profile" buttons
+            addProfileButton.style.display = 'inline-block';
+            copyProfileButton.style.display = 'inline-block';
+            deleteProfileButton.style.display = 'inline-block'; // Show delete button after add
+            profileSelect.disabled = false; // Unlock profile selector
+            currentProfileLabel.style.display = 'none';
+        } else {
+            // On failure (e.g., duplicate name), keep UI open for correction
+            addProfileInput.classList.add('input-error');
+            addProfileInput.style.borderColor = 'var(--danger-color)';
+        }
     });
 
     // Save Copy Profile Button Click
-    saveCopyProfileButton.addEventListener('click', () => {
+    saveCopyProfileButton.addEventListener('click', async () => {
         const newProfileName = copyProfileInput.value;
         if (newProfileName.trim() === "") {
             copyProfileInput.classList.add('input-error');
@@ -245,17 +252,24 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         copyProfileInput.classList.remove('input-error');
-        copyCurrentProfile(newProfileName);
-        // Reset and hide input
-        copyProfileInput.value = '';
-        copyProfileInput.style.borderColor = '';
-        copyProfileContainer.style.display = 'none';
-        // Show both "Add Profile" and "Duplicate Profile" buttons
-        copyProfileButton.style.display = 'inline-block';
-        addProfileButton.style.display = 'inline-block';
-        deleteProfileButton.style.display = 'inline-block'; // Show delete button after copy
-        profileSelect.disabled = false; // Unlock profile selector
-        currentProfileLabel.style.display = 'none';
+        const success = await copyCurrentProfile(newProfileName);
+
+        if (success) {
+            // Reset and hide input
+            copyProfileInput.value = '';
+            copyProfileInput.style.borderColor = '';
+            copyProfileContainer.style.display = 'none';
+            // Show both "Add Profile" and "Duplicate Profile" buttons
+            copyProfileButton.style.display = 'inline-block';
+            addProfileButton.style.display = 'inline-block';
+            deleteProfileButton.style.display = 'inline-block'; // Show delete button after copy
+            profileSelect.disabled = false; // Unlock profile selector
+            currentProfileLabel.style.display = 'none';
+        } else {
+            // On failure (e.g., duplicate name), keep UI open for correction
+            copyProfileInput.classList.add('input-error');
+            copyProfileInput.style.borderColor = 'var(--danger-color)';
+        }
     });
 
     // Delete Profile Button Click
