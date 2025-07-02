@@ -23,7 +23,7 @@
   },
   "options_page": "popup.html",
 
-  "permissions": ["storage"],
+  "permissions": ["storage", "contextMenus"],
 
   "background": {
     "service_worker": "config.js",
@@ -65,7 +65,8 @@
         "floating-panel-settings.js",
         "buttons-injection.js",
         "init.js",
-        "tests.js"
+        "tests.js",
+        "context-menu.js"
       ]
     }
   ],

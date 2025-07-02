@@ -4,6 +4,7 @@
 // This service worker does all Config stuff with sync storage, it handles storage exclusively, other files request data from it and don't care how it is stored.
 // There is also welcome page handling, it opens a welcome page on install, has to be there cause it's service worker.
 'use strict';
+import './context-menu.js';
 // Dependencies: default-config.json
 
 // Ensure the service worker is registered
