@@ -1,16 +1,23 @@
+// This script creates a context menu item for the extension's toolbar icon.
+
+// Create the context menu item when the extension is installed or updated.
+// This listener can coexist with other onInstalled listeners.
 chrome.runtime.onInstalled.addListener(() => {
-  // Create a context menu item for the extension icon.
-  chrome.contextMenus.create({
-    id: "open-welcome-page",
-    title: "Welcome Page", // The text that appears in the menu
-    contexts: ["action"], // Show only when right-clicking the extension's icon
-  });
+    // Use 'chrome.contextMenus.create' to add an item.
+    chrome.contextMenus.create({
+        id: "open-welcome",
+        title: "Open Welcome page",
+        contexts: ["action"] // Show this item only when right-clicking the extension's toolbar icon.
+    });
 });
 
-// Listen for a click on the context menu item.
+// Add a listener for when a context menu item is clicked.
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId === "open-welcome-page") {
-    // Open your options page (Welcome.html) in a new tab.
-    chrome.tabs.create({ url: "Welcome.html" });
-  }
+    // Check if the clicked menu item's ID is the one we created.
+    if (info.menuItemId === "open-welcome") {
+        // If it is, create a new tab with the welcome page.
+        chrome.tabs.create({
+            url: chrome.runtime.getURL('welcome.html')
+        });
+    }
 });

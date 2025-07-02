@@ -65,8 +65,7 @@
         "floating-panel-settings.js",
         "buttons-injection.js",
         "init.js",
-        "tests.js",
-        "context-menu.js"
+        "tests.js"
       ]
     }
   ],
