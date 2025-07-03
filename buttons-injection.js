@@ -12,12 +12,18 @@
 const EXTENDED_CHECK_INTERVAL = 15000; // 15 seconds
 const EXTENDED_CHECK_DURATION = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
 
+// Flag to coordinate with the floating panel toggle logic.
+window.OneClickPrompts_isTogglingPanel = false;
+
 /**
  * Checks whether the custom buttons modifications already exist in the DOM.
+ * This is strengthened to check for child elements, not just the container.
  * @returns {boolean} - True if modifications exist, false otherwise.
  */
 function doCustomModificationsExist() {
-    return document.getElementById(window.InjectionTargetsOnWebsite.selectors.buttonsContainerId) !== null;
+    const el = document.getElementById(window.InjectionTargetsOnWebsite.selectors.buttonsContainerId);
+    // The container must exist AND have child elements (buttons/toggles) inside it.
+    return !!(el && el.children.length > 0);
 }
 
 /**
@@ -30,7 +36,7 @@ function doCustomModificationsExist() {
  */
 function buttonBoxCheckingAndInjection(enableResiliency = true, activeWebsite) {
     logConCgp('[button-injection] Checking if mods already exist...');
-    
+
     // If modifications already exist and resiliency is disabled, skip the injection.
     if (doCustomModificationsExist() && !enableResiliency) {
         logConCgp('[button-injection] Modifications already exist and resiliency is disabled. Skipping initialization.');
@@ -91,7 +97,7 @@ function commenceEnhancedResiliencyChecks() {
         clearTimeout(window.OneClickPropmts_currentResiliencyTimeout);
         window.OneClickPropmts_currentResiliencyTimeout = null;
     }
-    
+
     if (window.OneClickPropmts_extendedMonitoringObserver) {
         window.OneClickPropmts_extendedMonitoringObserver.disconnect();
         window.OneClickPropmts_extendedMonitoringObserver = null;
@@ -107,6 +113,13 @@ function commenceEnhancedResiliencyChecks() {
     logConCgp('[button-injection] Beginning enhanced resiliency checks with dynamic interval...');
 
     function adaptiveCheck() {
+        // If the panel is being toggled, pause the watchdog to prevent race conditions.
+        if (window.OneClickPrompts_isTogglingPanel) {
+            logConCgp('[button-injection] Panel toggling in progress. Resiliency check paused.');
+            window.OneClickPropmts_currentResiliencyTimeout = setTimeout(adaptiveCheck, 150);
+            return;
+        }
+
         totalIterationsPerformed++;
         const modificationsExist = doCustomModificationsExist();
         let delay;
@@ -172,7 +185,8 @@ function startExtendedMonitoringWithObserver() {
 
     // Create new observer
     window.OneClickPropmts_extendedMonitoringObserver = new MutationObserver((mutations) => {
-        if (!doCustomModificationsExist()) {
+        // Also check the toggle flag here to avoid reacting to our own changes.
+        if (!window.OneClickPrompts_isTogglingPanel && !doCustomModificationsExist()) {
             logConCgp('[button-injection] Modifications missing during extended monitoring - reinserting');
             enforceResiliencyMeasures();
         }

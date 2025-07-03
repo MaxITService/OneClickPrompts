@@ -22,8 +22,15 @@
  * Creates the floating panel element by fetching an HTML template and appending it.
  */
 window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
-    if (this.panelElement) {
+    // Check if the panel element exists and is still attached to the document.
+    if (this.panelElement && document.body.contains(this.panelElement)) {
         return this.panelElement;
+    }
+
+    // If the panel element reference exists but is not in the DOM, it's been detached.
+    if (this.panelElement) {
+        this.panelElement = null; // Reset reference to allow re-creation.
+        logConCgp('[floating-panel] Panel element was detached from the DOM. It will be recreated.');
     }
 
     try {
