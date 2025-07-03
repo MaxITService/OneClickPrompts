@@ -34,15 +34,16 @@ window.MaxExtensionFloatingPanel.togglePanel = async function (event) {
 
         this.isPanelVisible = !this.isPanelVisible;
         this.currentPanelSettings.isVisible = this.isPanelVisible;
-        this.debouncedSavePanelSettings();
+
+        // Await the save to ensure state is persisted before re-initializing. This is critical.
+        await this.savePanelSettings();
 
         if (this.isPanelVisible) {
             logConCgp('[floating-panel] Toggling panel ON. Re-creating buttons in panel.');
-            // 1. Destroy the inline buttons container. This prevents resiliency checks from finding an empty container.
+            // 1. Destroy the inline buttons container.
             const originalContainer = document.getElementById(window.InjectionTargetsOnWebsite.selectors.buttonsContainerId);
             if (originalContainer) {
                 originalContainer.remove();
-                logConCgp('[floating-panel] Destroyed inline buttons container.');
             }
 
             // 2. Create buttons directly in the panel.
@@ -61,26 +62,25 @@ window.MaxExtensionFloatingPanel.togglePanel = async function (event) {
             }
 
         } else {
-            logConCgp('[floating-panel] Toggling panel OFF. Re-creating buttons inline.');
+            logConCgp('[floating-panel] Toggling panel OFF. Re-initializing extension for inline buttons.');
             // 1. Destroy buttons inside the panel.
             const panelContent = document.getElementById('max-extension-floating-panel-content');
             if (panelContent) {
                 panelContent.innerHTML = '';
-                logConCgp('[floating-panel] Destroyed panel buttons.');
             }
 
             // 2. Hide the panel.
             this.panelElement.style.display = 'none';
 
-            // 3. Perform a fast, direct re-creation of buttons in their original inline location.
-            // The flag we set prevents the watchdog from interfering with this.
-            const selectors = window.InjectionTargetsOnWebsite.selectors.containers;
-            MaxExtensionUtils.waitForElements(selectors, (targetDiv) => {
-                logConCgp('[floating-panel] Found inline target. Injecting buttons directly.');
-                window.MaxExtensionButtonsInit.createAndInsertCustomElements(targetDiv);
-            });
+            // 3. Re-run the entire, robust initialization script.
+            // This will correctly detect that the panel is now hidden (since we just saved that setting)
+            // and will proceed with the standard, resilient inline injection.
+            publicStaticVoidMain();
         }
-    } finally {
+    } catch (error) {
+        logConCgp('[floating-panel] CRITICAL ERROR in togglePanel try block:', error);
+    }
+    finally {
         // Re-enable the watchdog after a short delay to allow the DOM to settle.
         setTimeout(() => {
             window.OneClickPrompts_isTogglingPanel = false;

@@ -1,4 +1,3 @@
-// buttons-init.js
 // Version: 1.0
 //
 // Documentation:
@@ -24,7 +23,7 @@ window.MaxExtensionButtonsInit = {
      * Creates and appends toggle switches to the specified container.
      * @param {HTMLElement} container - The DOM element to which toggles will be appended.
      */
-    generateAndAppendToggles: function(container) {
+    generateAndAppendToggles: function (container) {
         const autoSendToggle = MaxExtensionInterface.createToggle(
             'auto-send-toggle',
             'Enable Auto-send',
@@ -51,13 +50,14 @@ window.MaxExtensionButtonsInit = {
     /**
      * Creates and appends custom send buttons to the specified container.
      * @param {HTMLElement} container - The DOM element to which custom buttons will be appended.
+     * @param {boolean} isPanel - Flag indicating if the container is the floating panel.
      */
-    generateAndAppendCustomSendButtons: function(container) {
-        // Add floating panel toggle button at the beginning
-        if (window.MaxExtensionFloatingPanel) {
+    generateAndAppendCustomSendButtons: function (container, isPanel) {
+        // Only add the toggle button to the INLINE container, not the floating panel itself.
+        if (window.MaxExtensionFloatingPanel && !isPanel) {
             const floatingPanelToggleButton = window.MaxExtensionFloatingPanel.createPanelToggleButton();
             container.appendChild(floatingPanelToggleButton);
-            logConCgp('[init] Floating panel toggle button has been created and appended.');
+            logConCgp('[init] Floating panel toggle button has been created and appended for inline container.');
         }
 
         globalMaxExtensionConfig.customButtons.forEach((buttonConfiguration, index) => {
@@ -77,7 +77,7 @@ window.MaxExtensionButtonsInit = {
      * Creates and inserts custom buttons and toggles into the target container element.
      * @param {HTMLElement} targetContainer - The DOM element where custom elements will be inserted.
      */
-    createAndInsertCustomElements: function(targetContainer) {
+    createAndInsertCustomElements: function (targetContainer) {
         // Prevent duplication by checking if the container already exists using dynamic selector
         const existingContainer = document.getElementById(window.InjectionTargetsOnWebsite.selectors.buttonsContainerId);
         if (existingContainer && existingContainer.parentElement === targetContainer) {
@@ -98,44 +98,47 @@ window.MaxExtensionButtonsInit = {
             z-index: 1000;
         `;
 
-        // Append custom send buttons
-        this.generateAndAppendCustomSendButtons(customElementsContainer);
+        // Determine if we are creating buttons for the panel or for an inline container.
+        const isPanel = targetContainer.id === 'max-extension-floating-panel-content';
+
+        // Append custom send buttons, passing the context.
+        this.generateAndAppendCustomSendButtons(customElementsContainer, isPanel);
         // Append toggle switches
         this.generateAndAppendToggles(customElementsContainer);
 
         targetContainer.appendChild(customElementsContainer);
         logConCgp('[init] Custom elements have been inserted into the DOM.');
     },
-    
+
     /**
      * Updates all buttons and toggles in response to a profile change.
      * This refreshes both the floating panel and the original container.
      */
-    updateButtonsForProfileChange: function() {
+    updateButtonsForProfileChange: function () {
         // Update buttons in the original container
         const originalContainer = document.getElementById(window.InjectionTargetsOnWebsite.selectors.buttonsContainerId);
         if (originalContainer) {
             // Clear existing buttons and toggles
             originalContainer.innerHTML = '';
-            
+
             // Re-generate buttons and toggles with new profile data
-            this.generateAndAppendCustomSendButtons(originalContainer);
+            this.generateAndAppendCustomSendButtons(originalContainer, false); // Not panel
             this.generateAndAppendToggles(originalContainer);
-            
+
             logConCgp('[init] Updated buttons in original container for profile change.');
         }
-        
+
         // Update buttons in the floating panel if it exists and is initialized
         if (window.MaxExtensionFloatingPanel && window.MaxExtensionFloatingPanel.panelElement) {
             const panelContent = document.getElementById('max-extension-floating-panel-content');
             if (panelContent) {
                 // Clear existing buttons and toggles
                 panelContent.innerHTML = '';
-                
+
                 // Re-generate buttons and toggles with new profile data
-                this.generateAndAppendCustomSendButtons(panelContent);
+                this.generateAndAppendCustomSendButtons(panelContent, true); // This is the panel
                 this.generateAndAppendToggles(panelContent);
-                
+
                 logConCgp('[init] Updated buttons in floating panel for profile change.');
             }
         }
@@ -146,13 +149,13 @@ window.MaxExtensionButtonsInit = {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'profileChanged') {
         logConCgp('[init] Received profile change notification');
-        
+
         // Update the global config with the new profile data
         window.globalMaxExtensionConfig = message.config;
-        
+
         // Update the UI components
         window.MaxExtensionButtonsInit.updateButtonsForProfileChange();
-        
+
         // Acknowledge the message
         sendResponse({ success: true });
     }

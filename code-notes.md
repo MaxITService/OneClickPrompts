@@ -1,5 +1,3 @@
-// code-notes.md
-
 # OneClickPrompts Chrome Extension - Codebase Overview
 
 This document provides a high-level overview of the OneClickPrompts Chrome Extension codebase. It describes the purpose of each file and its role within the extension. Extension was previously called "ChatGPT Quick Buttons for your text".
@@ -7,6 +5,16 @@ This document provides a high-level overview of the OneClickPrompts Chrome Exten
 ## Core Functionality
 
 The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, Copilot, DeepSeek, AI Studio, Gemini, and Grok by adding customizable buttons that inject pre-defined prompts into the chat input area. It also includes features for managing profiles, enabling keyboard shortcuts, and customizing the user interface.
+
+## Core Reliability Pattern: Crash-Only / Self-Healing DOM Injection
+
+A foundational architectural decision in this extension is the use of a **"Crash-only"** (or **"Self-healing"**) reliability pattern for managing the UI in the dynamic, and often hostile, DOM of the target Single-Page Applications (SPAs).
+
+- **The Problem:** The DOM on sites like ChatGPT is unpredictable. Elements are frequently destroyed and re-created, making simple, "surgical" DOM manipulations fragile. An attempt to insert a button can fail if the target container disappears at the wrong millisecond.
+- **The Solution:** Instead of writing complex recovery code for every possible failure, the extension embraces a "let-it-crash" philosophy. Any time the UI's integrity is in question (e.g., after an SPA navigation or when closing the floating panel), the extension triggers a full, **idempotent re-initialization** of its UI components.
+- **Why It Works:** This approach delegates UI creation to the robust resiliency engine in `buttons-injection.js`, which is designed to patiently wait for injection targets and handle dynamic changes. This trades a small amount of computational efficiency for a massive gain in reliability, ensuring the extension's UI is always present and functional. This pattern is analogous to forcing a re-mount in frameworks like React by changing a component's `key`.
+
+This "Crash-only" principle informs the design of `init.js`, `buttons-injection.js`, and `floating-panel-ui-interaction.js`.
 
 ## File Descriptions
 
@@ -80,7 +88,7 @@ The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, C
 - **Purpose:** Contains UI interaction and state management methods for the floating panel.
 - **Role:** Handles toggling panel visibility and updating the panel appearance from settings. The old "hide and clone" mechanism has been completely replaced.
 - **Key functions:**
-  - `togglePanel()`: An `async` function that toggles the floating panel's visibility using a **"destroy and re-create"** mechanism. When toggled ON, it destroys the inline buttons and re-creates them inside the panel. When toggled OFF, it does the reverse.
+  - `togglePanel()`: An `async` function that toggles the floating panel's visibility. When closed, it intentionally triggers the extension's main `publicStaticVoidMain()` initializer, delegating the button re-creation to the robust **"Crash-only"** resiliency engine.
   - `updatePanelFromSettings()`: Updates the panel’s dynamic styles (like position, size, and opacity).
 
 ### `floating-panel-ui-queue.js`
@@ -137,8 +145,8 @@ The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, C
 
 ### `init.js`
 
-- **Purpose:** Main initialization script for the content script. It acts as the **Director** of the initial UI setup.
-- **Role:** Implements a **"decide first, then create"** architecture to prevent UI flicker. It asynchronously checks if the floating panel should be visible for the current site *before* rendering any buttons. Based on this setting, it either injects the buttons into the traditional inline location (via `buttons-injection.js`) or directly into the floating panel, which it creates on demand. It also orchestrates the initialization of the full floating panel system in a controlled sequence to prevent race conditions.
+- **Purpose:** Main initialization script for the content script. It acts as the **Director** of the initial UI setup and embodies the **Crash-only** philosophy.
+- **Role:** Implements a **"decide first, then create"** architecture to prevent UI flicker. It asynchronously checks if the floating panel should be visible for the current site _before_ rendering any buttons. Based on this setting, it either injects the buttons into the traditional inline location (via `buttons-injection.js`) or directly into the floating panel. Its main initialization function (`publicStaticVoidMain`) is designed to be **idempotent** and is called on page load, SPA navigation, and panel closing to ensure a consistent and reliable UI state.
 
 ### `interface.js`
 
@@ -157,8 +165,8 @@ The OneClickPrompts extension enhances AI chat platforms like ChatGPT, Claude, C
 
 ### `buttons-injection.js`
 
-- **Purpose:** Handles the injection of custom buttons into the webpage for the **inline mode**.
-- **Role:** This script is now primarily used when `init.js` decides that the floating panel should be hidden on initial load. It finds the correct injection point on the page and implements a resiliency mechanism to re-inject the elements if they disappear due to dynamic page updates.
+- **Purpose:** Handles the injection of custom buttons into the webpage for the **inline mode** and provides the core resiliency mechanism.
+- **Role:** This script is now primarily used when `init.js` decides that the floating panel should be hidden on initial load. It finds the correct injection point on the page and implements a **self-healing** resiliency mechanism (using `MutationObserver` and timeouts) to re-inject the elements if they disappear due to dynamic page updates.
 
 ### `buttons-clicking-chatgpt.js`, `buttons-clicking-claude.js`, `buttons-clicking-copilot.js`, `buttons-clicking-deepseek.js`, `buttons-clicking-aistudio.js`, `buttons-clicking-grok.js`, `buttons-clicking-gemini.js`
 
@@ -258,11 +266,10 @@ The extension operates as follows:
 
 1.  The user configures the extension through the popup interface (`popup.html` and `popup-page-scripts/*`).
 2.  The configuration is stored in Chrome's storage by the service worker (`config.js`).
-3.  When the user visits a supported website, the content scripts are injected into the page.
-4.  The main content script (`init.js`) first checks if the floating panel should be visible. It then creates the custom buttons directly in the correct location (either inline or inside the newly created floating panel) to prevent any visual flicker.
-5.  When the user toggles the panel's visibility, the buttons are destroyed from their current location and re-created in the new one.
-6.  The floating panel's position, size, and visibility state are saved per website and restored when revisiting.
-7.  When the user clicks a custom button:
+3.  When the user visits a supported website, the content scripts are injected. The main initializer (`init.js`) then decides whether to create the UI inline or in the floating panel, based on saved settings, preventing any visual flicker.
+4.  If the UI disappears due to SPA updates, the **self-healing** resiliency engine in `buttons-injection.js` detects the change and triggers a full, idempotent re-initialization.
+5.  When the user closes the floating panel, this also triggers the same idempotent re-initialization, reliably moving the buttons back to their inline location.
+6.  When the user clicks a custom button:
     - If the floating panel is active and Queue Mode is on, the prompt is added to a queue. The queue sends prompts sequentially with a configurable delay.
     - Otherwise, the appropriate site-specific function is called to insert the text and trigger the send button.
 

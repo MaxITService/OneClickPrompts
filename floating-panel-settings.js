@@ -93,24 +93,36 @@ window.MaxExtensionFloatingPanel.loadPanelSettings = function () {
 
 /**
  * Saves panel settings to Chrome's storage via the config service worker.
+ * Returns a Promise that resolves on success and rejects on failure.
  */
 window.MaxExtensionFloatingPanel.savePanelSettings = function () {
-    try {
-        const hostname = window.location.hostname;
-        chrome.runtime.sendMessage({
-            type: 'saveFloatingPanelSettings',
-            hostname: hostname,
-            settings: this.currentPanelSettings
-        }, (response) => {
-            if (chrome.runtime.lastError) {
-                logConCgp('[floating-panel] Failed to save panel settings:', chrome.runtime.lastError.message);
-            } else if (response && response.success) {
-                logConCgp('[floating-panel] Saved panel settings for ' + hostname);
-            }
-        });
-    } catch (error) {
-        logConCgp('[floating-panel] Error saving panel settings: ' + error.message);
-    }
+    return new Promise((resolve, reject) => {
+        try {
+            const hostname = window.location.hostname;
+            chrome.runtime.sendMessage({
+                type: 'saveFloatingPanelSettings',
+                hostname: hostname,
+                settings: this.currentPanelSettings
+            }, (response) => {
+                if (chrome.runtime.lastError) {
+                    const errorMsg = `Failed to save panel settings: ${chrome.runtime.lastError.message}`;
+                    logConCgp(`[floating-panel] ${errorMsg}`);
+                    reject(new Error(errorMsg));
+                } else if (response && response.success) {
+                    logConCgp('[floating-panel] Saved panel settings for ' + hostname);
+                    resolve();
+                } else {
+                    const errorMsg = `Save failed with response: ${JSON.stringify(response)}`;
+                    logConCgp(`[floating-panel] ${errorMsg}`);
+                    reject(new Error(errorMsg));
+                }
+            });
+        } catch (error) {
+            const errorMsg = `Error saving panel settings: ${error.message}`;
+            logConCgp(`[floating-panel] ${errorMsg}`);
+            reject(error);
+        }
+    });
 };
 
 /**

@@ -112,9 +112,15 @@ async function commenceExtensionInitialization(configurationObject) {
 
     // --- All subsequent logic for shortcuts and SPA navigation remains the same ---
     const activeWebsite = window.InjectionTargetsOnWebsite.activeSite;
+
+    // Make the listener idempotent by removing it before adding it. This prevents duplicate listeners
+    // when the extension re-initializes and also cleans up the listener if shortcuts are disabled
+    // or when navigating away from the relevant site.
+    window.removeEventListener('keydown', manageKeyboardShortcutEvents);
+
     if (activeWebsite === 'ChatGPT' && window.globalMaxExtensionConfig.enableShortcuts) {
         window.addEventListener('keydown', manageKeyboardShortcutEvents);
-        logConCgp('[init] Keyboard shortcuts have been enabled and event listener added for ChatGPT.');
+        logConCgp('[init] Keyboard shortcut listener is active for ChatGPT.');
     }
 
     resilientStartAndRetryOnSPANavigation(() => {
@@ -187,7 +193,7 @@ function patchHistoryMethods() {
     const methods = ['pushState', 'replaceState'];
     methods.forEach(method => {
         const original = history[method];
-        history[method] = function(...args) {
+        history[method] = function (...args) {
             const result = original.apply(this, args);
             logConCgp(`[init] ${method} called. URL:`, args[2]);
             publicStaticVoidMain(); // Re-run the full initialization logic
