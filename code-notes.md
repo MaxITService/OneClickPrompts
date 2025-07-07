@@ -35,6 +35,15 @@ This "Crash-only" principle informs the design of `init.js`, `buttons-injection.
   - Provides unified storage for all extension settings
   - Implements reset functionality for various setting types
 - **Message Handlers:**
+  - **Cross-Chat Prompt Sharing Module Handlers:**
+    - `getCrossChatModuleSettings`: Retrieves global settings for the module (enabled, autosend, etc.).
+    - `saveCrossChatModuleSettings`: Saves changes to the module's global settings.
+    - `saveStoredPrompt`: Stores the prompt text copied from a chat input.
+    - `getStoredPrompt`: Retrieves the currently stored prompt text.
+    - `clearStoredPrompt`: Clears the stored prompt text.
+  - **Profile Management Handlers:**
+    - Processes messages for loading, saving, switching, and deleting user profiles.
+    - Manages creation of the default profile.
   - Processes messages from content scripts and popup pages
   - Handles floating panel settings with message types:
     - 'getFloatingPanelSettings': Retrieves settings for a specific website
@@ -145,8 +154,8 @@ This "Crash-only" principle informs the design of `init.js`, `buttons-injection.
 
 ### `init.js`
 
-- **Purpose:** Main initialization script for the content script. It acts as the **Director** of the initial UI setup and embodies the **Crash-only** philosophy.
-- **Role:** Implements a **"decide first, then create"** architecture to prevent UI flicker. It asynchronously checks if the floating panel should be visible for the current site _before_ rendering any buttons. Based on this setting, it either injects the buttons into the traditional inline location (via `buttons-injection.js`) or directly into the floating panel. Its main initialization function (`publicStaticVoidMain`) is designed to be **idempotent** and is called on page load, SPA navigation, and panel closing to ensure a consistent and reliable UI state.
+- **Purpose:** Main initialization script for the content script. It acts as the **Director** of the UI setup and embodies the **Crash-only** philosophy.
+- **Role:** Implements a **"decide first, then create"** architecture. It asynchronously loads all necessary configurations—both the user's current profile and global module settings (like Cross-Chat Prompt Sharing)—*before* rendering any UI. It then checks if the floating panel should be visible. Based on this setting, it either injects buttons into the traditional inline location (via `buttons-injection.js`) or directly into the floating panel. Its main initialization function (`publicStaticVoidMain`) is **idempotent** and is called on page load, SPA navigation, and panel closing to ensure a consistent and reliable UI state.
 
 ### `interface.js`
 
@@ -156,12 +165,15 @@ This "Crash-only" principle informs the design of `init.js`, `buttons-injection.
 ### `buttons.js`
 
 - **Purpose:** Manages the creation and functionality of custom send buttons.
-- **Role:** Creates button elements based on configuration, assigns keyboard shortcuts, and handles click events across different supported sites. It decides which site-specific functions are called. It also contains the logic to divert clicks to the prompt queue when Queue Mode is active in the floating panel.
+- **Role:** Contains the logic for creating all button types.
+  - `createCustomSendButton()`: Creates standard prompt buttons from the user's profile configuration. It has been updated to accept an overridden shortcut key to support unified assignment.
+  - `createCrossChatButton()`: Creates the new "Copy Prompt" and "Paste & Send Prompt" buttons for the cross-chat module. This function includes the logic for saving/retrieving prompts from the service worker and handling the dynamic tooltip on hover.
+  - `processCustomSendButtonClick()`: The central click handler that is called by all buttons to insert text and optionally trigger a send action. It decides which site-specific function to call and contains the logic to divert clicks to the prompt queue when Queue Mode is active.
 
 ### `buttons-init.js`
 
-- **Purpose:** Acts as a **UI Factory**. It contains the logic to generate a complete set of buttons and toggles.
-- **Role:** It is called by the "Director" (`init.js`) to populate a specified container, which can be either the inline injection point or the floating panel's content area. It is no longer responsible for making decisions about panel visibility.
+- **Purpose:** Acts as a **UI Factory & Orchestrator**. It contains the logic to generate a complete and ordered set of all buttons and toggles.
+- **Role:** Called by the "Director" (`init.js`), its `generateAndAppendAllButtons()` function is the single source of truth for UI generation. It builds a master list of all buttons to be rendered (cross-chat module buttons and standard custom buttons), places them in the correct order based on user settings (e.g., "before" or "after" for cross-chat buttons), and assigns sequential keyboard shortcuts (`Alt+1`, `Alt+2`, etc.) to the entire set. It populates a specified container, which can be either the inline injection point or the floating panel's content area.
 
 ### `buttons-injection.js`
 

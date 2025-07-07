@@ -37,17 +37,28 @@
  * Main entry point. Retrieves configuration and then starts the async initialization.
  */
 function publicStaticVoidMain() {
+    // Start a chain of callbacks to load all necessary configurations before initializing.
     chrome.runtime.sendMessage({ type: 'getConfig' }, (response) => {
-        if (chrome.runtime.lastError) {
-            logConCgp('[init] Error loading configuration:', chrome.runtime.lastError.message);
+        if (chrome.runtime.lastError || !response?.config) {
+            logConCgp('[init] Error loading main configuration:', chrome.runtime.lastError?.message);
             return;
         }
-        if (response && response.config) {
-            logConCgp('[init] Configuration successfully loaded:', response.config);
-            commenceExtensionInitialization(response.config);
-        } else {
-            logConCgp('[init] Failed to load configuration from service worker. Initialization aborted.');
-        }
+        const mainConfig = response.config;
+        logConCgp('[init] Main configuration successfully loaded:', mainConfig);
+
+        // After loading the main config, load the cross-chat module settings.
+        chrome.runtime.sendMessage({ type: 'getCrossChatModuleSettings' }, (moduleResponse) => {
+            if (chrome.runtime.lastError || !moduleResponse?.settings) {
+                logConCgp('[init] Could not load Cross-Chat module settings. Assuming disabled.', chrome.runtime.lastError?.message);
+                // Set a default disabled state to prevent errors.
+                window.globalCrossChatConfig = { enabled: false, placement: 'after', autosendCopy: false, autosendPaste: false };
+            } else {
+                window.globalCrossChatConfig = moduleResponse.settings;
+                logConCgp('[init] Cross-Chat module settings loaded:', window.globalCrossChatConfig);
+            }
+
+            commenceExtensionInitialization(mainConfig);
+        });
     });
 }
 
@@ -57,7 +68,8 @@ function publicStaticVoidMain() {
  */
 async function commenceExtensionInitialization(configurationObject) {
     logConCgp('[init] Async initialization started.');
-    window.globalMaxExtensionConfig = configurationObject;
+    // Configs are now set in publicStaticVoidMain before this is called.
+    window.globalMaxExtensionConfig = configurationObject; 
 
     /**
      * Helper to get panel visibility setting from storage, wrapped in a Promise.

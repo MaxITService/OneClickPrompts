@@ -52,24 +52,63 @@ window.MaxExtensionButtonsInit = {
      * @param {HTMLElement} container - The DOM element to which custom buttons will be appended.
      * @param {boolean} isPanel - Flag indicating if the container is the floating panel.
      */
-    generateAndAppendCustomSendButtons: function (container, isPanel) {
-        // Only add the toggle button to the INLINE container, not the floating panel itself.
+    generateAndAppendAllButtons: function (container, isPanel) {
+        // --- Create a unified list of all buttons to be rendered ---
+        const allButtonDefs = [];
+        let nonSeparatorCount = 0;
+
+        // 1. Add Cross-Chat buttons if they should be placed 'before'
+        if (window.globalCrossChatConfig?.enabled && window.globalCrossChatConfig.placement === 'before') {
+            allButtonDefs.push({ type: 'copy' });
+            allButtonDefs.push({ type: 'paste' });
+        }
+
+        // 2. Add standard custom buttons
+        globalMaxExtensionConfig.customButtons.forEach(config => {
+            allButtonDefs.push({ type: 'custom', config: config });
+        });
+
+        // 3. Add Cross-Chat buttons if they should be placed 'after'
+        if (window.globalCrossChatConfig?.enabled && window.globalCrossChatConfig.placement === 'after') {
+            allButtonDefs.push({ type: 'copy' });
+            allButtonDefs.push({ type: 'paste' });
+        }
+
+        // --- Render all buttons from the unified list ---
+
+        // Add floating panel toggle first, if applicable
         if (window.MaxExtensionFloatingPanel && !isPanel) {
             const floatingPanelToggleButton = window.MaxExtensionFloatingPanel.createPanelToggleButton();
             container.appendChild(floatingPanelToggleButton);
             logConCgp('[init] Floating panel toggle button has been created and appended for inline container.');
         }
 
-        globalMaxExtensionConfig.customButtons.forEach((buttonConfiguration, index) => {
-            if (buttonConfiguration.separator) {
+        // Process the unified list to create and append buttons
+        allButtonDefs.forEach((def, index) => {
+            // Handle separators from custom buttons
+            if (def.type === 'custom' && def.config.separator) {
                 const separatorElement = MaxExtensionUtils.createSeparator();
                 container.appendChild(separatorElement);
                 logConCgp('[init] Separator element has been created and appended.');
-            } else {
-                const customSendButton = MaxExtensionButtons.createCustomSendButton(buttonConfiguration, index, processCustomSendButtonClick);
-                container.appendChild(customSendButton);
-                logConCgp(`[init] Custom send button ${index + 1} has been created:`, customSendButton);
+                return; // Skip to next item
             }
+
+            // Assign a shortcut key if enabled and available
+            let shortcutKey = null;
+            if (globalMaxExtensionConfig.enableShortcuts && nonSeparatorCount < 10) {
+                shortcutKey = nonSeparatorCount + 1;
+            }
+
+            let buttonElement;
+            if (def.type === 'copy' || def.type === 'paste') {
+                buttonElement = MaxExtensionButtons.createCrossChatButton(def.type, shortcutKey);
+            } else { // 'custom'
+                buttonElement = MaxExtensionButtons.createCustomSendButton(def.config, index, processCustomSendButtonClick, shortcutKey);
+            }
+
+            container.appendChild(buttonElement);
+            nonSeparatorCount++;
+            logConCgp(`[init] Button ${nonSeparatorCount} (${def.type}) has been created and appended.`);
         });
     },
 
@@ -102,7 +141,7 @@ window.MaxExtensionButtonsInit = {
         const isPanel = targetContainer.id === 'max-extension-floating-panel-content';
 
         // Append custom send buttons, passing the context.
-        this.generateAndAppendCustomSendButtons(customElementsContainer, isPanel);
+        this.generateAndAppendAllButtons(customElementsContainer, isPanel);
         // Append toggle switches
         this.generateAndAppendToggles(customElementsContainer);
 
@@ -121,8 +160,7 @@ window.MaxExtensionButtonsInit = {
             // Clear existing buttons and toggles
             originalContainer.innerHTML = '';
 
-            // Re-generate buttons and toggles with new profile data
-            this.generateAndAppendCustomSendButtons(originalContainer, false); // Not panel
+            this.generateAndAppendAllButtons(originalContainer, false); // Not panel
             this.generateAndAppendToggles(originalContainer);
 
             logConCgp('[init] Updated buttons in original container for profile change.');
@@ -135,8 +173,7 @@ window.MaxExtensionButtonsInit = {
                 // Clear existing buttons and toggles
                 panelContent.innerHTML = '';
 
-                // Re-generate buttons and toggles with new profile data
-                this.generateAndAppendCustomSendButtons(panelContent, true); // This is the panel
+                this.generateAndAppendAllButtons(panelContent, true); // This is the panel
                 this.generateAndAppendToggles(panelContent);
 
                 logConCgp('[init] Updated buttons in floating panel for profile change.');
@@ -152,6 +189,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         // Update the global config with the new profile data
         window.globalMaxExtensionConfig = message.config;
+        // Note: Cross-chat config is global and does not change with profile.
 
         // Update the UI components
         window.MaxExtensionButtonsInit.updateButtonsForProfileChange();

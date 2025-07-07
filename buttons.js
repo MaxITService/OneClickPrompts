@@ -28,30 +28,138 @@
  */
 window.MaxExtensionButtons = {
     /**
+     * Creates a cross-chat prompt sharing button ('Copy' or 'Paste').
+     * @param {string} type - The type of button, either 'copy' or 'paste'.
+     * @param {number|null} shortcutKey - The shortcut key (1-10) to assign, or null.
+     * @returns {HTMLButtonElement} - The newly created button element.
+     */
+    createCrossChatButton: function (type, shortcutKey) {
+        const buttonElement = document.createElement('button');
+        buttonElement.type = 'button';
+
+        const icons = { copy: '📋', paste: '📥' };
+        const baseTooltips = { copy: 'Copy prompt from input area', paste: 'Paste stored prompt' };
+
+        buttonElement.innerHTML = icons[type];
+
+        // Style the button
+        buttonElement.style.cssText = `
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 1px;
+            font-size: 20px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        `;
+
+        // --- Tooltip & Shortcut ---
+        let shortcutDescription = '';
+        if (shortcutKey) {
+            buttonElement.dataset.shortcutKey = shortcutKey.toString();
+            const displayKey = shortcutKey === 10 ? 0 : shortcutKey;
+            shortcutDescription = ` (Shortcut: Alt+${displayKey})`;
+        }
+
+        const updateTooltip = (text) => {
+            buttonElement.setAttribute('title', text + shortcutDescription);
+        };
+
+        updateTooltip(baseTooltips[type]);
+
+        // --- Event Listeners ---
+        buttonElement.addEventListener('click', (event) => {
+            event.preventDefault();
+            if (type === 'copy') {
+                const editor = window.InjectionTargetsOnWebsite.selectors.editors
+                    .map(s => document.querySelector(s))
+                    .find(el => el);
+
+                if (!editor) {
+                    logConCgp('[buttons-cross-chat] Editor area not found for copy.');
+                    return;
+                }
+                const text = editor.value || editor.innerText || '';
+
+                chrome.runtime.sendMessage({ type: 'saveStoredPrompt', promptText: text }, () => {
+                    logConCgp('[buttons-cross-chat] Prompt saved.');
+                    // Visually indicate success by briefly changing the tooltip
+                    const originalTitle = buttonElement.getAttribute('title');
+                    updateTooltip('Copied!');
+                    setTimeout(() => updateTooltip(baseTooltips.copy), 1500);
+                });
+
+                if (window.globalCrossChatConfig?.autosendCopy) {
+                    processCustomSendButtonClick(event, text, true);
+                }
+            } else if (type === 'paste') {
+                chrome.runtime.sendMessage({ type: 'getStoredPrompt' }, (response) => {
+                    if (response?.promptText) {
+                        // Use shift key to override autosend setting, consistent with other buttons
+                        const autoSend = event.shiftKey ? !window.globalCrossChatConfig.autosendPaste : window.globalCrossChatConfig.autosendPaste;
+                        processCustomSendButtonClick(event, response.promptText, autoSend);
+                    } else {
+                        logConCgp('[buttons-cross-chat] No prompt to paste.');
+                        const originalTitle = buttonElement.getAttribute('title');
+                        updateTooltip('*No prompt has been saved*');
+                        setTimeout(() => updateTooltip(baseTooltips.paste), 2000);
+                    }
+                });
+            }
+        });
+
+        if (type === 'paste') {
+            let tooltipFetchTimeout;
+            buttonElement.addEventListener('mouseover', () => {
+                clearTimeout(tooltipFetchTimeout);
+                tooltipFetchTimeout = setTimeout(() => {
+                    chrome.runtime.sendMessage({ type: 'getStoredPrompt' }, (response) => {
+                        const promptText = response?.promptText;
+                        if (promptText) {
+                            const truncatedPrompt = promptText.length > 200 ? promptText.substring(0, 197) + '...' : promptText;
+                            updateTooltip(truncatedPrompt);
+                        } else {
+                            updateTooltip('*No prompt has been saved*');
+                        }
+                    });
+                }, 300); // 300ms debounce
+            });
+
+            buttonElement.addEventListener('mouseout', () => {
+                clearTimeout(tooltipFetchTimeout);
+                updateTooltip(baseTooltips.paste); // Reset to default tooltip
+            });
+        }
+
+        return buttonElement;
+    },
+    /**
      * Creates a custom send button based on the provided configuration.
      * @param {Object} buttonConfig - The configuration object for the custom button.
      * @param {number} buttonIndex - The index of the button in the custom buttons array.
      * @param {Function} onClickHandler - The function to handle the button's click event.
+     * @param {number|null} [overrideShortcutKey=null] - An optional shortcut key to override the default calculation.
      * @returns {HTMLButtonElement} - The newly created custom send button element.
      */
-    createCustomSendButton: function (buttonConfig, buttonIndex, onClickHandler) {
+    createCustomSendButton: function (buttonConfig, buttonIndex, onClickHandler, overrideShortcutKey = null) {
         const customButtonElement = document.createElement('button');
         customButtonElement.type = 'button'; // Prevent form being defaut type, that is "submit".
         customButtonElement.innerHTML = buttonConfig.icon;
         customButtonElement.setAttribute('data-testid', `custom-send-button-${buttonIndex}`);
 
         // Assign keyboard shortcuts to the first 10 non-separator buttons if shortcuts are enabled
-        let assignedShortcutKey = null;
-        if (globalMaxExtensionConfig.enableShortcuts) {
-            assignedShortcutKey = this.determineShortcutKeyForButtonIndex(buttonIndex);
-            if (assignedShortcutKey !== null) {
-                customButtonElement.dataset.shortcutKey = assignedShortcutKey.toString();
-            }
+        let assignedShortcutKey = overrideShortcutKey;
+        if (assignedShortcutKey === null && globalMaxExtensionConfig.enableShortcuts) {
+            assignedShortcutKey = this.determineShortcutKeyForButtonIndex(buttonIndex, 0); // Pass 0 as offset for old logic
+        }
+
+        if (assignedShortcutKey !== null) {
+            customButtonElement.dataset.shortcutKey = assignedShortcutKey.toString();
         }
 
         // Prepare tooltip parts: append (Auto-sends) if autoSend behavior is enabled
         const autoSendDescription = buttonConfig.autoSend ? ' (Auto-sends)' : '';
-        const shortcutDescription = assignedShortcutKey !== null ? ` (Shortcut: Alt+${assignedShortcutKey})` : '';
+        const shortcutDescription = assignedShortcutKey !== null ? ` (Shortcut: Alt+${assignedShortcutKey === 10 ? 0 : assignedShortcutKey})` : '';
 
         // Set the tooltip (title attribute) combining the button text with auto-send and shortcut info
         customButtonElement.setAttribute('title', `${buttonConfig.text}${autoSendDescription}${shortcutDescription}`);
@@ -74,16 +182,20 @@ window.MaxExtensionButtons = {
 
     /**
      * Determines the appropriate shortcut key for a button based on its index, skipping separator buttons.
+     * @param {number} offset - A number to offset the calculated shortcut index.
      * @param {number} buttonIndex - The index of the button in the custom buttons array.
      * @returns {number|null} - The assigned shortcut key (1-10) or null if no shortcut is assigned.
      */
-    determineShortcutKeyForButtonIndex: function (buttonIndex) {
+    determineShortcutKeyForButtonIndex: function (buttonIndex, offset = 0) {
         let shortcutAssignmentCount = 0;
         for (let i = 0; i < globalMaxExtensionConfig.customButtons.length; i++) {
             if (!globalMaxExtensionConfig.customButtons[i].separator) {
                 shortcutAssignmentCount++;
-                if (i === buttonIndex && shortcutAssignmentCount <= 10) {
-                    return shortcutAssignmentCount % 10; // 0 represents 10
+                if (i === buttonIndex) {
+                    const finalShortcutIndex = offset + shortcutAssignmentCount;
+                    if (finalShortcutIndex <= 10) {
+                        return finalShortcutIndex;
+                    }
                 }
             }
         }
