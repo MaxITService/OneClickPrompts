@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -24,7 +23,13 @@
       <section class="section">
         <h2>Profile</h2>
         <div class="row">
-          <label for="profileSelect" id="currentProfileLabel" class="profile-context-label" style="display: none;">Your current profile:</label>
+          <label
+            for="profileSelect"
+            id="currentProfileLabel"
+            class="profile-context-label"
+            style="display: none"
+            >Your current profile:</label
+          >
           <select
             id="profileSelect"
             title="Select profile"
@@ -167,6 +172,115 @@
         </div>
       </section>
 
+      <!-- ===== Modules Section ===== -->
+      <section class="section collapsible" id="modulesSection">
+        <div class="section-header">
+          <h2>
+            Modules
+            <span class="expand-text">(click to expand)</span>
+          </h2>
+          <span class="toggle-icon">▶</span>
+        </div>
+        <div class="section-content">
+          <!-- Cross-Chat Prompt Sharing Module -->
+          <div class="collapsible" id="crossChatModule">
+            <div class="section-header subsection-header">
+              <h3>
+                Cross-Chat Prompt Sharing
+                <span class="expand-text">(click to expand)</span>
+              </h3>
+              <span class="toggle-icon">▶</span>
+            </div>
+            <div class="section-content">
+              <div class="switch-container" style="margin-bottom: 16px">
+                <label class="switch">
+                  <input
+                    type="checkbox"
+                    id="crossChatModuleEnableToggle"
+                    aria-label="Enable Cross-Chat Prompt Sharing"
+                  />
+                  <span class="slider round"></span>
+                </label>
+                <span class="switch-label"
+                  >Enable Cross-Chat Prompt Sharing</span
+                >
+              </div>
+
+              <!-- Settings container - hidden by default -->
+              <div id="crossChatModuleSettings" style="display: none">
+                <div class="row">
+                  <label for="storedPromptDisplay">Stored Prompt:</label>
+                  <textarea
+                    id="storedPromptDisplay"
+                    class="selector-config-textarea"
+                    rows="4"
+                    readonly
+                    placeholder="No prompt has been saved."
+                  ></textarea>
+                </div>
+                <div class="row" style="justify-content: flex-end">
+                  <button id="refreshStoredPrompt">Refresh</button>
+                  <button id="clearStoredPrompt" class="danger">
+                    Clear Stored Prompt
+                  </button>
+                </div>
+                <hr style="margin: 16px 0" />
+                <h4>Settings</h4>
+                <div class="row">
+                  <div class="switch-container">
+                    <label class="switch">
+                      <input type="checkbox" id="crossChatAutosendCopy" />
+                      <span class="slider round"></span>
+                    </label>
+                    <span class="switch-label">Autosend after Copy</span>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="switch-container">
+                    <label class="switch">
+                      <input type="checkbox" id="crossChatAutosendPaste" />
+                      <span class="slider round"></span>
+                    </label>
+                    <span class="switch-label"
+                      >Autosend after Paste & Send</span
+                    >
+                  </div>
+                </div>
+                <div
+                  class="row"
+                  style="flex-direction: column; align-items: flex-start"
+                >
+                  <label>Button Placement:</label>
+                  <div style="margin-top: 8px">
+                    <label>
+                      <input
+                        type="radio"
+                        name="crossChatButtonPlacement"
+                        value="before"
+                        checked
+                      />
+                      Inject Cross-Chat Buttons <strong>Before</strong> Other
+                      Custom Buttons
+                    </label>
+                  </div>
+                  <div>
+                    <label>
+                      <input
+                        type="radio"
+                        name="crossChatButtonPlacement"
+                        value="after"
+                      />
+                      Inject Cross-Chat Buttons <strong>After</strong> Other
+                      Custom Buttons
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Settings -->
       <section class="section">
         <h2>Settings</h2>
@@ -214,14 +328,17 @@
           <div class="section-content">
             <div class="text-inside-container">
               <p>
-                Reset the position, size, and visibility of the floating panel. This can fix issues if the panel becomes stuck or invisible.
+                Reset the position, size, and visibility of the floating panel.
+                This can fix issues if the panel becomes stuck or invisible.
               </p>
             </div>
             <div id="floatingWindowSitesList" class="floating-sites-list">
               <!-- Site-specific reset buttons will be added here dynamically -->
-              <p class="empty-message" style="display: none;">No saved settings found for any website.</p>
+              <p class="empty-message" style="display: none">
+                No saved settings found for any website.
+              </p>
             </div>
-            <div class="row" style="margin-top: 16px;">
+            <div class="row" style="margin-top: 16px">
               <button
                 id="resetAllFloatingWindowSettings"
                 class="danger"
@@ -269,7 +386,8 @@
         <!-- Confirmation Div -->
         <div id="confirmationDiv" class="confirmation" style="display: none">
           <p>
-            File loaded successfully, but a profile with the same name already exists in the system. Do you want to overwrite the existing profile?
+            File loaded successfully, but a profile with the same name already
+            exists in the system. Do you want to overwrite the existing profile?
           </p>
           <button id="confirmOverwrite">Yes</button>
           <button id="cancelOverwrite">No</button>
@@ -511,6 +629,7 @@
     <script src="/popup-page-scripts/popup-page-advanced.js"></script>
     <!-- Floating Window Settings Handler script -->
     <script src="/popup-page-scripts/popup-page-floating-window-handler.js"></script>
+    <!-- NEW SCRIPT: Cross-Chat Module UI handler script -->
+    <script src="/modules/popup-page-modules-promptShare.js"></script>
   </body>
-</html>
 </html>

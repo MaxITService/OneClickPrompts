@@ -252,6 +252,16 @@ These scripts are responsible for the user interface in the extension's popup wi
 - **Purpose:** Contains CSS files for styling the popup page.
 - **Role:** Defines the visual appearance of the popup, including layouts, colors, fonts, and responsive design.
 
+## Module Scripts
+
+These scripts handle the logic for optional, self-contained features that can be toggled by the user.
+
+### `modules/popup-page-modules-promptShare.js`
+
+- **Purpose:** Handles the UI and settings management for the "Cross-Chat Prompt Sharing" module within the extension's popup (`popup.html`).
+- **Role:** This script is responsible for all user interactions with the module's settings in the popup. It manages the collapsible UI, loads the module's current state (enabled, autosend settings, button placement) from the service worker, and saves any changes back to storage. It also provides the functionality for the "Refresh" and "Clear" buttons that interact with the globally stored prompt.
+- **Dependencies:** `popup.html` (for UI elements), `config.js` (for message passing to get/set module settings and the stored prompt).
+
 ## Additional Files
 
 ### `welcome.html` and `welcome-page-files/`

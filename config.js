@@ -1,4 +1,3 @@
-// config.js
 // Version: 1.1
 // Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS. This one too!
 // This service worker does all Config stuff with sync storage, it handles storage exclusively, other files request data from it and don't care how it is stored.
@@ -589,6 +588,86 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             });
             return true;
         // ----- End Floating Panel Settings Cases -----
+
+        // ===== Cross-Chat Module Cases =====
+        // Note to developers: These settings are global and not tied to profiles.
+        case 'getCrossChatModuleSettings':
+            (async () => {
+                try {
+                    const result = await chrome.storage.local.get(['crossChatModuleSettings']);
+                    const defaultSettings = {
+                        enabled: false,
+                        autosendCopy: false,
+                        autosendPaste: false,
+                        placement: 'after', // 'before' or 'after'
+                    };
+                    const settings = result.crossChatModuleSettings || defaultSettings;
+                    logConfigurationRelatedStuff('Retrieved Cross-Chat module settings:', settings);
+                    sendResponse({ settings });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
+            return true;
+
+        case 'saveCrossChatModuleSettings':
+            (async () => {
+                try {
+                    await chrome.storage.local.set({ crossChatModuleSettings: request.settings });
+                    logConfigurationRelatedStuff('Saved Cross-Chat module settings:', request.settings);
+                    sendResponse({ success: true });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
+            return true;
+
+        // DEVELOPER INSTRUCTION: Use this message type from the content script's "Copy Prompt" button logic.
+        // The `request.promptText` should be the text captured from the chat input area.
+        case 'saveStoredPrompt':
+            (async () => {
+                try {
+                    await chrome.storage.local.set({ crossChatStoredPrompt: request.promptText });
+                    logConfigurationRelatedStuff('Saved cross-chat prompt.');
+                    sendResponse({ success: true });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
+            return true;
+
+        // DEVELOPER INSTRUCTION: Use this message type to fetch the prompt for the "Paste & Send" button's
+        // tooltip and its main functionality.
+        case 'getStoredPrompt':
+            (async () => {
+                try {
+                    const result = await chrome.storage.local.get(['crossChatStoredPrompt']);
+                    const promptText = result.crossChatStoredPrompt || '';
+                    logConfigurationRelatedStuff('Retrieved cross-chat prompt.');
+                    sendResponse({ promptText });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
+            return true;
+
+        case 'clearStoredPrompt':
+            (async () => {
+                try {
+                    await chrome.storage.local.remove('crossChatStoredPrompt');
+                    logConfigurationRelatedStuff('Cleared cross-chat prompt.');
+                    sendResponse({ success: true });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
+            return true;
+        // ===== End Cross-Chat Module Cases =====
 
         default:
             logConfigurationRelatedStuff('Unknown message type received:', request.type);
