@@ -1,4 +1,3 @@
-// init.js
 // Version: 1.5
 //
 // Documentation:
@@ -69,7 +68,7 @@ function publicStaticVoidMain() {
 async function commenceExtensionInitialization(configurationObject) {
     logConCgp('[init] Async initialization started.');
     // Configs are now set in publicStaticVoidMain before this is called.
-    window.globalMaxExtensionConfig = configurationObject; 
+    window.globalMaxExtensionConfig = configurationObject;
 
     /**
      * Helper to get panel visibility setting from storage, wrapped in a Promise.
@@ -130,9 +129,10 @@ async function commenceExtensionInitialization(configurationObject) {
     // or when navigating away from the relevant site.
     window.removeEventListener('keydown', manageKeyboardShortcutEvents);
 
-    if (activeWebsite === 'ChatGPT' && window.globalMaxExtensionConfig.enableShortcuts) {
+    // Activate shortcuts on ANY supported site, not just ChatGPT.
+    if (activeWebsite !== 'Unknown' && window.globalMaxExtensionConfig.enableShortcuts) {
         window.addEventListener('keydown', manageKeyboardShortcutEvents);
-        logConCgp('[init] Keyboard shortcut listener is active for ChatGPT.');
+        logConCgp(`[init] Keyboard shortcut listener is active for ${activeWebsite}.`);
     }
 
     resilientStartAndRetryOnSPANavigation(() => {
@@ -152,12 +152,21 @@ async function commenceExtensionInitialization(configurationObject) {
  */
 function manageKeyboardShortcutEvents(event) {
     if (!globalMaxExtensionConfig.enableShortcuts) return;
+
+    // We check for Alt key, but not Ctrl or Meta (Cmd/Win). The 'code' property is layout-independent.
     if (event.altKey && !event.ctrlKey && !event.metaKey && event.code.startsWith('Digit')) {
-        let pressedKey = event.code.replace('Digit', '');
-        if (pressedKey === '0') pressedKey = '10';
+        let pressedKey = parseInt(event.code.replace('Digit', ''), 10);
+        // Map Alt+0 to shortcut key 10.
+        if (pressedKey === 0) {
+            pressedKey = 10;
+        }
+
+        // Find the button with the corresponding data-shortcut-key attribute.
         const targetButton = document.querySelector(`button[data-shortcut-key="${pressedKey}"]`);
+
         if (targetButton) {
             event.preventDefault();
+            // Simulate a click event. Pass the shiftKey status so users can override autosend.
             const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true, view: window, shiftKey: event.shiftKey });
             targetButton.dispatchEvent(clickEvent);
         } else {
