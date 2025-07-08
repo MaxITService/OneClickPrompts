@@ -54,6 +54,12 @@ window.MaxExtensionButtons = {
         `;
 
         // --- Tooltip & Shortcut ---
+        // Determine auto-send status from global config to add to tooltip
+        const autoSendEnabled = (type === 'copy')
+            ? window.globalCrossChatConfig?.autosendCopy
+            : window.globalCrossChatConfig?.autosendPaste;
+        const autoSendDescription = autoSendEnabled ? ' (Auto-sends)' : '';
+
         let shortcutDescription = '';
         if (shortcutKey) {
             buttonElement.dataset.shortcutKey = shortcutKey.toString();
@@ -62,7 +68,8 @@ window.MaxExtensionButtons = {
         }
 
         const updateTooltip = (text) => {
-            buttonElement.setAttribute('title', text + shortcutDescription);
+            // Combine base text, auto-send status, and shortcut info
+            buttonElement.setAttribute('title', text + autoSendDescription + shortcutDescription);
         };
 
         updateTooltip(baseTooltips[type]);
@@ -84,23 +91,28 @@ window.MaxExtensionButtons = {
                 chrome.runtime.sendMessage({ type: 'saveStoredPrompt', promptText: text }, () => {
                     logConCgp('[buttons-cross-chat] Prompt saved.');
                     // Visually indicate success by briefly changing the tooltip
-                    const originalTitle = buttonElement.getAttribute('title');
                     updateTooltip('Copied!');
                     setTimeout(() => updateTooltip(baseTooltips.copy), 1500);
                 });
 
-                if (window.globalCrossChatConfig?.autosendCopy) {
-                    processCustomSendButtonClick(event, text, true);
-                }
+                // The `autosend` value passed here will be inverted by `processCustomSendButtonClick` if shift is held.
+                // This ensures that shift+click correctly toggles the send behavior.
+                const autoSend = window.globalCrossChatConfig?.autosendCopy;
+                // Calling processCustomSendButtonClick with an empty string for the text
+                // will prevent appending the text again, but will still trigger the auto-send
+                // mechanism with the existing text.
+                processCustomSendButtonClick(event, '', autoSend);
+
             } else if (type === 'paste') {
                 chrome.runtime.sendMessage({ type: 'getStoredPrompt' }, (response) => {
                     if (response?.promptText) {
-                        // Use shift key to override autosend setting, consistent with other buttons
-                        const autoSend = event.shiftKey ? !window.globalCrossChatConfig.autosendPaste : window.globalCrossChatConfig.autosendPaste;
+                        // The `autosend` value is taken directly from config.
+                        // `processCustomSendButtonClick` will handle shift+click to invert it.
+                        // This fixes a bug where shift+click was double-inverting the behavior.
+                        const autoSend = window.globalCrossChatConfig.autosendPaste;
                         processCustomSendButtonClick(event, response.promptText, autoSend);
                     } else {
                         logConCgp('[buttons-cross-chat] No prompt to paste.');
-                        const originalTitle = buttonElement.getAttribute('title');
                         updateTooltip('*No prompt has been saved*');
                         setTimeout(() => updateTooltip(baseTooltips.paste), 2000);
                     }
