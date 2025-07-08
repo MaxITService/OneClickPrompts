@@ -197,6 +197,7 @@
                   <input
                     type="checkbox"
                     id="crossChatModuleEnableToggle"
+                    title="Enable this module to add two new buttons (📋 Copy and 📥 Paste) to AI chat pages. This allows you to easily transfer prompts between different AI platforms."
                     aria-label="Enable Cross-Chat Prompt Sharing"
                   />
                   <span class="slider round"></span>
@@ -208,6 +209,30 @@
 
               <!-- Settings container - hidden by default -->
               <div id="crossChatModuleSettings" style="display: none">
+                <div class="text-inside-container" style="margin-bottom: 16px">
+                  <p>
+                    This module streamlines your workflow when using multiple AI
+                    chat services.
+                  </p>
+                  <ul>
+                    <li>
+                      <strong>How it works:</strong> On a supported chat page
+                      (like ChatGPT), type a prompt and click the
+                      <strong style="font-family: 'Segoe UI Emoji'">📋</strong>
+                      button. Then, navigate to another chat page (like Claude)
+                      and click the
+                      <strong style="font-family: 'Segoe UI Emoji'">📥</strong>
+                      button to paste the same prompt.
+                    </li>
+                    <li>
+                      The prompt is stored globally, so you can copy it once and
+                      paste it on multiple different sites. Hovering over the
+                      <strong style="font-family: 'Segoe UI Emoji'">📥</strong>
+                      button on a chat page will show you the stored prompt in a
+                      tooltip.
+                    </li>
+                  </ul>
+                </div>
                 <div class="row">
                   <label for="storedPromptDisplay">Stored Prompt:</label>
                   <textarea
@@ -215,34 +240,50 @@
                     class="selector-config-textarea"
                     rows="4"
                     readonly
+                    title="This read-only area shows the prompt that is currently saved in the extension's memory. Use the 'Refresh' button to update it."
                     placeholder="No prompt has been saved."
                   ></textarea>
                 </div>
                 <div class="row" style="justify-content: flex-end">
-                  <button id="refreshStoredPrompt">Refresh</button>
-                  <button id="clearStoredPrompt" class="danger">
+                  <button
+                    id="refreshStoredPrompt"
+                    title="Manually fetch and display the currently stored prompt from memory. Useful if you've copied a new prompt in another tab and want to see it here."
+                  >
+                    Refresh
+                  </button>
+                  <button
+                    id="clearStoredPrompt"
+                    class="danger"
+                    title="Permanently deletes the prompt currently stored in memory. This cannot be undone."
+                  >
                     Clear Stored Prompt
                   </button>
                 </div>
                 <hr style="margin: 16px 0" />
                 <h4>Settings</h4>
-                <div class="row">
+                <div
+                  class="row"
+                  title="If enabled, after you click the '📋 Copy' button on a chat page, the extension will also immediately 'send' the text in that same chat. This is useful for workflows where you want to send a prompt and simultaneously save it for use elsewhere."
+                >
                   <div class="switch-container">
                     <label class="switch">
                       <input type="checkbox" id="crossChatAutosendCopy" />
                       <span class="slider round"></span>
                     </label>
-                    <span class="switch-label">Autosend after Copy</span>
+                    <span class="switch-label">Autosend after 📋 Copy</span>
                   </div>
                 </div>
-                <div class="row">
+                <div
+                  class="row"
+                  title="If enabled, clicking the '📥 Paste & Send' button will not only paste the stored prompt into the chat input but also automatically trigger the send action, submitting it to the AI."
+                >
                   <div class="switch-container">
                     <label class="switch">
                       <input type="checkbox" id="crossChatAutosendPaste" />
                       <span class="slider round"></span>
                     </label>
                     <span class="switch-label"
-                      >Autosend after Paste & Send</span
+                      >Autosend after 📥 Paste & Send</span
                     >
                   </div>
                 </div>
@@ -251,7 +292,10 @@
                   style="flex-direction: column; align-items: flex-start"
                 >
                   <label>Button Placement:</label>
-                  <div style="margin-top: 8px">
+                  <div
+                    style="margin-top: 8px"
+                    title="Places the 📋 and 📥 buttons before your other custom buttons. They will be assigned shortcuts Alt+1 and Alt+2."
+                  >
                     <label>
                       <input
                         type="radio"
@@ -263,7 +307,9 @@
                       Custom Buttons
                     </label>
                   </div>
-                  <div>
+                  <div
+                    title="Places the 📋 and 📥 buttons after all your other custom buttons. Their shortcuts will follow your last custom button."
+                  >
                     <label>
                       <input
                         type="radio"
@@ -278,6 +324,98 @@
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <!-- Help Section -->
+      <section class="section" id="helpSection">
+        <h2>Help</h2>
+        <div class="text-inside-container">
+          <p>Some information:</p>
+          <p>
+            ABSOLUTELY DO BACKUP YOUR PROFILE! IN CASE OF UPDATE, YOU MAY LOSE
+            YOUR BUTTONS - ANYTIME. BE SURE TO BACKUP YOUR PROFILE! I am not yet
+            skillful enough in JS to make sure all updates will go without
+            problems
+          </p>
+          <ul>
+            <li>
+              Pressing "Shift" while pressing a key or button changes its
+              autosend behavior! Works both with clicks and keyboard shortcuts!
+            </li>
+            <li>Keyboard shortcuts can be enabled in Settings section</li>
+            <li>
+              <strong>Queue Feature:</strong> Use the floating panel (click the
+              '🔼' button on the chat page) to access the new Queue feature. It
+              allows you to send multiple prompts sequentially with a
+              configurable delay. Be sure to use it responsibly and in
+              accordance with the website's Terms of Service.
+            </li>
+            <li>
+              <strong>Cross-Chat Prompt Sharing:</strong> A new module that
+              lets you copy a prompt from one AI chat and paste it into
+              another. Enable it in the "Modules" section above to get started.
+            </li>
+            <li>In case of a problem: first step is to reload your browser.</li>
+            <li>
+              In case something stopped working completely: The websites often
+              change their structure. My extension therefore addresses elements
+              that are not longer present. Therefore, when I notice this, I need
+              to make an update, and then it takes time for Google to approve
+              it.
+            </li>
+            <li>
+              In case something is not working: try to use English version of
+              the websites. LLMs do not care about language, so you can use any
+              language you want in chat, while keeping interface language
+              English. I only test on English languages of webpages, because I
+              have to work and have no spare time.
+            </li>
+            <li>
+              If buttons disappear, first step is to refresh the page, then try
+              pressing "Reset Floating Window Settings for all pages" up here in
+              this popup. You can open an issue on Github:
+              <a
+                href="https://github.com/MaxITService/ChatGPT-Quick-Buttons-for-your-text/issues"
+              >
+                Issues page</a
+              >
+              Or email me at forpphotos@gmail.com
+            </li>
+            <li>
+              In case absolutely nothing works, do the following:
+              <ul>
+                <li>Export all the profiles you need to JSON files</li>
+                <li>Uninstall extension</li>
+                <li>
+                  Install extension again and test if it's working with default
+                  profiles
+                </li>
+                <li>Import your saved profiles and test again</li>
+              </ul>
+            </li>
+            <li>
+              <a
+                href="https://github.com/MaxITService/ChatGPT-Quick-Buttons-for-your-text"
+                >Github: you can provide code you want to see in app here.</a
+              >
+            </li>
+            <li>
+              <a href="https://buymeacoffee.com/netstaff"
+                >Donation link. If you are very rich, please send me huge amount
+                of money, thank you!</a
+              >
+            </li>
+            <li>
+              Introducing changes faster than once in second causes saving
+              issues
+            </li>
+            <li>
+              <a href="#" id="openWelcomePage"
+                >Open Welcome page (the one with instructions) again</a
+              >
+            </li>
+          </ul>
         </div>
       </section>
 
@@ -638,4 +776,5 @@
     <script src="/modules/popup-page-modules-promptShare.js"></script>
   </body>
 </html>
+
 
