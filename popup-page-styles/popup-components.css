@@ -306,6 +306,11 @@ Key areas:
     border-radius: 0 0 4px 4px;
 }
 
+/* Ensure crossChatModule content is hidden when collapsed */
+#crossChatModule:not(.expanded) .section-content {
+    display: none !important;
+}
+
 .collapsible.expanded .section-content {
     display: block;
 }

@@ -31,11 +31,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (toggleIcon) {
                 toggleIcon.style.transform = isExpanded ? 'rotate(90deg)' : 'rotate(0deg)';
             }
+            
+            // Update settings visibility when crossChatModule is expanded/collapsed
+            if (section === crossChatModule) {
+                updateSettingsVisibility();
+            }
         });
     }
 
     setupCollapsible(modulesSection);
     setupCollapsible(crossChatModule);
+    
+    // Ensure crossChatModule starts collapsed
+    crossChatModule.classList.remove('expanded');
 
     // --- State Management ---
     const defaultSettings = {
@@ -85,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateUIFromState() {
         // Main toggle
         enableToggle.checked = currentSettings.enabled;
-        settingsContainer.style.display = currentSettings.enabled ? 'block' : 'none';
+        updateSettingsVisibility();
 
         // Settings
         autosendCopyToggle.checked = currentSettings.autosendCopy;
@@ -97,6 +105,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             }
         }
+    }
+
+    // Helper function to manage settings visibility based on both toggle state and collapsible state
+    function updateSettingsVisibility() {
+        const isModuleExpanded = crossChatModule.classList.contains('expanded');
+        const isToggleEnabled = currentSettings.enabled;
+        
+        // Only show settings if both the module is expanded AND the toggle is enabled
+        settingsContainer.style.display = (isModuleExpanded && isToggleEnabled) ? 'block' : 'none';
     }
 
     // --- Prompt Actions ---
@@ -132,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Event Listeners ---
     enableToggle.addEventListener('change', () => {
         currentSettings.enabled = enableToggle.checked;
-        settingsContainer.style.display = currentSettings.enabled ? 'block' : 'none';
+        updateSettingsVisibility();
         saveModuleSettings();
     });
 
