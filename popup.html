@@ -173,6 +173,7 @@
       </section>
 
       <!-- ===== Modules Section ===== -->
+      <!-- This is a top-level collapsible container. The .collapsible class enables the expand/collapse behavior via popup-page-collapsible.js -->
       <section class="section collapsible" id="modulesSection">
         <div class="section-header">
           <h2>
@@ -183,6 +184,8 @@
         </div>
         <div class="section-content">
           <!-- Cross-Chat Prompt Sharing Module -->
+          <!-- This is a nested collapsible module. It has its own .collapsible class and header. -->
+          <!-- Its functionality is managed by popup-page-modules-promptShare.js, but its collapsible behavior is now managed centrally by popup-page-collapsible.js -->
           <div class="collapsible" id="crossChatModule">
             <div class="section-header subsection-header">
               <h3>
@@ -197,7 +200,7 @@
                   <input
                     type="checkbox"
                     id="crossChatModuleEnableToggle"
-                    title="Enable this module to add two new buttons (📋 Copy and 📥 Paste) to AI chat pages. This allows you to easily transfer prompts between different AI platforms."
+                    title="Enables the Cross-Chat module, which adds 'Copy' and 'Paste & Send' buttons to AI chat pages. This allows you to easily transfer prompts between different AI platforms."
                     aria-label="Enable Cross-Chat Prompt Sharing"
                   />
                   <span class="slider round"></span>
@@ -762,6 +765,8 @@
     <script src="log.js"></script>
     <script src="utils.js"></script>
     <script src="/popup-page-scripts/popup-page-visuals.js"></script>
+    <!-- NEW SCRIPT: Centralized handler for all collapsible sections -->
+    <script src="/popup-page-scripts/popup-page-collapsible.js"></script>
     <script src="/popup-page-scripts/popup-page-profiles.js"></script>
     <script src="/popup-page-scripts/popup-page-backup-handler.js"></script>
     <script src="/popup-page-scripts/popup-page-customButtons.js"></script>
@@ -772,9 +777,7 @@
     <script src="/popup-page-scripts/popup-page-advanced.js"></script>
     <!-- Floating Window Settings Handler script -->
     <script src="/popup-page-scripts/popup-page-floating-window-handler.js"></script>
-    <!-- NEW SCRIPT: Cross-Chat Module UI handler script -->
+    <!-- Cross-Chat Module UI handler script -->
     <script src="/modules/popup-page-modules-promptShare.js"></script>
   </body>
 </html>
-
-

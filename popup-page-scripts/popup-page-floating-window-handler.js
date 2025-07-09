@@ -111,18 +111,17 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // Set up collapsible functionality
-    const header = floatingWindowSection.querySelector('.section-header');
-    const toggleIcon = floatingWindowSection.querySelector('.toggle-icon');
-
-    header.addEventListener('click', () => {
-        const isExpanded = floatingWindowSection.classList.toggle('expanded');
-        toggleIcon.style.transform = isExpanded ? 'rotate(90deg)' : 'rotate(0deg)';
-
-        // Populate the list only when the section is expanded
-        if (isExpanded) {
+    // The centralized collapsible script handles toggling the .expanded class.
+    // We observe for that class change to populate the list only when needed, which is more efficient.
+    const observer = new MutationObserver(() => {
+        if (floatingWindowSection.classList.contains('expanded')) {
             populateFloatingWindowSitesList();
         }
+    });
+
+    observer.observe(floatingWindowSection, {
+        attributes: true,
+        attributeFilter: ['class']
     });
 
     // Event delegation for individual reset buttons

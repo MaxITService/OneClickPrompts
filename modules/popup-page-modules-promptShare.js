@@ -2,7 +2,6 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     // --- Module Elements ---
-    const modulesSection = document.getElementById('modulesSection');
     const crossChatModule = document.getElementById('crossChatModule');
     const enableToggle = document.getElementById('crossChatModuleEnableToggle');
     const settingsContainer = document.getElementById('crossChatModuleSettings');
@@ -17,33 +16,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const refreshPromptBtn = document.getElementById('refreshStoredPrompt');
     const clearPromptBtn = document.getElementById('clearStoredPrompt');
 
-    if (!modulesSection || !crossChatModule || !enableToggle) {
-        console.log("Cross-Chat module elements not found, skipping initialization.");
+    // Gracefully exit if essential elements for this module are missing.
+    // This no longer breaks the parent container's collapsible functionality.
+    if (!crossChatModule || !enableToggle || !settingsContainer || !autosendCopyToggle) {
+        console.warn("Cross-Chat module elements not found, skipping feature initialization.");
+        // If the module container exists, we hide it to prevent showing a broken UI.
+        if (crossChatModule) {
+            crossChatModule.style.display = 'none';
+        }
         return;
     }
-
-    // --- Collapsible Logic ---
-    function setupCollapsible(section) {
-        const header = section.querySelector('.section-header, .subsection-header');
-        const toggleIcon = header.querySelector('.toggle-icon');
-        header.addEventListener('click', () => {
-            const isExpanded = section.classList.toggle('expanded');
-            if (toggleIcon) {
-                toggleIcon.style.transform = isExpanded ? 'rotate(90deg)' : 'rotate(0deg)';
-            }
-            
-            // Update settings visibility when crossChatModule is expanded/collapsed
-            if (section === crossChatModule) {
-                updateSettingsVisibility();
-            }
-        });
-    }
-
-    setupCollapsible(modulesSection);
-    setupCollapsible(crossChatModule);
-    
-    // Ensure crossChatModule starts collapsed
-    crossChatModule.classList.remove('expanded');
 
     // --- State Management ---
     const defaultSettings = {
@@ -93,7 +75,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateUIFromState() {
         // Main toggle
         enableToggle.checked = currentSettings.enabled;
-        updateSettingsVisibility();
 
         // Settings
         autosendCopyToggle.checked = currentSettings.autosendCopy;
@@ -105,16 +86,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             }
         }
+        // Update visibility based on the new state
+        updateSettingsVisibility();
     }
 
     // Helper function to manage settings visibility based on both toggle state and collapsible state
     function updateSettingsVisibility() {
         const isModuleExpanded = crossChatModule.classList.contains('expanded');
         const isToggleEnabled = currentSettings.enabled;
-        
+
         // Only show settings if both the module is expanded AND the toggle is enabled
         settingsContainer.style.display = (isModuleExpanded && isToggleEnabled) ? 'block' : 'none';
     }
+
+    // --- Observer for Section Expansion ---
+    // The centralized collapsible script handles the click and toggles the .expanded class.
+    // We use a MutationObserver to react to that class change and update our UI accordingly.
+    const observer = new MutationObserver(() => {
+        // When the section is expanded or collapsed, we need to re-evaluate
+        // whether the settings sub-section should be visible.
+        updateSettingsVisibility();
+    });
+
+    // Start observing the crossChatModule for class attribute changes.
+    observer.observe(crossChatModule, { attributes: true, attributeFilter: ['class'] });
 
     // --- Prompt Actions ---
     async function refreshStoredPrompt() {

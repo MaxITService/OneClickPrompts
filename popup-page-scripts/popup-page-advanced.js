@@ -4,46 +4,39 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Set up collapsible section functionality
     const advancedSection = document.getElementById('advancedSection');
-    const toggleIcon = advancedSection.querySelector('.toggle-icon');
+    const advancedHelpSection = document.getElementById('advancedHelpSection');
 
-    function toggleSection(section, icon) {
-        section.classList.toggle('expanded');
-        icon.style.transform = section.classList.contains('expanded') 
-            ? 'rotate(90deg)' 
-            : 'rotate(0deg)';
+    // This script only needs to handle logic specific to the advanced settings.
+    // The general collapsible behavior is now managed by popup-page-collapsible.js.
+
+    // --- Collapsible Dependency Logic ---
+    // We have a special case: if the main "Advanced" section is collapsed, the
+    // inner "Help" section should also be forced into a collapsed state.
+    // A MutationObserver handles this dependency cleanly.
+    if (advancedSection && advancedHelpSection) {
+        const helpToggleIcon = advancedHelpSection.querySelector('.toggle-icon');
+
+        const parentObserver = new MutationObserver(() => {
+            // Check if the parent is collapsed while the child is expanded.
+            if (!advancedSection.classList.contains('expanded') && advancedHelpSection.classList.contains('expanded')) {
+                // Force the child to collapse.
+                advancedHelpSection.classList.remove('expanded');
+
+                // Manually reset the icon rotation, as this change is programmatic
+                // and won't trigger the click listener in the central script.
+                if (helpToggleIcon) {
+                    helpToggleIcon.style.transform = 'rotate(0deg)';
+                }
+            }
+        });
+
+        parentObserver.observe(advancedSection, {
+            attributes: true,
+            attributeFilter: ['class']
+        });
     }
 
-    // Toggle section visibility
-    advancedSection.querySelector('.section-header').addEventListener('click', () => {
-        toggleSection(advancedSection, toggleIcon);
-        
-        // If advanced section is collapsed, ensure help section is also collapsed
-        if (!advancedSection.classList.contains('expanded')) {
-            advancedHelpSection.classList.remove('expanded');
-            helpToggleIcon.style.transform = 'rotate(0deg)';
-        }
-    });
-
-    // Initialize in collapsed state
-    advancedSection.classList.remove('expanded');
-    toggleIcon.style.transform = 'rotate(0deg)';
-    
-    // Set up help section collapsible functionality
-    const advancedHelpSection = document.getElementById('advancedHelpSection');
-    const helpToggleIcon = advancedHelpSection.querySelector('.toggle-icon');
-
-    // Toggle help section visibility
-    advancedHelpSection.querySelector('.section-header').addEventListener('click', (event) => {
-        // Prevent the click from bubbling up to the parent advanced section
-        event.stopPropagation();
-        toggleSection(advancedHelpSection, helpToggleIcon);
-    });
-
-    // Initialize help section in collapsed state
-    advancedHelpSection.classList.remove('expanded');
-    helpToggleIcon.style.transform = 'rotate(0deg)';
 
     const websiteSelect = document.getElementById('selectorWebsiteSelect');
     const selectorConfig = document.getElementById('selectorConfig');
@@ -61,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     site: site
                 }, resolve);
             });
-            
+
             if (response && response.selectors) {
                 // Use custom selectors if available
                 selectorConfig.value = JSON.stringify(response.selectors, null, 2);
@@ -100,12 +93,12 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             // Parse the JSON to validate it
             const config = JSON.parse(selectorConfig.value);
-            
+
             // Validate the structure
             if (!validateSelectors(config)) {
                 throw new Error('Invalid selector structure');
             }
-            
+
             // Save to storage
             const response = await new Promise(resolve => {
                 chrome.runtime.sendMessage({
@@ -114,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     selectors: config
                 }, resolve);
             });
-            
+
             if (response && response.success) {
                 showToast('Selectors saved successfully', 'success');
             } else {
@@ -137,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     selectors: null // null means remove
                 }, resolve);
             });
-            
+
             if (response && response.success) {
                 // Load the defaults
                 const defaultSelectors = getDefaultSelectorsForSite(websiteSelect.value);
@@ -154,11 +147,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Validate the selector structure
     function validateSelectors(selectors) {
-        return selectors && 
-               selectors.containers && Array.isArray(selectors.containers) &&
-               selectors.sendButtons && Array.isArray(selectors.sendButtons) &&
-               selectors.editors && Array.isArray(selectors.editors) &&
-               typeof selectors.buttonsContainerId === 'string';
+        return selectors &&
+            selectors.containers && Array.isArray(selectors.containers) &&
+            selectors.sendButtons && Array.isArray(selectors.sendButtons) &&
+            selectors.editors && Array.isArray(selectors.editors) &&
+            typeof selectors.buttonsContainerId === 'string';
     }
 
     // Event listeners
