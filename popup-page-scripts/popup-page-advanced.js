@@ -48,11 +48,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const site = websiteSelect.value;
         try {
             // First try to get custom selectors
-            const response = await new Promise(resolve => {
-                chrome.runtime.sendMessage({
-                    type: 'getCustomSelectors',
-                    site: site
-                }, resolve);
+            const response = await chrome.runtime.sendMessage({
+                type: 'getCustomSelectors',
+                site: site,
             });
 
             if (response && response.selectors) {
@@ -100,12 +98,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Save to storage
-            const response = await new Promise(resolve => {
-                chrome.runtime.sendMessage({
-                    type: 'saveCustomSelectors',
-                    site: websiteSelect.value,
-                    selectors: config
-                }, resolve);
+            const response = await chrome.runtime.sendMessage({
+                type: 'saveCustomSelectors',
+                site: websiteSelect.value,
+                selectors: config,
             });
 
             if (response && response.success) {
@@ -123,12 +119,10 @@ document.addEventListener('DOMContentLoaded', () => {
     async function resetSelectors() {
         try {
             // Remove custom selectors
-            const response = await new Promise(resolve => {
-                chrome.runtime.sendMessage({
-                    type: 'saveCustomSelectors',
-                    site: websiteSelect.value,
-                    selectors: null // null means remove
-                }, resolve);
+            const response = await chrome.runtime.sendMessage({
+                type: 'saveCustomSelectors',
+                site: websiteSelect.value,
+                selectors: null, // null means remove
             });
 
             if (response && response.success) {

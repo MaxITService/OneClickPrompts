@@ -76,29 +76,40 @@ async function switchProfile(profileName) {
 
 
 // -------------------------
-// 3. Add New Empty Profile
+// 3. Profile Actions (Add, Copy, Delete)
 // -------------------------
 
 /**
- * Creates a new empty profile using minimalDefaultConfig.
- * @param {string} profileName - The name of the new profile.
+ * Validates a profile name against being empty or already existing.
+ * @param {string} profileName - The name to validate.
+ * @param {string} actionType - The type of action (e.g., 'creation', 'copy') for logging.
+ * @returns {{isValid: boolean, name: string|null}} - An object indicating if the name is valid and the trimmed name.
  */
-async function addNewEmptyProfile(profileName) {
-    // Trim whitespace and validate profile name
+function validateProfileName(profileName, actionType) {
     const trimmedProfileName = profileName.trim();
     if (trimmedProfileName === "") {
         showToast('Profile name cannot be empty.', 'error');
-        logToGUIConsole('Profile creation failed: Empty name provided.');
-        return false;
+        logToGUIConsole(`Profile ${actionType} failed: Empty name provided.`);
+        return { isValid: false, name: null };
     }
 
-    // Check if profile name already exists
     const existingProfiles = Array.from(profileSelect.options).map(option => option.value);
     if (existingProfiles.includes(trimmedProfileName)) {
         showToast('A profile with this name already exists.', 'error');
-        logToGUIConsole(`Profile creation failed: "${trimmedProfileName}" already exists.`);
-        return false;
+        logToGUIConsole(`Profile ${actionType} failed: "${trimmedProfileName}" already exists.`);
+        return { isValid: false, name: null };
     }
+    return { isValid: true, name: trimmedProfileName };
+}
+
+/**
+ * Creates a new empty profile.
+ * @param {string} profileName - The name of the new profile.
+ */
+async function addNewEmptyProfile(profileName) {
+    const validation = validateProfileName(profileName, 'creation');
+    if (!validation.isValid) return false;
+    const trimmedProfileName = validation.name;
 
     try {
         // Initialize new profile with minimal settings
@@ -123,29 +134,14 @@ async function addNewEmptyProfile(profileName) {
 }
 
 // -------------------------
-// 4. Copy Current Profile
-// -------------------------
-
 /**
- * Copies the current profile to a new profile with a specified name.
- * @param {string} newProfileName - The name of the new profile.
+ * Copies the current profile to a new profile.
+ * @param {string} profileName - The name of the new profile.
  */
-async function copyCurrentProfile(newProfileName) {
-    // Trim whitespace and validate profile name
-    const trimmedProfileName = newProfileName.trim();
-    if (trimmedProfileName === "") {
-        showToast('Profile name cannot be empty.', 'error');
-        logToGUIConsole('Profile copy failed: Empty name provided.');
-        return false;
-    }
-
-    // Check if profile name already exists
-    const existingProfiles = Array.from(profileSelect.options).map(option => option.value);
-    if (existingProfiles.includes(trimmedProfileName)) {
-        showToast('A profile with this name already exists.', 'error');
-        logToGUIConsole(`Profile copy failed: "${trimmedProfileName}" already exists.`);
-        return false;
-    }
+async function copyCurrentProfile(profileName) {
+    const validation = validateProfileName(profileName, 'copy');
+    if (!validation.isValid) return false;
+    const trimmedProfileName = validation.name;
 
     try {
         // Deep copy current profile settings
@@ -205,4 +201,5 @@ async function deleteCurrentProfile() {
         logToGUIConsole(`Error deleting profile: ${error.message}`);
     }
 }
+
 

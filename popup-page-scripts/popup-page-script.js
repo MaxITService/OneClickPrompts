@@ -163,6 +163,30 @@ function updateInterface() {
     profileSelect.value = currentProfile.PROFILE_NAME;
 }
 
+/**
+ * Resets and hides the profile action UIs (add/copy) and restores the default view.
+ */
+function resetProfileActionsUI() {
+    // Hide input containers and clear values/errors
+    addProfileInput.value = '';
+    addProfileInput.style.borderColor = '';
+    addProfileInput.classList.remove('input-error');
+    addProfileContainer.style.display = 'none';
+
+    copyProfileInput.value = '';
+    copyProfileInput.style.borderColor = '';
+    copyProfileInput.classList.remove('input-error');
+    copyProfileContainer.style.display = 'none';
+
+    // Show the main action buttons
+    addProfileButton.style.display = 'inline-block';
+    copyProfileButton.style.display = 'inline-block';
+    deleteProfileButton.style.display = 'inline-block';
+
+    // Unlock the profile selector
+    profileSelect.disabled = false;
+    currentProfileLabel.style.display = 'none';
+}
 // -------------------------
 // 9. Event Listeners
 // -------------------------
@@ -223,16 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const success = await addNewEmptyProfile(profileName);
 
         if (success) {
-            // Reset and hide input
-            addProfileInput.value = '';
-            addProfileInput.style.borderColor = '';
-            addProfileContainer.style.display = 'none';
-            // Show both "Add Profile" and "Duplicate Profile" buttons
-            addProfileButton.style.display = 'inline-block';
-            copyProfileButton.style.display = 'inline-block';
-            deleteProfileButton.style.display = 'inline-block'; // Show delete button after add
-            profileSelect.disabled = false; // Unlock profile selector
-            currentProfileLabel.style.display = 'none';
+            resetProfileActionsUI();
         } else {
             // On failure (e.g., duplicate name), keep UI open for correction
             addProfileInput.classList.add('input-error');
@@ -255,16 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const success = await copyCurrentProfile(newProfileName);
 
         if (success) {
-            // Reset and hide input
-            copyProfileInput.value = '';
-            copyProfileInput.style.borderColor = '';
-            copyProfileContainer.style.display = 'none';
-            // Show both "Add Profile" and "Duplicate Profile" buttons
-            copyProfileButton.style.display = 'inline-block';
-            addProfileButton.style.display = 'inline-block';
-            deleteProfileButton.style.display = 'inline-block'; // Show delete button after copy
-            profileSelect.disabled = false; // Unlock profile selector
-            currentProfileLabel.style.display = 'none';
+            resetProfileActionsUI();
         } else {
             // On failure (e.g., duplicate name), keep UI open for correction
             copyProfileInput.classList.add('input-error');
@@ -277,22 +283,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Cancel Add Profile Button Click
     cancelAddProfileButton.addEventListener('click', () => {
-        addProfileContainer.style.display = 'none';
-        addProfileButton.style.display = 'inline-block';
-        copyProfileButton.style.display = 'inline-block';
-        deleteProfileButton.style.display = 'inline-block'; // Show delete button
-        profileSelect.disabled = false; // Unlock profile selector
-        currentProfileLabel.style.display = 'none';
+        resetProfileActionsUI();
     });
 
     // Cancel Copy Profile Button Click
     cancelCopyProfileButton.addEventListener('click', () => {
-        copyProfileContainer.style.display = 'none';
-        addProfileButton.style.display = 'inline-block';
-        copyProfileButton.style.display = 'inline-block';
-        deleteProfileButton.style.display = 'inline-block'; // Show delete button
-        profileSelect.disabled = false; // Unlock profile selector
-        currentProfileLabel.style.display = 'none';
+        resetProfileActionsUI();
     });
 
     // Button management

@@ -110,6 +110,36 @@ async function handleImportProfile(event) {
     event.target.value = '';
 }
 
+/**
+ * Handles the logic for saving a profile (new or overwritten) and updating the UI.
+ * @param {object} parsedProfile - The profile object to save.
+ * @param {boolean} isOverwrite - Indicates if this is an overwrite operation.
+ */
+async function saveAndSwitchToImportedProfile(parsedProfile, isOverwrite) {
+    const actionText = isOverwrite ? 'overwritten' : 'imported';
+    const actionVerb = isOverwrite ? 'overwrite' : 'import';
+
+    try {
+        await chrome.runtime.sendMessage({
+            type: 'saveConfig',
+            profileName: parsedProfile.PROFILE_NAME,
+            config: parsedProfile
+        });
+
+        // Reload profiles and switch to the new/overwritten profile
+        await loadProfiles();
+        profileSelect.value = parsedProfile.PROFILE_NAME;
+        await switchProfile(parsedProfile.PROFILE_NAME);
+
+        updateInterface();
+        logToGUIConsole(`Profile "${parsedProfile.PROFILE_NAME}" ${actionText} successfully.`);
+        showToast(`Profile "${parsedProfile.PROFILE_NAME}" has been ${actionText} successfully.`, 'success');
+    } catch (error) {
+        logToGUIConsole(`Failed to save the imported profile: ${error.message}`);
+        showToast(`Failed to ${actionVerb} the profile. Please try again.`, 'error');
+    }
+}
+
 // Function to overwrite the existing profile with the parsed profile
 async function overwriteCurrentProfile() {
     const parsedProfile = window.tempParsedProfile;
@@ -120,27 +150,7 @@ async function overwriteCurrentProfile() {
 
     logToGUIConsole(`Overwriting existing profile "${parsedProfile.PROFILE_NAME}" with imported profile.`);
 
-    try {
-        await chrome.runtime.sendMessage({
-            type: 'saveConfig',
-            profileName: parsedProfile.PROFILE_NAME,
-            config: parsedProfile
-        });
-
-        // Reload profiles and switch to the imported profile
-        await loadProfiles();
-        profileSelect.value = parsedProfile.PROFILE_NAME;
-        await switchProfile(parsedProfile.PROFILE_NAME);
-
-        updateInterface();
-        logToGUIConsole(`Profile "${parsedProfile.PROFILE_NAME}" imported and overwritten successfully.`);
-        // Use toast notification instead of alert
-        showToast(`Profile "${parsedProfile.PROFILE_NAME}" has been overwritten successfully.`, 'success');
-    } catch (error) {
-        logToGUIConsole(`Failed to save the imported profile: ${error.message}`);
-        // Use toast notification instead of alert
-        showToast('Failed to overwrite the existing profile. Please try again.', 'error');
-    }
+    await saveAndSwitchToImportedProfile(parsedProfile, true);
 
     // Hide the confirmation div
     document.getElementById('confirmationDiv').style.display = 'none';
@@ -162,27 +172,7 @@ function cancelImport() {
 // Function to import profile directly without confirmation
 async function importProfile(parsedProfile) {
     logToGUIConsole(`Importing profile "${parsedProfile.PROFILE_NAME}" as a new profile.`);
-    try {
-        await chrome.runtime.sendMessage({
-            type: 'saveConfig',
-            profileName: parsedProfile.PROFILE_NAME,
-            config: parsedProfile
-        });
-
-        // Reload profiles and switch to the new profile
-        await loadProfiles();
-        profileSelect.value = parsedProfile.PROFILE_NAME;
-        await switchProfile(parsedProfile.PROFILE_NAME);
-
-        updateInterface();
-        logToGUIConsole(`Profile "${parsedProfile.PROFILE_NAME}" imported successfully.`);
-        // Use toast notification instead of alert
-        showToast(`Profile "${parsedProfile.PROFILE_NAME}" has been imported successfully.`, 'success');
-    } catch (error) {
-        logToGUIConsole(`Failed to save the imported profile: ${error.message}`);
-        // Use toast notification instead of alert
-        showToast('Failed to import the profile. Please try again.', 'error');
-    }
+    await saveAndSwitchToImportedProfile(parsedProfile, false);
 }
 
 // Attach event listeners after DOM content is loaded
@@ -200,3 +190,4 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('confirmOverwrite').addEventListener('click', overwriteCurrentProfile);
     document.getElementById('cancelOverwrite').addEventListener('click', cancelImport);
 });
+

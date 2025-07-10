@@ -93,10 +93,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Helper function to manage settings visibility based on both toggle state and collapsible state
     function updateSettingsVisibility() {
         const isModuleExpanded = crossChatModule.classList.contains('expanded');
-        const isToggleEnabled = currentSettings.enabled;
-
-        // Only show settings if both the module is expanded AND the toggle is enabled
-        settingsContainer.style.display = (isModuleExpanded && isToggleEnabled) ? 'block' : 'none';
+        // The visibility of settings now ONLY depends on whether the section is expanded.
+        // The toggle's state is reflected by the toggle itself, not by hiding the section.
+        settingsContainer.style.display = isModuleExpanded ? 'block' : 'none';
     }
 
     // --- Observer for Section Expansion ---
@@ -144,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Event Listeners ---
     enableToggle.addEventListener('change', () => {
         currentSettings.enabled = enableToggle.checked;
-        updateSettingsVisibility();
+        // The toggle now only changes the setting and saves it; it does not control UI visibility.
         saveModuleSettings();
     });
 
