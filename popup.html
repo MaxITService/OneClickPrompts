@@ -120,46 +120,50 @@
       <!-- Button Configuration via button cards (buttons have their UI - each on card that is added dynamically) -->
       <section class="section">
         <h2>Button Configuration</h2>
-        <div class="row">
-          <input
-            type="text"
-            id="buttonIcon"
-            placeholder="✨"
-            class="emoji-input"
-            title="Button icon that will be clickable in the chat interface, or you may have text here or multiple emojis. (Emoji menu Win+. Or you may ask AI for them and copy)"
-            aria-label="Button icon"
-          />
+        <div class="add-button-group">
+          <div class="row">
+            <input
+              type="text"
+              id="buttonIcon"
+              placeholder="✨"
+              class="emoji-input"
+              title="Button icon that will be clickable in the chat interface, or you may have text here or multiple emojis. (Emoji menu Win+. Or you may ask AI for them and copy)"
+              aria-label="Button icon"
+            />
 
-          <textarea
-            id="buttonText"
-            placeholder="Button Template Text To be Inserted"
-            class="text-input"
-            rows="1"
-            title="This will be inserting text into the chat input when the button is clicked, into textbox after your text"
-            aria-label="Button template text"
-          ></textarea>
-          <label
-            class="checkbox-row"
-            for="buttonAutoSendToggle"
-            title="If checked, clicking the new button will automatically send the prompt. This setting can be overridden by the global auto-send toggle below."
-          >
-            <input type="checkbox" id="buttonAutoSendToggle" checked />
-            <span>Auto-send</span>
-          </label>
+            <textarea
+              id="buttonText"
+              placeholder="Button Template Text To be Inserted"
+              class="text-input"
+              rows="1"
+              title="This will be inserting text into the chat input when the button is clicked, into textbox after your text"
+              aria-label="Button template text"
+            ></textarea>
+            <label
+              class="checkbox-row"
+              for="buttonAutoSendToggle"
+              title="If checked, clicking the new button will automatically send the prompt. This setting can be overridden by the global auto-send toggle below."
+            >
+              <input type="checkbox" id="buttonAutoSendToggle" checked />
+              <span>Auto-send</span>
+            </label>
+          </div>
+          <div class="row">
+            <button
+              id="addButton"
+              title="Add a new prompt button using the icon, text, and auto-send setting from above."
+            >
+              Add Button
+            </button>
+            <button
+              id="clearText"
+              title="Clear the icon and text fields for adding a new button."
+            >
+              Clear Text
+            </button>
+          </div>
         </div>
         <div class="row">
-          <button
-            id="addButton"
-            title="Add a new prompt button using the icon, text, and auto-send setting from above."
-          >
-            Add Button
-          </button>
-          <button
-            id="clearText"
-            title="Clear the icon and text fields for adding a new button."
-          >
-            Clear Text
-          </button>
           <button
             id="addSeparator"
             title="Add a visual separator to the button list to organize your prompts."

@@ -18,6 +18,7 @@ These rules set up the basic typography, spacing, and color scheme for the inter
     --bg-color: #f9f9f9; /* Very light gray for background */
     --text-color: #333; /* Dark gray for primary text */
     --separator-color: #bbb; /* Medium gray for separators */
+    --primary-color-faded: rgba(122, 92, 200, 0.05);
     --hover-bg-color: #e6e6e6; /* Light gray on hover */
     --transition-duration: 0.3s; /* Standard transition duration */
     --transition-duration-release: 0.4s; /* Slower transition duration for release */
@@ -139,4 +140,5 @@ h2:hover {
     color: #6a4abd;
     transition: color var(--transition-duration-release) ease;
 }
+
 

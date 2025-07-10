@@ -22,6 +22,7 @@ body.dark-theme {
     --bg-color: #222;
     --text-color: #eee;
     --separator-color: #666;
+    --primary-color-faded: rgba(154, 121, 211, 0.1);
     --hover-bg-color: #333;
     --section-header-bg: #2a2a2a;
     --manual-bg: #1e1e1e;

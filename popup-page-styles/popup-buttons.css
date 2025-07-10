@@ -63,6 +63,25 @@ button.danger:hover {
 /* 2. Custom Buttons Section                                                 */
 /* ------------------------------------------------------------------------- */
 
+/* Group for the "Add Button" form controls */
+.add-button-group {
+    border: 1px dashed var(--primary-color);
+    padding: 12px;
+    margin-bottom: 16px;
+    border-radius: 8px;
+    background-color: var(--primary-color-faded);
+}
+
+/* Adjust margins for rows inside the group to avoid double margins */
+.add-button-group .row {
+    margin-bottom: 8px;
+}
+
+/* Remove margin from the last row inside the group */
+.add-button-group .row:last-child {
+    margin-bottom: 0;
+}
+
 /* Container for the custom button list */
 #buttonCardsList {
     border: 1px solid var(--border-color);
