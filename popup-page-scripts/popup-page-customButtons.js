@@ -24,10 +24,10 @@ function createButtonCardElement(button, index) {
     const buttonItem = document.createElement('div');
     buttonItem.className = 'button-item';
     buttonItem.dataset.index = index;
-    buttonItem.draggable = true; // Ensure the item is draggable
 
     if (button.separator) {
         buttonItem.classList.add('separator-item');
+        buttonItem.draggable = true; // Separators are draggable as a whole item.
         buttonItem.innerHTML = `
             <div class="separator-line"></div>
             <span class="separator-text">Separator</span>
@@ -35,6 +35,7 @@ function createButtonCardElement(button, index) {
             <button class="delete-button danger">Delete</button>
         `;
     } else {
+        // For regular buttons, only the drag handle is draggable, not the whole card.
         buttonItem.innerHTML = `
             <div class="drag-handle" draggable="true">&#9776;</div>
             <input type="text" class="emoji-input" value="${button.icon}">
@@ -152,12 +153,8 @@ let draggedItem = null;
 let lastDragPosition = { x: 0, y: 0 };
 
 function handleDragStart(e) {
-    // Define interactive elements that should not initiate dragging.
-    const interactiveTags = ['INPUT', 'TEXTAREA', 'BUTTON', 'SELECT'];
-    if (interactiveTags.includes(e.target.tagName)) {
-        // Do not initiate drag when interacting with these elements.
-        return;
-    }
+    // Since dragging is now restricted to specific handles or separator items,
+    // we can be sure that if a drag starts, it's intentional.
     const buttonItem = e.target.closest('.button-item');
     if (buttonItem) {
         isDragging = true;
@@ -434,4 +431,5 @@ function textareaSaverAndResizerFunc() {
         });
     });
 }
+
 
