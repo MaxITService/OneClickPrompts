@@ -42,10 +42,10 @@ function createButtonCardElement(button, index) {
             <label class="checkbox-row">
                 <input type="checkbox" class="autosend-toggle" ${button.autoSend ? 'checked' : ''}>
                 <span>Auto-send</span>
-                ${ index < 10 
-                    ? `<span class="shortcut-indicator">[Ctrl+${index === 9 ? 0 : index + 1}]</span>` 
-                    : '' 
-                }
+                ${index < 10
+                ? `<span class="shortcut-indicator">[Ctrl+${index === 9 ? 0 : index + 1}]</span>`
+                : ''
+            }
             </label>
             <button class="delete-button danger">Delete</button>
         `;
@@ -94,8 +94,9 @@ function clearText() {
 
 /**
  * Adds a new custom button and related card to the current profile.
+ * @param {MouseEvent} [event] - The click event, used for visual feedback around the cursor.
  */
-async function addButton() {
+async function addButton(event) {
     const icon = document.getElementById('buttonIcon').value || '✨';
     const text = document.getElementById('buttonText').value || 'New Button';
     const autoSend = document.getElementById('buttonAutoSendToggle').checked;
@@ -109,6 +110,13 @@ async function addButton() {
     await saveCurrentProfile();
     updatebuttonCardsList();
     logToGUIConsole('Added new button');
+
+    // --- Visual Feedback ---
+    showToast('Button added', 'success');
+    if (event) {
+        // This function is in popup-page-visuals.js
+        showMouseEffect(event);
+    }
 }
 
 
@@ -302,8 +310,8 @@ function handleDragOver(e) {
             } else {
                 // If DOM position didn't change, ensure it still has the correct base dragging transform
                 // and importantly, ensure no transition is active from a previous interrupted move.
-                 draggedItem.style.transition = 'none'; // Remove any potentially active transition
-                 draggedItem.style.transform = playTransform; // Ensure the scale(0.8) is applied
+                draggedItem.style.transition = 'none'; // Remove any potentially active transition
+                draggedItem.style.transform = playTransform; // Ensure the scale(0.8) is applied
             }
         }
 
@@ -420,9 +428,10 @@ function textareaSaverAndResizerFunc() {
             const buttonItem = textarea.closest('.button-item');
             const index = parseInt(buttonItem.dataset.index);
             currentProfile.customButtons[index].text = textarea.value;
-            
+
             // Use debounced save to throttle saving
             debouncedSaveCurrentProfile();
         });
     });
 }
+

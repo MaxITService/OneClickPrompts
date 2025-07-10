@@ -24,6 +24,32 @@ Key areas:
 }
 
 /* ------------------------------------------------------------------------- */
+/* Mouse Click Effect                                                        */
+/* ------------------------------------------------------------------------- */
+.mouse-effect {
+    position: fixed;
+    /* Use fixed positioning so scroll doesn't matter */
+    border: 2px solid var(--primary-color);
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    /* Center on cursor and start scaled down */
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 1;
+    pointer-events: none;
+    /* So it doesn't interfere with other clicks */
+    z-index: 9999;
+    animation: mouse-ripple 0.5s ease-out forwards;
+}
+
+@keyframes mouse-ripple {
+    to {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(4);
+    }
+}
+
+/* ------------------------------------------------------------------------- */
 /* Console Styling                                                           */
 /* ------------------------------------------------------------------------- */
 .console {
@@ -435,7 +461,7 @@ Key areas:
     border-bottom: none;
 }
 
-.floating-site-item span { 
+.floating-site-item span {
     font-size: 1.1em;
     /* Responsive, scales with parent font size */
 }

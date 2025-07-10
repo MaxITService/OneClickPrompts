@@ -296,7 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Button management
-    document.getElementById('addButton').addEventListener('click', addButton);
+    document.getElementById('addButton').addEventListener('click', e => addButton(e));
     document.getElementById('clearText').addEventListener('click', clearText);
     document.getElementById('addSeparator').addEventListener('click', addSeparator);
 
