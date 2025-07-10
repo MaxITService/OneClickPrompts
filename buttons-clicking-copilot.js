@@ -12,7 +12,7 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
 
     const injectionTargets = window.InjectionTargetsOnWebsite;
     const editorSelectors = injectionTargets.selectors.editors;
-    const editorArea = editorSelectors.reduce((found, selector) => 
+    const editorArea = editorSelectors.reduce((found, selector) =>
         found || document.querySelector(selector), null);
 
     if (!editorArea) {
@@ -35,7 +35,7 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
             Object.getPrototypeOf(element),
             'value'
         )?.set;
-        
+
         if (nativeInputValueSetter) {
             nativeInputValueSetter.call(element, text);
             element.dispatchEvent(new Event('input', { bubbles: true }));
@@ -50,29 +50,17 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
             .map(selector => document.querySelector(selector))
             .filter(Boolean);
 
-        logConCgp(sendButtons.length ? 
-            '[buttons] Send buttons located.' : 
+        logConCgp(sendButtons.length ?
+            '[buttons] Send buttons located.' :
             '[buttons] Send buttons not found using dynamic selectors.');
 
         return sendButtons;
     };
 
-    let originalSendButtons = locateSendButtons();
-
     const handleSendButtons = (sendButtons) => {
         if (!sendButtons.length) {
             logConCgp('[buttons] Send buttons are not available to handle.');
             return;
-        }
-
-        const existingText = editorArea.value ?? '';
-        const newText = `${existingText}${customText}`;
-        
-        setEditorValueDirectly(editorArea, newText);
-
-        if (editorArea.setSelectionRange) {
-            editorArea.setSelectionRange(newText.length, newText.length);
-            logConCgp('[buttons] Cursor moved to the end of the editor.');
         }
 
         if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
@@ -114,43 +102,54 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
     const handleMessageInsertion = () => {
         const initialState = isEditorInInitialState(editorArea);
 
+        // Step 1: Consolidate text insertion logic to prevent duplication.
         if (initialState) {
+            // If editor is empty, just set the text.
             setEditorValueDirectly(editorArea, customText);
-
-            if (editorArea.setSelectionRange) {
-                editorArea.setSelectionRange(customText.length, customText.length);
-            }
-
-            originalSendButtons = locateSendButtons();
-
-            if (!originalSendButtons.length) {
-                const observer = new MutationObserver((mutations, obs) => {
-                    originalSendButtons = locateSendButtons();
-                    if (originalSendButtons.length) {
-                        handleSendButtons(originalSendButtons);
-                        obs.disconnect();
-                        logConCgp('[buttons] Send buttons detected and observer disconnected.');
-                    }
-                });
-
-                observer.observe(document.body, {
-                    childList: true,
-                    subtree: true
-                });
-
-                setTimeout(() => {
-                    if (!window.autoSendInterval) {
-                        observer.disconnect();
-                        logConCgp('[buttons] MutationObserver disconnected after timeout.');
-                    }
-                }, 5000);
-            } else {
-                handleSendButtons(originalSendButtons);
-            }
         } else {
-            handleSendButtons(originalSendButtons);
+            // If editor has content, append the new text.
+            const existingText = editorArea.value ?? '';
+            const newText = `${existingText}${customText}`;
+            setEditorValueDirectly(editorArea, newText);
+        }
+
+        // Step 2: Move cursor to the end after text is set.
+        const finalLength = editorArea.value.length;
+        if (editorArea.setSelectionRange) {
+            editorArea.setSelectionRange(finalLength, finalLength);
+            logConCgp('[buttons] Cursor moved to the end of the editor.');
+        }
+
+        // Step 3: Locate send buttons and handle auto-sending.
+        let sendButtons = locateSendButtons();
+        if (sendButtons.length) {
+            handleSendButtons(sendButtons);
+        } else {
+            // If buttons aren't ready, wait for them with an observer.
+            const observer = new MutationObserver((mutations, obs) => {
+                const foundButtons = locateSendButtons();
+                if (foundButtons.length) {
+                    handleSendButtons(foundButtons);
+                    obs.disconnect();
+                    logConCgp('[buttons] Send buttons detected and observer disconnected.');
+                }
+            });
+
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+
+            // Timeout to prevent the observer from running indefinitely.
+            setTimeout(() => {
+                if (!window.autoSendInterval) {
+                    observer.disconnect();
+                    logConCgp('[buttons] MutationObserver disconnected after timeout.');
+                }
+            }, 5000);
         }
     };
 
     handleMessageInsertion();
 }
+
