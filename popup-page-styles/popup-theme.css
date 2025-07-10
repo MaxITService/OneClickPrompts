@@ -37,6 +37,7 @@ body.dark-theme button {
     background: #333;
     color: #eee;
     border-color: #555;
+    color-scheme: dark;
 }
 
 body.dark-theme .section {

@@ -300,8 +300,6 @@ Key areas:
     padding: 8px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
-    background-color: var(--input-bg-color);
-    color: var(--text-color);
     margin-bottom: 8px;
 }
 
