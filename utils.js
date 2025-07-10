@@ -356,7 +356,8 @@ class InjectionTargetsOnWebsite {
             },
             Gemini: { 
                  containers: [
-                    'input-container', // The main container holding input and disclaimer
+                    'chat-window input-container', // The main container holding input and disclaimer
+                    'input-container', // maybe herre?
                     'main' // Fallback if input-container structure changes significantly
                  ],
                  sendButtons: [
