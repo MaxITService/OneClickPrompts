@@ -97,6 +97,11 @@ body:has(#copyProfileContainer:not([style*="display: none"])) #versionContainer 
     flex-direction: column;
     justify-content: space-between;
     scroll-behavior: smooth;
+    transition: max-width 0.4s ease-in-out;
+}
+
+.container.expanded {
+    max-width: 90%;
 }
 
 /* Sections Styling: Boxes that wrap content areas */
@@ -140,5 +145,6 @@ h2:hover {
     color: #6a4abd;
     transition: color var(--transition-duration-release) ease;
 }
+
 
 

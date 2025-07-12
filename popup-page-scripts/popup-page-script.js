@@ -41,6 +41,7 @@ const cancelCopyProfileButton = document.getElementById('cancelCopyProfile');
 
 // Open in Tab Button
 const openInTabButton = document.getElementById('open-in-tab-button');
+const toggleWidthButton = document.getElementById('toggle-width-button');
 
 // -------------------------
 // Debounced Save Function
@@ -197,11 +198,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const isTab = urlParams.get('isTab') === 'true';
 
     if (isTab) {
-        // Hide the "Open in New Tab" button when already in a tab
+        // When in a tab, hide the 'open in tab' button and show the 'toggle width' button
         if (openInTabButton) {
             openInTabButton.style.display = 'none';
         }
-        // Add tab-mode class to body for centering
+        if (toggleWidthButton) {
+            toggleWidthButton.style.display = 'inline-block';
+        }
         document.body.classList.add('tab-mode');
     }
 
@@ -340,6 +343,24 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             // Close the popup window
             window.close();
+        });
+    }
+
+    // Toggle Width Button Click (for tab view)
+    if (toggleWidthButton) {
+        toggleWidthButton.addEventListener('click', () => {
+            const container = document.querySelector('.container');
+            if (!container) return;
+
+            const isExpanded = container.classList.toggle('expanded');
+
+            if (isExpanded) {
+                toggleWidthButton.innerHTML = '🤏 Make page narrower';
+                toggleWidthButton.title = 'Revert to default width.';
+            } else {
+                toggleWidthButton.innerHTML = '↔️ Make page wider';
+                toggleWidthButton.title = 'Expand page width to 90% of the viewport.';
+            }
         });
     }
 
