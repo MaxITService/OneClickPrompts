@@ -106,7 +106,7 @@ button.danger:hover {
     border: 1px solid var(--border-color);
     border-radius: 4px;
     background: #ffffff;
-    cursor: grab;
+    cursor: grab; 
     position: relative;
     /* Set initial scale to 1 and enable a smooth transition */
     transform: scale(1);
@@ -114,6 +114,18 @@ button.danger:hover {
     will-change: transform, opacity;
     backface-visibility: hidden;
     perspective: 1000px;
+}
+
+/*
+ * Override the parent's 'grab' cursor for interactive children.
+ * This ensures that users see the correct cursor (e.g., text, pointer)
+ * over elements they can interact with, improving the UI's affordance.
+ */
+.button-item > input,
+.button-item > textarea,
+.button-item > button,
+.button-item > label {
+    cursor: auto;
 }
 
 /* Hover effect for button items */
@@ -145,7 +157,6 @@ button.danger:hover {
 
 /* Visual affordance for dragging custom button items */
 .drag-handle {
-    cursor: grab;
     padding: 0 8px;
     display: flex;
     align-items: center;

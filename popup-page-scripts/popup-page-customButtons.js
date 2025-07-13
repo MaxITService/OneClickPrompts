@@ -24,10 +24,10 @@ function createButtonCardElement(button, index) {
     const buttonItem = document.createElement('div');
     buttonItem.className = 'button-item';
     buttonItem.dataset.index = index;
+    buttonItem.draggable = true; // The entire card is the draggable target.
 
     if (button.separator) {
         buttonItem.classList.add('separator-item');
-        buttonItem.draggable = true; // Separators are draggable as a whole item.
         buttonItem.innerHTML = `
             <div class="separator-line"></div>
             <span class="separator-text">Separator</span>
@@ -35,18 +35,16 @@ function createButtonCardElement(button, index) {
             <button class="delete-button danger">Delete</button>
         `;
     } else {
-        // For regular buttons, only the drag handle is draggable, not the whole card.
+        // The drag handle is now just a visual affordance. The event listeners
+        // determine if a drag should start, based on the click target.
         buttonItem.innerHTML = `
-            <div class="drag-handle" draggable="true">&#9776;</div>
+            <div class="drag-handle">&#9776;</div>
             <input type="text" class="emoji-input" value="${button.icon}">
             <textarea class="text-input" rows="1">${button.text}</textarea>
             <label class="checkbox-row">
                 <input type="checkbox" class="autosend-toggle" ${button.autoSend ? 'checked' : ''}>
                 <span>Auto-send</span>
-                ${index < 10
-                ? `<span class="shortcut-indicator">[Ctrl+${index === 9 ? 0 : index + 1}]</span>`
-                : ''
-            }
+                ${index < 10 ? `<span class="shortcut-indicator">[Ctrl+${index === 9 ? 0 : index + 1}]</span>` : ''}
             </label>
             <button class="delete-button danger">Delete</button>
         `;
@@ -148,13 +146,30 @@ async function deleteButton(index) {
 // Drag and Drop Functionality
 // -------------------------
 
+let dragOrigin = null; // Stores the initial target of a mousedown/pointerdown event.
 let isDragging = false;
 let draggedItem = null;
 let lastDragPosition = { x: 0, y: 0 };
 
+/**
+ * Captures the initial element clicked before a potential drag starts.
+ * This is crucial for the veto logic in handleDragStart.
+ * @param {PointerEvent} e
+ */
+function handlePointerDown(e) {
+    dragOrigin = e.target;
+}
+
 function handleDragStart(e) {
-    // Since dragging is now restricted to specific handles or separator items,
-    // we can be sure that if a drag starts, it's intentional.
+    // --- Veto Logic ---
+    // Check if the drag gesture originated inside an interactive element.
+    // If so, prevent the drag from starting to allow normal interaction (e.g., text selection).
+    if (dragOrigin?.closest('input, textarea, button, label')) {
+        e.preventDefault();
+        return;
+    }
+
+    // --- Drag Initialization ---
     const buttonItem = e.target.closest('.button-item');
     if (buttonItem) {
         isDragging = true;
@@ -325,8 +340,11 @@ function handleDrop(e) {
 }
 
 function handleDragEnd(e) {
-    if (!isDragging || !draggedItem) return;
-    finalizeDrag();
+    if (isDragging && draggedItem) {
+        finalizeDrag();
+    }
+    // Always reset the drag origin on drag end.
+    dragOrigin = null;
 }
 
 function finalizeDrag() {
@@ -431,5 +449,9 @@ function textareaSaverAndResizerFunc() {
         });
     });
 }
+
+
+
+
 
 
