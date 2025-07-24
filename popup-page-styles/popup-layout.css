@@ -53,10 +53,19 @@ select:focus {
 /* Specific Input Field Styles                                               */
 /* ------------------------------------------------------------------------- */
 
-/* Emoji input: Narrow input designed for displaying emojis */
+/* Emoji input: Narrow input designed for displaying emojis, now a textarea */
 .emoji-input {
-    width: 40px;
+    /* JS will expand it based on content. */
+    min-width: 40px;
+    max-width: 200px;
     text-align: center;
+    /* Crucial: prevent this element from being squished or grown by its flex sibling */
+    flex-grow: 0;
+    flex-shrink: 0;
+    /* Make it behave like a single-line input */
+    white-space: pre;
+    /* Use pre to respect spaces and prevent wrapping */
+    overflow-wrap: normal;
 }
 
 /* Text input: Flexible input for longer text entries */

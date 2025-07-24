@@ -39,7 +39,7 @@ function createButtonCardElement(button, index) {
         // determine if a drag should start, based on the click target.
         buttonItem.innerHTML = `
             <div class="drag-handle">&#9776;</div>
-            <input type="text" class="emoji-input" value="${button.icon}">
+            <textarea class="emoji-input" rows="1">${button.icon}</textarea>
             <textarea class="text-input" rows="1">${button.text}</textarea>
             <label class="checkbox-row">
                 <input type="checkbox" class="autosend-toggle" ${button.autoSend ? 'checked' : ''}>
@@ -393,20 +393,56 @@ function textareaInputAreaResizerFun(textareaId) {
 }
 
 /**
- * Attaches input listeners to emoji input fields to update button icons.
- * Modified to use debouncedSaveCurrentProfile() for throttled saving.
+ * Resizes a textarea vertically to fit its content.
+ * @param {HTMLTextAreaElement} textarea The textarea to resize.
+ */
+function resizeVerticalTextarea(textarea) {
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+}
+
+/**
+ * Attaches input listeners to emoji textareas for horizontal resizing and data saving.
+ * Crucially, it also triggers a vertical resize on the sibling main text area.
  */
 function attachEmojiInputListeners() {
-    const emojiInputs = buttonCardsList.querySelectorAll('input.emoji-input');
-    emojiInputs.forEach(input => {
-        input.addEventListener('input', () => {
-            const buttonItem = input.closest('.button-item');
+    const emojiInputs = buttonCardsList.querySelectorAll('textarea.emoji-input');
+    emojiInputs.forEach(textarea => {
+        const resizeSelfAndSibling = () => {
+            // --- Horizontal Self-Resizing ---
+            // To accurately measure scrollWidth without flexbox interference,
+            // temporarily set width to a minimal value.
+            textarea.style.width = '1px';
+            // Apply the calculated scrollWidth as the new width.
+            textarea.style.width = `${textarea.scrollWidth}px`;
+
+            // --- Sibling Vertical Resizing ---
+            // This re-triggers the vertical resize on the main textarea,
+            // which now has a different available width due to the emoji input's resize.
+            const buttonItem = textarea.closest('.button-item');
+            if (buttonItem) {
+                const mainTextarea = buttonItem.querySelector('.text-input');
+                resizeVerticalTextarea(mainTextarea);
+            }
+        };
+
+        textarea.addEventListener('input', () => {
+            // Update the corresponding button icon in the data model.
+            const buttonItem = textarea.closest('.button-item');
             const index = parseInt(buttonItem.dataset.index);
-            currentProfile.customButtons[index].icon = input.value;
+            currentProfile.customButtons[index].icon = textarea.value;
             debouncedSaveCurrentProfile();
+
+            // Perform the resize operations.
+            resizeSelfAndSibling();
         });
+
+        // Initial resize on load to account for existing content.
+        resizeSelfAndSibling();
     });
 }
+
 
 /**
  * Attaches listeners to auto-send toggle inputs to update button settings.
@@ -426,32 +462,26 @@ function attachAutoSendToggleListeners() {
 }
 
 /**
- * Automatically resizes textareas based on their content and attaches input listeners.
- * Modified to use debouncedSaveCurrentProfile() for throttled saving.
+ * Automatically resizes textareas based on their content and attaches input listeners for saving.
+ * Uses the resizeVerticalTextarea helper for resizing logic.
  */
 function textareaSaverAndResizerFunc() {
     const textareas = buttonCardsList.querySelectorAll('textarea.text-input');
     textareas.forEach(textarea => {
-        textarea.style.height = 'auto';
-        textarea.style.height = `${textarea.scrollHeight}px`;
+        // Perform an initial resize to fit existing content.
+        resizeVerticalTextarea(textarea);
 
         textarea.addEventListener('input', () => {
-            textarea.style.height = 'auto';
-            textarea.style.height = `${textarea.scrollHeight}px`;
+            // Resize the textarea vertically as the user types.
+            resizeVerticalTextarea(textarea);
 
-            // Update the corresponding button text
+            // Update the corresponding button text in the data model.
             const buttonItem = textarea.closest('.button-item');
             const index = parseInt(buttonItem.dataset.index);
             currentProfile.customButtons[index].text = textarea.value;
 
-            // Use debounced save to throttle saving
+            // Use debounced save to throttle saving.
             debouncedSaveCurrentProfile();
         });
     });
 }
-
-
-
-
-
-

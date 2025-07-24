@@ -155,4 +155,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initial load
     loadSelectors();
+
+    // Make the selectorConfig textarea auto-resizable by reusing the global function
+    if (typeof textareaInputAreaResizerFun === 'function') {
+        textareaInputAreaResizerFun('selectorConfig');
+    } else {
+        console.error('Resizer function not found. Ensure popup-page-customButtons.js is loaded first.');
+    }
 });
