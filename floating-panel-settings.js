@@ -190,7 +190,7 @@ window.MaxExtensionFloatingPanel.loadAvailableProfiles = function () {
         (response) => {
             if (response && response.profiles && Array.isArray(response.profiles)) {
                 this.availableProfiles = response.profiles;
-                console.log('[floating-panel] Available profiles loaded:', this.availableProfiles);
+                logConCgp('[floating-panel] Available profiles loaded:', this.availableProfiles);
                 // After loading profiles, get the current profile.
                 this.getCurrentProfile();
             }
@@ -210,7 +210,7 @@ window.MaxExtensionFloatingPanel.getCurrentProfile = function () {
                 chrome.storage.local.get(['currentProfile'], (result) => {
                     if (result.currentProfile) {
                         this.currentProfileName = result.currentProfile;
-                        console.log('[floating-panel] Current profile:', this.currentProfileName);
+                        logConCgp('[floating-panel] Current profile:', this.currentProfileName);
                         // Update the profile switcher UI.
                         this.createProfileSwitcher();
                     }
@@ -221,7 +221,7 @@ window.MaxExtensionFloatingPanel.getCurrentProfile = function () {
 };
 
 /**
- * Handles switching to a different profile.
+ * Handles switching to a different profile. Unlike standard buttons, Panel is capable of immediately changing buttons on profile change. 
  */
 window.MaxExtensionFloatingPanel.switchToProfile = function (profileName) {
     // Prevent switching to the same profile.
@@ -234,10 +234,12 @@ window.MaxExtensionFloatingPanel.switchToProfile = function (profileName) {
                 return;
             }
             if (response.config) {
-                // The service worker now broadcasts the profile change to all tabs.
-                // The listener in `buttons-init.js` will handle updating the UI.
-                // No need to call refreshButtonsInPanel() here anymore.
-                console.log(`[floating-panel] Successfully switched to profile: ${profileName}`);
+                // The service worker broadcasts the change to other tabs. For this tab,
+                // we update the UI directly for immediate and reliable feedback.
+                this.currentProfileName = profileName; // Update internal state
+                window.globalMaxExtensionConfig = response.config; // Update global config
+                window.MaxExtensionButtonsInit.updateButtonsForProfileChange(); // Trigger UI refresh
+                logConCgp(`[floating-panel] Successfully switched to profile: ${profileName}`);
             }
         }
     );
