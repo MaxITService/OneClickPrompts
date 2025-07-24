@@ -218,11 +218,11 @@ class InjectionTargetsOnWebsite {
                 containers: [
 
 
-                    'form[data-type="unified-composer"] > div.rounded-\\[28px\\]',               
+                    'form[data-type="unified-composer"] > div.rounded-\\[28px\\]',
                     'div.flex.basis-auto.flex-col.shrink.min-\\[510px\\]\\:max-\\[768px\\]\\:mt-\\[25dvh\\]\\!',
-                    'div#conversation-header-actions',              
+                    'div#conversation-header-actions',
                     'div.relative.flex.w-full.items-end.px-3.py-3',
-                    'div.relative.flex.w-full.items-end',    
+                    'div.relative.flex.w-full.items-end',
                     'div.flex.w-full.items-end',
                     'div.flex.w-full.flex-col:has(textarea#prompt-textarea)',
                     'div.flex.w-full.flex-col:has(textarea)',
@@ -304,33 +304,37 @@ class InjectionTargetsOnWebsite {
                 buttonsContainerId: 'deepseek-custom-buttons-container'
             },
             AIStudio: {
-    containers: [
-        'div.prompt-input-wrapper',
-        'div.prompt-input-wrapper-container',
-        'section.text-and-attachments-wrapper',
-        'section.chunk-editor-main',
-        'footer',
-        'ms-chunk-editor-menu',
-        'body > app-root > div > div > div.layout-wrapper > div > span > ms-prompt-switcher > ms-chunk-editor > section > footer'
-    ],
-    sendButtons: [
-        'button.run-button[type="submit"]',
-        'button[aria-label="Run"]',
-        'run-button button[type="submit"]',
-        'button.run-button',
-        'footer > div.input-wrapper > div:nth-child(3) > run-button > button'
-    ],
-    editors: [
-        'textarea.textarea.gmat-body-medium[aria-label="Type something or pick one from prompt gallery"]',
-        'textarea.textarea.gmat-body-medium[aria-label="Type something"]',
-        'ms-autosize-textarea textarea.textarea.gmat-body-medium',
-        'ms-autosize-textarea.empty textarea.textarea',
-        'ms-autosize-textarea textarea[aria-label="User text input"]',
-        'textarea.textarea.gmat-body-medium[aria-label="Type something"]',
-        'footer > div.input-wrapper > div.text-wrapper > ms-chunk-input > section > ms-text-chunk > ms-autosize-textarea'
-    ],
-    buttonsContainerId: 'aistudio-custom-buttons-container'
-},
+                containers: [
+                    'div.prompt-input-wrapper',
+                    'div.prompt-input-wrapper-container',
+                    'section.text-and-attachments-wrapper',
+                    'section.chunk-editor-main',
+                    'footer',
+                    'ms-chunk-editor-menu',
+                    'body > app-root > div > div > div.layout-wrapper > div > span > ms-prompt-switcher > ms-chunk-editor > section > footer'
+                ],
+                sendButtons: [
+                    'button.run-button[type="submit"]',
+                    'button[aria-label="Run"]',
+                    'run-button button[type="submit"]',
+                    'button.run-button',
+                    'footer > div.input-wrapper > div:nth-child(3) > run-button > button'
+                ],
+                editors: [
+                    // 1. Most specific and accurate for the new HTML
+                    'textarea[aria-label="Type something or tab to choose an example prompt"]',
+
+                    // 2. More flexible: looks for an aria-label that *contains* "Type something"
+                    'textarea[aria-label*="Type something"]',
+
+                    // 3. Relies on the parent component, which is often stable
+                    'ms-autosize-textarea textarea',
+
+                    // 4. A combination of structure and the new class name
+                    'ms-autosize-textarea textarea.v3-font-body'
+                ],
+                buttonsContainerId: 'aistudio-custom-buttons-container'
+            },
             Grok: {
                 // Updated selectors for new Grok UI (April 2025)
                 // Container: the chat form (unique structure)
@@ -354,22 +358,22 @@ class InjectionTargetsOnWebsite {
                 ],
                 buttonsContainerId: 'grok-custom-buttons-container'
             },
-            Gemini: { 
-                 containers: [
+            Gemini: {
+                containers: [
                     'chat-window input-container', // The main container holding input and disclaimer
                     'input-container', // maybe herre?
                     'main' // Fallback if input-container structure changes significantly
-                 ],
-                 sendButtons: [
-                     'button.send-button[aria-label="Send message"]', // Primary send button
-                     'button[aria-label="Send message"][aria-disabled="false"]' // Explicitly enabled state
-                 ],
-                 editors: [
-                     'div.ql-editor[contenteditable="true"]', // Quill editor div
-                     'rich-textarea div.ql-editor' // More specific path
-                 ],
-                 buttonsContainerId: 'gemini-custom-buttons-container' // Unique ID
-             }
+                ],
+                sendButtons: [
+                    'button.send-button[aria-label="Send message"]', // Primary send button
+                    'button[aria-label="Send message"][aria-disabled="false"]' // Explicitly enabled state
+                ],
+                editors: [
+                    'div.ql-editor[contenteditable="true"]', // Quill editor div
+                    'rich-textarea div.ql-editor' // More specific path
+                ],
+                buttonsContainerId: 'gemini-custom-buttons-container' // Unique ID
+            }
             // TODO: Add selectors for other supported websites
         };
         return selectors[site] || {};
