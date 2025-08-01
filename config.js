@@ -599,7 +599,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         enabled: false,
                         autosendCopy: false,
                         autosendPaste: false,
-                        placement: 'after', // 'before' or 'after'
+                        placement: 'before', // 'before' or 'after'
                     };
                     const settings = result.crossChatModuleSettings || defaultSettings;
                     logConfigurationRelatedStuff('Retrieved Cross-Chat module settings:', settings);
