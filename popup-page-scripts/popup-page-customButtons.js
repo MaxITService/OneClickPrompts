@@ -407,39 +407,107 @@ function resizeVerticalTextarea(textarea) {
  * Crucially, it also triggers a vertical resize on the sibling main text area.
  */
 function attachEmojiInputListeners() {
-    const emojiInputs = buttonCardsList.querySelectorAll('textarea.emoji-input');
-    emojiInputs.forEach(textarea => {
-        const resizeSelfAndSibling = () => {
-            // --- Horizontal Self-Resizing ---
-            // To accurately measure scrollWidth without flexbox interference,
-            // temporarily set width to a minimal value.
-            textarea.style.width = '1px';
-            // Apply the calculated scrollWidth as the new width.
-            textarea.style.width = `${textarea.scrollWidth}px`;
+    // Select both: the "Add new button" single-line input (#buttonIcon) and per-item emoji textareas
+    const allEmojiInputs = document.querySelectorAll('#buttonIcon, #buttonCardsList textarea.emoji-input');
 
-            // --- Sibling Vertical Resizing ---
-            // This re-triggers the vertical resize on the main textarea,
-            // which now has a different available width due to the emoji input's resize.
-            const buttonItem = textarea.closest('.button-item');
+    allEmojiInputs.forEach((inputElement) => {
+        // Normalize styles for correct measuring and UX
+        inputElement.style.overflowX = 'hidden';
+        inputElement.style.whiteSpace = 'nowrap';
+
+        const resizeSelf = () => {
+            // Horizontal resize with small buffer and center-align until threshold
+            inputElement.style.width = '1px';
+            const bufferPx = 6;
+            const desired = inputElement.scrollWidth + bufferPx;
+
+            // Respect CSS max-width if present
+            const computed = getComputedStyle(inputElement);
+            const maxW = computed.maxWidth;
+            let finalWidth = desired;
+            if (maxW && maxW !== 'none') {
+                const maxNum = parseFloat(maxW);
+                if (!Number.isNaN(maxNum)) {
+                    finalWidth = Math.min(desired, maxNum);
+                }
+            } else {
+                // Provide a reasonable cap for plain inputs if no CSS max-width is set
+                finalWidth = Math.min(desired, 200);
+            }
+
+            inputElement.style.width = `${finalWidth}px`;
+            const centerUntilPx = 100;
+            inputElement.style.textAlign = finalWidth <= centerUntilPx ? 'center' : 'left';
+
+            // Optional vertical resize of neighbor textarea when inside a card
+            const buttonItem = inputElement.closest('.button-item');
             if (buttonItem) {
                 const mainTextarea = buttonItem.querySelector('.text-input');
                 resizeVerticalTextarea(mainTextarea);
             }
         };
 
-        textarea.addEventListener('input', () => {
-            // Update the corresponding button icon in the data model.
-            const buttonItem = textarea.closest('.button-item');
-            const index = parseInt(buttonItem.dataset.index);
-            currentProfile.customButtons[index].icon = textarea.value;
-            debouncedSaveCurrentProfile();
+        // Manual autoscroll while selecting without showing scrollbars
+        let selecting = false;
+        let autoScrollRAF = null;
+        let lastMouseX = 0;
 
-            // Perform the resize operations.
-            resizeSelfAndSibling();
+        const autoScrollWhileSelecting = () => {
+            if (!selecting) return;
+            const rect = inputElement.getBoundingClientRect();
+            const threshold = 12;
+            const speed = 12;
+
+            if (lastMouseX > rect.right - threshold) {
+                inputElement.scrollLeft += speed;
+            } else if (lastMouseX < rect.left + threshold) {
+                inputElement.scrollLeft -= speed;
+            }
+            autoScrollRAF = requestAnimationFrame(autoScrollWhileSelecting);
+        };
+
+        inputElement.addEventListener('mousedown', (e) => {
+            selecting = true;
+            lastMouseX = e.clientX;
+            if (autoScrollRAF) cancelAnimationFrame(autoScrollRAF);
+            autoScrollRAF = requestAnimationFrame(autoScrollWhileSelecting);
+        });
+        inputElement.addEventListener('mousemove', (e) => {
+            if (!selecting) return;
+            lastMouseX = e.clientX;
+        });
+        const endSelection = () => {
+            selecting = false;
+            if (autoScrollRAF) {
+                cancelAnimationFrame(autoScrollRAF);
+                autoScrollRAF = null;
+            }
+        };
+        inputElement.addEventListener('mouseup', endSelection);
+        inputElement.addEventListener('mouseleave', endSelection);
+        document.addEventListener('mouseup', endSelection, { once: true });
+
+        inputElement.addEventListener('input', () => {
+            // Persist only when editing within a card
+            const buttonItem = inputElement.closest('.button-item');
+            if (buttonItem) {
+                const index = parseInt(buttonItem.dataset.index);
+                currentProfile.customButtons[index].icon = inputElement.value;
+                debouncedSaveCurrentProfile();
+            }
+            resizeSelf();
         });
 
-        // Initial resize on load to account for existing content.
-        resizeSelfAndSibling();
+        inputElement.addEventListener('blur', () => {
+            inputElement.scrollLeft = 0;
+        });
+
+        inputElement.addEventListener('change', () => {
+            inputElement.scrollLeft = 0;
+        });
+
+        // Initial sizing
+        resizeSelf();
     });
 }
 
