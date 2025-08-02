@@ -1,9 +1,18 @@
-// Version: 1.1
-// Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS. This one too!
-// This service worker does all Config stuff with sync storage, it handles storage exclusively, other files request data from it and don't care how it is stored.
-// There is also welcome page handling, it opens a welcome page on install, has to be there cause it's service worker.
+// config.js
+/*
+Version: 1.1
+Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS. This one too!
+
+Service worker responsibilities (current):
+- Single entry point for extension messaging (onMessage) and lifecycle (install/activate).
+- Owns profile storage and related handlers (getConfig/saveConfig/switchProfile/etc.).
+- Delegates non‑profile storage (theme, custom selectors, floating panel, cross‑chat) to modules/state-store.js.
+- Opens the welcome page on fresh install and runs migration checks.
+*/
 'use strict';
 import './context-menu.js';
+import './modules/state-store.js'; // state-store module (non-profile state)
+import { StateStore } from './modules/state-store.js';
 // Dependencies: default-config.json
 
 // Ensure the service worker is registered
@@ -420,9 +429,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case 'getTheme':
             (async () => {
                 try {
-                    const result = await chrome.storage.local.get(['darkTheme']);
-                    // Default to 'light' if not set
-                    const theme = result.darkTheme ? result.darkTheme : 'light';
+                    const theme = await StateStore.getUiTheme();
                     logConfigurationRelatedStuff('Retrieved theme preference: ' + theme);
                     sendResponse({ darkTheme: theme });
                 } catch (error) {
@@ -434,7 +441,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case 'setTheme':
             (async () => {
                 try {
-                    await chrome.storage.local.set({ darkTheme: request.darkTheme });
+                    await StateStore.setUiTheme(request.darkTheme);
                     logConfigurationRelatedStuff('Set theme preference to: ' + request.darkTheme);
                     sendResponse({ success: true });
                 } catch (error) {
@@ -447,10 +454,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case 'getCustomSelectors':
             (async () => {
                 try {
-                    const result = await chrome.storage.local.get(['customSelectors']);
-                    const customSelectors = result.customSelectors || {};
+                    const selectors = await StateStore.getCustomSelectors(request.site);
                     logConfigurationRelatedStuff('Retrieved custom selectors for: ' + request.site);
-                    sendResponse({ selectors: customSelectors[request.site] || null });
+                    sendResponse({ selectors: selectors || null });
                 } catch (error) {
                     handleStorageError(error);
                     sendResponse({ error: error.message });
@@ -460,18 +466,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case 'saveCustomSelectors':
             (async () => {
                 try {
-                    const result = await chrome.storage.local.get(['customSelectors']);
-                    const customSelectors = result.customSelectors || {};
-
-                    if (request.selectors) {
-                        customSelectors[request.site] = request.selectors;
-                        logConfigurationRelatedStuff('Saved custom selectors for: ' + request.site);
-                    } else {
-                        delete customSelectors[request.site];
-                        logConfigurationRelatedStuff('Removed custom selectors for: ' + request.site);
-                    }
-
-                    await chrome.storage.local.set({ customSelectors });
+                    await StateStore.saveCustomSelectors(request.site, request.selectors);
+                    logConfigurationRelatedStuff((request.selectors ? 'Saved' : 'Removed') + ' custom selectors for: ' + request.site);
                     sendResponse({ success: true });
                 } catch (error) {
                     handleStorageError(error);
@@ -480,112 +476,100 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             })();
             return true;
         case 'resetAdvancedSelectors':
-            clearAdvancedSelectors().then(result => {
-                sendResponse({ success: result });
-                logConfigurationRelatedStuff('Reset advanced selectors');
-            }).catch(error => {
-                handleStorageError(error);
-                sendResponse({ error: error.message });
-            });
+            (async () => {
+                try {
+                    const count = await StateStore.resetAdvancedSelectors(request.site);
+                    sendResponse({ success: true, count });
+                    logConfigurationRelatedStuff('Reset advanced selectors');
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
             return true;
         // ----- End Custom Selectors Cases -----
 
         // ----- Floating Panel Settings Cases -----
         case 'getFloatingPanelSettings':
-            if (!request.hostname) {
-                sendResponse({ error: 'Hostname is required' });
-                return true;
-            }
-
-            const floatingPanelKey = 'floating_panel_' + request.hostname;
-            chrome.storage.local.get([floatingPanelKey], result => {
-                if (result && result[floatingPanelKey]) {
-                    sendResponse({ settings: result[floatingPanelKey] });
-                    logConfigurationRelatedStuff(`Retrieved floating panel settings for ${request.hostname}`);
-                } else {
-                    sendResponse({ settings: null });
-                    logConfigurationRelatedStuff(`No saved floating panel settings for ${request.hostname}`);
+            (async () => {
+                if (!request.hostname) {
+                    sendResponse({ error: 'Hostname is required' });
+                    return;
                 }
-            });
+                try {
+                    const settings = await StateStore.getFloatingPanelSettings(request.hostname);
+                    if (settings) {
+                        logConfigurationRelatedStuff(`Retrieved floating panel settings for ${request.hostname}`);
+                        sendResponse({ settings });
+                    } else {
+                        logConfigurationRelatedStuff(`No saved floating panel settings for ${request.hostname}`);
+                        sendResponse({ settings: null });
+                    }
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
             return true;
 
         case 'saveFloatingPanelSettings':
-            if (!request.hostname || !request.settings) {
-                sendResponse({ error: 'Hostname and settings are required' });
-                return true;
-            }
-
-            const saveKey = 'floating_panel_' + request.hostname;
-            const saveData = {};
-            saveData[saveKey] = request.settings;
-
-            chrome.storage.local.set(saveData, () => {
-                if (chrome.runtime.lastError) {
-                    handleStorageError(chrome.runtime.lastError);
-                    sendResponse({ success: false, error: chrome.runtime.lastError.message });
-                } else {
-                    sendResponse({ success: true });
-                    logConfigurationRelatedStuff(`Saved floating panel settings for ${request.hostname}`);
+            (async () => {
+                if (!request.hostname || !request.settings) {
+                    sendResponse({ error: 'Hostname and settings are required' });
+                    return;
                 }
-            });
+                try {
+                    await StateStore.saveFloatingPanelSettings(request.hostname, request.settings);
+                    logConfigurationRelatedStuff(`Saved floating panel settings for ${request.hostname}`);
+                    sendResponse({ success: true });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ success: false, error: error.message });
+                }
+            })();
             return true;
 
         case 'resetFloatingPanelSettings':
-            chrome.storage.local.get(null, result => {
-                const floatingPanelKeys = Object.keys(result).filter(key =>
-                    key.startsWith('floating_panel_')
-                );
-
-                if (floatingPanelKeys.length === 0) {
-                    sendResponse({ success: true, count: 0 });
-                    logConfigurationRelatedStuff('No floating panel settings found to reset');
-                    return;
+            (async () => {
+                try {
+                    const count = await StateStore.resetFloatingPanelSettings();
+                    sendResponse({ success: true, count });
+                    logConfigurationRelatedStuff(`Reset ${count} floating panel settings`);
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ success: false, error: error.message });
                 }
-
-                chrome.storage.local.remove(floatingPanelKeys, () => {
-                    if (chrome.runtime.lastError) {
-                        handleStorageError(chrome.runtime.lastError);
-                        sendResponse({ success: false, error: chrome.runtime.lastError.message });
-                    } else {
-                        sendResponse({ success: true, count: floatingPanelKeys.length });
-                        logConfigurationRelatedStuff(`Reset ${floatingPanelKeys.length} floating panel settings`);
-                    }
-                });
-            });
+            })();
             return true;
 
         case 'getFloatingPanelHostnames':
-            chrome.storage.local.get(null, result => {
-                if (chrome.runtime.lastError) {
-                    handleStorageError(chrome.runtime.lastError);
-                    sendResponse({ success: false, error: chrome.runtime.lastError.message });
-                    return;
+            (async () => {
+                try {
+                    const hostnames = await StateStore.listFloatingPanelHostnames();
+                    sendResponse({ success: true, hostnames });
+                    logConfigurationRelatedStuff(`Found ${hostnames.length} hostnames with floating panel settings.`);
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ success: false, error: error.message });
                 }
-                const hostnames = Object.keys(result)
-                    .filter(key => key.startsWith('floating_panel_'))
-                    .map(key => key.replace('floating_panel_', ''));
-
-                sendResponse({ success: true, hostnames: hostnames });
-                logConfigurationRelatedStuff(`Found ${hostnames.length} hostnames with floating panel settings.`);
-            });
+            })();
             return true;
 
         case 'resetFloatingPanelSettingsForHostname':
-            if (!request.hostname) {
-                sendResponse({ error: 'Hostname is required' });
-                return true;
-            }
-
-            const keyToRemove = 'floating_panel_' + request.hostname;
-            chrome.storage.local.remove(keyToRemove, () => {
-                if (chrome.runtime.lastError) {
-                    handleStorageError(chrome.runtime.lastError);
-                    sendResponse({ success: false, error: chrome.runtime.lastError.message });
-                } else {
+            (async () => {
+                if (!request.hostname) {
+                    sendResponse({ error: 'Hostname is required' });
+                    return;
+                }
+                try {
+                    await StateStore.resetFloatingPanelSettingsForHostname(request.hostname);
                     sendResponse({ success: true });
                     logConfigurationRelatedStuff(`Reset floating panel settings for ${request.hostname}`);
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ success: false, error: error.message });
                 }
-            });
+            })();
             return true;
         // ----- End Floating Panel Settings Cases -----
 
@@ -594,16 +578,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case 'getCrossChatModuleSettings':
             (async () => {
                 try {
-                    const result = await chrome.storage.local.get(['crossChatModuleSettings']);
-                    const defaultSettings = {
-                        enabled: false,
-                        autosendCopy: false,
-                        autosendPaste: false,
-                        placement: 'before', // 'before' or 'after'
-                    };
-                    const settings = result.crossChatModuleSettings || defaultSettings;
-                    logConfigurationRelatedStuff('Retrieved Cross-Chat module settings:', settings);
-                    sendResponse({ settings });
+                    const cc = await StateStore.getCrossChat();
+                    logConfigurationRelatedStuff('Retrieved Cross-Chat module settings:', cc.settings);
+                    sendResponse({ settings: cc.settings });
                 } catch (error) {
                     handleStorageError(error);
                     sendResponse({ error: error.message });
@@ -614,7 +591,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case 'saveCrossChatModuleSettings':
             (async () => {
                 try {
-                    await chrome.storage.local.set({ crossChatModuleSettings: request.settings });
+                    await StateStore.saveCrossChat(request.settings);
                     logConfigurationRelatedStuff('Saved Cross-Chat module settings:', request.settings);
                     sendResponse({ success: true });
                 } catch (error) {
@@ -629,7 +606,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case 'saveStoredPrompt':
             (async () => {
                 try {
-                    await chrome.storage.local.set({ crossChatStoredPrompt: request.promptText });
+                    await StateStore.saveStoredPrompt(request.promptText);
                     logConfigurationRelatedStuff('Saved cross-chat prompt.');
                     sendResponse({ success: true });
                 } catch (error) {
@@ -644,8 +621,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case 'getStoredPrompt':
             (async () => {
                 try {
-                    const result = await chrome.storage.local.get(['crossChatStoredPrompt']);
-                    const promptText = result.crossChatStoredPrompt || '';
+                    const promptText = await StateStore.getStoredPrompt();
                     logConfigurationRelatedStuff('Retrieved cross-chat prompt.');
                     sendResponse({ promptText });
                 } catch (error) {
@@ -658,7 +634,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case 'clearStoredPrompt':
             (async () => {
                 try {
-                    await chrome.storage.local.remove('crossChatStoredPrompt');
+                    await StateStore.clearStoredPrompt();
                     logConfigurationRelatedStuff('Cleared cross-chat prompt.');
                     sendResponse({ success: true });
                 } catch (error) {
