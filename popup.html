@@ -253,6 +253,55 @@
         </div>
       </section>
 
+      <!-- Backup Section -->
+      <section class="section" id="backupSection">
+        <h2>Backup &amp; Restore</h2>
+        <div class="row">
+          <button
+            id="exportProfile"
+            title="Download the current profile's settings as a JSON backup file. You can then import this file to another computer or restore in case of data loss."
+          >
+            Export Profile
+          </button>
+          <button
+            id="importProfile"
+            title="Import a profile's settings from a JSON backup file."
+          >
+            Import Profile
+          </button>
+          <!-- Hidden file input for importing profile -->
+          <input
+            type="file"
+            id="importFileInput"
+            accept="application/json"
+            style="display: none"
+            title="Import profile file"
+            aria-label="Import profile file"
+          />
+        </div>
+        <!-- Confirmation Div -->
+        <div id="confirmationDiv" class="confirmation" style="display: none">
+          <p>
+            File loaded successfully, but a profile with the same name already
+            exists in the system. Do you want to overwrite the existing profile?
+          </p>
+          <button id="confirmOverwrite">Yes</button>
+          <button id="cancelOverwrite">No</button>
+        </div>
+        <!-- Error Message Div -->
+        <div id="errorDiv" class="error" style="display: none">
+          <p>
+            Error loading file. Please ensure the file is a valid JSON profile.
+          </p>
+        </div>
+      </section>
+
+      <!-- Console -->
+      <section class="section">
+        <h2>Console</h2>
+        <div id="console" class="console"></div>
+      </section>
+
       <!-- ===== Modules Section ===== -->
       <!-- This is a top-level collapsible container. The .collapsible class enables the expand/collapse behavior via popup-page-collapsible.js -->
       <section class="section collapsible" id="modulesSection">
@@ -436,9 +485,11 @@
               accordance with the website's Terms of Service.
             </li>
             <li>
-              <strong>Cross-Chat Prompt Sharing:</strong> A new module that
-              lets you copy (adds button 📋) a prompt from one AI chat and paste it (📥) into
-              another. Just as usual buttons, allows autosend. Does not uses clipboard. A Enable it in the "Modules" section above to get started.
+              <strong>Cross-Chat Prompt Sharing:</strong> A new module that lets
+              you copy (adds button 📋) a prompt from one AI chat and paste it
+              (📥) into another. Just as usual buttons, allows autosend. Does
+              not uses clipboard. A Enable it in the "Modules" section above to
+              get started.
             </li>
             <li>In case of a problem: first step is to reload your browser.</li>
             <li>
@@ -500,55 +551,6 @@
               >
             </li>
           </ul>
-        </div>
-      </section>
-
-      <!-- Console -->
-      <section class="section">
-        <h2>Console</h2>
-        <div id="console" class="console"></div>
-      </section>
-
-      <!-- Backup Section -->
-      <section class="section" id="backupSection">
-        <h2>Backup &amp; Restore</h2>
-        <div class="row">
-          <button
-            id="exportProfile"
-            title="Download the current profile's settings as a JSON backup file. You can then import this file to another computer or restore in case of data loss."
-          >
-            Export Profile
-          </button>
-          <button
-            id="importProfile"
-            title="Import a profile's settings from a JSON backup file."
-          >
-            Import Profile
-          </button>
-          <!-- Hidden file input for importing profile -->
-          <input
-            type="file"
-            id="importFileInput"
-            accept="application/json"
-            style="display: none"
-            title="Import profile file"
-            aria-label="Import profile file"
-          />
-        </div>
-        <!-- Confirmation Div -->
-        <div id="confirmationDiv" class="confirmation" style="display: none">
-          <p>
-            File loaded successfully, but a profile with the same name already
-            exists in the system. Do you want to overwrite the existing profile?
-          </p>
-          <button id="confirmOverwrite">Yes</button>
-          <button id="cancelOverwrite">No</button>
-        </div>
-        <!-- Error Message Div -->
-        <div id="errorDiv" class="error" style="display: none">
-          <p>
-            Error loading file. Please ensure the file is a valid JSON profile.
-          </p>
         </div>
       </section>
 
