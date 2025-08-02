@@ -183,6 +183,76 @@
         </div>
       </section>
 
+      <!-- ===== Settings  ===== -->
+      <section class="section">
+        <h2>Settings</h2>
+        <div class="row">
+          <label
+            class="checkbox-row"
+            for="autoSendToggle"
+            title="Global setting for this profile. If unchecked, no buttons will auto-send, overriding individual button settings."
+          >
+            <input type="checkbox" id="autoSendToggle" />
+            <span
+              >Enable Global Auto-send for profile. Disabling will disable
+              auto-send everywhere.</span
+            >
+          </label>
+        </div>
+        <div class="row">
+          <label
+            class="checkbox-row"
+            for="shortcutsToggle"
+            title="Enable or disable keyboard shortcuts (Alt+1 through Alt+0) for the first 10 buttons in this profile, so you can press keyboard instead of clicking them. If disabled, you can still click buttons with mouse."
+          >
+            <input type="checkbox" id="shortcutsToggle" />
+            <span>Enable Keyboard Shortcuts</span>
+          </label>
+        </div>
+        <div class="row">
+          <button
+            id="revertDefault"
+            class="danger"
+            title="Reset all buttons and settings in the current profile back to the extension's defaults."
+          >
+            Revert Current Profile to Default
+          </button>
+        </div>
+        <!-- Floating Window Settings -->
+        <div class="collapsible" id="floatingWindowSettingsSection">
+          <div class="section-header">
+            <h2>
+              Floating Window Settings
+              <span class="expand-text">(click to expand)</span>
+            </h2>
+            <span class="toggle-icon">▶</span>
+          </div>
+          <div class="section-content">
+            <div class="text-inside-container">
+              <p>
+                Reset the position, size, and visibility of the floating panel.
+                This can fix issues if the panel becomes stuck or invisible.
+              </p>
+            </div>
+            <div id="floatingWindowSitesList" class="floating-sites-list">
+              <!-- Site-specific reset buttons will be added here dynamically -->
+              <p class="empty-message" style="display: none">
+                No saved settings found for any website.
+              </p>
+            </div>
+            <div class="row" style="margin-top: 16px">
+              <button
+                id="resetAllFloatingWindowSettings"
+                class="danger"
+                title="Reset floating window settings for ALL websites."
+              >
+                Reset settings for all websites
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- ===== Modules Section ===== -->
       <!-- This is a top-level collapsible container. The .collapsible class enables the expand/collapse behavior via popup-page-collapsible.js -->
       <section class="section collapsible" id="modulesSection">
@@ -430,76 +500,6 @@
               >
             </li>
           </ul>
-        </div>
-      </section>
-
-      <!-- Settings -->
-      <section class="section">
-        <h2>Settings</h2>
-        <div class="row">
-          <label
-            class="checkbox-row"
-            for="autoSendToggle"
-            title="Global setting for this profile. If unchecked, no buttons will auto-send, overriding individual button settings."
-          >
-            <input type="checkbox" id="autoSendToggle" />
-            <span
-              >Enable Global Auto-send for profile. Disabling will disable
-              auto-send everywhere.</span
-            >
-          </label>
-        </div>
-        <div class="row">
-          <label
-            class="checkbox-row"
-            for="shortcutsToggle"
-            title="Enable or disable keyboard shortcuts (Alt+1 through Alt+0) for the first 10 buttons in this profile, so you can press keyboard instead of clicking them. If disabled, you can still click buttons with mouse."
-          >
-            <input type="checkbox" id="shortcutsToggle" />
-            <span>Enable Keyboard Shortcuts</span>
-          </label>
-        </div>
-        <div class="row">
-          <button
-            id="revertDefault"
-            class="danger"
-            title="Reset all buttons and settings in the current profile back to the extension's defaults."
-          >
-            Revert Current Profile to Default
-          </button>
-        </div>
-        <!-- Floating Window Settings -->
-        <div class="collapsible" id="floatingWindowSettingsSection">
-          <div class="section-header">
-            <h2>
-              Floating Window Settings
-              <span class="expand-text">(click to expand)</span>
-            </h2>
-            <span class="toggle-icon">▶</span>
-          </div>
-          <div class="section-content">
-            <div class="text-inside-container">
-              <p>
-                Reset the position, size, and visibility of the floating panel.
-                This can fix issues if the panel becomes stuck or invisible.
-              </p>
-            </div>
-            <div id="floatingWindowSitesList" class="floating-sites-list">
-              <!-- Site-specific reset buttons will be added here dynamically -->
-              <p class="empty-message" style="display: none">
-                No saved settings found for any website.
-              </p>
-            </div>
-            <div class="row" style="margin-top: 16px">
-              <button
-                id="resetAllFloatingWindowSettings"
-                class="danger"
-                title="Reset floating window settings for ALL websites."
-              >
-                Reset settings for all websites
-              </button>
-            </div>
-          </div>
         </div>
       </section>
 
