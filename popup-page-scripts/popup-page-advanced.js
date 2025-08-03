@@ -64,6 +64,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectorConfig.value = JSON.stringify(defaultSelectors, null, 2);
                 console.log(`Loaded default selectors for ${site}`);
             }
+
+            // After programmatic value set, resize to content.
+            if (typeof resizeVerticalTextarea === 'function') {
+                // If hidden (collapsed), defer until visible via rAF to let layout settle
+                requestAnimationFrame(() => resizeVerticalTextarea(selectorConfig));
+            }
         } catch (error) {
             console.error('Error loading selectors:', error);
             showToast('Error loading selectors', 'error');
@@ -130,6 +136,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const defaultSelectors = getDefaultSelectorsForSite(websiteSelect.value);
                 selectorConfig.value = JSON.stringify(defaultSelectors, null, 2);
                 showToast('Selectors reset to defaults', 'info');
+
+                // Ensure textarea fits to new content
+                if (typeof resizeVerticalTextarea === 'function') {
+                    requestAnimationFrame(() => resizeVerticalTextarea(selectorConfig));
+                }
             } else {
                 throw new Error('Failed to reset selectors');
             }
@@ -161,5 +172,40 @@ document.addEventListener('DOMContentLoaded', () => {
         textareaInputAreaResizerFun('selectorConfig');
     } else {
         console.error('Resizer function not found. Ensure popup-page-customButtons.js is loaded first.');
+    }
+
+    // Observe Advanced section expand/collapse to handle hidden measurement issues
+    if (advancedSection && selectorConfig) {
+        const onExpanded = () => {
+            // Wait for paint so display: block takes effect, then measure
+            requestAnimationFrame(() => {
+                if (typeof resizeVerticalTextarea === 'function') {
+                    resizeVerticalTextarea(selectorConfig);
+                }
+            });
+        };
+        const onCollapsed = () => {
+            // Drop stale inline height so next expand re-measures from CSS baseline
+            selectorConfig.style.height = 'auto';
+        };
+
+        const mo = new MutationObserver((mutations) => {
+            for (const m of mutations) {
+                if (m.type === 'attributes' && m.attributeName === 'class') {
+                    const isExpanded = advancedSection.classList.contains('expanded');
+                    if (isExpanded) {
+                        onExpanded();
+                    } else {
+                        onCollapsed();
+                    }
+                }
+            }
+        });
+        mo.observe(advancedSection, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    // Also re-fit while user edits (keeps parity with button card logic)
+    if (selectorConfig && typeof resizeVerticalTextarea === 'function') {
+        selectorConfig.addEventListener('input', () => resizeVerticalTextarea(selectorConfig));
     }
 });
