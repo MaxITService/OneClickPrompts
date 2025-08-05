@@ -18,7 +18,19 @@ const toastContainer = document.getElementById('toastContainer');
  */
 function showToast(message, type = 'info', duration = 3000) {
     const toast = document.createElement('div');
-    toast.classList.add('toast', type);
+    toast.classList.add('toast');
+
+    // Map legacy types to new, specific classes
+    const typeClassMap = {
+        success: 'toast-success',
+        error: 'toast-error',
+        info: 'toast-info'
+    };
+
+    if (type && typeClassMap[type]) {
+        toast.classList.add(typeClassMap[type]);
+    }
+
     toast.textContent = message;
 
     toastContainer.appendChild(toast);

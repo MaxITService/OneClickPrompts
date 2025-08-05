@@ -72,8 +72,8 @@ body.dark-theme button.danger:hover {
 /* ------------------------------------------------------------------------- */
 /* Dark Theme Overrides for Dynamic Prompt Dialogs                           */
 /* ------------------------------------------------------------------------- */
-body.dark-theme .confirmation,
-body.dark-theme .error {
+body.dark-theme .dialog-confirmation,
+body.dark-theme .dialog-error {
     background-color: #333;
     /* Dark background for dialogs */
     color: #fff;
@@ -87,8 +87,8 @@ body.dark-theme .error {
     /* Rounded corners */
 }
 
-body.dark-theme .confirmation button,
-body.dark-theme .error button {
+body.dark-theme .dialog-confirmation button,
+body.dark-theme .dialog-error button {
     background-color: #444;
     /* Dark button background */
     color: #fff;
@@ -103,8 +103,8 @@ body.dark-theme .error button {
 }
 
 /* Button hover states for dialogs */
-body.dark-theme .confirmation button:hover,
-body.dark-theme .error button:hover {
+body.dark-theme .dialog-confirmation button:hover,
+body.dark-theme .dialog-error button:hover {
     background-color: #555;
     border-color: #777;
 }
@@ -135,7 +135,8 @@ body.dark-theme #importProfile {
 }
 
 /* Dark theme toast styling */
-body.dark-theme .toast:not(.success):not(.error):not(.info) {
+/* In dark mode, apply neutral background to base .toast unless it has one of the explicit type classes */
+body.dark-theme .toast:not(.toast-success):not(.toast-error):not(.toast-info) {
     background: rgba(50, 50, 50, 0.9);
     color: #eee;
 }

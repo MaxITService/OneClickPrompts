@@ -156,7 +156,7 @@ Key areas:
 /* ------------------------------------------------------------------------- */
 /* Confirmation Dialog Styling                                               */
 /* ------------------------------------------------------------------------- */
-.confirmation {
+.dialog-confirmation {
     margin-top: 16px;
     padding: 16px;
     border: 1px solid var(--primary-color);
@@ -165,13 +165,13 @@ Key areas:
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.confirmation p {
+.dialog-confirmation p {
     margin: 0 0 16px 0;
     color: var(--text-color);
     font-size: 14px;
 }
 
-.confirmation button {
+.dialog-confirmation button {
     margin-right: 12px;
     padding: 8px 16px;
     border: none;
@@ -182,19 +182,19 @@ Key areas:
     transition: background-color var(--transition-duration) ease, transform var(--transition-duration) ease;
 }
 
-.confirmation button:hover {
+.dialog-confirmation button:hover {
     background-color: #6a4abd;
     transform: scale(1.02);
 }
 
-.confirmation button:active {
+.dialog-confirmation button:active {
     transform: scale(0.98);
 }
 
 /* ------------------------------------------------------------------------- */
 /* Error Dialog Styling                                                      */
 /* ------------------------------------------------------------------------- */
-.error {
+.dialog-error {
     margin-top: 16px;
     padding: 16px;
     border: 1px solid var(--danger-color);
@@ -203,13 +203,13 @@ Key areas:
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.error p {
+.dialog-error p {
     margin: 0;
     color: var(--danger-color);
     font-size: 14px;
 }
 
-.error button {
+.dialog-error button {
     margin-right: 12px;
     padding: 8px 16px;
     border: none;
@@ -220,12 +220,12 @@ Key areas:
     transition: background-color var(--transition-duration) ease, transform var(--transition-duration) ease;
 }
 
-.error button:hover {
+.dialog-error button:hover {
     background-color: #c9302c;
     transform: scale(1.02);
 }
 
-.error button:active {
+.dialog-error button:active {
     transform: scale(0.98);
 }
 
@@ -258,15 +258,16 @@ Key areas:
     transform: translateY(0);
 }
 
-.toast.success {
+/* New toast type classes */
+.toast-success {
     background: #4BB543;
 }
 
-.toast.error {
+.toast-error {
     background: #FF3333;
 }
 
-.toast.info {
+.toast-info {
     background: #3333FF;
 }
 
