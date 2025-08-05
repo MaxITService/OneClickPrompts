@@ -12,7 +12,6 @@ These rules set up the basic typography, spacing, and color scheme for the inter
 /* Root Variables for Consistent Styling                                   */
 /* ------------------------------------------------------------------------- */
 :root {
-    --primary-color: #7a5cc8; /* Less saturated violet shade for titles and accents */
     --danger-color: #a94442; /* Soft red for danger buttons */
     --border-color: #ccc; /* Light gray for borders */
     --bg-color: #f9f9f9; /* Very light gray for background */
