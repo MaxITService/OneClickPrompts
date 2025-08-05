@@ -135,7 +135,7 @@ body.dark-theme #importProfile {
 }
 
 /* Dark theme toast styling */
-body.dark-theme .toast {
+body.dark-theme .toast:not(.success):not(.error):not(.info) {
     background: rgba(50, 50, 50, 0.9);
     color: #eee;
 }
