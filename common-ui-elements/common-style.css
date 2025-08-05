@@ -1,4 +1,25 @@
-/* Generated css */
+/*
+common-style.css
+Version: 1.0
+
+This file contains shared base styles used across different pages of the extension.
+*/
+
+/* ------------------------------------------------------------------------- */
+/* Root Variables for Consistent Styling                                   */
+/* ------------------------------------------------------------------------- */
 :root {
-  --primary-color: #7a5cc8;
+    --primary-color: #7a5cc8; 
+    --danger-color: #a94442; 
+    --border-color: #ccc;
+    --bg-color: #f9f9f9;
+    --text-color: #333;
+    --separator-color: #bbb;
+    --primary-color-faded: rgba(122, 92, 200, 0.05);
+    --hover-bg-color: #e6e6e6;
+    --transition-duration: 0.3s;
+    --transition-duration-release: 0.4s;
+    --box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    --box-shadow-hover: 0 4px 8px rgba(0,0,0,0.1);
+    --checkbox-size: 18px;  
 }

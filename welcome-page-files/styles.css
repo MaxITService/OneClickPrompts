@@ -1,18 +1,5 @@
 /* CSS Variables Definition */
-:root {
-  --bg-color: #fff;
-  --text-color: #333;
-
-  /* Typography scale (rem-based) */
-  --font-base: 1rem;          /* body text, paragraphs, list items */
-  --font-sm: 0.875rem;        /* small UI text such as switch label */
-  --font-lg: 1.125rem;        /* subheadings or emphasized text */
-  --font-xl: 1.375rem;        /* section titles (h2) */
-  --font-2xl: 1.625rem;       /* main page title (h1) */
-
-  --lh-normal: 1.55;
-  --lh-tight: 1.3;
-}
+/* :root block removed as requested */
 
 /* Base styles for the page */
 body {

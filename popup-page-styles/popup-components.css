@@ -240,14 +240,14 @@ Key areas:
 }
 
 .toast {
-    background: var(--toast-bg-color);
-    color: var(--toast-text-color);
-    padding: var(--toast-padding);
-    border-radius: var(--toast-border-radius);
-    margin-top: var(--toast-margin);
+    background: #222;                 /* neutral base; type classes override */
+    color: #fff;                      /* readable on dark base */
+    padding: 12px 24px;               
+    border-radius: 4px;               
+    margin-top: 8px;                 
     opacity: 0;
     transform: translateY(20px);
-    transition: var(--toast-transition);
+    transition: opacity 0.5s ease, transform 0.5s ease; /* was var(--toast-transition) */
     min-width: 200px;
     max-width: 300px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);

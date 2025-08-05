@@ -8,29 +8,6 @@ container centering, section styling, and heading (h2) styles.
 These rules set up the basic typography, spacing, and color scheme for the interface.
 */
 
-/* ------------------------------------------------------------------------- */
-/* Root Variables for Consistent Styling                                   */
-/* ------------------------------------------------------------------------- */
-:root {
-    --danger-color: #a94442; /* Soft red for danger buttons */
-    --border-color: #ccc; /* Light gray for borders */
-    --bg-color: #f9f9f9; /* Very light gray for background */
-    --text-color: #333; /* Dark gray for primary text */
-    --separator-color: #bbb; /* Medium gray for separators */
-    --primary-color-faded: rgba(122, 92, 200, 0.05);
-    --hover-bg-color: #e6e6e6; /* Light gray on hover */
-    --transition-duration: 0.3s; /* Standard transition duration */
-    --transition-duration-release: 0.4s; /* Slower transition duration for release */
-    --box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    --box-shadow-hover: 0 4px 8px rgba(0,0,0,0.1);
-    --checkbox-size: 18px;
-    --toast-bg-color: rgba(0, 0, 0, 0.8);
-    --toast-text-color: #fff;
-    --toast-padding: 12px 24px;
-    --toast-border-radius: 4px;
-    --toast-margin: 8px;
-    --toast-transition: opacity 0.5s ease, transform 0.5s ease;
-}
 
 /* ------------------------------------------------------------------------- */
 /* Global Body Styles                                                        */
