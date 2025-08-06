@@ -72,8 +72,7 @@ body.dark-theme button.danger:hover {
 /* ------------------------------------------------------------------------- */
 /* Dark Theme Overrides for Dynamic Prompt Dialogs                           */
 /* ------------------------------------------------------------------------- */
-body.dark-theme .dialog-confirmation,
-body.dark-theme .dialog-error {
+body.dark-theme .dialog {
     background-color: #333;
     /* Dark background for dialogs */
     color: #fff;
@@ -87,8 +86,7 @@ body.dark-theme .dialog-error {
     /* Rounded corners */
 }
 
-body.dark-theme .dialog-confirmation button,
-body.dark-theme .dialog-error button {
+body.dark-theme .dialog button {
     background-color: #444;
     /* Dark button background */
     color: #fff;
@@ -103,8 +101,7 @@ body.dark-theme .dialog-error button {
 }
 
 /* Button hover states for dialogs */
-body.dark-theme .dialog-confirmation button:hover,
-body.dark-theme .dialog-error button:hover {
+body.dark-theme .dialog button:hover {
     background-color: #555;
     border-color: #777;
 }
