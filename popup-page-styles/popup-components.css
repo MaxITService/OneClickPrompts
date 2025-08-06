@@ -131,27 +131,8 @@ Key areas:
 /* ------------------------------------------------------------------------- */
 /* Export and Import Buttons                                                 */
 /* ------------------------------------------------------------------------- */
-#exportProfile,
-#importProfile {
-    padding: 8px 16px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    background: #ffffff;
-    color: var(--text-color);
-    cursor: pointer;
-    font-size: 14px;
-    transition: background var(--transition-duration) ease, transform 0.2s ease, color var(--transition-duration) ease;
-}
-
-#exportProfile:hover,
-#importProfile:hover {
-    background: #e6e6e6;
-}
-
-#exportProfile:active,
-#importProfile:active {
-    transform: scale(0.98);
-}
+/* Removed redundant ID-specific styles for #exportProfile and #importProfile
+   to inherit the base button styles from popup-buttons.css */
 
 /* ------------------------------------------------------------------------- */
 /* Confirmation Dialog Styling                                               */
