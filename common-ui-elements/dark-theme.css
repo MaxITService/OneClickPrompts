@@ -106,6 +106,15 @@ body.dark-theme .dialog button:hover {
     border-color: #777;
 }
 
+/* Override for confirmation dialogs in dark theme to enable blinking */
+body.dark-theme .dialog-confirmation {
+    background-color: rgba(154, 121, 211, 0.1);
+    /* Faint primary color */
+    border-color: var(--primary-color);
+    --blink-bg-color: rgba(154, 121, 211, 0.25);
+    /* Brighter faint primary color for blink */
+}
+
 /* ------------------------------------------------------------------------- */
 /* Additional Dark Theme Overrides for Miscellaneous Components                */
 /* ------------------------------------------------------------------------- */

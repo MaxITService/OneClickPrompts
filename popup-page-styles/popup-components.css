@@ -49,6 +49,13 @@ Key areas:
     }
 }
 
+@keyframes blink-background {
+    50% {
+        background-color: var(--blink-bg-color, #d9e9ff);
+        /* A slightly brighter blue for the confirmation blink */
+    }
+}
+
 /* ------------------------------------------------------------------------- */
 /* Console Styling                                                           */
 /* ------------------------------------------------------------------------- */
@@ -174,6 +181,8 @@ Key areas:
 .dialog-confirmation {
     border-color: var(--primary-color);
     background-color: #f0f8ff;
+    --blink-bg-color: #d9e9ff;
+    animation: blink-background 1.5s ease-in-out infinite;
 }
 
 .dialog-confirmation p {
