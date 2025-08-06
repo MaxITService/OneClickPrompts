@@ -173,21 +173,21 @@ body.dark-theme .button-item .shortcut-indicator {
 /* ------------------------------------------------------------------------- */
 /* Dark Theme Overrides for Dragged Button Items                             */
 /* ------------------------------------------------------------------------- */
-/* NEW: Force dragged item to have a green highlight in dark mode */
+/* Dragged item to have a green highlight in dark mode */
 body.dark-theme .button-item.dragging {
     background-color: #2ecc71 !important;
     /* Green highlight for dragged items */
 }
 
 /* ------------------------------------------------------------------------- */
-/* Additional Dark Theme Overrides for Version Container and Links           */
+/* Version Container and Links           */
 /* ------------------------------------------------------------------------- */
 /* Make the versionContainer text light */
 body.dark-theme #versionContainer {
     color: var(--text-color);
 }
 
-/* All links in dark theme should be super light blue */
+/* All links in dark theme super light blue */
 body.dark-theme a {
     color: #add8e6;
 }
