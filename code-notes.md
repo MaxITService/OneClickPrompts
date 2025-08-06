@@ -131,6 +131,13 @@ Read precedence and writes:
 - For per-site selector reset, popup uses saveCustomSelectors(site, null).
 - For global selector reset (if any caller uses it): resetAdvancedSelectors is supported and will clear all or one site accordingly.
 
+## UI Theming and Styles
+
+- Shared vars: ['common-ui-elements/common-style.css'](common-ui-elements/common-style.css) defines root tokens (colors, hover, transitions, shadows, checkbox size). Used by popup and welcome.
+- Dark theme: ['common-ui-elements/dark-theme.css'](common-ui-elements/dark-theme.css) applies on body.dark-theme; adjusts tokens and components (buttons, inputs, sections, links, toasts, dialogs).
+- Dialogs: use .dialog with variants .dialog-confirmation and .dialog-error (see ['popup.html'](popup.html:284)).
+- Toasts: base .toast plus type classes toast-success/error/info from ['popup-page-scripts/popup-page-visuals.js'](popup-page-scripts/popup-page-visuals.js:19). In dark mode, neutral fallback applies only without a type class.
+
 ## Future Adoption (Optional)
 
 - ui.popup.firstOpen/collapsibles/lastOpenedSection are available for a future pass to persist popup section states.
@@ -140,13 +147,14 @@ Read precedence and writes:
 ## Testing Notes
 
 Recommended checks:
-- Theme toggle reads/writes both ui.theme and legacy darkTheme.
-- Cross-Chat module settings and stored prompt round-trip; legacy keys mirrored.
-- Floating panel per-host settings round-trip with legacy mirroring; list and reset functions operate correctly.
-- Custom selectors get/save/reset work; legacy customSelectors mirrored.
-- Profiles remain fully functional and unaffected.
+- Theme toggle, cross-chat, floating panel, custom selectors, and profiles behave as documented.
+- UI theming:
+  - .dialog and variants render correctly in light/dark.
+  - Toasts show base + correct type classes; dark fallback applies when no type.
 
 ## File References
 
 - Service worker: ['config.js'](config.js)
-- Centralized state (non-profile): ['modules/state-store.js'](modules/state-store.js)
+- State: ['modules/state-store.js'](modules/state-store.js)
+- Styles: ['common-ui-elements/common-style.css'](common-ui-elements/common-style.css), ['common-ui-elements/dark-theme.css'](common-ui-elements/dark-theme.css)
+- HTML: ['popup.html'](popup.html), ['welcome.html'](welcome.html)
