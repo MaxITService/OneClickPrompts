@@ -169,7 +169,7 @@ async function loadProfileConfig(profileName) {
 }
 
 // Function to switch to a different profile
-async function switchProfile(profileName) {
+async function switchProfile(profileName, excludeTabId) {
     logConfigurationRelatedStuff(`Switching to profile: ${profileName}`);
     try {
         const profile = await loadProfileConfig(profileName);
@@ -177,8 +177,8 @@ async function switchProfile(profileName) {
             await chrome.storage.local.set({ 'currentProfile': profileName });
             logConfigurationRelatedStuff(`Switched to profile: ${profileName}`);
 
-            // Broadcast profile change to all tabs
-            broadcastProfileChange(profileName, profile);
+            // Broadcast profile change to all tabs except the initiator (if provided)
+            broadcastProfileChange(profileName, profile, excludeTabId);
 
             return profile;
         } else {
@@ -192,30 +192,22 @@ async function switchProfile(profileName) {
 }
 
 // Function to broadcast profile change to all tabs
-async function broadcastProfileChange(profileName, profileData) {
+async function broadcastProfileChange(profileName, profileData, excludeTabId) {
     try {
         const tabs = await chrome.tabs.query({});
         tabs.forEach(tab => {
-            // Only send to URLs that match our content script patterns
-            if (tab.url && (
-                tab.url.includes('chat.openai.com') ||
-                tab.url.includes('grok.x.ai') ||
-                tab.url.includes('claude.ai') ||
-                tab.url.includes('o3') ||
-                tab.url.includes('x.ai')
-            )) {
-                chrome.tabs.sendMessage(tab.id, {
-                    type: 'profileChanged',
-                    profileName: profileName,
-                    config: profileData
-                }).catch(error => {
-                    // Suppress errors when content script is not running on a tab
-                    // This is normal for tabs that don't have our extension active
-                    logConfigurationRelatedStuff(`Could not send message to tab ${tab.id}: ${error.message}`);
-                });
-            }
+            if (excludeTabId && tab.id === excludeTabId) return;
+            // Send broadly; content scripts will ignore if not present. Errors are expected on non‑matched tabs.
+            chrome.tabs.sendMessage(tab.id, {
+                type: 'profileChanged',
+                profileName: profileName,
+                config: profileData
+            }).catch(error => {
+                // Suppress errors when content script is not running on a tab
+                logConfigurationRelatedStuff(`Could not send message to tab ${tab.id}: ${error.message}`);
+            });
         });
-        logConfigurationRelatedStuff(`Broadcasted profile change (${profileName}) to all matching tabs`);
+        logConfigurationRelatedStuff(`Broadcasted profile change (${profileName}) to all tabs`);
     } catch (error) {
         handleStorageError(error);
         logConfigurationRelatedStuff(`Error broadcasting profile change: ${error.message}`);
@@ -364,7 +356,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             });
             return true;
         case 'switchProfile':
-            switchProfile(request.profileName).then(config => {
+            // Identify the sender tab (if any) to avoid echoing a broadcast back immediately.
+            switchProfile(request.profileName, sender?.tab?.id).then(config => {
                 sendResponse({ config });
                 logConfigurationRelatedStuff('Profile switch request processed');
             });
@@ -644,6 +637,34 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             })();
             return true;
         // ===== End Cross-Chat Module Cases =====
+
+        // ===== Inline Profile Selector Cases =====
+        case 'getInlineProfileSelectorSettings':
+            (async () => {
+                try {
+                    const settings = await StateStore.getInlineProfileSelectorSettings();
+                    logConfigurationRelatedStuff('Retrieved Inline Profile Selector settings:', settings);
+                    sendResponse({ settings });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
+            return true;
+
+        case 'saveInlineProfileSelectorSettings':
+            (async () => {
+                try {
+                    await StateStore.saveInlineProfileSelectorSettings(request.settings);
+                    logConfigurationRelatedStuff('Saved Inline Profile Selector settings:', request.settings);
+                    sendResponse({ success: true });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
+            return true;
+        // ===== End Inline Profile Selector Cases =====
 
         default:
             logConfigurationRelatedStuff('Unknown message type received:', request.type);

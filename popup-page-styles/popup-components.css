@@ -314,6 +314,7 @@ Key areas:
     /* Add this line to ensure text is visible */
 }
 
+/* Collapsible content default border (uses global --border-color) */
 .collapsible .section-content {
     display: none;
     padding: 10px;
@@ -321,13 +322,25 @@ Key areas:
     border-radius: 0 0 4px 4px;
 }
 
-/* Ensure crossChatModule content is hidden when collapsed */
+/* Ensure crossChatModule content is removed from layout when collapsed */
 #crossChatModule:not(.expanded) .section-content {
     display: none !important;
+    padding: 0 !important;
+    border: 0 !important;
+    margin: 0 !important;
 }
 
 .collapsible.expanded .section-content {
     display: block;
+}
+
+/* Strong collapse: when a collapsible is not expanded, fully remove the content from layout.
+   This eliminates any visual borders/padding/margins that might otherwise linger. */
+.collapsible:not(.expanded) .section-content {
+    display: none !important;
+    padding: 0 !important;
+    border: 0 !important;
+    margin: 0 !important;
 }
 
 .collapsible.expanded .toggle-icon {
@@ -406,6 +419,23 @@ Key areas:
     /* Add this line to ensure text is visible */
 }
 
+/* Keep nested module containers default; scoped overrides below handle borders cleanly */
+#modulesSection > .section-content > .collapsible .section-content {
+    border: 1px solid var(--border-color);
+    border-radius: 0 0 4px 4px;
+    padding: 10px;
+}
+
+/* Optional: if you want zero border in collapsed state header, comment this out.
+   Keeping header border matches Cross-Chat look. */
+/* #modulesSection > .section-content > .collapsible .subsection-header { border: 0; } */
+
+/* No reset of outer .section chrome here to avoid side effects */
+#modulesSection .collapsible .section-content {
+    border: 1px solid var(--border-color);
+    border-radius: 0 0 4px 4px;
+}
+
 .subsection-header h3 {
     font-size: 15px;
     margin: 0;
@@ -419,6 +449,18 @@ Key areas:
     display: none;
     /* Ensure content is hidden by default */
 }
+
+/* Inline Profile Selector: in collapsed state, content is fully removed (redundant with global rule but explicit).
+   In expanded state, normal styles apply. */
+#inlineProfileSelectorModule:not(.expanded) .section-content {
+    display: none !important;
+    padding: 0 !important;
+    border: 0 !important;
+    margin: 0 !important;
+}
+
+/* If you also see a faint outline from the header, you can optionally remove its border: */
+/* #inlineProfileSelectorModule .subsection-header { border-color: transparent; } */
 
 #advancedHelpSection.expanded .section-content {
     display: block;

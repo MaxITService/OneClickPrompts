@@ -230,7 +230,7 @@ window.MaxExtensionFloatingPanel.switchToProfile = function (profileName) {
         { type: 'switchProfile', profileName: profileName },
         (response) => {
             if (response.error) {
-                console.error(`[floating-panel] Error switching to profile ${profileName}:`, response.error);
+                logConCgp(`[floating-panel] Error switching to profile ${profileName}: ${response.error}`);
                 return;
             }
             if (response.config) {
@@ -238,7 +238,14 @@ window.MaxExtensionFloatingPanel.switchToProfile = function (profileName) {
                 // we update the UI directly for immediate and reliable feedback.
                 this.currentProfileName = profileName; // Update internal state
                 window.globalMaxExtensionConfig = response.config; // Update global config
-                window.MaxExtensionButtonsInit.updateButtonsForProfileChange(); // Trigger UI refresh
+                // Prefer partial refresh to preserve panel state
+                if (typeof window.__OCP_partialRefreshUI === 'function') {
+                    window.__OCP_partialRefreshUI(response.config);
+                } else if (typeof window.__OCP_nukeAndRefresh === 'function') {
+                    window.__OCP_nukeAndRefresh(response.config);
+                } else {
+                    window.MaxExtensionButtonsInit.updateButtonsForProfileChange();
+                }
                 logConCgp(`[floating-panel] Successfully switched to profile: ${profileName}`);
             }
         }

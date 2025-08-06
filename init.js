@@ -32,6 +32,95 @@
 
 'use strict';
 
+// === Global, idempotent message/listener helpers for SPA-safe operation ===
+if (!window.__OCP_messageListenerRegistered_v2) {
+    window.__OCP_messageListenerRegistered_v2 = true;
+
+    // Guard to prevent concurrent nukes
+    window.__OCP_nukeInProgress = false;
+
+    // Lightweight UI refresh that preserves the floating panel state
+    window.__OCP_partialRefreshUI = function(optionalNewConfig) {
+        try {
+            if (optionalNewConfig) {
+                window.globalMaxExtensionConfig = optionalNewConfig;
+            }
+            if (window.MaxExtensionButtonsInit && typeof window.MaxExtensionButtonsInit.updateButtonsForProfileChange === 'function') {
+                window.MaxExtensionButtonsInit.updateButtonsForProfileChange();
+            }
+        } catch (e) {
+            // If anything goes wrong, fallback to full re-init on next call
+            logConCgp('[init] Partial refresh failed; will fallback to full re-init if needed.');
+        }
+    };
+
+    // Expose a single entry to perform partial or full refresh depending on panel presence
+    window.__OCP_nukeAndRefresh = function(optionalNewConfig) {
+        if (window.__OCP_nukeInProgress) return;
+        window.__OCP_nukeInProgress = true;
+        try {
+            const hasPanel = !!(window.MaxExtensionFloatingPanel && window.MaxExtensionFloatingPanel.panelElement);
+
+            if (hasPanel) {
+                // Preserve panel DOM/state; only refresh buttons/inline
+                window.__OCP_partialRefreshUI(optionalNewConfig);
+            } else {
+                // Full re-init path (no panel in DOM)
+                if (optionalNewConfig) {
+                    window.globalMaxExtensionConfig = optionalNewConfig;
+                }
+
+                // 1) Stop resiliency monitors and timers from previous run
+                try {
+                    if (window.OneClickPropmts_currentResiliencyTimeout) {
+                        clearTimeout(window.OneClickPropmts_currentResiliencyTimeout);
+                        window.OneClickPropmts_currentResiliencyTimeout = null;
+                    }
+                    if (window.OneClickPropmts_extendedMonitoringObserver) {
+                        window.OneClickPropmts_extendedMonitoringObserver.disconnect();
+                        window.OneClickPropmts_extendedMonitoringObserver = null;
+                    }
+                } catch (e) {}
+
+                // 2) Remove inline buttons container(s)
+                try {
+                    const containerId = window?.InjectionTargetsOnWebsite?.selectors?.buttonsContainerId;
+                    if (containerId) {
+                        document.querySelectorAll('#' + CSS.escape(containerId)).forEach(node => node.remove());
+                    }
+                } catch (e) {}
+
+                // 3) Do NOT remove the panel here (it is already absent in this branch)
+
+                // 4) Detach keyboard listener to avoid duplicates
+                try { window.removeEventListener('keydown', manageKeyboardShortcutEvents); } catch (e) {}
+
+                // 5) Re-run full initialization
+                publicStaticVoidMain();
+            }
+        } finally {
+            // Allow subsequent nukes after the next tick so re-init can attach first
+            setTimeout(() => { window.__OCP_nukeInProgress = false; }, 0);
+        }
+    };
+
+    // Single runtime message listener for this page
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        if (message && message.type === 'profileChanged') {
+            logConCgp('[init] Received profileChanged. Refreshing UI.');
+            // Prefer partial refresh to preserve panel state
+            if (typeof window.__OCP_partialRefreshUI === 'function') {
+                window.__OCP_partialRefreshUI(message.config);
+            } else {
+                window.__OCP_nukeAndRefresh(message.config);
+            }
+            sendResponse?.({ ok: true });
+            return true;
+        }
+        return false;
+    });
+}
+
 /**
  * Main entry point. Retrieves configuration and then starts the async initialization.
  */
@@ -56,7 +145,19 @@ function publicStaticVoidMain() {
                 logConCgp('[init] Cross-Chat module settings loaded:', window.globalCrossChatConfig);
             }
 
-            commenceExtensionInitialization(mainConfig);
+            // Load Inline Profile Selector global settings next
+            chrome.runtime.sendMessage({ type: 'getInlineProfileSelectorSettings' }, (selectorResponse) => {
+                if (chrome.runtime.lastError || !selectorResponse?.settings) {
+                    logConCgp('[init] Could not load Inline Profile Selector settings.', chrome.runtime.lastError?.message);
+                    window.globalInlineSelectorConfig = { enabled: false, placement: 'before' };
+                } else {
+                    window.globalInlineSelectorConfig = selectorResponse.settings;
+                    logConCgp('[init] Inline Profile Selector settings loaded:', window.globalInlineSelectorConfig);
+                }
+
+                // Start main initialization only after all global configs are present
+                commenceExtensionInitialization(mainConfig);
+            });
         });
     });
 }
@@ -194,6 +295,14 @@ function debounceFunctionExecution(func, delay) {
  * @param {Function} callback - The function to execute when a URL change is detected.
  */
 function resilientStartAndRetryOnSPANavigation(callback) {
+    // Ensure only one observer is active across re-inits
+    try {
+        if (window.__OCP_urlChangeObserver) {
+            window.__OCP_urlChangeObserver.disconnect();
+            window.__OCP_urlChangeObserver = null;
+        }
+    } catch (e) {}
+
     let previousUrl = location.href;
     const urlChangeObserver = new MutationObserver(() => {
         const currentUrl = location.href;
@@ -203,6 +312,7 @@ function resilientStartAndRetryOnSPANavigation(callback) {
         }
     });
     urlChangeObserver.observe(document, { subtree: true, childList: true });
+    window.__OCP_urlChangeObserver = urlChangeObserver;
 }
 
 /**

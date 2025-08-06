@@ -52,65 +52,87 @@ window.MaxExtensionButtonsInit = {
      * @param {HTMLElement} container - The DOM element to which custom buttons will be appended.
      * @param {boolean} isPanel - Flag indicating if the container is the floating panel.
      */
-    generateAndAppendAllButtons: function (container, isPanel) {
-        // --- Create a unified list of all buttons to be rendered ---
-        const allButtonDefs = [];
-        let nonSeparatorCount = 0;
+    generateAndAppendAllButtons: async function (container, isPanel) {
+       // --- Create a unified list of all buttons to be rendered ---
+       const allButtonDefs = [];
+       let nonSeparatorCount = 0;
 
-        // 1. Add Cross-Chat buttons if they should be placed 'before'
-        if (window.globalCrossChatConfig?.enabled && window.globalCrossChatConfig.placement === 'before') {
-            allButtonDefs.push({ type: 'copy' });
-            allButtonDefs.push({ type: 'paste' });
-        }
+       // 1. Add Cross-Chat buttons if they should be placed 'before'
+       if (window.globalCrossChatConfig?.enabled && window.globalCrossChatConfig.placement === 'before') {
+           allButtonDefs.push({ type: 'copy' });
+           allButtonDefs.push({ type: 'paste' });
+       }
 
-        // 2. Add standard custom buttons
-        globalMaxExtensionConfig.customButtons.forEach(config => {
-            allButtonDefs.push({ type: 'custom', config: config });
-        });
+       // 2. Add standard custom buttons
+       globalMaxExtensionConfig.customButtons.forEach(config => {
+           allButtonDefs.push({ type: 'custom', config: config });
+       });
 
-        // 3. Add Cross-Chat buttons if they should be placed 'after'
-        if (window.globalCrossChatConfig?.enabled && window.globalCrossChatConfig.placement === 'after') {
-            allButtonDefs.push({ type: 'copy' });
-            allButtonDefs.push({ type: 'paste' });
-        }
+       // 3. Add Cross-Chat buttons if they should be placed 'after'
+       if (window.globalCrossChatConfig?.enabled && window.globalCrossChatConfig.placement === 'after') {
+           allButtonDefs.push({ type: 'copy' });
+           allButtonDefs.push({ type: 'paste' });
+       }
 
-        // --- Render all buttons from the unified list ---
+       // --- Render all buttons from the unified list ---
 
-        // Add floating panel toggle first, if applicable
-        if (window.MaxExtensionFloatingPanel && !isPanel) {
-            const floatingPanelToggleButton = window.MaxExtensionFloatingPanel.createPanelToggleButton();
-            container.appendChild(floatingPanelToggleButton);
-            logConCgp('[init] Floating panel toggle button has been created and appended for inline container.');
-        }
+       // Add floating panel toggle first, if applicable
+       if (window.MaxExtensionFloatingPanel && !isPanel) {
+           const floatingPanelToggleButton = window.MaxExtensionFloatingPanel.createPanelToggleButton();
+           container.appendChild(floatingPanelToggleButton);
+           logConCgp('[init] Floating panel toggle button has been created and appended for inline container.');
+       }
 
-        // Process the unified list to create and append buttons
-        allButtonDefs.forEach((def, index) => {
-            // Handle separators from custom buttons
-            if (def.type === 'custom' && def.config.separator) {
-                const separatorElement = MaxExtensionUtils.createSeparator();
-                container.appendChild(separatorElement);
-                logConCgp('[init] Separator element has been created and appended.');
-                return; // Skip to next item
-            }
+       // Inline Profile Selector BEFORE buttons
+       if (window.globalInlineSelectorConfig?.enabled && window.globalInlineSelectorConfig.placement === 'before' && !isPanel) {
+           if (typeof this.createInlineProfileSelector === 'function') {
+               const selectorElBefore = await this.createInlineProfileSelector();
+               if (selectorElBefore) {
+                   container.appendChild(selectorElBefore);
+                   logConCgp('[init] Inline Profile Selector appended before buttons.');
+               }
+           }
+       }
 
-            // Assign a shortcut key if enabled and available
-            let shortcutKey = null;
-            if (globalMaxExtensionConfig.enableShortcuts && nonSeparatorCount < 10) {
-                shortcutKey = nonSeparatorCount + 1;
-            }
+       // Process the unified list to create and append buttons
+       allButtonDefs.forEach((def, index) => {
+           // Handle separators from custom buttons
+           if (def.type === 'custom' && def.config.separator) {
+               const separatorElement = MaxExtensionUtils.createSeparator();
+               container.appendChild(separatorElement);
+               logConCgp('[init] Separator element has been created and appended.');
+               return; // Skip to next item
+           }
 
-            let buttonElement;
-            if (def.type === 'copy' || def.type === 'paste') {
-                buttonElement = MaxExtensionButtons.createCrossChatButton(def.type, shortcutKey);
-            } else { // 'custom'
-                buttonElement = MaxExtensionButtons.createCustomSendButton(def.config, index, processCustomSendButtonClick, shortcutKey);
-            }
+           // Assign a shortcut key if enabled and available
+           let shortcutKey = null;
+           if (globalMaxExtensionConfig.enableShortcuts && nonSeparatorCount < 10) {
+               shortcutKey = nonSeparatorCount + 1;
+           }
 
-            container.appendChild(buttonElement);
-            nonSeparatorCount++;
-            logConCgp(`[init] Button ${nonSeparatorCount} (${def.type}) has been created and appended.`);
-        });
-    },
+           let buttonElement;
+           if (def.type === 'copy' || def.type === 'paste') {
+               buttonElement = MaxExtensionButtons.createCrossChatButton(def.type, shortcutKey);
+           } else { // 'custom'
+               buttonElement = MaxExtensionButtons.createCustomSendButton(def.config, index, processCustomSendButtonClick, shortcutKey);
+           }
+
+           container.appendChild(buttonElement);
+           nonSeparatorCount++;
+           logConCgp(`[init] Button ${nonSeparatorCount} (${def.type}) has been created and appended.`);
+       });
+
+       // Inline Profile Selector AFTER buttons
+       if (window.globalInlineSelectorConfig?.enabled && window.globalInlineSelectorConfig.placement === 'after' && !isPanel) {
+           if (typeof this.createInlineProfileSelector === 'function') {
+               const selectorElAfter = await this.createInlineProfileSelector();
+               if (selectorElAfter) {
+                   container.appendChild(selectorElAfter);
+                   logConCgp('[init] Inline Profile Selector appended after buttons.');
+               }
+           }
+       }
+   },
 
     /**
      * Creates and inserts custom buttons and toggles into the target container element.
@@ -182,20 +204,75 @@ window.MaxExtensionButtonsInit = {
     }
 };
 
-// Listen for profile change events
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === 'profileChanged') {
-        logConCgp('[init] Received profile change notification');
+// --- Helper to create Inline Profile Selector element ---
+/**
+ * Creates and returns a DOM element for the inline profile selector.
+ * @returns {Promise<HTMLElement|null>}
+ */
+window.MaxExtensionButtonsInit.createInlineProfileSelector = async function () {
+    try {
+        const container = document.createElement('div');
+        container.style.display = 'flex';
+        container.style.alignItems = 'center';
+        container.style.gap = '4px';
+        container.style.marginRight = '8px';
 
-        // Update the global config with the new profile data
-        window.globalMaxExtensionConfig = message.config;
-        // Note: Cross-chat config is global and does not change with profile.
+        const label = document.createElement('span');
+        label.textContent = 'Profile:';
+        label.style.fontSize = '12px';
+        label.style.color = '#888';
 
-        // Update the UI components
-        window.MaxExtensionButtonsInit.updateButtonsForProfileChange();
+        const select = document.createElement('select');
+        select.title = 'Switch active profile';
+        select.style.padding = '2px';
+        select.style.zIndex = '100000';
+        select.tabIndex = 0;
 
-        // Acknowledge the message
-        sendResponse({ success: true });
+        // Prevent hostile site handlers from closing the dropdown immediately on SPA UIs (e.g. ChatGPT)
+        const stop = (e) => { e.stopPropagation(); };
+        ['pointerdown','mousedown','mouseup','click','touchstart','touchend','keydown'].forEach(evt => {
+            select.addEventListener(evt, stop, { capture: true });
+        });
+
+        // Load profiles and current profile
+        const profilesResponse = await chrome.runtime.sendMessage({ type: 'listProfiles' });
+        const { currentProfile } = await chrome.storage.local.get('currentProfile');
+
+        const profileNames = Array.isArray(profilesResponse?.profiles) ? profilesResponse.profiles : [];
+        profileNames.forEach((name) => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            if (name === currentProfile) opt.selected = true;
+            select.appendChild(opt);
+        });
+
+        select.addEventListener('change', (e) => {
+            const selected = e.target.value;
+            // Request switch and refresh immediately using service worker response for reliability.
+            chrome.runtime.sendMessage({ type: 'switchProfile', profileName: selected }, (response) => {
+                if (response && response.config) {
+                    // Immediate local refresh; SW also broadcasts to other tabs
+                    if (typeof window.__OCP_partialRefreshUI === 'function') {
+                        window.__OCP_partialRefreshUI(response.config);
+                    } else if (typeof window.__OCP_nukeAndRefresh === 'function') {
+                        window.__OCP_nukeAndRefresh(response.config);
+                    } else if (window.MaxExtensionButtonsInit && typeof window.MaxExtensionButtonsInit.updateButtonsForProfileChange === 'function') {
+                        // Fallback: partial refresh
+                        window.globalMaxExtensionConfig = response.config;
+                        window.MaxExtensionButtonsInit.updateButtonsForProfileChange();
+                    }
+                }
+            });
+        });
+
+        container.appendChild(label);
+        container.appendChild(select);
+        return container;
+    } catch (err) {
+        logConCgp('[init] Error creating inline profile selector:', err?.message || err);
+        return null;
     }
-    return true;
-});
+};
+
+// Profile change messaging is handled centrally in init.js to avoid duplicate listeners.

@@ -303,6 +303,7 @@
         <div id="console" class="console"></div>
       </section>
 
+
       <!-- ===== Modules Section ===== -->
       <!-- This is a top-level collapsible container. The .collapsible class enables the expand/collapse behavior via popup-page-collapsible.js -->
       <section class="section collapsible" id="modulesSection">
@@ -458,6 +459,50 @@
               </div>
             </div>
           </div>
+
+          <!-- NEW MODULE: Inline Profile Selector -->
+          <div class="collapsible" id="inlineProfileSelectorModule">
+            <div class="section-header subsection-header">
+              <h3>
+                Inline Profile Selector
+                <span class="expand-text">(click to expand)</span>
+              </h3>
+              <span class="toggle-icon">▶</span>
+            </div>
+            <div class="section-content">
+              <div class="switch-container" style="margin-bottom: 16px">
+                <label class="switch">
+                  <input type="checkbox" id="inlineProfileSelectorEnableToggle" />
+                  <span class="slider"></span>
+                </label>
+                <span class="switch-label">Show profile selector in button row</span>
+              </div>
+
+              <!-- Settings visible when enabled -->
+              <div id="inlineProfileSelectorSettingsContainer" style="display: none; margin-left: 20px;">
+                <div class="text-inside-container" style="margin-bottom: 8px;">
+                  <p>Choose where the profile selector appears relative to your custom buttons.</p>
+                </div>
+                <div class="row" style="flex-direction: column; align-items: flex-start;">
+                  <label>Placement:</label>
+                  <div style="margin-top: 8px;">
+                    <label>
+                      <input type="radio" name="inlineProfileSelectorPlacement" value="before" checked />
+                      Before custom buttons
+                    </label>
+                  </div>
+                  <div>
+                    <label>
+                      <input type="radio" name="inlineProfileSelectorPlacement" value="after" />
+                      After custom buttons
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- END NEW MODULE -->
+
         </div>
       </section>
 
@@ -701,5 +746,7 @@
     <script src="/popup-page-scripts/popup-page-floating-window-handler.js"></script>
     <!-- Cross-Chat Module UI handler script -->
     <script src="/modules/popup-page-modules-promptShare.js"></script>
+    <!-- Inline Profile Selector UI handler script -->
+    <script src="/modules/popup-page-modules-inlineSelector.js"></script>
   </body>
 </html>

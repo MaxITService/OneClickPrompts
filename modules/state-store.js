@@ -48,6 +48,7 @@ const KEYS = {
   },
   modules: {
     crossChat: 'modules.crossChat', // object { settings: {...}, storedPrompt: string }
+    inlineProfileSelector: 'modules.inlineProfileSelector', // object { enabled:boolean, placement:'before'|'after' }
   },
   floatingPanel: 'floatingPanel', // object map { [hostname]: settings }
   global: {
@@ -106,6 +107,21 @@ async function getValue(path) {
       obj.storedPrompt = typeof obj.storedPrompt === 'string' ? obj.storedPrompt : '';
     }
     return obj;
+  }
+  if (path === KEYS.modules.inlineProfileSelector) {
+    const r = await lsGet([KEYS.modules.inlineProfileSelector]);
+    const obj = r[KEYS.modules.inlineProfileSelector];
+    if (obj && typeof obj === 'object') {
+      // Ensure shape and defaults
+      return {
+        enabled: !!obj.enabled,
+        placement: obj.placement === 'after' ? 'after' : 'before',
+      };
+    }
+    return {
+      enabled: false,
+      placement: 'before',
+    };
   }
   if (path === KEYS.floatingPanel) {
     // Build map from structured store if exists, else from legacy scattered keys
@@ -166,6 +182,15 @@ async function setValue(path, value) {
       [LEGACY.crossChatModuleSettings]: settings,
       [LEGACY.crossChatStoredPrompt]: storedPrompt,
     });
+    return;
+  }
+  if (path === KEYS.modules.inlineProfileSelector) {
+    const settings = value && typeof value === 'object' ? value : {};
+    const normalized = {
+      enabled: !!settings.enabled,
+      placement: settings.placement === 'after' ? 'after' : 'before',
+    };
+    await lsSet({ [KEYS.modules.inlineProfileSelector]: normalized });
     return;
   }
   if (path.startsWith(KEYS.floatingPanel)) {
@@ -328,6 +353,15 @@ export const StateStore = {
   },
   async setDebugLogging(enabled) {
     await setValue(KEYS.meta.debugLogging, !!enabled);
+  },
+
+  // ===== Inline Profile Selector (Global Module) =====
+  async getInlineProfileSelectorSettings() {
+    return await getValue(KEYS.modules.inlineProfileSelector);
+  },
+  async saveInlineProfileSelectorSettings(settings) {
+    await setValue(KEYS.modules.inlineProfileSelector, settings);
+    this.broadcast({ type: 'inlineProfileSelectorSettingsChanged', settings });
   },
 
   // Broadcast utility
