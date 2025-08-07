@@ -220,15 +220,38 @@ window.MaxExtensionButtonsInit.createInlineProfileSelector = async function () {
         container.style.marginRight = '8px';
 
         const label = document.createElement('span');
-        label.textContent = 'Profile:';
+        label.textContent = ''; // Could be text like "Profile: " - no text for compactness 
         label.style.fontSize = '12px';
-        label.style.color = '#888';
+        // Don't hardcode color - let it inherit from theme
 
         const select = document.createElement('select');
         select.title = 'Switch active profile';
-        select.style.padding = '2px';
+        select.style.padding = '2px 16px 2px 4px'; // Add padding on right for arrow
         select.style.zIndex = '100000';
+        select.style.appearance = 'auto'; // Ensure dropdown arrow is visible
+        select.style.webkitAppearance = 'auto'; // For Safari/Chrome
+        select.style.mozAppearance = 'auto'; // For Firefox
+        select.style.backgroundImage = 'url("data:image/svg+xml;utf8,<svg fill=\'%23666\' height=\'24\' viewBox=\'0 0 24 24\' width=\'24\' xmlns=\'http://www.w3.org/2000/svg\'><path d=\'M7 10l5 5 5-5z\'/></svg>")';
+        select.style.backgroundRepeat = 'no-repeat';
+        select.style.backgroundPosition = 'right 2px center';
+        select.style.backgroundSize = '16px';
         select.tabIndex = 0;
+        
+        // Check if dark theme is active and apply appropriate styling
+        const isDarkTheme = document.body.classList.contains('dark-theme') ||
+                           document.documentElement.classList.contains('dark-theme') ||
+                           window.matchMedia('(prefers-color-scheme: dark)').matches;
+        
+        if (isDarkTheme) {
+            select.style.background = '#333';
+            select.style.color = '#eee';
+            select.style.borderColor = '#555';
+            select.style.backgroundImage = 'url("data:image/svg+xml;utf8,<svg fill=\'%23eee\' height=\'24\' viewBox=\'0 0 24 24\' width=\'24\' xmlns=\'http://www.w3.org/2000/svg\'><path d=\'M7 10l5 5 5-5z\'/></svg>")';
+            select.style.backgroundRepeat = 'no-repeat';
+            select.style.backgroundPosition = 'right 2px center';
+            select.style.backgroundSize = '16px';
+            label.style.color = '#eee';
+        }
 
         // Prevent hostile site handlers from closing the dropdown immediately on SPA UIs (e.g. ChatGPT)
         const stop = (e) => { e.stopPropagation(); };
