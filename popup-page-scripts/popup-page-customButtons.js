@@ -396,10 +396,26 @@ function textareaInputAreaResizerFun(textareaId) {
  * Resizes a textarea vertically to fit its content.
  * @param {HTMLTextAreaElement} textarea The textarea to resize.
  */
+/**
+ * Resizes a textarea vertically to fit its content while preserving the scroll position.
+ * This prevents the page from scrolling when the textarea is resized.
+ * @param {HTMLTextAreaElement} textarea The textarea to resize.
+ */
 function resizeVerticalTextarea(textarea) {
     if (!textarea) return;
+    
+    // Save current scroll position
+    const scrollPos = {
+        top: window.pageYOffset || document.documentElement.scrollTop,
+        left: window.pageXOffset || document.documentElement.scrollLeft
+    };
+    
+    // Perform resize
     textarea.style.height = 'auto';
     textarea.style.height = `${textarea.scrollHeight}px`;
+    
+    // Restore scroll position
+    window.scrollTo(scrollPos.left, scrollPos.top);
 }
 
 /**
