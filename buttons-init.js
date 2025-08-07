@@ -175,31 +175,49 @@ window.MaxExtensionButtonsInit = {
 
     /**
      * Updates all buttons and toggles in response to a profile change.
-     * This refreshes both the floating panel and the original container.
+     * Accepts an optional `origin` parameter:
+     *  - 'panel'  => only update the floating panel UI
+     *  - 'inline' => only update the inline buttons UI
+     *  - null/undefined => update both (legacy behavior)
      */
-    updateButtonsForProfileChange: function () {
-        // Update buttons in the original container
+    updateButtonsForProfileChange: function (origin = null) {
+        // If origin is 'panel', only update the floating panel
+        if (origin === 'panel') {
+            if (window.MaxExtensionFloatingPanel && window.MaxExtensionFloatingPanel.panelElement) {
+                const panelContent = document.getElementById('max-extension-floating-panel-content');
+                if (panelContent) {
+                    panelContent.innerHTML = '';
+                    this.generateAndAppendAllButtons(panelContent, true);
+                    logConCgp('[init] Updated buttons in floating panel for profile change (panel origin).');
+                }
+            }
+            return;
+        }
+    
+        // If origin is 'inline', only update the inline/original container
+        if (origin === 'inline') {
+            const originalContainer = document.getElementById(window.InjectionTargetsOnWebsite.selectors.buttonsContainerId);
+            if (originalContainer) {
+                originalContainer.innerHTML = '';
+                this.generateAndAppendAllButtons(originalContainer, false);
+                logConCgp('[init] Updated buttons in original container for profile change (inline origin).');
+            }
+            return;
+        }
+    
+        // Legacy/default: update both containers
         const originalContainer = document.getElementById(window.InjectionTargetsOnWebsite.selectors.buttonsContainerId);
         if (originalContainer) {
-            // Clear existing buttons and toggles
             originalContainer.innerHTML = '';
-
-            // Note: toggles are now appended within generateAndAppendAllButtons() at the very end
             this.generateAndAppendAllButtons(originalContainer, false); // Not panel
-
             logConCgp('[init] Updated buttons in original container for profile change.');
         }
-
-        // Update buttons in the floating panel if it exists and is initialized
+    
         if (window.MaxExtensionFloatingPanel && window.MaxExtensionFloatingPanel.panelElement) {
             const panelContent = document.getElementById('max-extension-floating-panel-content');
             if (panelContent) {
-                // Clear existing buttons and toggles
                 panelContent.innerHTML = '';
-
-                // Note: toggles are now appended within generateAndAppendAllButtons() at the very end
                 this.generateAndAppendAllButtons(panelContent, true); // This is the panel
-
                 logConCgp('[init] Updated buttons in floating panel for profile change.');
             }
         }
@@ -275,17 +293,18 @@ window.MaxExtensionButtonsInit.createInlineProfileSelector = async function () {
         select.addEventListener('change', (e) => {
             const selected = e.target.value;
             // Request switch and refresh immediately using service worker response for reliability.
-            chrome.runtime.sendMessage({ type: 'switchProfile', profileName: selected }, (response) => {
+            // Include origin so receiver can limit refresh scope to inline UI only.
+            chrome.runtime.sendMessage({ type: 'switchProfile', profileName: selected, origin: 'inline' }, (response) => {
                 if (response && response.config) {
                     // Immediate local refresh; SW also broadcasts to other tabs
                     if (typeof window.__OCP_partialRefreshUI === 'function') {
-                        window.__OCP_partialRefreshUI(response.config);
+                        window.__OCP_partialRefreshUI(response.config, 'inline');
                     } else if (typeof window.__OCP_nukeAndRefresh === 'function') {
-                        window.__OCP_nukeAndRefresh(response.config);
+                        window.__OCP_nukeAndRefresh(response.config, 'inline');
                     } else if (window.MaxExtensionButtonsInit && typeof window.MaxExtensionButtonsInit.updateButtonsForProfileChange === 'function') {
                         // Fallback: partial refresh
                         window.globalMaxExtensionConfig = response.config;
-                        window.MaxExtensionButtonsInit.updateButtonsForProfileChange();
+                        window.MaxExtensionButtonsInit.updateButtonsForProfileChange('inline');
                     }
                 }
             });

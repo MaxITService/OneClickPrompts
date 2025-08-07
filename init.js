@@ -40,13 +40,15 @@ if (!window.__OCP_messageListenerRegistered_v2) {
     window.__OCP_nukeInProgress = false;
 
     // Lightweight UI refresh that preserves the floating panel state
-    window.__OCP_partialRefreshUI = function(optionalNewConfig) {
+    // Accepts an optional `origin` parameter to limit refreshing to the initiator (e.g. 'panel' or 'inline').
+    window.__OCP_partialRefreshUI = function(optionalNewConfig, origin = null) {
         try {
             if (optionalNewConfig) {
                 window.globalMaxExtensionConfig = optionalNewConfig;
             }
             if (window.MaxExtensionButtonsInit && typeof window.MaxExtensionButtonsInit.updateButtonsForProfileChange === 'function') {
-                window.MaxExtensionButtonsInit.updateButtonsForProfileChange();
+                // Forward origin so updateButtonsForProfileChange can limit which container(s) are updated.
+                window.MaxExtensionButtonsInit.updateButtonsForProfileChange(origin);
             }
         } catch (e) {
             // If anything goes wrong, fallback to full re-init on next call
@@ -55,21 +57,22 @@ if (!window.__OCP_messageListenerRegistered_v2) {
     };
 
     // Expose a single entry to perform partial or full refresh depending on panel presence
-    window.__OCP_nukeAndRefresh = function(optionalNewConfig) {
+    // Accepts optional `origin` so partial refresh can be targeted when appropriate.
+    window.__OCP_nukeAndRefresh = function(optionalNewConfig, origin = null) {
         if (window.__OCP_nukeInProgress) return;
         window.__OCP_nukeInProgress = true;
         try {
             const hasPanel = !!(window.MaxExtensionFloatingPanel && window.MaxExtensionFloatingPanel.panelElement);
-
+    
             if (hasPanel) {
                 // Preserve panel DOM/state; only refresh buttons/inline
-                window.__OCP_partialRefreshUI(optionalNewConfig);
+                window.__OCP_partialRefreshUI(optionalNewConfig, origin);
             } else {
                 // Full re-init path (no panel in DOM)
                 if (optionalNewConfig) {
                     window.globalMaxExtensionConfig = optionalNewConfig;
                 }
-
+    
                 // 1) Stop resiliency monitors and timers from previous run
                 try {
                     if (window.OneClickPropmts_currentResiliencyTimeout) {
@@ -81,7 +84,7 @@ if (!window.__OCP_messageListenerRegistered_v2) {
                         window.OneClickPropmts_extendedMonitoringObserver = null;
                     }
                 } catch (e) {}
-
+    
                 // 2) Remove inline buttons container(s)
                 try {
                     const containerId = window?.InjectionTargetsOnWebsite?.selectors?.buttonsContainerId;
@@ -89,12 +92,12 @@ if (!window.__OCP_messageListenerRegistered_v2) {
                         document.querySelectorAll('#' + CSS.escape(containerId)).forEach(node => node.remove());
                     }
                 } catch (e) {}
-
+    
                 // 3) Do NOT remove the panel here (it is already absent in this branch)
-
+    
                 // 4) Detach keyboard listener to avoid duplicates
                 try { window.removeEventListener('keydown', manageKeyboardShortcutEvents); } catch (e) {}
-
+    
                 // 5) Re-run full initialization
                 publicStaticVoidMain();
             }
@@ -108,11 +111,13 @@ if (!window.__OCP_messageListenerRegistered_v2) {
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         if (message && message.type === 'profileChanged') {
             logConCgp('[init] Received profileChanged. Refreshing UI.');
+            // Pass origin along if provided to limit refresh scope.
+            const origin = message.origin || null;
             // Prefer partial refresh to preserve panel state
             if (typeof window.__OCP_partialRefreshUI === 'function') {
-                window.__OCP_partialRefreshUI(message.config);
+                window.__OCP_partialRefreshUI(message.config, origin);
             } else {
-                window.__OCP_nukeAndRefresh(message.config);
+                window.__OCP_nukeAndRefresh(message.config, origin);
             }
             sendResponse?.({ ok: true });
             return true;

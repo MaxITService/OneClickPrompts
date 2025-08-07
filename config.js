@@ -169,7 +169,7 @@ async function loadProfileConfig(profileName) {
 }
 
 // Function to switch to a different profile
-async function switchProfile(profileName, excludeTabId) {
+async function switchProfile(profileName, excludeTabId, origin = null) {
     logConfigurationRelatedStuff(`Switching to profile: ${profileName}`);
     try {
         const profile = await loadProfileConfig(profileName);
@@ -177,8 +177,9 @@ async function switchProfile(profileName, excludeTabId) {
             await chrome.storage.local.set({ 'currentProfile': profileName });
             logConfigurationRelatedStuff(`Switched to profile: ${profileName}`);
 
-            // Broadcast profile change to all tabs except the initiator (if provided)
-            broadcastProfileChange(profileName, profile, excludeTabId);
+            // Broadcast profile change to all tabs except the initiator (if provided).
+            // Include origin so content scripts can limit their refresh scope.
+            broadcastProfileChange(profileName, profile, excludeTabId, origin);
 
             return profile;
         } else {
@@ -192,7 +193,7 @@ async function switchProfile(profileName, excludeTabId) {
 }
 
 // Function to broadcast profile change to all tabs
-async function broadcastProfileChange(profileName, profileData, excludeTabId) {
+async function broadcastProfileChange(profileName, profileData, excludeTabId, origin = null) {
     try {
         const tabs = await chrome.tabs.query({});
         tabs.forEach(tab => {
@@ -201,7 +202,8 @@ async function broadcastProfileChange(profileName, profileData, excludeTabId) {
             chrome.tabs.sendMessage(tab.id, {
                 type: 'profileChanged',
                 profileName: profileName,
-                config: profileData
+                config: profileData,
+                origin: origin
             }).catch(error => {
                 // Suppress errors when content script is not running on a tab
                 logConfigurationRelatedStuff(`Could not send message to tab ${tab.id}: ${error.message}`);
@@ -357,8 +359,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             return true;
         case 'switchProfile':
             // Identify the sender tab (if any) to avoid echoing a broadcast back immediately.
-            switchProfile(request.profileName, sender?.tab?.id).then(config => {
-                sendResponse({ config });
+            switchProfile(request.profileName, sender?.tab?.id, request.origin).then(config => {
+                // Echo the origin back to the initiator for clarity.
+                sendResponse({ config, origin: request.origin || null });
                 logConfigurationRelatedStuff('Profile switch request processed');
             });
             return true;
