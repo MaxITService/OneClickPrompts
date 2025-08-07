@@ -132,6 +132,9 @@ window.MaxExtensionButtonsInit = {
                }
            }
        }
+
+       // --- Add toggles at the very end, always after everything else ---
+       this.generateAndAppendToggles(container);
    },
 
     /**
@@ -163,9 +166,8 @@ window.MaxExtensionButtonsInit = {
         const isPanel = targetContainer.id === 'max-extension-floating-panel-content';
 
         // Append custom send buttons, passing the context.
+        // Note: toggles are now appended within generateAndAppendAllButtons() at the very end
         this.generateAndAppendAllButtons(customElementsContainer, isPanel);
-        // Append toggle switches
-        this.generateAndAppendToggles(customElementsContainer);
 
         targetContainer.appendChild(customElementsContainer);
         logConCgp('[init] Custom elements have been inserted into the DOM.');
@@ -182,8 +184,8 @@ window.MaxExtensionButtonsInit = {
             // Clear existing buttons and toggles
             originalContainer.innerHTML = '';
 
+            // Note: toggles are now appended within generateAndAppendAllButtons() at the very end
             this.generateAndAppendAllButtons(originalContainer, false); // Not panel
-            this.generateAndAppendToggles(originalContainer);
 
             logConCgp('[init] Updated buttons in original container for profile change.');
         }
@@ -195,8 +197,8 @@ window.MaxExtensionButtonsInit = {
                 // Clear existing buttons and toggles
                 panelContent.innerHTML = '';
 
+                // Note: toggles are now appended within generateAndAppendAllButtons() at the very end
                 this.generateAndAppendAllButtons(panelContent, true); // This is the panel
-                this.generateAndAppendToggles(panelContent);
 
                 logConCgp('[init] Updated buttons in floating panel for profile change.');
             }
