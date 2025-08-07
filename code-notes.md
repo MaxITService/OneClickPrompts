@@ -21,6 +21,7 @@ Profiles are explicitly excluded. Keys under currentProfile and profiles.* remai
   - Theme
   - UI popup state (firstOpen, collapsibles, lastOpenedSection)
   - Cross-Chat module global settings and stored prompt
+  - Inline Profile Selector module settings
   - Floating panel per-host settings
   - Custom selectors per-site
   - Optional meta: schemaVersion, dev.debugLogging
@@ -50,6 +51,10 @@ Cross-Chat
 - saveStoredPrompt(text: string): Promise<void> (broadcasts crossChatPromptChanged)
 - clearStoredPrompt(): Promise<void> (broadcasts crossChatPromptChanged)
 
+Inline Profile Selector
+- getInlineProfileSelectorSettings(): { enabled: boolean, placement: 'before' | 'after' }
+- saveInlineProfileSelectorSettings(settings): Promise<void> (broadcasts inlineProfileSelectorSettingsChanged)
+
 Floating Panel
 - getFloatingPanelSettings(hostname: string): object | null
 - saveFloatingPanelSettings(hostname: string, settings: object): Promise<void> (broadcasts floatingPanelChanged)
@@ -69,7 +74,7 @@ Meta
 - setDebugLogging(enabled: boolean): Promise<void>
 
 Broadcasts
-- uiThemeChanged, uiPopupChanged, crossChatChanged, crossChatPromptChanged, floatingPanelChanged, floatingPanelResetAll, floatingPanelReset, customSelectorsChanged
+- uiThemeChanged, uiPopupChanged, crossChatChanged, crossChatPromptChanged, inlineProfileSelectorSettingsChanged, floatingPanelChanged, floatingPanelResetAll, floatingPanelReset, customSelectorsChanged
 
 ## config.js Changes
 
@@ -96,6 +101,9 @@ Updated message handlers:
   - saveStoredPrompt -> StateStore.saveStoredPrompt(text)
   - getStoredPrompt -> StateStore.getStoredPrompt()
   - clearStoredPrompt -> StateStore.clearStoredPrompt()
+- Inline Profile Selector module:
+  - getInlineProfileSelectorSettings -> StateStore.getInlineProfileSelectorSettings()
+  - saveInlineProfileSelectorSettings -> StateStore.saveInlineProfileSelectorSettings(settings)
 
 Unchanged message handlers:
 - Profiles: getConfig, saveConfig, switchProfile, listProfiles, deleteProfile, createDefaultProfile
@@ -109,6 +117,7 @@ New schema (logical paths):
 - ui.theme: 'light' | 'dark' (mirrors darkTheme)
 - ui.popup: { firstOpen: boolean, lastOpenedSection?: string, collapsibles?: Record<id, boolean> }
 - modules.crossChat: { settings: { enabled, autosendCopy, autosendPaste, placement }, storedPrompt: string }
+- modules.inlineProfileSelector: { enabled: boolean, placement: 'before' | 'after' }
 - floatingPanel: { [hostname]: FloatingPanelSettings }
 - global.customSelectors: { [site]: SelectorsConfig }
 - state.schemaVersion: number
@@ -138,6 +147,29 @@ Read precedence and writes:
 - Dialogs: use .dialog with variants .dialog-confirmation and .dialog-error (see ['popup.html'](popup.html:284)).
 - Toasts: base .toast plus type classes toast-success/error/info from ['popup-page-scripts/popup-page-visuals.js'](popup-page-scripts/popup-page-visuals.js:19). In dark mode, neutral fallback applies only without a type class.
 
+## Inline Profile Selector Module
+
+The Inline Profile Selector module adds a dropdown menu directly in the button row of chat interfaces, allowing users to quickly switch between profiles without opening the extension popup.
+
+### Features
+- Adds a dropdown selector in the button row that displays all available profiles
+- Can be positioned either before or after custom buttons
+- Automatically updates UI when profile is changed
+- Preserves state across page refreshes and navigation
+- Handles dark/light theme detection for appropriate styling
+
+### Implementation
+- UI settings in popup: ['modules/popup-page-modules-inlineSelector.js'](modules/popup-page-modules-inlineSelector.js)
+- DOM creation: ['buttons-init.js'](buttons-init.js) (createInlineProfileSelector function)
+- Storage: ['modules/state-store.js'](modules/state-store.js) (inlineProfileSelector key)
+- Global config loading: ['init.js'](init.js) (loads settings during initialization)
+
+### Integration Points
+- Initialization: Settings loaded in init.js before main UI initialization
+- Button Row: Rendered in generateAndAppendAllButtons based on placement setting
+- Profile Switching: Uses the same profile switching mechanism as the floating panel
+- UI Refresh: Leverages the centralized refresh helpers (__OCP_partialRefreshUI, __OCP_nukeAndRefresh)
+
 ## Future Adoption (Optional)
 
 - ui.popup.firstOpen/collapsibles/lastOpenedSection are available for a future pass to persist popup section states.
@@ -151,6 +183,11 @@ Recommended checks:
 - UI theming:
   - .dialog and variants render correctly in light/dark.
   - Toasts show base + correct type classes; dark fallback applies when no type.
+- Inline Profile Selector:
+  - Verify dropdown appears in correct position (before/after buttons)
+  - Test profile switching works correctly
+  - Confirm dark/light theme styling is applied properly
+  - Check event propagation blocking prevents dropdown from closing immediately
 
 ## File References
 
@@ -158,3 +195,4 @@ Recommended checks:
 - State: ['modules/state-store.js'](modules/state-store.js)
 - Styles: ['common-ui-elements/common-style.css'](common-ui-elements/common-style.css), ['common-ui-elements/dark-theme.css'](common-ui-elements/dark-theme.css)
 - HTML: ['popup.html'](popup.html), ['welcome.html'](welcome.html)
+- Inline Profile Selector: ['modules/popup-page-modules-inlineSelector.js'](modules/popup-page-modules-inlineSelector.js)
