@@ -26,7 +26,7 @@ window.MaxExtensionButtonsInit = {
     generateAndAppendToggles: function (container) {
         const autoSendToggle = MaxExtensionInterface.createToggle(
             'auto-send-toggle',
-            'Enable Auto-send',
+            'Auto-send',
             globalMaxExtensionConfig.globalAutoSendEnabled,
             (state) => {
                 globalMaxExtensionConfig.globalAutoSendEnabled = state;
@@ -37,7 +37,7 @@ window.MaxExtensionButtonsInit = {
 
         const hotkeysToggle = MaxExtensionInterface.createToggle(
             'hotkeys-toggle',
-            'Enable Hotkeys',
+            'Hotkeys',
             globalMaxExtensionConfig.enableShortcuts,
             (state) => {
                 globalMaxExtensionConfig.enableShortcuts = state;
