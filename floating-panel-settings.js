@@ -227,7 +227,9 @@ window.MaxExtensionFloatingPanel.switchToProfile = function (profileName) {
     // Prevent switching to the same profile.
     if (profileName === this.currentProfileName) return;
     chrome.runtime.sendMessage(
-        { type: 'switchProfile', profileName: profileName },
+        // Pass origin so receivers (including our own content script)
+        // can limit refresh scope to the floating panel only.
+        { type: 'switchProfile', profileName: profileName, origin: 'panel' },
         (response) => {
             if (response.error) {
                 logConCgp(`[floating-panel] Error switching to profile ${profileName}: ${response.error}`);
@@ -244,7 +246,8 @@ window.MaxExtensionFloatingPanel.switchToProfile = function (profileName) {
                 } else if (typeof window.__OCP_nukeAndRefresh === 'function') {
                     window.__OCP_nukeAndRefresh(response.config);
                 } else {
-                    window.MaxExtensionButtonsInit.updateButtonsForProfileChange();
+                    // Fallback: update only the floating panel, never inline buttons
+                    window.MaxExtensionButtonsInit.updateButtonsForProfileChange('panel');
                 }
                 logConCgp(`[floating-panel] Successfully switched to profile: ${profileName}`);
             }
