@@ -281,7 +281,11 @@
           />
         </div>
         <!-- Confirmation Div -->
-        <div id="confirmationDiv" class="dialog dialog-confirmation" style="display: none">
+        <div
+          id="confirmationDiv"
+          class="dialog dialog-confirmation"
+          style="display: none"
+        >
           <p>
             File loaded successfully, but a profile with the same name already
             exists in the system. Do you want to overwrite the existing profile?
@@ -302,7 +306,6 @@
         <h2>Console</h2>
         <div id="console" class="console"></div>
       </section>
-
 
       <!-- ===== Modules Section ===== -->
       <!-- This is a top-level collapsible container. The .collapsible class enables the expand/collapse behavior via popup-page-collapsible.js -->
@@ -335,7 +338,7 @@
                     id="crossChatModuleEnableToggle"
                     aria-label="Enable Cross-Chat Prompt Sharing"
                   />
-                  <span class="slider "></span>
+                  <span class="slider"></span>
                 </label>
                 <span class="switch-label"
                   >Enable Cross-Chat Prompt Sharing</span
@@ -403,7 +406,7 @@
                   <div class="switch-container">
                     <label class="switch">
                       <input type="checkbox" id="crossChatAutosendCopy" />
-                      <span class="slider "></span>
+                      <span class="slider"></span>
                     </label>
                     <span class="switch-label">Autosend after 📋 Copy</span>
                   </div>
@@ -415,7 +418,7 @@
                   <div class="switch-container">
                     <label class="switch">
                       <input type="checkbox" id="crossChatAutosendPaste" />
-                      <span class="slider "></span>
+                      <span class="slider"></span>
                     </label>
                     <span class="switch-label"
                       >Autosend after 📥 Paste & Send</span
@@ -459,7 +462,7 @@
               </div>
             </div>
           </div>
-
+          <br /><br />
           <!-- NEW MODULE: Inline Profile Selector -->
           <div class="collapsible" id="inlineProfileSelectorModule">
             <div class="section-header subsection-header">
@@ -472,29 +475,55 @@
             <div class="section-content">
               <div class="switch-container" style="margin-bottom: 16px">
                 <label class="switch">
-                  <input type="checkbox" id="inlineProfileSelectorEnableToggle" />
+                  <input
+                    type="checkbox"
+                    id="inlineProfileSelectorEnableToggle"
+                  />
                   <span class="slider"></span>
                 </label>
-                <span class="switch-label">Show profile selector in button row</span>
-                </div>
-                <p class="text-inside-container">The selector will appear among the custom buttons in the button row, allowing you to switch the current profile quickly.</p>
+                <span class="switch-label"
+                  >Show profile selector in button row</span
+                >
+              </div>
+              <p class="text-inside-container">
+                The selector will appear among the custom buttons in the button
+                row, allowing you to switch the current profile quickly.
+              </p>
 
               <!-- Settings visible when enabled -->
-              <div id="inlineProfileSelectorSettingsContainer" style="display: none; margin-left: 20px;">
-                <div class="text-inside-container" style="margin-bottom: 8px;">
-                  <p>Choose where the profile selector appears relative to your custom buttons.</p>
+              <div
+                id="inlineProfileSelectorSettingsContainer"
+                style="display: none; margin-left: 20px"
+              >
+                <div class="text-inside-container" style="margin-bottom: 8px">
+                  <p>
+                    Choose where the profile selector appears relative to your
+                    custom buttons.
+                  </p>
                 </div>
-                <div class="row" style="flex-direction: column; align-items: flex-start;">
+                <div
+                  class="row"
+                  style="flex-direction: column; align-items: flex-start"
+                >
                   <label>Placement:</label>
-                  <div style="margin-top: 8px;">
+                  <div style="margin-top: 8px">
                     <label>
-                      <input type="radio" name="inlineProfileSelectorPlacement" value="before" checked />
+                      <input
+                        type="radio"
+                        name="inlineProfileSelectorPlacement"
+                        value="before"
+                        checked
+                      />
                       Before custom buttons
                     </label>
                   </div>
                   <div>
                     <label>
-                      <input type="radio" name="inlineProfileSelectorPlacement" value="after" />
+                      <input
+                        type="radio"
+                        name="inlineProfileSelectorPlacement"
+                        value="after"
+                      />
                       After custom buttons
                     </label>
                   </div>
@@ -503,7 +532,6 @@
             </div>
           </div>
           <!-- END NEW MODULE -->
-
         </div>
       </section>
 
@@ -543,7 +571,13 @@
               not uses clipboard. A Enable it in the "Modules" section above to
               get started.
             </li>
-<li><strong>Inline Profile Selector:</strong> Enable it in the Modules section by toggling “Show profile selector in button row”. Choose placement (before or after custom buttons). The selector will appear among the buttons, allowing you to switch the current profile quickly.</li>
+            <li>
+              <strong>Inline Profile Selector:</strong> Enable it in the Modules
+              section by toggling “Show profile selector in button row”. Choose
+              placement (before or after custom buttons). The selector will
+              appear among the buttons, allowing you to switch the current
+              profile quickly.
+            </li>
             <li>In case of a problem: first step is to reload your browser.</li>
             <li>
               In case something stopped working completely: The websites often
@@ -720,7 +754,7 @@
               id="darkThemeToggle"
               aria-label="Enable Dark Theme"
             />
-            <span class="slider "></span>
+            <span class="slider"></span>
           </label>
           <span class="switch-label">Enable Dark Theme</span>
         </div>
