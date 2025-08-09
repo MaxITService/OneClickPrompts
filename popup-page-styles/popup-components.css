@@ -291,7 +291,7 @@ Key areas:
     padding: 8px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
-    margin-bottom: 8px;
+    margin-bottom: 8px; /* keep default for non-modules */
 }
 
 #advancedSection .row {
@@ -309,7 +309,7 @@ Key areas:
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 0;
+    margin-bottom: 8px; /* default spacing for non-Modules */
     color: var(--text-color);
     /* Add this line to ensure text is visible */
 }
@@ -370,11 +370,10 @@ Key areas:
     transition: opacity 0.3s ease;
 }
 
-.collapsible.expanded>.section-header .expand-text {
+.collapsible.expanded > .section-header .expand-text {
     opacity: 0;
     display: none;
 }
-
 
 .text-inside-container {
     font-size: 14px;
@@ -436,6 +435,21 @@ Key areas:
     border-radius: 0 0 4px 4px;
 }
 
+/* ---------- Consistent spacing for Modules area only ---------- */
+
+/* Ensure uniform spacing between modules in all states */
+#modulesSection > .section-content > .collapsible {
+  margin-bottom: 8px;            /* consistent gap */
+}
+#modulesSection > .section-content > .collapsible:last-child {
+  margin-bottom: 0;              /* no extra space after the last module */
+}
+
+/* Remove the bottom margin from individual headers in Modules only */
+#modulesSection > .section-content > .collapsible .section-header {
+  margin-bottom: 0;
+}
+
 .subsection-header h3 {
     font-size: 15px;
     margin: 0;
@@ -495,17 +509,4 @@ Key areas:
 .floating-site-item span {
     font-size: 1.1em;
     /* Responsive, scales with parent font size */
-}
-
-/* Ensure uniform spacing between modules in all states */
-#modulesSection > .section-content > .collapsible {
-  margin-bottom: 8px;            /* consistent gap */
-}
-#modulesSection > .section-content > .collapsible:last-child {
-  margin-bottom: 0;              /* no extra space after the last module */
-}
-
-/* Remove the bottom margin from individual headers */
-#modulesSection > .section-content > .collapsible .section-header {
-  margin-bottom: 0;
 }
