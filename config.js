@@ -10,9 +10,10 @@ Service worker responsibilities (current):
 - Opens the welcome page on fresh install and runs migration checks.
 */
 'use strict';
+// when you right click on extension icon in broser
 import './context-menu.js';
-import { StateStore } from './modules/service-worker-auxiliary-state-store.js'; // state-store module (non-profile state)
-// Dependencies: default-config.json
+// Save mechanism for UI popup state, ALL modules, floating panel settings, custom selectors.
+import { StateStore } from './modules/service-worker-auxiliary-state-store.js'; 
 
 // Ensure the service worker is registered
 self.addEventListener('install', (event) => {
