@@ -17,10 +17,62 @@ Key areas:
 */
 
 :root {
+    /* Base tokens */
     --section-header-bg: #f5f5f5;
     --manual-bg: #f8f8f8;
     --code-bg: #efefef;
     --text-muted: #666;
+    
+    /* Module tokens */
+    --ocp-module-gap: 8px;
+    --ocp-module-radius: 4px;
+    --ocp-module-pad: 10px;
+    --ocp-module-border: 1px solid var(--border-color);
+    --ocp-module-header-bg: var(--section-header-bg, #f5f5f5);
+}
+
+/* ===== Module container & layout ===== */
+#modulesSection > .section-content {
+    /* Controls inter-module spacing */
+}
+#modulesSection > .section-content > .ocp-module {
+    margin-bottom: var(--ocp-module-gap);
+}
+#modulesSection > .section-content > .ocp-module:last-child {
+    margin-bottom: 0;
+}
+
+/* ===== Module internals (no outer spacing here) ===== */
+.ocp-module__header {
+    background: var(--ocp-module-header-bg);
+    border-radius: var(--ocp-module-radius);
+    padding: var(--ocp-module-pad);
+    margin-bottom: 0; /* keep gaps on the container, not here */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.ocp-module__content {
+    padding: var(--ocp-module-pad);
+    border: var(--ocp-module-border);
+    border-radius: 0 0 var(--ocp-module-radius) var(--ocp-module-radius);
+}
+
+/* Collapse behavior (state class on section) */
+.ocp-module:not(.expanded) .ocp-module__content {
+    display: none !important;
+    padding: 0 !important;
+    border: 0 !important;
+    margin: 0 !important;
+}
+
+/* Optional: arrow rotation */
+.ocp-module.expanded .toggle-icon { transform: rotate(90deg); }
+
+/* Specific module tweaks (only if necessary) */
+.ocp-module--danger .ocp-module__header { /* example modifier */
+    /* different bg, etc. */
 }
 
 /* ------------------------------------------------------------------------- */
@@ -323,7 +375,8 @@ Key areas:
 }
 
 /* Ensure crossChatModule content is removed from layout when collapsed */
-#crossChatModule:not(.expanded) .section-content {
+#crossChatModule:not(.expanded) .section-content,
+#crossChatModule:not(.expanded) .ocp-module__content {
     display: none !important;
     padding: 0 !important;
     border: 0 !important;
@@ -336,7 +389,8 @@ Key areas:
 
 /* Strong collapse: when a collapsible is not expanded, fully remove the content from layout.
    This eliminates any visual borders/padding/margins that might otherwise linger. */
-.collapsible:not(.expanded) .section-content {
+.collapsible:not(.expanded) .section-content,
+.ocp-module:not(.expanded) .ocp-module__content {
     display: none !important;
     padding: 0 !important;
     border: 0 !important;
@@ -438,15 +492,18 @@ Key areas:
 /* ---------- Consistent spacing for Modules area only ---------- */
 
 /* Ensure uniform spacing between modules in all states */
-#modulesSection > .section-content > .collapsible {
-  margin-bottom: 8px;            /* consistent gap */
+#modulesSection > .section-content > .collapsible,
+#modulesSection > .section-content > .ocp-module {
+  margin-bottom: var(--ocp-module-gap);  /* consistent gap using variable */
 }
-#modulesSection > .section-content > .collapsible:last-child {
+#modulesSection > .section-content > .collapsible:last-child,
+#modulesSection > .section-content > .ocp-module:last-child {
   margin-bottom: 0;              /* no extra space after the last module */
 }
 
 /* Remove the bottom margin from individual headers in Modules only */
-#modulesSection > .section-content > .collapsible .section-header {
+#modulesSection > .section-content > .collapsible .section-header,
+#modulesSection > .section-content > .ocp-module .ocp-module__header {
   margin-bottom: 0;
 }
 
@@ -466,7 +523,8 @@ Key areas:
 
 /* Inline Profile Selector: in collapsed state, content is fully removed (redundant with global rule but explicit).
    In expanded state, normal styles apply. */
-#inlineProfileSelectorModule:not(.expanded) .section-content {
+#inlineProfileSelectorModule:not(.expanded) .section-content,
+#inlineProfileSelectorModule:not(.expanded) .ocp-module__content {
     display: none !important;
     padding: 0 !important;
     border: 0 !important;
