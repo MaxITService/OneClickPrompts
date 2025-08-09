@@ -51,7 +51,7 @@ window.MaxExtensionButtonsInit = {
                 globalMaxExtensionConfig.globalAutoSendEnabled = state;
             }
         );
-        autoSendToggle.title = "If unchecked, this will disable all autosend for all buttons.";
+        autoSendToggle.title = "If unchecked, this will disable all autosend for all buttons. For this tab only.";
         container.appendChild(autoSendToggle);
         logConCgp('[init] Auto-send toggle has been created and appended.');
 
@@ -63,7 +63,7 @@ window.MaxExtensionButtonsInit = {
                 globalMaxExtensionConfig.enableShortcuts = state;
             }
         );
-        hotkeysToggle.title = "If unchecked this will disable all hotkeys so your keyboard will never trigger any button pushes";
+        hotkeysToggle.title = "If unchecked this will disable all hotkeys so your keyboard will never trigger any button pushes. For this tab only.";
         container.appendChild(hotkeysToggle);
         logConCgp('[init] Hotkeys toggle has been created and appended.');
     },
