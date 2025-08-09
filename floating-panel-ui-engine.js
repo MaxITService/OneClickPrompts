@@ -1,5 +1,5 @@
 // Version: 1.0
-//
+// floating-panel-ui-engine.js
 // Documentation:
 // This file contains the core engine logic for the prompt queue feature.
 // It manages the queue's state, adding/removing items, and the sequential
