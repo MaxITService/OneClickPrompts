@@ -160,7 +160,7 @@ The Inline Profile Selector module adds a dropdown menu directly in the button r
 
 ### Implementation
 - UI settings in popup: ['modules/popup-page-modules-inlineSelector.js'](modules/popup-page-modules-inlineSelector.js)
-- DOM creation: ['buttons-init.js'](buttons-init.js) (createInlineProfileSelector function)
+- DOM creation: ['buttons-init-and-render.js'](buttons-init-and-render.js) (createInlineProfileSelector function)
 - Storage: ['modules/state-store.js'](modules/state-store.js) (inlineProfileSelector key)
 - Global config loading: ['init.js'](init.js) (loads settings during initialization)
 

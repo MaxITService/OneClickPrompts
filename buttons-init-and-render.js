@@ -1,4 +1,4 @@
-// buttons-init.js
+// buttons-init-and-render.js
 // Version: 1.0
 //
 // Documentation:

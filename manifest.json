@@ -55,7 +55,7 @@
         "buttons-clicking-grok.js",
         "buttons-clicking-gemini.js",
         "buttons.js",
-        "buttons-init.js",
+        "buttons-init-and-render.js",
         "interface.js",
         "floating-panel.js",
         "floating-panel-ui-engine.js",

@@ -17,7 +17,7 @@
  * Usage:
  * - Ensure the following scripts are loaded (in order) before this file:
  *   1. buttons.js
- *   2. buttons-init.js
+ *   2. buttons-init-and-render.js
  *   3. buttons-injection.js
  * - The initialization process starts automatically upon script load.
  *

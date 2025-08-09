@@ -27,11 +27,11 @@
 
      Usage:
      Load order should ensure `utils.js` and any site-specific clicking modules are present before use.
-     Rendering order and placement are orchestrated by buttons-init.js; this file focuses on element creation and behavior.
+     Rendering order and placement are orchestrated by buttons-init-and-render.js; this file focuses on element creation and behavior.
 
      Depends on:
      - utils.js (selectors and shared utilities)
-     - buttons-init.js (composition/placement)
+     - buttons-init-and-render.js (composition/placement)
      - buttons-clicking-*.js (site handlers: chatgpt/claude/copilot/deepseek/aistudio/grok/gemini)
 
      Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS. This one too!
