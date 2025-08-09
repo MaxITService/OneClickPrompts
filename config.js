@@ -451,7 +451,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             (async () => {
                 try {
                     const selectors = await StateStore.getCustomSelectors(request.site);
-                    logConfigurationRelatedStuff('Retrieved custom selectors for: ' + request.site);
+                       if (selectors) {
+                           logConfigurationRelatedStuff('Retrieved custom selectors for: ' + request.site);
+                       } else {                          
+                           logConfigurationRelatedStuff('No custom selectors found for: ' + request.site +
+                               '. Using default selectors defined in utils.js.');
+                       }
                     sendResponse({ selectors: selectors || null });
                 } catch (error) {
                     handleStorageError(error);
