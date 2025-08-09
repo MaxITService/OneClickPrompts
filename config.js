@@ -6,13 +6,12 @@ Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS. This one 
 Service worker responsibilities (current):
 - Single entry point for extension messaging (onMessage) and lifecycle (install/activate).
 - Owns profile storage and related handlers (getConfig/saveConfig/switchProfile/etc.).
-- Delegates non‑profile storage (theme, custom selectors, floating panel, cross‑chat) to modules/state-store.js.
+- Delegates non‑profile storage (theme, custom selectors, floating panel, cross‑chat) to modules/service-worker-auxiliary-state-store.js.
 - Opens the welcome page on fresh install and runs migration checks.
 */
 'use strict';
 import './context-menu.js';
-import './modules/state-store.js'; // state-store module (non-profile state)
-import { StateStore } from './modules/state-store.js';
+import { StateStore } from './modules/service-worker-auxiliary-state-store.js'; // state-store module (non-profile state)
 // Dependencies: default-config.json
 
 // Ensure the service worker is registered

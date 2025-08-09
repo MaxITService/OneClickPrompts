@@ -6,7 +6,7 @@ This document summarizes the non-profile state centralization changes and how to
 
 ## Overview
 
-- Centralized non-profile state is handled by a new service-worker module: modules/state-store.js.
+- Centralized non-profile state is handled by a new service-worker module: modules/service-worker-auxiliary-state-store.js.
 - config.js remains the single messaging entry point and now delegates only non-profile handlers to StateStore.
 - Backward compatibility is preserved via dual-read (prefer new schema, fallback to legacy) and dual-write (mirror writes to legacy keys).
 
@@ -14,7 +14,7 @@ Profiles are explicitly excluded. Keys under currentProfile and profiles.* remai
 
 ## New Module
 
-1) modules/state-store.js
+1) modules/service-worker-auxiliary-state-store.js
 - Purpose: Encapsulate non-profile state (UI and module/global settings) with a stable API and event broadcasts.
 - Context: Imported and executed in the service worker. It exports StateStore.
 - Responsibilities:
@@ -161,7 +161,7 @@ The Inline Profile Selector module adds a dropdown menu directly in the button r
 ### Implementation
 - UI settings in popup: ['modules/popup-page-modules-inlineSelector.js'](modules/popup-page-modules-inlineSelector.js)
 - DOM creation: ['buttons-init-and-render.js'](buttons-init-and-render.js) (createInlineProfileSelector function)
-- Storage: ['modules/state-store.js'](modules/state-store.js) (inlineProfileSelector key)
+- Storage: ['modules/service-worker-auxiliary-state-store.js'](modules/service-worker-auxiliary-state-store.js) (inlineProfileSelector key)
 - Global config loading: ['init.js'](init.js) (loads settings during initialization)
 
 ### Integration Points
@@ -192,7 +192,7 @@ Recommended checks:
 ## File References
 
 - Service worker: ['config.js'](config.js)
-- State: ['modules/state-store.js'](modules/state-store.js)
+- State: ['modules/service-worker-auxiliary-state-store.js'](modules/service-worker-auxiliary-state-store.js)
 - Styles: ['common-ui-elements/common-style.css'](common-ui-elements/common-style.css), ['common-ui-elements/dark-theme.css'](common-ui-elements/dark-theme.css)
 - HTML: ['popup.html'](popup.html), ['welcome.html'](welcome.html)
 - Inline Profile Selector: ['modules/popup-page-modules-inlineSelector.js'](modules/popup-page-modules-inlineSelector.js)

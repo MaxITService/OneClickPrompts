@@ -1,4 +1,4 @@
-// modules/state-store.js
+// modules/service-worker-auxiliary-state-store.js
 // Version: 0.1 (non-profile state only)
 // Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS.
 // This module centralizes non-profile state in the service worker context.
