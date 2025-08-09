@@ -175,12 +175,16 @@ window.MaxExtensionButtonsInit = {
 
     /**
      * Updates all buttons and toggles in response to a profile change.
-     * Accepts an optional `origin` parameter:
+     * Requires an `origin` parameter to specify which UI to update:
      *  - 'panel'  => only update the floating panel UI
      *  - 'inline' => only update the inline buttons UI
-     *  - null/undefined => update both (legacy behavior)
      */
-    updateButtonsForProfileChange: function (origin = null) {
+    updateButtonsForProfileChange: function (origin) {
+        if (!origin) {
+            logConCgp('[init] Warning: updateButtonsForProfileChange called without origin parameter. No action taken.');
+            return;
+        }
+
         // If origin is 'panel', only update the floating panel
         if (origin === 'panel') {
             if (window.MaxExtensionFloatingPanel && window.MaxExtensionFloatingPanel.panelElement) {
@@ -204,23 +208,8 @@ window.MaxExtensionButtonsInit = {
             }
             return;
         }
-    
-        // Legacy/default: update both containers
-        const originalContainer = document.getElementById(window.InjectionTargetsOnWebsite.selectors.buttonsContainerId);
-        if (originalContainer) {
-            originalContainer.innerHTML = '';
-            this.generateAndAppendAllButtons(originalContainer, false); // Not panel
-            logConCgp('[init] Updated buttons in original container for profile change.');
-        }
-    
-        if (window.MaxExtensionFloatingPanel && window.MaxExtensionFloatingPanel.panelElement) {
-            const panelContent = document.getElementById('max-extension-floating-panel-content');
-            if (panelContent) {
-                panelContent.innerHTML = '';
-                this.generateAndAppendAllButtons(panelContent, true); // This is the panel
-                logConCgp('[init] Updated buttons in floating panel for profile change.');
-            }
-        }
+
+        logConCgp(`[init] Warning: updateButtonsForProfileChange called with unknown origin '${origin}'. No action taken.`);
     }
 };
 
