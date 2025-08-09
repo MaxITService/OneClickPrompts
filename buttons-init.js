@@ -1,17 +1,36 @@
+// buttons-init.js
 // Version: 1.0
 //
 // Documentation:
-// This file handles the initialization of custom buttons and toggles within the ChatGPT extension.
-// It ensures that custom buttons and toggles are created and appended to the DOM without duplication.
+// Initialization and rendering of the *entire* buttons row for target containers (inline chat area
+// or the floating panel). Prevents duplicates, composes all button types, and appends global toggles.
+//
+// What this module renders (in order):
+//  1) Floating panel toggle (for inline containers only, if the panel feature exists)
+//  2) Inline Profile Selector — optional, position configurable ("before" or "after")
+//  3) A unified list of buttons:
+//     - Cross-Chat buttons ("Copy", "Paste") placed "before" or "after" based on globalCrossChatConfig
+//     - Custom buttons from globalMaxExtensionConfig.customButtons (honors separators)
+//     - Numeric shortcuts (1–10) assigned to the first 10 non-separator buttons when enabled
+//  4) Global toggles appended last: "Auto-send" and "Hotkeys"
 //
 // Functions:
-// - createAndInsertCustomElements: Creates and inserts custom buttons and toggles into the target container.
-// - generateAndAppendToggles: Creates and appends toggle switches (e.g., Auto-send, Hotkeys) to a specified container.
-// - updateButtonsForProfileChange: Updates all buttons and toggles in response to a profile change.
+// - createAndInsertCustomElements(targetContainer): Creates the container, renders everything once, and inserts it.
+//   Uses a dynamic id from InjectionTargetsOnWebsite to avoid duplication.
+// - generateAndAppendAllButtons(container, isPanel): Main renderer for all buttons + optional controls.
+// - generateAndAppendToggles(container): Appends Auto-send and Hotkeys toggles and wires them to global config.
+// - updateButtonsForProfileChange(origin): Scoped re-render — only "panel" or only "inline".
+// - createInlineProfileSelector(): Builds the inline profile <select>, loads profile list, styles for theme,
+//   blocks event bubbling on hostile SPAs, and triggers a partial refresh on change.
+//
+// Notes:
+// - Cross-Chat placement and autosend behavior is driven by window.globalCrossChatConfig.
+// - Shortcut keys appear in tooltips; Shift+click inversion happens in processCustomSendButtonClick.
 //
 // Usage:
-// Ensure that `buttons.js` and `init.js` are loaded before this script to utilize button initialization functionalities.
-// This script should be included in the `content_scripts` section of the manifest to be injected into the target pages.
+// Ensure `buttons.js`, `utils.js`, and `init.js` are loaded first. Include in `content_scripts` so it runs
+// on the target pages. This module only performs DOM composition; click routing is in buttons.js.
+//
 // Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS. This one too!
 'use strict';
 

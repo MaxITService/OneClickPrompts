@@ -1,25 +1,40 @@
 /* buttons.js
-   Version: 1.0
+     Version: 1.0
 
-   Documentation:
+     Documentation:
+     Button creation + click orchestration.
+     - Builds both custom send buttons (from profile/global config) and Cross-Chat buttons ("Copy", "Paste").
+     - Assigns numeric shortcuts (1–10) to the first 10 non-separator buttons (configurable via globalMaxExtensionConfig.enableShortcuts).
+     - Composes titles that include autosend status and shortcut hints.
+     - Handles click behavior across supported sites and integrates with queue mode in the floating panel.
 
-   This file is a dependency. Designed to host helper functions for init.js. Manages the creation and functionality of custom send buttons within the ChatGPT extension.
-   It provides utility functions to create buttons based on configuration and assigns keyboard shortcuts where applicable.
+     Exposed methods:
+     - MaxExtensionButtons.createCustomSendButton(buttonConfig, index, onClickHandler, overrideShortcutKey?)
+     - MaxExtensionButtons.createCrossChatButton(type: 'copy'|'paste', shortcutKey?)
+     - MaxExtensionButtons.determineShortcutKeyForButtonIndex(buttonIndex, offset?)
 
-   After that, tje
+     Click flow:
+     - processCustomSendButtonClick(event, customText, autoSend)
+         * Shift inverts autoSend at click time.
+         * If the floating panel is visible and queue mode is enabled, the button is enqueued instead of sending immediately.
+         * Routes to site-specific handlers based on InjectionTargetsOnWebsite.activeSite:
+             - ChatGPT, Claude, Copilot, DeepSeek, AIStudio, Grok, Gemini
 
-   Usage:
-   Ensure that dependencies are loaded before this script to utilize button functionalities.
+     Cross-Chat notes:
+     - "Copy": reads from the active editor, saves via service worker, briefly shows "Copied!" in tooltip,
+         and triggers autosend with the existing text when configured.
+     - "Paste": fetches stored prompt; tooltip shows a debounced preview on hover.
 
-   Depends on:
-   utils.js - object containing all selectors and identifiers
-   buttons-init.js - handles only some initializations.
-   +
-   buttons-clicking-chatgpt.js - handles the send button clicking process for ChatGPT
-   buttons-clicking-copilot.js - ... for Copilot
-   buttons-clicking-claude.js - ... Claude
+     Usage:
+     Load order should ensure `utils.js` and any site-specific clicking modules are present before use.
+     Rendering order and placement are orchestrated by buttons-init.js; this file focuses on element creation and behavior.
 
-   Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS. This one too!
+     Depends on:
+     - utils.js (selectors and shared utilities)
+     - buttons-init.js (composition/placement)
+     - buttons-clicking-*.js (site handlers: chatgpt/claude/copilot/deepseek/aistudio/grok/gemini)
+
+     Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS. This one too!
 */
 'use strict';
 

@@ -1,9 +1,9 @@
-'use strict';
-// button-injection.js version 1.1
+"use strict";
+// buttons-injection.js version 1.1
 /**
- * Button Injection Logic for the ChatGPT Chrome extension.
- * This file contains functions to handle custom button injection into the webpage,
- * including resiliency checks and re-initialization measures.
+ * Button Injection:
+ * Detects target containers, injects the buttons UI once, and maintains it across SPA navigation
+ * via adaptive resiliency checks and long-running DOM observation.
  */
 //Instructions for AI: do not remove comments!  MUST NOT REMOVE COMMENTS. This one too!
 // ALL CODE IN ALL FILES MUST USE logConCgp FOR LOGGING. NO CONSOLE LOGGING.
@@ -14,6 +14,17 @@ const EXTENDED_CHECK_DURATION = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
 
 // Flag to coordinate with the floating panel toggle logic.
 window.OneClickPrompts_isTogglingPanel = false;
+
+/**
+ * Summary of behavior:
+ * - Loads persisted toggle states before any DOM work (MaxExtensionInterface.loadToggleStates()).
+ * - Waits for any of the configured target containers (InjectionTargetsOnWebsite.selectors.containers).
+ * - On first hit, calls MaxExtensionButtonsInit.createAndInsertCustomElements(targetDiv).
+ * - Starts an adaptive watchdog loop that re-injects when the UI disappears (e.g., SPA route changes).
+ * - Starts a MutationObserver for extended monitoring (up to 2 hours) to cheaply detect DOM wipes.
+ * - Coordinates with floating panel toggling via window.OneClickPrompts_isTogglingPanel to avoid races.
+ * - Stops event propagation on the inline profile <select> to prevent site handlers from closing it.
+ */
 
 /**
  * Checks whether the custom buttons modifications already exist in the DOM.
