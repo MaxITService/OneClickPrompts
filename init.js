@@ -48,7 +48,9 @@ if (!window.__OCP_messageListenerRegistered_v2) {
             }
             if (window.MaxExtensionButtonsInit && typeof window.MaxExtensionButtonsInit.updateButtonsForProfileChange === 'function') {
                 // Forward origin so updateButtonsForProfileChange can limit which container(s) are updated.
-                window.MaxExtensionButtonsInit.updateButtonsForProfileChange(origin);
+                // Default to 'inline' if no origin is specified, as that's the primary UI element
+                const effectiveOrigin = origin || 'inline';
+                window.MaxExtensionButtonsInit.updateButtonsForProfileChange(effectiveOrigin);
             }
         } catch (e) {
             // If anything goes wrong, fallback to full re-init on next call
