@@ -309,7 +309,7 @@ Key areas:
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 0;
     color: var(--text-color);
     /* Add this line to ensure text is visible */
 }
@@ -495,4 +495,17 @@ Key areas:
 .floating-site-item span {
     font-size: 1.1em;
     /* Responsive, scales with parent font size */
+}
+
+/* Ensure uniform spacing between modules in all states */
+#modulesSection > .section-content > .collapsible {
+  margin-bottom: 8px;            /* consistent gap */
+}
+#modulesSection > .section-content > .collapsible:last-child {
+  margin-bottom: 0;              /* no extra space after the last module */
+}
+
+/* Remove the bottom margin from individual headers */
+#modulesSection > .section-content > .collapsible .section-header {
+  margin-bottom: 0;
 }
