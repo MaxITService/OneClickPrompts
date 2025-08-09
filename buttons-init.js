@@ -32,6 +32,7 @@ window.MaxExtensionButtonsInit = {
                 globalMaxExtensionConfig.globalAutoSendEnabled = state;
             }
         );
+        autoSendToggle.title = "If unchecked, this will disable all autosend for all buttons.";
         container.appendChild(autoSendToggle);
         logConCgp('[init] Auto-send toggle has been created and appended.');
 
@@ -43,6 +44,7 @@ window.MaxExtensionButtonsInit = {
                 globalMaxExtensionConfig.enableShortcuts = state;
             }
         );
+        hotkeysToggle.title = "If unchecked this will disable all hotkeys so your keyboard will never trigger any button pushes";
         container.appendChild(hotkeysToggle);
         logConCgp('[init] Hotkeys toggle has been created and appended.');
     },
