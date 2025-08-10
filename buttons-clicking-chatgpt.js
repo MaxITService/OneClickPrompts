@@ -21,6 +21,7 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
 
     if (!editorArea) {
         logConCgp('[buttons] Editor area not found. Unable to proceed.');
+        showToast('Could not find the text input area.', 'error');
         return;
     }
 
@@ -57,12 +58,12 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
 
         return type === 'input'
             ? new InputEvent(type, {
-                  data: char,
-                  inputType: 'insertText',
-                  bubbles: true,
-                  composed: true,
-                  cancelable: true
-              })
+                data: char,
+                inputType: 'insertText',
+                bubbles: true,
+                composed: true,
+                cancelable: true
+            })
             : new KeyboardEvent(type, eventInit);
     };
 
@@ -117,6 +118,11 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
     const handleSendButtons = (sendButtons) => {
         logConCgp('[buttons] handleSendButtons called.');
         if (!sendButtons.length) {
+            // If auto-send was intended, notify the user that the button was not found.
+            if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
+                logConCgp('[buttons] Auto-send failed: Send button not found.');
+                showToast('Could not find the send button.', 'error');
+            }
             logConCgp('[buttons] Send buttons are not available to handle.');
             return;
         }
@@ -161,6 +167,7 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
             if (updatedSendButtons.length === 0) {
                 logConCgp('[auto-send] Send button not found during auto-send. Stopping auto-send interval.');
                 clearInterval(window.autoSendInterval);
+                showToast('Send button not found. Auto-send stopped.', 'error');
                 window.autoSendInterval = null;
                 return;
             }
@@ -240,6 +247,7 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
                     })
                     .catch((error) => {
                         logConCgp('[buttons] ' + error.message);
+                        showToast('Could not find the send button.', 'error');
                     });
             }, 500); // Delay to allow the editor to update
         } else {

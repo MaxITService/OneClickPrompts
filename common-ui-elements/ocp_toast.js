@@ -4,9 +4,6 @@
 
 'use strict';
 
-// This script assumes an element with id="toastContainer" exists in the DOM.
-const toastContainer = document.getElementById('toastContainer');
-
 /**
  * Displays a toast notification.
  *
@@ -15,9 +12,13 @@ const toastContainer = document.getElementById('toastContainer');
  * @param {number} duration - Duration in milliseconds before the toast disappears. Defaults to 3000ms.
  */
 function showToast(message, type = 'info', duration = 3000) {
+    // Ensure the toast container exists, creating it if necessary.
+    let toastContainer = document.getElementById('toastContainer');
     if (!toastContainer) {
-        console.error('Toast container not found. Please add <div id="toastContainer" class="toast-container"></div> to your HTML.');
-        return;
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toastContainer';
+        toastContainer.className = 'toast-container';
+        document.body.appendChild(toastContainer);
     }
 
     const toast = document.createElement('div');

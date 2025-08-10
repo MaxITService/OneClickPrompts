@@ -21,6 +21,7 @@ function processGeminiCustomSendButtonClick(event, customText, autoSend) {
 
     if (!editorArea) {
         logConCgp('[Gemini] Editor area not found. Unable to proceed.');
+        showToast('Could not find the text input area.', 'error');
         return;
     }
 
@@ -80,17 +81,18 @@ function processGeminiCustomSendButtonClick(event, customText, autoSend) {
                 } else if (++attempts >= maxAttempts) {
                     clearInterval(intervalId);
                     logConCgp('[Gemini] Send button did not become enabled after multiple attempts.');
+                    showToast('Send button did not become active.', 'error');
                 } else {
-                     logConCgp(`[Gemini] Send button not enabled yet. Attempt ${attempts}/${maxAttempts}`);
+                    logConCgp(`[Gemini] Send button not enabled yet. Attempt ${attempts}/${maxAttempts}`);
                 }
             }, 100); // Check every 100ms
         };
         attemptSend(); // Start trying to send
     } else {
-         logConCgp('[Gemini] Auto-send disabled or not requested for this button.');
-         // Optional: Re-focus editor after insertion if not auto-sending
-         editorArea.focus();
-         MaxExtensionUtils.moveCursorToEnd(editorArea);
+        logConCgp('[Gemini] Auto-send disabled or not requested for this button.');
+        // Optional: Re-focus editor after insertion if not auto-sending
+        editorArea.focus();
+        MaxExtensionUtils.moveCursorToEnd(editorArea);
     }
 }
 

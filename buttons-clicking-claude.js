@@ -81,6 +81,7 @@ function handleClaudeSend() {
             clearTimeout(timeoutId);
             obs.disconnect();
             logConCgp('[Claude] Maximum attempts reached without finding send button');
+            showToast('Could not find the send button.', 'error');
         } else {
             logConCgp(`[Claude] Attempt ${attempts}/${MAX_ATTEMPTS}: Send button not found yet`);
         }
@@ -94,6 +95,7 @@ function handleClaudeSend() {
     timeoutId = setTimeout(() => {
         observer.disconnect();
         logConCgp('[Claude] Timeout reached without finding send button');
+        showToast('Could not find the send button.', 'error');
     }, TIMEOUT_DURATION);
 }
 
@@ -121,6 +123,7 @@ const ClaudeEditorUtils = {
         const editorElement = this.findEditorElement();
         if (!editorElement) {
             logConCgp('[ClaudeEditor] Editor element not found');
+            showToast('Could not find the text input area.', 'error');
             return false;
         }
 
@@ -201,6 +204,7 @@ const ClaudeEditorUtils = {
             logConCgp('[ClaudeEditor] Editor state analysis:', state);
         } catch (error) {
             logConCgp('[ClaudeEditor] Error analyzing editor state:', error);
+            showToast('Error preparing editor for text.', 'error');
         }
 
         return state;
@@ -224,6 +228,7 @@ const ClaudeEditorUtils = {
             }
         } catch (error) {
             logConCgp('[ClaudeEditor] Error during text insertion:', error);
+            showToast('Failed to insert text.', 'error');
             return false;
         }
     },
@@ -252,6 +257,7 @@ const ClaudeEditorUtils = {
             return this.insertTextIntoParagraph(editorElement, textToInsert);
         } catch (error) {
             logConCgp('[ClaudeEditor] Error in ProseMirror insertion:', error);
+            showToast('Failed to insert text.', 'error');
             return false;
         }
     },
@@ -283,6 +289,7 @@ const ClaudeEditorUtils = {
             return true;
         } catch (error) {
             logConCgp('[ClaudeEditor] Error in standard insertion:', error);
+            showToast('Failed to insert text.', 'error');
             return false;
         }
     },
@@ -339,6 +346,7 @@ const ClaudeEditorUtils = {
             return true;
         } catch (error) {
             logConCgp('[ClaudeEditor] Error inserting text:', error);
+            showToast('Failed to insert text.', 'error');
             return false;
         }
     }

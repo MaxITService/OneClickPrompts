@@ -42,11 +42,12 @@
         "https://grok.com/*",
         "https://gemini.google.com/*"
       ],
-      "css": ["floating-panel.css"],
+      "css": ["floating-panel.css", "common-ui-elements/ocp_toast.css"],
       "js": [
         "log.js",
         "event-handlers.js",
         "utils.js",
+        "common-ui-elements/ocp_toast.js",
         "buttons-clicking-chatgpt.js",
         "buttons-clicking-copilot.js",
         "buttons-clicking-claude.js",
