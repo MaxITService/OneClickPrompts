@@ -221,10 +221,11 @@
 #max-extension-profile-switcher {
     padding: 8px 12px;
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
     border-top: 1px solid rgba(100, 100, 100, 0.3);
     cursor: move;
+    gap: 8px; /* Add 8px gap between label and dropdown */
 }
 
 #max-extension-profile-switcher div {
