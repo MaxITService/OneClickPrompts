@@ -305,14 +305,12 @@
     /* For Firefox */
 }
 
+/*without this there are no up and down arrows next to number imput */
 #max-extension-queue-delay-input::-webkit-inner-spin-button,
 #max-extension-queue-delay-input::-webkit-outer-spin-button {
-    -webkit-appearance: auto;
-    /* For Chrome, Safari, Edge */
+    -webkit-appearance: auto;   
     opacity: 1;
-    /* Make sure they are not transparent */
     margin: 0;
-    /* Reset any custom margin */
 }
 
 /* Style all checkboxes inside your panel */
