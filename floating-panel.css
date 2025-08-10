@@ -220,7 +220,6 @@
     height: 100%;
     width: 100%;
     background-color: white;
-    /* Changed from green to white */
     border-radius: 2px;
 }
 
@@ -270,7 +269,7 @@
 .queue-toggle-footer-container .toggle-container {
     margin-top: 0 !important;
     padding-left: 0 !important;
-    margin-right: auto !important; /* Push to the left */
+    margin-right: auto !important; 
 }
 
 .queue-toggle-footer-container label {
