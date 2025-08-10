@@ -114,6 +114,20 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         expandableSection.style.display = state ? 'contents' : 'none';
         this.queueDisplayArea.style.display = state ? 'flex' : 'none';
         this.saveCurrentProfileConfig(); // Save to profile
+        
+        // Update queue section visibility when toggle is in footer
+        const queueToggleFooter = document.getElementById('max-extension-queue-toggle-footer');
+        const queueSection = document.getElementById('max-extension-queue-section');
+        if (queueToggleFooter && queueToggleFooter.children.length > 0) {
+            // Toggle is in footer
+            if (state) {
+                // Show queue section with controls when enabled
+                queueSection.style.display = 'flex';
+            } else {
+                // Hide entire queue section when disabled
+                queueSection.style.display = 'none';
+            }
+        }
     };
 
     this.queueModeToggle = MaxExtensionInterface.createToggle(
@@ -129,6 +143,11 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
 
     expandableSection.style.display = isQueueEnabled ? 'contents' : 'none';
     this.queueDisplayArea.style.display = isQueueEnabled ? 'flex' : 'none';
+
+    // Initialize responsive positioning after toggle is created
+    if (this.initializeResponsiveQueueToggle) {
+        this.initializeResponsiveQueueToggle();
+    }
 
     // TOS Button Listeners
     tosAcceptButton.addEventListener('click', () => {

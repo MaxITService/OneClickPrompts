@@ -104,6 +104,15 @@ window.MaxExtensionFloatingPanel.createProfileSwitcher = function () {
     // Clear existing content
     switcherContainer.innerHTML = '';
 
+    // Create a container for profile elements (label + dropdown)
+    const profileContainer = document.createElement('div');
+    profileContainer.className = 'profile-elements-container';
+    profileContainer.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    `;
+
     // Create profile label
     const profileLabel = document.createElement('div');
     profileLabel.textContent = 'Profile:';
@@ -137,9 +146,25 @@ window.MaxExtensionFloatingPanel.createProfileSwitcher = function () {
         this.switchToProfile(selectedProfileName);
     });
 
-    // Append label and selector to the container
-    switcherContainer.appendChild(profileLabel);
-    switcherContainer.appendChild(profileSelector);
+    // Append label and selector to the profile container
+    profileContainer.appendChild(profileLabel);
+    profileContainer.appendChild(profileSelector);
+
+    // Create a container for the queue toggle (will be moved here when space allows)
+    const queueToggleContainer = document.createElement('div');
+    queueToggleContainer.id = 'max-extension-queue-toggle-footer';
+    queueToggleContainer.className = 'queue-toggle-footer-container';
+    queueToggleContainer.style.cssText = `
+        display: none;
+        margin-right: 16px;
+    `;
+
+    // Append both containers to the switcher container - queue toggle on left, profile on right
+    switcherContainer.appendChild(queueToggleContainer);
+    switcherContainer.appendChild(profileContainer);
+
+    // Initialize responsive queue toggle positioning
+    this.initializeResponsiveQueueToggle();
 };
 
 /**
@@ -289,4 +314,98 @@ window.MaxExtensionFloatingPanel.createPanelToggleButton = function () {
     });
 
     return toggleButton;
+};
+
+/**
+ * Initializes responsive positioning for the queue toggle based on available space.
+ */
+window.MaxExtensionFloatingPanel.initializeResponsiveQueueToggle = function () {
+    // This will be called after the queue section is initialized
+    // We'll add a resize observer to monitor panel width changes
+    if (!this.panelElement) return;
+
+    const checkSpaceAndMoveToggle = () => {
+        const queueToggleOriginal = document.getElementById('max-extension-queue-toggle-placeholder');
+        const queueToggleFooter = document.getElementById('max-extension-queue-toggle-footer');
+        const profileSwitcher = document.getElementById('max-extension-profile-switcher');
+        const queueSection = document.getElementById('max-extension-queue-section');
+        const controlsContainer = queueSection?.querySelector('.controls-container');
+        
+        if (!queueToggleOriginal || !queueToggleFooter || !profileSwitcher || !queueSection || !controlsContainer) return;
+
+        const panelWidth = this.panelElement.offsetWidth;
+        // More aggressive threshold - move toggle at smaller widths
+        const minWidthForFooterPlacement = 320;
+
+        if (panelWidth >= minWidthForFooterPlacement) {
+            // Move toggle to footer if it's not already there
+            const toggle = this.queueModeToggle;
+            if (toggle && toggle.parentElement === queueToggleOriginal) {
+                queueToggleFooter.appendChild(toggle);
+                queueToggleFooter.style.display = 'block';
+                
+                // Hide only the toggle placeholder in the queue section
+                queueToggleOriginal.style.display = 'none';
+                
+                // Check if queue mode is enabled to determine if we should show the queue controls
+                const isQueueEnabled = window.globalMaxExtensionConfig?.enableQueueMode || false;
+                if (isQueueEnabled) {
+                    // Keep the queue section visible but without the toggle
+                    queueSection.style.display = 'flex';
+                    // Hide the controls container header but keep the expandable controls visible
+                    const expandableSection = queueSection.querySelector('.expandable-queue-controls');
+                    if (expandableSection) {
+                        expandableSection.style.display = 'contents';
+                    }
+                } else {
+                    // Hide the entire queue section if queue mode is disabled
+                    queueSection.style.display = 'none';
+                }
+            }
+        } else {
+            // Move toggle back to original position if it's in the footer
+            const toggle = this.queueModeToggle;
+            if (toggle && toggle.parentElement === queueToggleFooter) {
+                queueToggleOriginal.appendChild(toggle);
+                queueToggleFooter.style.display = 'none';
+                
+                // Show the toggle placeholder
+                queueToggleOriginal.style.display = 'block';
+                
+                // Show the queue section
+                queueSection.style.display = 'flex';
+            }
+        }
+    };
+
+    // Initial check
+    setTimeout(checkSpaceAndMoveToggle, 100);
+
+    // Monitor panel resize
+    if (window.ResizeObserver) {
+        const resizeObserver = new ResizeObserver(checkSpaceAndMoveToggle);
+        resizeObserver.observe(this.panelElement);
+        this.queueToggleResizeObserver = resizeObserver;
+    }
+
+    // Also check on window resize as fallback
+    window.addEventListener('resize', checkSpaceAndMoveToggle);
+};
+
+/**
+ * Updates the visibility of the queue section based on toggle placement and state.
+ * This function is now simplified since the entire section visibility is managed in checkSpaceAndMoveToggle
+ */
+window.MaxExtensionFloatingPanel.updateQueueSectionVisibility = function (isToggleInFooter) {
+    const queueSection = document.getElementById('max-extension-queue-section');
+    
+    if (!queueSection) return;
+
+    if (isToggleInFooter) {
+        // Hide the entire queue section when toggle is in footer
+        queueSection.style.display = 'none';
+    } else {
+        // Show the queue section when toggle is back in original position
+        queueSection.style.display = 'flex';
+    }
 };

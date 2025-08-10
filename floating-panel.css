@@ -68,6 +68,16 @@
     gap: 12px;
 }
 
+/* When toggle is in footer, hide only the placeholder, not the entire controls */
+#max-extension-queue-toggle-placeholder {
+    display: block;
+}
+
+/* Adjust queue section layout when toggle is moved to footer */
+#max-extension-queue-section.toggle-in-footer .controls-container {
+    justify-content: flex-end; /* Align controls to the right when toggle is gone */
+}
+
 #max-extension-queue-section .expandable-queue-controls {
     display: contents;
     /* Ensures children are treated as direct children of the flex container */
@@ -221,11 +231,18 @@
 #max-extension-profile-switcher {
     padding: 8px 12px;
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
     align-items: center;
     border-top: 1px solid rgba(100, 100, 100, 0.3);
     cursor: move;
-    gap: 8px; /* Add 8px gap between label and dropdown */
+    gap: 8px; /* Add 8px gap between elements */
+}
+
+/* Profile elements container */
+.profile-elements-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 #max-extension-profile-switcher div {
@@ -243,6 +260,45 @@
     font-size: 12px;
     cursor: pointer;
     min-width: 120px;
+}
+
+/* Queue toggle in footer */
+.queue-toggle-footer-container {
+    display: none;
+    margin-right: 16px;
+}
+
+.queue-toggle-footer-container .toggle-container {
+    margin-top: 0 !important;
+    padding-left: 0 !important;
+    margin-right: auto !important; /* Push to the left */
+}
+
+.queue-toggle-footer-container label {
+    font-size: 12px !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Ensure proper spacing in the footer */
+#max-extension-profile-switcher {
+    min-height: 36px; /* Ensure consistent height */
+}
+
+/* Responsive behavior for queue section */
+@media (min-width: 400px) {
+    #max-extension-queue-section .controls-container {
+        /* Will be hidden by JavaScript when toggle is moved to footer */
+    }
+}
+
+/* Prevent dragging on queue toggle elements */
+.queue-toggle-footer-container * {
+    pointer-events: auto;
+}
+
+.queue-toggle-footer-container input,
+.queue-toggle-footer-container label {
+    cursor: pointer;
 }
 
 /* === ADDED TO RESTORE NUMBER INPUT SPINNERS === */
