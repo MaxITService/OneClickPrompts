@@ -145,7 +145,7 @@ Read precedence and writes:
 - Shared vars: ['common-ui-elements/common-style.css'](common-ui-elements/common-style.css) defines root tokens (colors, hover, transitions, shadows, checkbox size). Used by popup and welcome.
 - Dark theme: ['common-ui-elements/dark-theme.css'](common-ui-elements/dark-theme.css) applies on body.dark-theme; adjusts tokens and components (buttons, inputs, sections, links, toasts, dialogs).
 - Dialogs: use .dialog with variants .dialog-confirmation and .dialog-error (see ['popup.html'](popup.html:284)).
-- Toasts: base .toast plus type classes toast-success/error/info from ['popup-page-scripts/popup-page-visuals.js'](popup-page-scripts/popup-page-visuals.js:19). In dark mode, neutral fallback applies only without a type class.
+- Toasts: base .toast plus type classes toast-success/error/info from ['common-ui-elements/ocp_toast.js'](common-ui-elements/ocp_toast.js) with styles in ['common-ui-elements/ocp_toast.css'](common-ui-elements/ocp_toast.css). In dark mode, neutral fallback applies only without a type class.
 
 ## Inline Profile Selector Module
 

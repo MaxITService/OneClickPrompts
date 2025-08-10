@@ -140,13 +140,6 @@ body.dark-theme #importProfile {
     border-color: var(--primary-color);
 }
 
-/* Dark theme toast styling */
-/* In dark mode, apply neutral background to base .toast unless it has one of the explicit type classes */
-body.dark-theme .toast:not(.toast-success):not(.toast-error):not(.toast-info) {
-    background: rgba(50, 50, 50, 0.9);
-    color: #eee;
-}
-
 /* ------------------------------------------------------------------------- */
 /* Dark Theme Overrides for Dynamic Button Items                             */
 /* ------------------------------------------------------------------------- */

@@ -272,48 +272,6 @@ Key areas:
 }
 
 /* ------------------------------------------------------------------------- */
-/* Toast Notification Styles                                                 */
-/* ------------------------------------------------------------------------- */
-.toast-container {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 1000;
-}
-
-.toast {
-    background: #222;                 /* neutral base; type classes override */
-    color: #fff;                      /* readable on dark base */
-    padding: 12px 24px;               
-    border-radius: 4px;               
-    margin-top: 8px;                 
-    opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.5s ease, transform 0.5s ease; /* was var(--toast-transition) */
-    min-width: 200px;
-    max-width: 300px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-}
-
-.toast.show {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-/* New toast type classes */
-.toast-success {
-    background: #4BB543;
-}
-
-.toast-error {
-    background: #FF3333;
-}
-
-.toast-info {
-    background: #3333FF;
-}
-
-/* ------------------------------------------------------------------------- */
 /* Wrapper for the Button List (if needed)                                  */
 /* ------------------------------------------------------------------------- */
 .button-list-wrapper {

@@ -1,0 +1,61 @@
+/*
+common-ui-elements/ocp_toast.css
+Version: 1.0
+
+This file contains all styles related to toast notifications.
+It includes base styling for the container and individual toasts,
+type-specific coloring (success, error, info), and animations for
+showing and hiding toasts. It also includes dark theme overrides.
+*/
+
+/* ------------------------------------------------------------------------- */
+/* Toast Notification Styles                                                 */
+/* ------------------------------------------------------------------------- */
+.toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.toast {
+    background: #222;                 /* neutral base; type classes override */
+    color: #fff;                      /* readable on dark base */
+    padding: 12px 24px;
+    border-radius: 4px;
+    margin-top: 8px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    min-width: 200px;
+    max-width: 300px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Toast type classes */
+.toast-success {
+    background: #4BB543;
+}
+
+.toast-error {
+    background: #FF3333;
+}
+
+.toast-info {
+    background: #3333FF;
+}
+
+
+/* ------------------------------------------------------------------------- */
+/* Dark Theme Overrides for Toasts                                           */
+/* ------------------------------------------------------------------------- */
+/* In dark mode, apply neutral background to base .toast unless it has one of the explicit type classes */
+body.dark-theme .toast:not(.toast-success):not(.toast-error):not(.toast-info) {
+    background: rgba(50, 50, 50, 0.9);
+    color: #eee;
+}
