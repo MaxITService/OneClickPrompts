@@ -96,31 +96,41 @@ window.MaxExtensionFloatingPanel.togglePanel = async function (event) {
  * Updates the panel's dynamic styles based on current settings.
  * Static styles are now in floating-panel.css.
  */
+/**
+ * Updates the panel’s dynamic styles based on current settings.
+ * If the saved position is off-screen or invalid, repositions to bottom-right.
+ */
 window.MaxExtensionFloatingPanel.updatePanelFromSettings = function () {
     if (!this.panelElement) return;
-
-    // Position and size
-    const viewportW = window.innerWidth;
-    const viewportH = window.innerHeight;
-    const width  = Number(this.currentPanelSettings?.width);
-    const height = Number(this.currentPanelSettings?.height);
-    const safeW = Number.isFinite(width)  && width  > 0 ? width  : (this.panelElement.offsetWidth  || 360);
-    const safeH = Number.isFinite(height) && height > 0 ? height : (this.panelElement.offsetHeight || 320);
-    this.panelElement.style.width  = `${safeW}px`;
-    this.panelElement.style.height = `${safeH}px`;
-
-    const posX = Number(this.currentPanelSettings?.posX);
-    const posY = Number(this.currentPanelSettings?.posY);
-    const withinX = Number.isFinite(posX) && posX >= 0 && posX <= Math.max(0, viewportW - safeW);
-    const withinY = Number.isFinite(posY) && posY >= 0 && posY <= Math.max(0, viewportH - safeH);
-    const hasValidSaved = withinX && withinY;
-
-    if (hasValidSaved) {
-        this.panelElement.style.left = `${posX}px`;
-        this.panelElement.style.top  = `${posY}px`;
+    // size
+    this.panelElement.style.width = `${this.currentPanelSettings.width}px`;
+    this.panelElement.style.height = `${this.currentPanelSettings.height}px`;
+    // validate position
+    let intendedLeft = this.currentPanelSettings.posX;
+    let intendedTop = this.currentPanelSettings.posY;
+    const panelWidth = this.currentPanelSettings.width;
+    const panelHeight = this.currentPanelSettings.height;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const positionIsValid =
+        typeof intendedLeft === 'number' &&
+        typeof intendedTop === 'number' &&
+        intendedLeft >= 0 && intendedTop >= 0 &&
+        intendedLeft <= viewportWidth - panelWidth &&
+        intendedTop <= viewportHeight - panelHeight;
+    if (positionIsValid) {
+        this.panelElement.style.left = `${intendedLeft}px`;
+        this.panelElement.style.top = `${intendedTop}px`;
     } else {
-        logConCgp('[floating-panel][fallback] No valid saved position; placing at bottom-right.');
-        this.positionPanelBottomRight?.();
+        // Prefer TOP-right if available, else fall back to bottom-right
+        if (typeof this.positionPanelTopRight === 'function') {
+            this.positionPanelTopRight();
+            return;
+        }
+        if (typeof this.positionPanelBottomRight === 'function') {
+            this.positionPanelBottomRight();
+            return;
+        }
     }
 
     // Opacity

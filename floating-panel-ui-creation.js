@@ -1,5 +1,5 @@
 // Version: 1.1
-//
+// floating-panel-ui-creation.js
 // Documentation:
 // This file handles fetching and creating the floating panel from an HTML template.
 // It also contains basic behavior methods for making the panel draggable, positioning it,
@@ -215,30 +215,60 @@ window.MaxExtensionFloatingPanel.positionPanelAtCursor = function (event) {
  */
 
 /**
- * Positions the floating panel to the bottom-right corner of the viewport.
- * Updates currentPanelSettings and schedules a debounced save.
+ * Positions the floating panel in the bottom-right corner of the viewport.
+ * Performs a secondary adjustment in the next animation frame to account for
+ * late layout shifts (e.g. scrollbars).
  */
 window.MaxExtensionFloatingPanel.positionPanelBottomRight = function () {
     if (!this.panelElement) return;
-    try {
-        const margin = 0; // align exactly at the viewport bottom-right corner
-        const viewportW = window.innerWidth;
-        const viewportH = window.innerHeight;
-        const panelW = Math.max(0, (this.currentPanelSettings?.width || this.panelElement.offsetWidth || 360));
-        const panelH = Math.max(0, (this.currentPanelSettings?.height || this.panelElement.offsetHeight || 320));
-        const left = Math.max(0, viewportW - panelW - margin);
-        const top  = Math.max(0, viewportH - panelH - margin);
-        this.panelElement.style.left = `${left}px`;
-        this.panelElement.style.top  = `${top}px`;
-        if (!this.currentPanelSettings) this.currentPanelSettings = { ...this.defaultPanelSettings };
-        this.currentPanelSettings.posX = left;
-        this.currentPanelSettings.posY = top;
-        logConCgp('[floating-panel][fallback] Voting panel fallback has been activated. Placing at bottom-right.');
+    const margin = 20;
+    const panelWidth = this.panelElement.offsetWidth || this.currentPanelSettings.width || 300;
+    const panelHeight = this.panelElement.offsetHeight || this.currentPanelSettings.height || 400;
+    let newLeft = Math.max(window.innerWidth - panelWidth - margin, 0);
+    let newTop = Math.max(window.innerHeight - panelHeight - margin, 0);
+    this.panelElement.style.left = `${newLeft}px`;
+    this.panelElement.style.top = `${newTop}px`;
+    this.currentPanelSettings.posX = parseInt(newLeft);
+    this.currentPanelSettings.posY = parseInt(newTop);
+    this.debouncedSavePanelSettings?.();
+    requestAnimationFrame(() => {
+        const adjustedLeft = Math.max(window.innerWidth - this.panelElement.offsetWidth - margin, 0);
+        const adjustedTop = Math.max(window.innerHeight - this.panelElement.offsetHeight - margin, 0);
+        this.panelElement.style.left = `${adjustedLeft}px`;
+        this.panelElement.style.top = `${adjustedTop}px`;
+        this.currentPanelSettings.posX = parseInt(adjustedLeft);
+        this.currentPanelSettings.posY = parseInt(adjustedTop);
         this.debouncedSavePanelSettings?.();
-    } catch (e) {
-        logConCgp('[floating-panel][fallback] Could not position bottom-right safely:', e?.message || e);
-    }
+    });
 };
+
+/**
+ * Positions the floating panel in the TOP-right corner of the viewport.
+ */
+window.MaxExtensionFloatingPanel.positionPanelTopRight = function () {
+    if (!this.panelElement) return;
+    const margin = 20;
+    const panelWidth = this.panelElement.offsetWidth || this.currentPanelSettings.width || 300;
+    // top-right = x near right edge, y near top
+    let newLeft = Math.max(window.innerWidth - panelWidth - margin, 0);
+    let newTop = margin;
+    this.panelElement.style.left = `${newLeft}px`;
+    this.panelElement.style.top = `${newTop}px`;
+    this.currentPanelSettings.posX = parseInt(newLeft);
+    this.currentPanelSettings.posY = parseInt(newTop);
+    this.debouncedSavePanelSettings?.();
+    // second pass after layout settles
+    requestAnimationFrame(() => {
+        const adjustedLeft = Math.max(window.innerWidth - this.panelElement.offsetWidth - margin, 0);
+        const adjustedTop = margin;
+        this.panelElement.style.left = `${adjustedLeft}px`;
+        this.panelElement.style.top = `${adjustedTop}px`;
+        this.currentPanelSettings.posX = parseInt(adjustedLeft);
+        this.currentPanelSettings.posY = parseInt(adjustedTop);
+        this.debouncedSavePanelSettings?.();
+    });
+};
+
 window.MaxExtensionFloatingPanel.createPanelToggleButton = function () {
     const toggleButton = document.createElement('button');
     toggleButton.type = 'button'; // Prevent form submission!
