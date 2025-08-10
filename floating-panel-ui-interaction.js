@@ -58,6 +58,8 @@ window.MaxExtensionFloatingPanel.togglePanel = async function (event) {
             if (event) {
                 this.positionPanelAtCursor(event);
             } else {
+                // Non-user summon: ensure we have a sane position
+                logConCgp('[floating-panel][fallback] Non-user summon path engaged; ensuring default position (bottom-right) if needed.');
                 this.updatePanelFromSettings();
             }
 
@@ -98,10 +100,28 @@ window.MaxExtensionFloatingPanel.updatePanelFromSettings = function () {
     if (!this.panelElement) return;
 
     // Position and size
-    this.panelElement.style.width = `${this.currentPanelSettings.width}px`;
-    this.panelElement.style.height = `${this.currentPanelSettings.height}px`;
-    this.panelElement.style.left = `${this.currentPanelSettings.posX}px`;
-    this.panelElement.style.top = `${this.currentPanelSettings.posY}px`;
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+    const width  = Number(this.currentPanelSettings?.width);
+    const height = Number(this.currentPanelSettings?.height);
+    const safeW = Number.isFinite(width)  && width  > 0 ? width  : (this.panelElement.offsetWidth  || 360);
+    const safeH = Number.isFinite(height) && height > 0 ? height : (this.panelElement.offsetHeight || 320);
+    this.panelElement.style.width  = `${safeW}px`;
+    this.panelElement.style.height = `${safeH}px`;
+
+    const posX = Number(this.currentPanelSettings?.posX);
+    const posY = Number(this.currentPanelSettings?.posY);
+    const withinX = Number.isFinite(posX) && posX >= 0 && posX <= Math.max(0, viewportW - safeW);
+    const withinY = Number.isFinite(posY) && posY >= 0 && posY <= Math.max(0, viewportH - safeH);
+    const hasValidSaved = withinX && withinY;
+
+    if (hasValidSaved) {
+        this.panelElement.style.left = `${posX}px`;
+        this.panelElement.style.top  = `${posY}px`;
+    } else {
+        logConCgp('[floating-panel][fallback] No valid saved position; placing at bottom-right.');
+        this.positionPanelBottomRight?.();
+    }
 
     // Opacity
     const bgOpacity = this.currentPanelSettings.opacity;

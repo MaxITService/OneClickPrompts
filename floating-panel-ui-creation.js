@@ -10,6 +10,7 @@
 // - createProfileSwitcher(): Builds the profile dropdown in the panel footer.
 // - makeDraggable(): Enables drag functionality on an element via a handle.
 // - positionPanelAtCursor(): Positions the panel relative to the mouse cursor.
+// - positionPanelBottomRight(): Positions the panel to the lower-right corner safely.
 // - createPanelToggleButton(): Creates the toggle button for summoning the floating panel.
 //
 // Dependencies:
@@ -212,6 +213,32 @@ window.MaxExtensionFloatingPanel.positionPanelAtCursor = function (event) {
 /**
  * Creates a toggle button for the floating panel.
  */
+
+/**
+ * Positions the floating panel to the bottom-right corner of the viewport.
+ * Updates currentPanelSettings and schedules a debounced save.
+ */
+window.MaxExtensionFloatingPanel.positionPanelBottomRight = function () {
+    if (!this.panelElement) return;
+    try {
+        const margin = 0; // align exactly at the viewport bottom-right corner
+        const viewportW = window.innerWidth;
+        const viewportH = window.innerHeight;
+        const panelW = Math.max(0, (this.currentPanelSettings?.width || this.panelElement.offsetWidth || 360));
+        const panelH = Math.max(0, (this.currentPanelSettings?.height || this.panelElement.offsetHeight || 320));
+        const left = Math.max(0, viewportW - panelW - margin);
+        const top  = Math.max(0, viewportH - panelH - margin);
+        this.panelElement.style.left = `${left}px`;
+        this.panelElement.style.top  = `${top}px`;
+        if (!this.currentPanelSettings) this.currentPanelSettings = { ...this.defaultPanelSettings };
+        this.currentPanelSettings.posX = left;
+        this.currentPanelSettings.posY = top;
+        logConCgp('[floating-panel][fallback] Voting panel fallback has been activated. Placing at bottom-right.');
+        this.debouncedSavePanelSettings?.();
+    } catch (e) {
+        logConCgp('[floating-panel][fallback] Could not position bottom-right safely:', e?.message || e);
+    }
+};
 window.MaxExtensionFloatingPanel.createPanelToggleButton = function () {
     const toggleButton = document.createElement('button');
     toggleButton.type = 'button'; // Prevent form submission!

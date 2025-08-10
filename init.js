@@ -212,6 +212,9 @@ async function commenceExtensionInitialization(configurationObject) {
                 // Manually make panel visible and set state.
                 panel.style.display = 'flex';
                 window.MaxExtensionFloatingPanel.isPanelVisible = true;
+                // Ensure a sane position if this is a non-user summon (fallback path).
+                logConCgp('[floating-panel][fallback] Non-user summon path engaged during decide-first; ensuring default position (bottom-right) if needed.');
+                window.MaxExtensionFloatingPanel.updatePanelFromSettings();
             } else {
                 logConCgp('[init] Decide-first: Failed to create panel. Falling back to inline injection.');
                 buttonBoxCheckingAndInjection(true); // Fallback
@@ -220,6 +223,35 @@ async function commenceExtensionInitialization(configurationObject) {
     } else {
         logConCgp('[init] Decide-first: Panel is hidden. Using standard inline injection.');
         buttonBoxCheckingAndInjection(true);
+
+        // --- Fallback summon if inline injection could not find an editor/container ---
+        // Runs once, shortly after we attempt standard inline injection.
+        try {
+            const probeOnceForEditorAndMaybeFallback = () => {
+                const containerId = window?.InjectionTargetsOnWebsite?.selectors?.buttonsContainerId;
+                const editorSelector = window?.InjectionTargetsOnWebsite?.selectors?.editorSelector;
+                const containerEl = containerId ? document.getElementById(containerId) : null;
+                const editorEl = editorSelector ? document.querySelector(editorSelector) : null;
+
+                // We consider it a hard failure if both are missing.
+                if (!containerEl && !editorEl) {
+                    logConCgp('[floating-panel][fallback] Editor/container not found; summoning floating panel (fallback).');
+                    if (window.MaxExtensionFloatingPanel) {
+                        window.MaxExtensionFloatingPanel.createFloatingPanel().then(() => {
+                            // Toggle without event => non-user summon; will bottom-right if needed.
+                            window.MaxExtensionFloatingPanel.togglePanel();
+                        });
+                    }
+                } else if (!containerEl) {
+                    // Editor exists but container did not render yet; useful breadcrumb.
+                    logConCgp('[button-injection][fallback] Editor found but injection container missing after initial pass.');
+                }
+            };
+            // Small delay to allow SPA paint and any microtasks within buttonBoxCheckingAndInjection.
+            setTimeout(probeOnceForEditorAndMaybeFallback, 800);
+        } catch (e) {
+            logConCgp('[init] Fallback summon probe failed:', e?.message || e);
+        }
     }
 
     // After the initial decision and creation, initialize the full floating panel system.
