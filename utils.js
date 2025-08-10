@@ -374,7 +374,6 @@ class InjectionTargetsOnWebsite {
                 ],
                 buttonsContainerId: 'gemini-custom-buttons-container' // Unique ID
             }
-            // TODO: Add selectors for other supported websites
         };
         return selectors[site] || {};
     }
