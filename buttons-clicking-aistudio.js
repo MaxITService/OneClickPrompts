@@ -15,7 +15,7 @@ function processAIStudioCustomSendButtonClick(event, customText, autoSend) {
 
     const injectionTargets = window.InjectionTargetsOnWebsite;
     const aiStudioSelectors = injectionTargets.selectors;
-    
+
     let editorArea = null;
     // Try each editor selector until we find one that works
     for (const selector of aiStudioSelectors.editors) {
@@ -32,7 +32,7 @@ function processAIStudioCustomSendButtonClick(event, customText, autoSend) {
     }
 
     let sendButton = null;
-    
+
     // Find send button using selectors from configuration
     for (const selector of aiStudioSelectors.sendButtons) {
         const foundButton = document.querySelector(selector);
@@ -45,12 +45,13 @@ function processAIStudioCustomSendButtonClick(event, customText, autoSend) {
 
     if (!editorArea) {
         logConCgp('[buttons] AI Studio Editor not found. Unable to proceed.');
+        showToast('Could not find the text input area.', 'error');
         return;
     }
 
     // Insert text and trigger Angular's change detection
     editorArea.value = editorArea.value + customText;
-    
+
     // Dispatch events for Angular binding
     const events = ['input', 'change'];
     events.forEach(eventType => {
@@ -66,7 +67,12 @@ function processAIStudioCustomSendButtonClick(event, customText, autoSend) {
         logConCgp('[buttons] AI Studio Auto-send enabled, attempting to send message');
         // Use setTimeout to ensure text is processed before sending
         setTimeout(() => {
-            MaxExtensionUtils.simulateClick(sendButton);
+            if (sendButton) {
+                MaxExtensionUtils.simulateClick(sendButton);
+            } else {
+                logConCgp('[buttons] AI Studio Send button not found for auto-send.');
+                showToast('Could not find the send button.', 'error');
+            }
         }, 100);
     }
 }

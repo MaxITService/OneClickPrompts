@@ -140,9 +140,10 @@ async function processGrokCustomSendButtonClick(event, customText, autoSend) {
     const editorArea = editorCandidates.length > 0
         ? editorCandidates[editorCandidates.length - 1]
         : document.querySelector(window.InjectionTargetsOnWebsite.selectors.editors[0]);
-    
+
     if (!editorArea) {
         logConCgp('[grok] Editor area not found. Aborting send process.');
+        showToast('Could not find the text input area.', 'error');
         return;
     }
 
@@ -189,7 +190,11 @@ async function processGrokCustomSendButtonClick(event, customText, autoSend) {
         logConCgp('[grok] Auto-send enabled. Waiting 100ms before sending.');
         // Added extra delay to ensure the last character is fully processed.
         await new Promise(resolve => setTimeout(resolve, 100));
-        window.autoSendInterval = setInterval(() => {
+
+        let attempts = 0;
+        const maxAttempts = 50; // 5 seconds of attempts
+
+        const intervalId = setInterval(() => {
             const currentText = isTextArea ? editorArea.value.trim() : editorArea.innerText.trim();
             if (currentText.length === 0) {
                 logConCgp('[grok] Editor became empty during auto-send. Stopping auto-send.');
@@ -204,13 +209,19 @@ async function processGrokCustomSendButtonClick(event, customText, autoSend) {
             if (sendButton) {
                 logConCgp('[grok] Send button found. Clicking send button.');
                 window.MaxExtensionUtils.simulateClick(sendButton);
-                clearInterval(window.autoSendInterval);
+                clearInterval(intervalId);
                 window.autoSendInterval = null;
                 logConCgp('[grok] Auto-send: Send button clicked, auto-send stopped.');
+            } else if (++attempts >= maxAttempts) {
+                clearInterval(intervalId);
+                window.autoSendInterval = null;
+                logConCgp('[grok] Send button not found after multiple attempts.');
+                showToast('Send button not found. Auto-send stopped.', 'error');
             } else {
-                logConCgp('[grok] Send button not found. Retrying...');
+                logConCgp(`[grok] Send button not found. Attempt ${attempts}/${maxAttempts}`);
             }
         }, 100);
+        window.autoSendInterval = intervalId;
     }
 }
 

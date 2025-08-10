@@ -17,6 +17,7 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
 
     if (!editorArea) {
         logConCgp('[buttons] Editor area not found. Unable to proceed.');
+        showToast('Could not find the text input area.', 'error');
         return;
     }
 
@@ -60,6 +61,10 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
     const handleSendButtons = (sendButtons) => {
         if (!sendButtons.length) {
             logConCgp('[buttons] Send buttons are not available to handle.');
+            if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
+                logConCgp('[buttons] Auto-send failed: Send button not found.');
+                showToast('Could not find the send button.', 'error');
+            }
             return;
         }
 
@@ -75,28 +80,34 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
             return;
         }
 
-        window.autoSendInterval = setInterval(() => {
+        let attempts = 0;
+        const maxAttempts = 50; // 5 seconds
+
+        const intervalId = setInterval(() => {
             const currentText = editor.value?.trim() ?? '';
 
             if (!currentText) {
-                clearInterval(window.autoSendInterval);
+                clearInterval(intervalId);
                 window.autoSendInterval = null;
                 logConCgp('[auto-send] Editor is empty. Stopping auto-send interval.');
                 return;
             }
 
-            const updatedSendButtons = locateSendButtons();
-            const sendButton = updatedSendButtons[0];
+            const sendButton = locateSendButtons()[0];
 
             if (sendButton) {
                 sendButton.click();
-                clearInterval(window.autoSendInterval);
+                clearInterval(intervalId);
                 window.autoSendInterval = null;
                 logConCgp('[auto-send] Message sent and interval stopped.');
-            } else {
-                logConCgp('[auto-send] Send button not found during auto-send.');
+            } else if (++attempts >= maxAttempts) {
+                clearInterval(intervalId);
+                window.autoSendInterval = null;
+                logConCgp('[auto-send] Send button not found after multiple attempts.');
+                showToast('Send button not found. Auto-send stopped.', 'error');
             }
         }, 100);
+        window.autoSendInterval = intervalId;
     };
 
     const handleMessageInsertion = () => {
@@ -144,6 +155,9 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
             setTimeout(() => {
                 if (!window.autoSendInterval) {
                     observer.disconnect();
+                    if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
+                        showToast('Could not find the send button.', 'error');
+                    }
                     logConCgp('[buttons] MutationObserver disconnected after timeout.');
                 }
             }, 5000);

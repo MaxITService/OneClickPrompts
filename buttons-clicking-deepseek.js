@@ -27,6 +27,7 @@ function processDeepSeekCustomSendButtonClick(event, customText, autoSend) {
 
     if (editors.length === 0) {
         logConCgp('[DeepSeek] No active editors found');
+        showToast('Could not find the text input area.', 'error');
         return;
     }
 
@@ -34,7 +35,7 @@ function processDeepSeekCustomSendButtonClick(event, customText, autoSend) {
     function handleEditorInput(editor, text) {
         try {
             logConCgp('[DeepSeek] Handling editor:', editor.tagName);
-            
+
             // For textareas
             if (editor.tagName === 'TEXTAREA') {
                 editor.value += text;
@@ -82,6 +83,7 @@ function processDeepSeekCustomSendButtonClick(event, customText, autoSend) {
             editor.dispatchEvent(reactEvent);
         } catch (error) {
             logConCgp('[DeepSeek] Input error:', error);
+            showToast('Failed to insert text.', 'error');
         }
     }
 
@@ -92,14 +94,14 @@ function processDeepSeekCustomSendButtonClick(event, customText, autoSend) {
             .flatMap(selector => Array.from(document.querySelectorAll(selector)))
             .filter(btn => {
                 if (!btn.offsetParent) return false; // Visible check
-                const disabled = btn.disabled || 
-                              btn.getAttribute('aria-disabled') === 'true' ||
-                              btn.classList.contains('disabled');
+                const disabled = btn.disabled ||
+                    btn.getAttribute('aria-disabled') === 'true' ||
+                    btn.classList.contains('disabled');
                 return !disabled;
             });
 
         // Priority 1: Button with send icon
-        const iconButton = buttons.find(btn => 
+        const iconButton = buttons.find(btn =>
             btn.querySelector('svg')?.innerHTML.includes('send')
         );
 
@@ -116,6 +118,8 @@ function processDeepSeekCustomSendButtonClick(event, customText, autoSend) {
         const attemptSend = () => {
             if (attempts++ > MAX_ATTEMPTS) {
                 clearInterval(interval);
+                logConCgp('[DeepSeek] Max attempts reached, send button not found.');
+                showToast('Could not find the send button.', 'error');
                 return;
             }
 
