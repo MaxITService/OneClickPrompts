@@ -198,7 +198,7 @@ async function processGrokCustomSendButtonClick(event, customText, autoSend) {
             const currentText = isTextArea ? editorArea.value.trim() : editorArea.innerText.trim();
             if (currentText.length === 0) {
                 logConCgp('[grok] Editor became empty during auto-send. Stopping auto-send.');
-                clearInterval(window.autoSendInterval);
+                clearInterval(intervalId);
                 window.autoSendInterval = null;
                 return;
             }
