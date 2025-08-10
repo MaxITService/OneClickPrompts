@@ -301,8 +301,6 @@
 /* This rule ensures the up/down arrows are visible on the queue delay input */
 #max-extension-queue-delay-input {
     appearance: textfield;
-    -moz-appearance: textfield;
-    /* For Firefox */
 }
 
 /*without this there are no up and down arrows next to number imput */
