@@ -49,6 +49,7 @@ const KEYS = {
   modules: {
     crossChat: 'modules.crossChat', // object { settings: {...}, storedPrompt: string }
     inlineProfileSelector: 'modules.inlineProfileSelector', // object { enabled:boolean, placement:'before'|'after' }
+    tokenEstimator: 'modules.tokenEstimator', // object { enabled:boolean }
   },
   floatingPanel: 'floatingPanel', // object map { [hostname]: settings }
   global: {
@@ -123,6 +124,19 @@ async function getValue(path) {
       placement: 'before',
     };
   }
+  if (path === KEYS.modules.tokenEstimator) {
+    const r = await lsGet([KEYS.modules.tokenEstimator]);
+    const obj = r[KEYS.modules.tokenEstimator];
+    if (obj && typeof obj === 'object') {
+      // Ensure shape and defaults
+      return {
+        enabled: !!obj.enabled,
+      };
+    }
+    return {
+      enabled: false,
+    };
+  }
   if (path === KEYS.floatingPanel) {
     // Build map from structured store if exists, else from legacy scattered keys
     const all = await lsGet(null);
@@ -191,6 +205,14 @@ async function setValue(path, value) {
       placement: settings.placement === 'after' ? 'after' : 'before',
     };
     await lsSet({ [KEYS.modules.inlineProfileSelector]: normalized });
+    return;
+  }
+  if (path === KEYS.modules.tokenEstimator) {
+    const settings = value && typeof value === 'object' ? value : {};
+    const normalized = {
+      enabled: !!settings.enabled,
+    };
+    await lsSet({ [KEYS.modules.tokenEstimator]: normalized });
     return;
   }
   if (path.startsWith(KEYS.floatingPanel)) {
@@ -362,6 +384,15 @@ export const StateStore = {
   async saveInlineProfileSelectorSettings(settings) {
     await setValue(KEYS.modules.inlineProfileSelector, settings);
     this.broadcast({ type: 'inlineProfileSelectorSettingsChanged', settings });
+  },
+
+  // ===== Token Estimator (Global Module) =====
+  async getTokenEstimatorSettings() {
+    return await getValue(KEYS.modules.tokenEstimator);
+  },
+  async saveTokenEstimatorSettings(settings) {
+    await setValue(KEYS.modules.tokenEstimator, settings);
+    this.broadcast({ type: 'tokenEstimatorSettingsChanged', settings });
   },
 
   // Broadcast utility

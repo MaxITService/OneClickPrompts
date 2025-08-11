@@ -674,6 +674,34 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             return true;
         // ===== End Inline Profile Selector Cases =====
 
+        // ===== Token Estimator Cases =====
+        case 'getTokenEstimatorSettings':
+            (async () => {
+                try {
+                    const settings = await StateStore.getTokenEstimatorSettings();
+                    logConfigurationRelatedStuff('Retrieved Token Estimator settings:', settings);
+                    sendResponse({ settings });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
+            return true;
+
+        case 'saveTokenEstimatorSettings':
+            (async () => {
+                try {
+                    await StateStore.saveTokenEstimatorSettings(request.settings);
+                    logConfigurationRelatedStuff('Saved Token Estimator settings:', request.settings);
+                    sendResponse({ success: true });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
+            return true;
+        // ===== End Token Estimator Cases =====
+
         default:
             logConfigurationRelatedStuff('Unknown message type received:', request.type);
             sendResponse({ error: 'Unknown message type' });
