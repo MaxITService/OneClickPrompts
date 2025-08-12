@@ -567,8 +567,10 @@
                   <strong>Accuracy:</strong> English ±2k below ~10k tokens, ±10k above. Code/non-English: expect ~50% error. Beyond ~100k: directional only.
                 </p>
                 <p>
-                  <strong>Why use it?</strong> Know if you're at ~50k vs ~100k tokens to decide when to summarize/trim.
-                  For exact counts: <a href="https://platform.openai.com/tokenizer" target="_blank" rel="noreferrer noopener">OpenAI Tokenizer</a>
+                  <strong>Why care?</strong> Models degrade as context grows—knowing if you're at ~50k vs ~100k helps you decide to trim/chunk/summarize. Plus, after specific model token limit, chat may "forget" previous messages: this is not guaranteed, as web chats are "black box" - there might be some sort of RAG for previous messages, however, RAG is not as good as direct token input.
+                </p>
+                <p>
+                  For more information, check model limits/benchmarks (e.g., <a href="https://github.com/adobe-research/NoLiMa" target="_blank" rel="noreferrer noopener">NoLiMa</a>). For exact counts use the <a href="https://platform.openai.com/tokenizer" target="_blank" rel="noreferrer noopener">official tokenizer</a>.
                 </p>
               </div>
 
