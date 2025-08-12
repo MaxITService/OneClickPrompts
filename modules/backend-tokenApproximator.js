@@ -112,17 +112,25 @@
   }
 
   function placeUi(placement) {
-    // Place before/after our buttons container
     const wrap = createUiIfNeeded();
     const container = document.getElementById(BUTTONS_CONTAINER_ID);
-    if (!container || !container.parentElement) return;
+    if (!container) return;
+
+    // behave nicely in a flex row
+    wrap.style.display = 'inline-flex';
+    wrap.style.flex = '0 0 auto';
+    wrap.style.gap = '8px';
+    wrap.style.marginRight = placement === 'before' ? '8px' : '0';
+    wrap.style.marginLeft  = placement === 'after'  ? '8px' : '0';
+
+    // move INSIDE the buttons container (not as a sibling)
     if (placement === 'before') {
-      if (wrap.nextSibling !== container) {
-        container.parentElement.insertBefore(wrap, container);
+      if (wrap.parentElement !== container || wrap !== container.firstChild) {
+        container.insertAdjacentElement('afterbegin', wrap);
       }
     } else {
-      if (container.nextSibling !== wrap) {
-        container.parentElement.insertBefore(wrap, container.nextSibling);
+      if (wrap.parentElement !== container || wrap !== container.lastElementChild) {
+        container.insertAdjacentElement('beforeend', wrap);
       }
     }
   }
@@ -371,6 +379,16 @@
     await waitForButtons();
     placeUi(settings.placement);
     showHideBySettings(settings);
+
+    // keep chips inside the row if the container gets re-rendered
+    const keepInRow = new MutationObserver(() => {
+      const container = document.getElementById(BUTTONS_CONTAINER_ID);
+      const wrap = document.getElementById(WRAP_ID);
+      if (container && wrap && !container.contains(wrap)) {
+        placeUi(settings.placement);
+      }
+    });
+    keepInRow.observe(document.documentElement, { childList: true, subtree: true });
 
     // Update title hints initially
     const wrap = createUiIfNeeded();
