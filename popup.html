@@ -636,13 +636,22 @@
 
                 <!-- Counting Method -->
                 <div class="row" style="margin-top: 16px">
-                  <div class="switch-container" title="Choose between advanced algorithm (adapts to content type) or simple heuristic (1 token = 4 characters)">
-                    <span class="switch-label">Use some "advanced" heuristics (may use lots of CPU) </span>                  
-                    <label class="switch">
-                      <input type="checkbox" id="tokenApproxSimpleMethodToggle" />
-                      <span class="slider"></span>
-                    </label>
-                    <span class="switch-label">Use simple counting (1 token = 4 chars)</span>
+                  <div title="Choose between advanced algorithm (adapts to content type) or simple heuristic (1 token = 4 characters)">
+                    <label>Counting Method:</label>
+                    <div style="margin-top: 8px">
+                      <label>
+                        <input type="radio" name="tokenApproxCountingMethod" value="advanced" id="tokenApproxMethodAdvanced" />
+                        Use some "advanced" heuristics (may use lots of CPU)
+                      </label>
+                    </div>
+                    <div>
+                      <label>
+                        <input type="radio" name="tokenApproxCountingMethod" value="simple" id="tokenApproxMethodSimple" />
+                        Use simple counting (1 token = 4 chars)
+                      </label>
+                    </div>
+                    <!-- Hidden checkbox for compatibility with existing JavaScript -->
+                    <input type="checkbox" id="tokenApproxSimpleMethodToggle" style="display: none;" />
                   </div>
                 </div>
               </div>

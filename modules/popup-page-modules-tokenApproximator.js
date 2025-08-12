@@ -61,6 +61,8 @@
   const elEditorCb = document.getElementById('tokenApproxShowEditorCounter');
   const elPlacementBeforeCb = document.getElementById('tokenApproxPlacementBefore');
   const elSimpleMethodCb = document.getElementById('tokenApproxSimpleMethodToggle');
+  const elMethodRadioAdvanced = document.getElementById('tokenApproxMethodAdvanced');
+  const elMethodRadioSimple = document.getElementById('tokenApproxMethodSimple');
 
   function normalize(settings) {
     const s = settings && typeof settings === 'object' ? settings : {};
@@ -93,7 +95,12 @@
     }
     if (elEditorCb) elEditorCb.checked = !!s.showEditorCounter;
     if (elPlacementBeforeCb) elPlacementBeforeCb.checked = (s.placement === 'before');
-    if (elSimpleMethodCb) elSimpleMethodCb.checked = (s.countingMethod === 'simple');
+    
+    // Update both the hidden checkbox and the visible radio buttons
+    const isSimple = (s.countingMethod === 'simple');
+    if (elSimpleMethodCb) elSimpleMethodCb.checked = isSimple;
+    if (elMethodRadioSimple) elMethodRadioSimple.checked = isSimple;
+    if (elMethodRadioAdvanced) elMethodRadioAdvanced.checked = !isSimple;
   }
 
   function collectSettingsFromUi() {
@@ -204,9 +211,20 @@
       }, { passive: true });
     }
     
-    // Counting method toggle
-    if (elSimpleMethodCb) {
-      elSimpleMethodCb.addEventListener('change', async () => {
+    // Counting method radio buttons
+    if (elMethodRadioSimple) {
+      elMethodRadioSimple.addEventListener('change', async () => {
+        // Update the hidden checkbox to maintain compatibility
+        if (elSimpleMethodCb) elSimpleMethodCb.checked = elMethodRadioSimple.checked;
+        const s = collectSettingsFromUi();
+        await save(s);
+      }, { passive: true });
+    }
+    
+    if (elMethodRadioAdvanced) {
+      elMethodRadioAdvanced.addEventListener('change', async () => {
+        // Update the hidden checkbox to maintain compatibility
+        if (elSimpleMethodCb) elSimpleMethodCb.checked = !elMethodRadioAdvanced.checked;
         const s = collectSettingsFromUi();
         await save(s);
       }, { passive: true });
