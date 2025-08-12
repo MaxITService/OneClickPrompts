@@ -103,13 +103,13 @@
       const t = document.createElement('div');
       t.className = 'ocp-tokapprox-chip loading';
       t.dataset.kind = 'thread';
-      t.title = 'T: estimating… (very rough, visible text only)';
+      t.title = 'Whole-thread tokens — calculating…';
       t.innerHTML = `<span class="lbl">T:</span><span class="val">-------</span>`;
       // Editor chip
       const e = document.createElement('div');
       e.className = 'ocp-tokapprox-chip loading';
       e.dataset.kind = 'editor';
-      e.title = 'E: estimating… (very rough, editor only)';
+      e.title = 'Editor tokens — calculating…';
       e.innerHTML = `<span class="lbl">E:</span><span class="val">-------</span>`;
 
       wrap.appendChild(t);
@@ -163,36 +163,75 @@
   // ---- Formatting ----
   function formatTokens(est) {
     if (!Number.isFinite(est) || est <= 0) return '-------';
-    if (est < 500) return '<500';
+    if (est < 100) return '<100';
+    if (est < 1000) return String(Math.round(est / 100) * 100); // round to nearest 100
     const k = Math.ceil(est / 1000);
     return `${k}k`;
   }
 
-  function markFreshThenStale(el) {
+  // ---- Tooltip helpers (stable prefix + state postfix; no "T:" in tooltip) ----
+  function buildTooltip(kind, status, settings) {
+    // Descriptive prefix
+    const prefix =
+      kind === 'thread'
+        ? (settings.threadMode === 'ignoreEditors'
+            ? 'Whole-thread tokens (thread only)'
+            : 'Whole-thread tokens (with editors)')
+        : 'Editor tokens';
+
+    // State postfix
+    let postfix = '';
+    switch (status) {
+      case 'loading': postfix = 'calculating…'; break;
+      case 'fresh':   postfix = 'updated just now'; break;
+      case 'stale':   postfix = 'stale — click to re-estimate'; break;
+      case 'paused':  postfix = 'paused while tab inactive'; break;
+      default:        postfix = ''; break;
+    }
+    // CTA: always present on thread; also helpful on editor
+    const cta = kind === 'thread' ? ' • Click to re-estimate now.' : ' • Click to re-estimate.';
+    return `${prefix} — ${postfix}${cta}`;
+  }
+
+  function setTooltip(el, kind, status, settings) {
+    const next = buildTooltip(kind, status, settings);
+    if (el.__tooltipText !== next) {
+      el.title = next;
+      el.__tooltipText = next;
+      el.__tooltipStatus = status;
+    }
+  }
+
+  // ---- State visuals ----
+  function markFreshThenStale(el, kind, settings) {
     // cancel previous stale timer so multiple updates don't flicker
     if (el.__staleTimer) {
       clearTimeout(el.__staleTimer);
       el.__staleTimer = null;
     }
-    // go to "fresh" (will transition back from stale because of CSS)
+    // go to "fresh"
     el.classList.remove('loading', 'paused', 'stale');
+    setTooltip(el, kind, 'fresh', settings);
 
-    // after a long delay, gently fade to stale (keeps value readable)
-    const STALE_DELAY_MS = 6500; // very slow fade-out cadence
+    // after a delay, gently fade to stale (editor stays fresh longer)
+    const STALE_DELAY_MS = kind === 'editor' ? 12000 : 6500;
     el.__staleTimer = setTimeout(() => {
       el.classList.add('stale');
+      setTooltip(el, kind, 'stale', settings);
       el.__staleTimer = null;
     }, STALE_DELAY_MS);
   }
 
-  function markLoading(el, msg) {
+  function markLoading(el, kind, settings) {
     el.classList.add('loading');
-    if (msg) el.title = msg;
+    el.classList.remove('paused', 'stale');
+    setTooltip(el, kind, 'loading', settings);
   }
 
-  function markPaused(el, msg) {
+  function markPaused(el, kind, settings) {
     el.classList.add('paused');
-    if (msg) el.title = msg;
+    el.classList.remove('loading');
+    setTooltip(el, kind, 'paused', settings);
   }
 
   // ---- Worker (off-main-thread) ----
@@ -367,6 +406,14 @@
     return {
       markDirty() { dirty = true; schedule(false); },
       runNow() { if (!running) { dirty = true; schedule(true); } },
+      // Only clicking should bypass cooldown:
+      // expose an explicit forceNow() used exclusively by the click handler.
+      forceNow() {
+        if (running) { dirty = true; return; }
+        dirty = true;
+        lastRun = 0; // ensures schedule(true) runs immediately
+        schedule(true);
+      },
       pauseInfo() { return { running }; }
     };
   }
@@ -418,6 +465,11 @@
     const wrap = createUiIfNeeded();
     const threadChip = wrap.querySelector('.ocp-tokapprox-chip[data-kind="thread"]');
     const editorChip = wrap.querySelector('.ocp-tokapprox-chip[data-kind="editor"]');
+    // Initialize tooltips to descriptive "loading"
+    try {
+      setTooltip(threadChip, 'thread', 'loading', settings);
+      setTooltip(editorChip, 'editor', 'loading', settings);
+    } catch {}
 
     // Worker shared for both schedulers
     const worker = createEstimatorWorker();
@@ -438,23 +490,21 @@
           if (settings.threadMode !== 'hide') {
             const use = (settings.threadMode === 'ignoreEditors') ? estimates.threadOnly : estimates.all;
             threadChip.querySelector('.val').textContent = formatTokens(use);
-            threadChip.title = `T: very rough estimate (click to refresh)`;
-            markFreshThenStale(threadChip);
+            markFreshThenStale(threadChip, 'thread', settings);
           }
           // Paint Editor chip (if visible)
           if (settings.showEditorCounter) {
             editorChip.querySelector('.val').textContent = formatTokens(estimates.editorsOnly);
-            editorChip.title = `E: very rough estimate (click to refresh)`;
-            markFreshThenStale(editorChip);
+            markFreshThenStale(editorChip, 'editor', settings);
           }
           resolve();
         };
         // Set loading state
         if (settings.threadMode !== 'hide') {
-          markLoading(threadChip, 'T: calculating… (very rough)');
+          markLoading(threadChip, 'thread', settings);
         }
         if (settings.showEditorCounter) {
-          markLoading(editorChip, 'E: calculating… (very rough)');
+          markLoading(editorChip, 'editor', settings);
         }
         worker.postMessage({
           texts,
@@ -472,7 +522,7 @@
 
     // Editor scheduler (typing + lifecycle)
     const editorScheduler = makeScheduler({
-      minCooldown: 1000,
+      minCooldown: 600, // faster editor updates
       runFn: () => estimateAndPaint('editor')
     });
 
@@ -502,15 +552,24 @@
     // Visibility control
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
-        if (settings.threadMode !== 'hide') threadScheduler.runNow();
-        if (settings.showEditorCounter) editorScheduler.runNow();
+        // Immediately clear paused visuals; schedule normal (cooldown-aware) refresh
+        if (settings.threadMode !== 'hide') {
+          threadChip.classList.remove('paused', 'stale');
+          markLoading(threadChip, 'thread', settings);
+          threadScheduler.runNow(); // respects cooldown
+        }
+        if (settings.showEditorCounter) {
+          editorChip.classList.remove('paused', 'stale');
+          markLoading(editorChip, 'editor', settings);
+          editorScheduler.runNow(); // respects cooldown
+        }
       } else {
-        if (settings.threadMode !== 'hide') markPaused(threadChip, 'T: paused (tab inactive)');
-        if (settings.showEditorCounter) markPaused(editorChip, 'E: paused (tab inactive)');
+        if (settings.threadMode !== 'hide') markPaused(threadChip, 'thread', settings);
+        if (settings.showEditorCounter) markPaused(editorChip, 'editor', settings);
       }
     });
 
-    // Safety ticks
+    // Safety ticks (cooldown-aware)
     setInterval(() => {
       if (document.visibilityState !== 'visible') return;
       threadScheduler.markDirty();
@@ -522,9 +581,13 @@
       const el = e.target.closest('.ocp-tokapprox-chip');
       if (!el) return;
       if (el.dataset.kind === 'thread' && settings.threadMode !== 'hide') {
-        threadScheduler.runNow();
+        // Clicking explicitly bypasses cooldown
+        markLoading(threadChip, 'thread', settings);
+        threadScheduler.forceNow();
       } else if (el.dataset.kind === 'editor' && settings.showEditorCounter) {
-        editorScheduler.runNow();
+        // Clicking explicitly bypasses cooldown
+        markLoading(editorChip, 'editor', settings);
+        editorScheduler.forceNow();
       }
     });
 
@@ -546,6 +609,11 @@
         });
         placeUi(settings.placement);
         showHideBySettings(settings);
+        // Refresh tooltip prefixes (thread mode may have changed)
+        try {
+          setTooltip(threadChip, 'thread', threadChip.__tooltipStatus || 'stale', settings);
+          setTooltip(editorChip, 'editor', editorChip.__tooltipStatus || 'stale', settings);
+        } catch {}
         // Refresh on change
         if (settings.threadMode !== 'hide') threadScheduler.runNow();
         if (settings.showEditorCounter) editorScheduler.runNow();
