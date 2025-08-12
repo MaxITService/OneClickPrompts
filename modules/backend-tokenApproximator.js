@@ -156,8 +156,12 @@
   // ---- Formatting ----
   function formatTokens(est) {
     if (!Number.isFinite(est) || est <= 0) return '-------';
-    if (est < 100) return '<100';
-    if (est < 1000) return String(Math.round(est / 100) * 100); // round to nearest 100
+    // For values below 1000, always show "<next 100" (conservative / higher bucket).
+    if (est < 1000) {
+      const bucket = Math.max(100, Math.ceil(est / 100) * 100);
+      return `<${bucket}`;
+    }
+    // 1000+ -> ceil to thousands as "Nk"
     const k = Math.ceil(est / 1000);
     return `${k}k`;
   }
