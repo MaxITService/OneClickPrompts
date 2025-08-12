@@ -49,7 +49,7 @@ const KEYS = {
   modules: {
     crossChat: 'modules.crossChat', // object { settings: {...}, storedPrompt: string }
     inlineProfileSelector: 'modules.inlineProfileSelector', // object { enabled:boolean, placement:'before'|'after' }
-    tokenEstimator: 'modules.tokenEstimator', // object { enabled:boolean }
+    tokenApproximator: 'modules.tokenApproximator', // object { enabled:boolean }
   },
   floatingPanel: 'floatingPanel', // object map { [hostname]: settings }
   global: {
@@ -124,9 +124,9 @@ async function getValue(path) {
       placement: 'before',
     };
   }
-  if (path === KEYS.modules.tokenEstimator) {
-    const r = await lsGet([KEYS.modules.tokenEstimator]);
-    const obj = r[KEYS.modules.tokenEstimator];
+  if (path === KEYS.modules.tokenApproximator) {
+    const r = await lsGet([KEYS.modules.tokenApproximator]);
+    const obj = r[KEYS.modules.tokenApproximator];
     if (obj && typeof obj === 'object') {
       // Ensure shape and defaults
       return {
@@ -207,12 +207,12 @@ async function setValue(path, value) {
     await lsSet({ [KEYS.modules.inlineProfileSelector]: normalized });
     return;
   }
-  if (path === KEYS.modules.tokenEstimator) {
+  if (path === KEYS.modules.tokenApproximator) {
     const settings = value && typeof value === 'object' ? value : {};
     const normalized = {
       enabled: !!settings.enabled,
     };
-    await lsSet({ [KEYS.modules.tokenEstimator]: normalized });
+    await lsSet({ [KEYS.modules.tokenApproximator]: normalized });
     return;
   }
   if (path.startsWith(KEYS.floatingPanel)) {
@@ -386,13 +386,13 @@ export const StateStore = {
     this.broadcast({ type: 'inlineProfileSelectorSettingsChanged', settings });
   },
 
-  // ===== Token Estimator (Global Module) =====
-  async getTokenEstimatorSettings() {
-    return await getValue(KEYS.modules.tokenEstimator);
+  // ===== Token Approximator (Global Module) =====
+  async getTokenApproximatorSettings() {
+    return await getValue(KEYS.modules.tokenApproximator);
   },
-  async saveTokenEstimatorSettings(settings) {
-    await setValue(KEYS.modules.tokenEstimator, settings);
-    this.broadcast({ type: 'tokenEstimatorSettingsChanged', settings });
+  async saveTokenApproximatorSettings(settings) {
+    await setValue(KEYS.modules.tokenApproximator, settings);
+    this.broadcast({ type: 'tokenApproximatorSettingsChanged', settings });
   },
 
   // Broadcast utility

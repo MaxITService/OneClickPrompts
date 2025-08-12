@@ -1,19 +1,19 @@
 'use strict';
 
-// modules/popup-page-modules-tokenEstimator.js
-// Handles the ChatGPT Token Estimator popup UI module (global settings)
+// modules/popup-page-modules-tokenApproximator.js
+// Handles the ChatGPT Token Approximator popup UI module (global settings)
 // Version 1.0
 
 document.addEventListener('DOMContentLoaded', () => {
   // --- Elements ---
-  const moduleContainer = document.getElementById('chatgptTokenEstimatorModule');
-  const enableToggle = document.getElementById('chatgptTokenEstimatorEnableToggle');
+  const moduleContainer = document.getElementById('chatgptTokenApproximatorModule');
+  const enableToggle = document.getElementById('chatgptTokenApproximatorEnableToggle');
   // Also control the top switch row visibility with the collapsible
   const switchRow = moduleContainer?.querySelector('.section-content .switch-container');
 
   if (!moduleContainer || !enableToggle) {
     // Popup might be opened on a version without the module block yet
-    console.warn('[tokenEstimator] Module elements not found; skipping initialization');
+    console.warn('[tokenApproximator] Module elements not found; skipping initialization');
     return;
   }
 
@@ -22,13 +22,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- State sync ---
   async function loadModuleState() {
     try {
-      const response = await chrome.runtime.sendMessage({ type: 'getTokenEstimatorSettings' });
+      const response = await chrome.runtime.sendMessage({ type: 'getTokenApproximatorSettings' });
       if (response && response.settings) {
         currentSettings = normalizeSettings(response.settings);
       }
       updateUIFromState();
     } catch (error) {
-      console.error('[tokenEstimator] Failed to load settings:', error);
+      console.error('[tokenApproximator] Failed to load settings:', error);
       updateUIFromState();
     }
     // Reflect current collapsible state after controls are updated
@@ -38,11 +38,11 @@ document.addEventListener('DOMContentLoaded', () => {
   async function saveModuleSettings() {
     try {
       await chrome.runtime.sendMessage({
-        type: 'saveTokenEstimatorSettings',
+        type: 'saveTokenApproximatorSettings',
         settings: currentSettings,
       });
     } catch (error) {
-      console.error('[tokenEstimator] Failed to save settings:', error);
+      console.error('[tokenApproximator] Failed to save settings:', error);
     }
   }
 

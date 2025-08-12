@@ -674,12 +674,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             return true;
         // ===== End Inline Profile Selector Cases =====
 
-        // ===== Token Estimator Cases =====
-        case 'getTokenEstimatorSettings':
+        // ===== Token Approximator Cases =====
+        case 'getTokenApproximatorSettings':
             (async () => {
                 try {
-                    const settings = await StateStore.getTokenEstimatorSettings();
-                    logConfigurationRelatedStuff('Retrieved Token Estimator settings:', settings);
+                    const settings = await StateStore.getTokenApproximatorSettings();
+                    logConfigurationRelatedStuff('Retrieved Token Approximator settings:', settings);
                     sendResponse({ settings });
                 } catch (error) {
                     handleStorageError(error);
@@ -688,11 +688,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             })();
             return true;
 
-        case 'saveTokenEstimatorSettings':
+        case 'saveTokenApproximatorSettings':
             (async () => {
                 try {
-                    await StateStore.saveTokenEstimatorSettings(request.settings);
-                    logConfigurationRelatedStuff('Saved Token Estimator settings:', request.settings);
+                    await StateStore.saveTokenApproximatorSettings(request.settings);
+                    logConfigurationRelatedStuff('Saved Token Approximator settings:', request.settings);
                     sendResponse({ success: true });
                 } catch (error) {
                     handleStorageError(error);
@@ -700,7 +700,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 }
             })();
             return true;
-        // ===== End Token Estimator Cases =====
+        // ===== End Token Approximator Cases =====
 
         default:
             logConfigurationRelatedStuff('Unknown message type received:', request.type);
