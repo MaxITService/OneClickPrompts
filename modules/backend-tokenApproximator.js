@@ -444,15 +444,7 @@
     placeUi(settings.placement);
     showHideBySettings(settings);
 
-    // keep chips inside the row if the container gets re-rendered
-    const keepInRow = new MutationObserver(() => {
-      const container = document.getElementById(BUTTONS_CONTAINER_ID);
-      const wrap = document.getElementById(WRAP_ID);
-      if (container && wrap && !container.contains(wrap)) {
-        placeUi(settings.placement);
-      }
-    });
-    keepInRow.observe(document.documentElement, { childList: true, subtree: true });
+    // We'll use a more comprehensive observer defined below
 
     // Update title hints initially
     const wrap = createUiIfNeeded();
@@ -469,6 +461,44 @@
 
     function estimateAndPaint(mode) {
       return new Promise((resolve) => {
+        // ----- Query for elements inside the callback for resilience -----
+        const wrap = document.getElementById(WRAP_ID);
+        if (!wrap) return resolve();
+        const threadChip = wrap.querySelector('.ocp-tokapprox-chip[data-kind="thread"]');
+        const editorChip = wrap.querySelector('.ocp-tokapprox-chip[data-kind="editor"]');
+        // ----- End query -----
+
+        worker.onmessage = (ev) => {
+          // Re-query elements inside the async callback to ensure they are fresh
+          const currentWrap = document.getElementById(WRAP_ID);
+          if (!currentWrap) return resolve();
+          const currentThreadChip = currentWrap.querySelector('.ocp-tokapprox-chip[data-kind="thread"]');
+          const currentEditorChip = currentWrap.querySelector('.ocp-tokapprox-chip[data-kind="editor"]');
+          if (!currentThreadChip || !currentEditorChip) return resolve();
+
+          const { ok, estimates } = ev.data || {};
+          if (!ok || !estimates) return resolve();
+          // Paint Thread chip
+          if (settings.threadMode !== 'hide') {
+            const use = (settings.threadMode === 'ignoreEditors') ? estimates.threadOnly : estimates.all;
+            currentThreadChip.querySelector('.val').textContent = formatTokens(use);
+            markFreshThenStale(currentThreadChip, 'thread', settings);
+          }
+          // Paint Editor chip (if visible)
+          if (settings.showEditorCounter) {
+            currentEditorChip.querySelector('.val').textContent = formatTokens(estimates.editorsOnly);
+            markFreshThenStale(currentEditorChip, 'editor', settings);
+          }
+          resolve();
+        };
+        // Set loading state
+        if (threadChip && settings.threadMode !== 'hide') {
+          markLoading(threadChip, 'thread', settings);
+        }
+        if (editorChip && settings.showEditorCounter) {
+          markLoading(editorChip, 'editor', settings);
+        }
+
         const rootTxt = getThreadText();
         const edTxt = editorsText();
         const texts = {
@@ -476,29 +506,6 @@
           threadOnly: rootTxt,
           editorsOnly: edTxt
         };
-        worker.onmessage = (ev) => {
-          const { ok, estimates } = ev.data || {};
-          if (!ok || !estimates) return resolve();
-          // Paint Thread chip
-          if (settings.threadMode !== 'hide') {
-            const use = (settings.threadMode === 'ignoreEditors') ? estimates.threadOnly : estimates.all;
-            threadChip.querySelector('.val').textContent = formatTokens(use);
-            markFreshThenStale(threadChip, 'thread', settings);
-          }
-          // Paint Editor chip (if visible)
-          if (settings.showEditorCounter) {
-            editorChip.querySelector('.val').textContent = formatTokens(estimates.editorsOnly);
-            markFreshThenStale(editorChip, 'editor', settings);
-          }
-          resolve();
-        };
-        // Set loading state
-        if (settings.threadMode !== 'hide') {
-          markLoading(threadChip, 'thread', settings);
-        }
-        if (settings.showEditorCounter) {
-          markLoading(editorChip, 'editor', settings);
-        }
         worker.postMessage({
           texts,
           scale: settings.calibration,
@@ -509,10 +516,32 @@
 
     // Thread scheduler (mutations + scroll + visibility)
     const threadScheduler = makeScheduler({
-      minCooldown: 15000,
+      minCooldown: 15000, // Reduced from 15000 for better responsiveness on change
       runFn: () => estimateAndPaint('thread')
     });
+    
+    // Replace the simple observer with one that can re-create the UI
+    const keepInRow = new MutationObserver(() => {
+      const container = document.getElementById(BUTTONS_CONTAINER_ID);
+      if (!container) return; // Not an error, page might be changing
 
+      const wrap = document.getElementById(WRAP_ID);
+
+      if (!wrap) {
+        // UI is missing, re-create and place it.
+        log('Token Approximator UI is missing, re-injecting.');
+        placeUi(settings.placement);
+        showHideBySettings(settings);
+        // Force an immediate calculation to populate the new UI.
+        threadScheduler.forceNow();
+        editorScheduler.forceNow();
+      } else if (!container.contains(wrap)) {
+        // UI exists but is detached, just move it back.
+        log('Token Approximator UI is misplaced, re-attaching.');
+        placeUi(settings.placement);
+      }
+    });
+    keepInRow.observe(document.documentElement, { childList: true, subtree: true });
     // Editor scheduler (typing + lifecycle)
     const editorScheduler = makeScheduler({
       minCooldown: 600, // faster editor updates
@@ -567,19 +596,20 @@
     }, 45000);
 
     // Click-to-refresh (debounced by scheduler)
-    wrap.addEventListener('click', (e) => {
-      const el = e.target.closest('.ocp-tokapprox-chip');
-      if (!el) return;
+    // Use a delegated listener on document for resilience against UI re-creation
+    document.addEventListener('click', (e) => {
+      const el = e.target.closest(`#${WRAP_ID} .ocp-tokapprox-chip`);
+      if (!el) return; // Click was not on one of our chips
+
+      // el is now confirmed to be one of our chips
       if (el.dataset.kind === 'thread' && settings.threadMode !== 'hide') {
-        // Clicking explicitly bypasses cooldown
-        markLoading(threadChip, 'thread', settings);
+        markLoading(el, 'thread', settings);
         threadScheduler.forceNow();
       } else if (el.dataset.kind === 'editor' && settings.showEditorCounter) {
-        // Clicking explicitly bypasses cooldown
-        markLoading(editorChip, 'editor', settings);
+        markLoading(el, 'editor', settings);
         editorScheduler.forceNow();
       }
-    });
+    }, true); // Use capture phase to handle click before other listeners
 
     // First run
     if (settings.threadMode !== 'hide') threadScheduler.runNow();
