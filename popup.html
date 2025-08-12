@@ -633,6 +633,23 @@
                     <span>Show counters before buttons?</span>
                   </label>
                 </div>
+
+                <!-- Counting Method -->
+                <div class="row" style="flex-direction: column; align-items: flex-start; margin-top: 16px">
+                  <label>Counting method:</label>
+                  <div style="margin-top: 8px">
+                    <label title="Uses advanced algorithm with word/character models, adapting to text content (code, CJK, etc.)">
+                      <input type="radio" name="tokenApproxCountingMethod" value="advanced" checked />
+                      Advanced (adapts to content type)
+                    </label>
+                  </div>
+                  <div>
+                    <label title="Simple heuristic: 1 token = 4 characters. Less accurate but consistent.">
+                      <input type="radio" name="tokenApproxCountingMethod" value="simple" />
+                      Simple (1 token = 4 characters)
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

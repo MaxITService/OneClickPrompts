@@ -200,10 +200,10 @@
     const workerCode = `
       self.onmessage = (e) => {
         try {
-          const { texts, scale } = e.data || {};
+          const { texts, scale, countingMethod } = e.data || {};
           const out = {};
           for (const key of Object.keys(texts || {})) {
-            out[key] = estimate(texts[key] || '', scale);
+            out[key] = estimate(texts[key] || '', scale, countingMethod);
           }
           self.postMessage({ ok: true, estimates: out });
         } catch (err) {
@@ -211,7 +211,18 @@
         }
       };
 
-      function estimate(rawInput, scaleIn) {
+      function estimate(rawInput, scaleIn, countingMethod = 'advanced') {
+        const scale = Number.isFinite(scaleIn) && scaleIn > 0 ? scaleIn : 1.0;
+        const raw = String(rawInput || '');
+        const text = raw.replace(/\\s+/g, ' ').trim();
+        const normChars = text.length;
+        
+        // Simple heuristic mode: 1 token = 4 characters
+        if (countingMethod === 'simple') {
+          return Math.round((normChars / 4) * scale);
+        }
+        
+        // Advanced mode - original algorithm
         // --- Adapted from provided script to work on TEXT only ---
         const CFG = {
           wordsDivisor: 0.75,
@@ -222,11 +233,6 @@
           weights: { default:[2,1], code:[2,1], cjk:[1,3] },
           capPct: 0.12
         };
-        const scale = Number.isFinite(scaleIn) && scaleIn > 0 ? scaleIn : 1.0;
-
-        const raw = String(rawInput || '');
-        const text = raw.replace(/\\s+/g, ' ').trim();
-        const normChars = text.length;
 
         // Words
         let wordsOnly = 0;
@@ -376,7 +382,8 @@
       threadMode: settings.threadMode,
       showEditorCounter: settings.showEditorCounter,
       placement: settings.placement,
-      threadSelector: THREAD_SELECTOR
+      threadSelector: THREAD_SELECTOR,
+      countingMethod: settings.countingMethod
     });
 
     // Ensure UI exists and placed
@@ -449,7 +456,11 @@
         if (settings.showEditorCounter) {
           markLoading(editorChip, 'E: calculating… (very rough)');
         }
-        worker.postMessage({ texts, scale: settings.calibration });
+        worker.postMessage({
+          texts,
+          scale: settings.calibration,
+          countingMethod: settings.countingMethod
+        });
       });
     }
 
@@ -530,7 +541,8 @@
           calibration: Number.isFinite(msg.settings.calibration) && msg.settings.calibration > 0 ? Number(msg.settings.calibration) : settings.calibration,
           threadMode: (msg.settings.threadMode === 'ignoreEditors' || msg.settings.threadMode === 'hide') ? msg.settings.threadMode : 'withEditors',
           showEditorCounter: !!msg.settings.showEditorCounter,
-          placement: msg.settings.placement === 'before' ? 'before' : 'after'
+          placement: msg.settings.placement === 'before' ? 'before' : 'after',
+          countingMethod: msg.settings.countingMethod === 'simple' ? 'simple' : 'advanced'
         });
         placeUi(settings.placement);
         showHideBySettings(settings);

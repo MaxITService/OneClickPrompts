@@ -136,7 +136,9 @@ async function getValue(path) {
         threadMode: (obj.threadMode === 'ignoreEditors' || obj.threadMode === 'hide') ? obj.threadMode : 'withEditors',
         showEditorCounter: !!obj.showEditorCounter, // separate editor counter
         // placement of counters relative to buttons
-        placement: (obj.placement === 'before') ? 'before' : 'after'
+        placement: (obj.placement === 'before') ? 'before' : 'after',
+        // counting method: 'advanced' (default) or 'simple' (1 token = 4 chars)
+        countingMethod: obj.countingMethod === 'simple' ? 'simple' : 'advanced'
       };
     }
     return {
@@ -144,7 +146,8 @@ async function getValue(path) {
       calibration: 1.0,
       threadMode: 'withEditors',
       showEditorCounter: false,
-      placement: 'after'
+      placement: 'after',
+      countingMethod: 'advanced'
     };
   }
   if (path === KEYS.floatingPanel) {
@@ -225,6 +228,7 @@ async function setValue(path, value) {
       threadMode: (settings.threadMode === 'ignoreEditors' || settings.threadMode === 'hide') ? settings.threadMode : 'withEditors',
       showEditorCounter: !!settings.showEditorCounter,
       placement: settings.placement === 'before' ? 'before' : 'after',
+      countingMethod: settings.countingMethod === 'simple' ? 'simple' : 'advanced'
     };
     await lsSet({ [KEYS.modules.tokenApproximator]: normalized });
     return;

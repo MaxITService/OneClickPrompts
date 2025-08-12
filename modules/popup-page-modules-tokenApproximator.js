@@ -15,6 +15,7 @@
     threadMode: 'withEditors',        // 'withEditors' | 'ignoreEditors' | 'hide'
     showEditorCounter: false,
     placement: 'after',               // 'before' | 'after'
+    countingMethod: 'advanced',       // 'advanced' | 'simple'
   });
 
   // Safe toast helper (works with ocp_toast.js or falls back to basic)
@@ -59,6 +60,7 @@
   const elModeRadios = () => Array.from(document.querySelectorAll('input[name="tokenApproxThreadMode"]'));
   const elEditorCb = document.getElementById('tokenApproxShowEditorCounter');
   const elPlacementBeforeCb = document.getElementById('tokenApproxPlacementBefore');
+  const elCountingMethodRadios = () => Array.from(document.querySelectorAll('input[name="tokenApproxCountingMethod"]'));
 
   function normalize(settings) {
     const s = settings && typeof settings === 'object' ? settings : {};
@@ -68,6 +70,7 @@
       threadMode: (s.threadMode === 'ignoreEditors' || s.threadMode === 'hide') ? s.threadMode : DEFAULTS.threadMode,
       showEditorCounter: !!s.showEditorCounter,
       placement: s.placement === 'before' ? 'before' : DEFAULTS.placement,
+      countingMethod: s.countingMethod === 'simple' ? 'simple' : DEFAULTS.countingMethod,
     };
   }
 
@@ -90,6 +93,13 @@
     }
     if (elEditorCb) elEditorCb.checked = !!s.showEditorCounter;
     if (elPlacementBeforeCb) elPlacementBeforeCb.checked = (s.placement === 'before');
+    
+    const countingMethodRadios = elCountingMethodRadios();
+    if (countingMethodRadios.length) {
+      for (const r of countingMethodRadios) {
+        r.checked = (r.value === s.countingMethod);
+      }
+    }
   }
 
   function collectSettingsFromUi() {
@@ -102,6 +112,7 @@
       threadMode: selected,
       showEditorCounter: !!(elEditorCb && elEditorCb.checked),
       placement: (elPlacementBeforeCb && elPlacementBeforeCb.checked) ? 'before' : 'after',
+      countingMethod: (elCountingMethodRadios().find(r => r.checked) || {}).value || DEFAULTS.countingMethod,
     });
   }
 
@@ -198,6 +209,14 @@
         await save(s);
       }, { passive: true });
     }
+    
+    // Counting method radios
+    elCountingMethodRadios().forEach(r => {
+      r.addEventListener('change', async () => {
+        const s = collectSettingsFromUi();
+        await save(s);
+      }, { passive: true });
+    });
   }
 
   // Listen to external changes (keep UI in sync if settings update elsewhere)
