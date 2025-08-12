@@ -65,13 +65,20 @@
   const CSS = `
   .ocp-tokapprox-wrap{display:flex;gap:8px;align-items:center;flex-wrap:wrap;
     font:600 12px/1.1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif}
-  .ocp-tokapprox-chip{user-select:none;cursor:pointer;border-radius:12px;padding:4px 8px;
-    background:var(--ocp-chip-bg,rgba(127,127,127,.08));box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+  .ocp-tokapprox-chip{
+    user-select:none;cursor:pointer;border-radius:12px;padding:4px 8px;
+    background:var(--ocp-chip-bg,rgba(127,127,127,.08));
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);
+    /* slow, gentle transitions only for state changes, not content */
+    transition: opacity 4.5s ease, filter 4.5s ease;
+    will-change: opacity, filter;
+  }
   .ocp-tokapprox-chip .lbl{opacity:.8;margin-right:4px}
   .ocp-tokapprox-chip .val{letter-spacing:.2px}
-  .ocp-tokapprox-chip.stale{opacity:.55}
-  .ocp-tokapprox-chip.loading{opacity:.55; font-style:italic}
-  .ocp-tokapprox-chip.paused{opacity:.45; text-decoration:dotted underline}
+  /* states */
+  .ocp-tokapprox-chip.stale{opacity:.55; filter: grayscale(.35)}
+  .ocp-tokapprox-chip.loading{opacity:.7; filter: saturate(.85)}
+  .ocp-tokapprox-chip.paused{opacity:.45; filter: grayscale(.55)}
   .ocp-tokapprox-hidden{display:none !important}
   `;
 
@@ -162,10 +169,20 @@
   }
 
   function markFreshThenStale(el) {
-    el.classList.remove('loading', 'paused');
-    el.classList.remove('stale');
-    // Briefly render as "fresh", then fade to stale
-    setTimeout(() => el.classList.add('stale'), 2500);
+    // cancel previous stale timer so multiple updates don't flicker
+    if (el.__staleTimer) {
+      clearTimeout(el.__staleTimer);
+      el.__staleTimer = null;
+    }
+    // go to "fresh" (will transition back from stale because of CSS)
+    el.classList.remove('loading', 'paused', 'stale');
+
+    // after a long delay, gently fade to stale (keeps value readable)
+    const STALE_DELAY_MS = 6500; // very slow fade-out cadence
+    el.__staleTimer = setTimeout(() => {
+      el.classList.add('stale');
+      el.__staleTimer = null;
+    }, STALE_DELAY_MS);
   }
 
   function markLoading(el, msg) {
@@ -438,7 +455,7 @@
 
     // Thread scheduler (mutations + scroll + visibility)
     const threadScheduler = makeScheduler({
-      minCooldown: 1000,
+      minCooldown: 15000,
       runFn: () => estimateAndPaint('thread')
     });
 
@@ -487,7 +504,7 @@
       if (document.visibilityState !== 'visible') return;
       threadScheduler.markDirty();
       editorScheduler.markDirty();
-    }, 20000);
+    }, 45000);
 
     // Click-to-refresh (debounced by scheduler)
     wrap.addEventListener('click', (e) => {
