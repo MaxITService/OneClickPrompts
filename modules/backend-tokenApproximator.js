@@ -30,17 +30,17 @@
               enabled: false,
               calibration: 1.0,
               threadMode: 'withEditors',
-              showEditorCounter: false,
-              placement: 'after'
+              showEditorCounter: true,
+              placement: 'before'
             });
           }
           const s = resp && resp.settings ? resp.settings : {};
           resolve({
-            enabled: !!s.enabled,
             calibration: Number.isFinite(s.calibration) && s.calibration > 0 ? Number(s.calibration) : 1.0,
+            enabled: !!s.enabled,
             threadMode: (s.threadMode === 'ignoreEditors' || s.threadMode === 'hide') ? s.threadMode : 'withEditors',
-            showEditorCounter: !!s.showEditorCounter,
-            placement: s.placement === 'before' ? 'before' : 'after'
+            showEditorCounter: typeof s.showEditorCounter === 'boolean' ? s.showEditorCounter : true,
+            placement: s.placement === 'after' ? 'after' : 'before'
           });
         });
       } catch {

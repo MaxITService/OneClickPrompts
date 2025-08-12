@@ -134,19 +134,19 @@ async function getValue(path) {
         calibration: Number.isFinite(obj.calibration) && obj.calibration > 0 ? Number(obj.calibration) : 1.0,
         // 'withEditors' | 'ignoreEditors' | 'hide'
         threadMode: (obj.threadMode === 'ignoreEditors' || obj.threadMode === 'hide') ? obj.threadMode : 'withEditors',
-        showEditorCounter: !!obj.showEditorCounter, // separate editor counter
+        showEditorCounter: typeof obj.showEditorCounter === 'boolean' ? obj.showEditorCounter : true, // separate editor counter
         // placement of counters relative to buttons
-        placement: (obj.placement === 'before') ? 'before' : 'after',
+        placement: (obj.placement === 'after') ? 'after' : 'before',
         // counting method: 'advanced' (default) or 'simple' (1 token = 4 chars)
         countingMethod: obj.countingMethod === 'simple' ? 'simple' : 'advanced'
       };
     }
     return {
-      enabled: false,
       calibration: 1.0,
+      enabled: false,
       threadMode: 'withEditors',
-      showEditorCounter: false,
-      placement: 'after',
+      showEditorCounter: true,
+      placement: 'before',
       countingMethod: 'advanced'
     };
   }
@@ -226,8 +226,8 @@ async function setValue(path, value) {
       enabled: !!settings.enabled,
       calibration: Number.isFinite(settings.calibration) && settings.calibration > 0 ? Number(settings.calibration) : 1.0,
       threadMode: (settings.threadMode === 'ignoreEditors' || settings.threadMode === 'hide') ? settings.threadMode : 'withEditors',
-      showEditorCounter: !!settings.showEditorCounter,
-      placement: settings.placement === 'before' ? 'before' : 'after',
+      showEditorCounter: typeof settings.showEditorCounter === 'boolean' ? settings.showEditorCounter : true,
+      placement: settings.placement === 'after' ? 'after' : 'before',
       countingMethod: settings.countingMethod === 'simple' ? 'simple' : 'advanced'
     };
     await lsSet({ [KEYS.modules.tokenApproximator]: normalized });
@@ -419,7 +419,7 @@ export const StateStore = {
       const clients = await chrome.tabs.query({});
       clients.forEach(tab => {
         if (tab.id) {
-          chrome.tabs.sendMessage(tab.id, payload).catch(() => {});
+          chrome.tabs.sendMessage(tab.id, payload).catch(() => { });
         }
       });
     } catch (e) {

@@ -13,8 +13,8 @@
     enabled: false,
     calibration: 1.0,
     threadMode: 'withEditors',        // 'withEditors' | 'ignoreEditors' | 'hide'
-    showEditorCounter: false,
-    placement: 'after',               // 'before' | 'after'
+    showEditorCounter: true,
+    placement: 'before',               // 'before' | 'after'
     countingMethod: 'advanced',       // 'advanced' | 'simple'
   });
 
@@ -72,8 +72,8 @@
       enabled: !!s.enabled,
       calibration: Number.isFinite(s.calibration) && s.calibration > 0 ? Number(s.calibration) : DEFAULTS.calibration,
       threadMode: (s.threadMode === 'ignoreEditors' || s.threadMode === 'hide') ? s.threadMode : DEFAULTS.threadMode,
-      showEditorCounter: !!s.showEditorCounter,
-      placement: s.placement === 'before' ? 'before' : DEFAULTS.placement,
+      showEditorCounter: typeof s.showEditorCounter === 'boolean' ? s.showEditorCounter : DEFAULTS.showEditorCounter,
+      placement: s.placement === 'after' ? 'after' : DEFAULTS.placement,
       countingMethod: s.countingMethod === 'simple' ? 'simple' : DEFAULTS.countingMethod,
     };
   }
