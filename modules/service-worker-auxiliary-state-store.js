@@ -49,7 +49,7 @@ const KEYS = {
   modules: {
     crossChat: 'modules.crossChat', // object { settings: {...}, storedPrompt: string }
     inlineProfileSelector: 'modules.inlineProfileSelector', // object { enabled:boolean, placement:'before'|'after' }
-    tokenApproximator: 'modules.tokenApproximator', // object { enabled:boolean }
+    tokenApproximator: 'modules.tokenApproximator', // object { enabled:boolean, calibration:number, threadMode:string, showEditorCounter:boolean, placement:'before'|'after' }
   },
   floatingPanel: 'floatingPanel', // object map { [hostname]: settings }
   global: {
@@ -131,10 +131,20 @@ async function getValue(path) {
       // Ensure shape and defaults
       return {
         enabled: !!obj.enabled,
+        calibration: Number.isFinite(obj.calibration) && obj.calibration > 0 ? Number(obj.calibration) : 1.0,
+        // 'withEditors' | 'ignoreEditors' | 'hide'
+        threadMode: (obj.threadMode === 'ignoreEditors' || obj.threadMode === 'hide') ? obj.threadMode : 'withEditors',
+        showEditorCounter: !!obj.showEditorCounter, // separate editor counter
+        // placement of counters relative to buttons
+        placement: (obj.placement === 'before') ? 'before' : 'after'
       };
     }
     return {
       enabled: false,
+      calibration: 1.0,
+      threadMode: 'withEditors',
+      showEditorCounter: false,
+      placement: 'after'
     };
   }
   if (path === KEYS.floatingPanel) {
@@ -211,6 +221,10 @@ async function setValue(path, value) {
     const settings = value && typeof value === 'object' ? value : {};
     const normalized = {
       enabled: !!settings.enabled,
+      calibration: Number.isFinite(settings.calibration) && settings.calibration > 0 ? Number(settings.calibration) : 1.0,
+      threadMode: (settings.threadMode === 'ignoreEditors' || settings.threadMode === 'hide') ? settings.threadMode : 'withEditors',
+      showEditorCounter: !!settings.showEditorCounter,
+      placement: settings.placement === 'before' ? 'before' : 'after',
     };
     await lsSet({ [KEYS.modules.tokenApproximator]: normalized });
     return;

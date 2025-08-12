@@ -556,9 +556,84 @@
                   >Enable ChatGPT Token Approximator</span
                 >
               </div>
-              <p class="text-inside-container">
-                Counts words on ChatGPT website and estimates token usage in English.
-              </p>
+              <!-- Description -->
+              <div class="text-inside-container" style="margin-bottom: 12px">
+                <p><strong>Token estimator is for high performance computers</strong> — performance requirement grows with the growth of conversation!</p>
+                <p>
+                  Token Estimator gives a local, <strong>VERY VERY VERY ROUGH</strong> approximation of tokens in the visible chat thread. It scans visible texts inside your target selector (default is <code>#thread</code>). The estimate is grayed out when stale and appears in normal text color when freshly calculated.
+                </p>
+                <p>
+                  <strong>Accuracy (rule of thumb):</strong> English ±2k below ~10k tokens, ±10k above. If you have code or non-English characters: expect about 50% inaccuracy. Beyond ~100k treat results as directional only. Mixed code/CJK/emoji can increase error. If your app virtualizes long threads, scroll to load older messages before estimating.
+                </p>
+                <p>
+                  <strong>Why care?</strong> Models degrade as context grows—knowing if you're at ~50k vs ~100k helps you decide to trim/chunk/summarize. After a model's context limit, chats may "forget" older messages. Some sites may use RAG, but it's not as good as direct token input. See model limits/benchmarks (e.g., NoLiMa). For exact counts use the official tokenizer.
+                </p>
+                <ul style="margin:6px 0 0 16px">
+                  <li><a href="https://github.com/adobe-research/NoLiMa" target="_blank" rel="noreferrer noopener">NoLiMa</a></li>
+                  <li><a href="https://platform.openai.com/tokenizer" target="_blank" rel="noreferrer noopener">OpenAI Tokenizer</a></li>
+                </ul>
+                <p><strong>Why not exact tokenization?</strong> In-browser tokenization is slow and shipping full token maps would bloat the extension. This estimator is a pragmatic compromise.</p>
+              </div>
+
+              <!-- Settings (shown when enabled) -->
+              <div id="tokenApproxSettingsContainer" style="display:none; margin-left: 8px">
+                <!-- Calibration -->
+                <div class="row" title="Calibration factor applied to all counters. Default is 1.00. Increase/decrease if your language mix skews counts.">
+                  <label for="tokenApproxCalibration" style="min-width: 180px">Calibration value:</label>
+                  <input
+                    id="tokenApproxCalibration"
+                    type="number"
+                    inputmode="decimal"
+                    step="0.01"
+                    min="0.01"
+                    max="10"
+                    value="1.00"
+                    style="width: 120px"
+                    aria-label="Calibration value"
+                  />
+                </div>
+
+                <!-- Whole thread counters -->
+                <div class="row" style="flex-direction: column; align-items: flex-start; margin-top: 8px">
+                  <label>Whole thread counters:</label>
+                  <div style="margin-top: 8px">
+                    <label title="Estimate over the whole thread and the editors together.">
+                      <input type="radio" name="tokenApproxThreadMode" value="withEditors" checked />
+                      Whole thread with editors
+                    </label>
+                  </div>
+                  <div>
+                    <label title="Estimate over the whole thread only (ignores editors).">
+                      <input type="radio" name="tokenApproxThreadMode" value="ignoreEditors" />
+                      Whole thread, ignore editors
+                    </label>
+                  </div>
+                  <div>
+                    <label title="Hide the whole-thread counters completely.">
+                      <input type="radio" name="tokenApproxThreadMode" value="hide" />
+                      Do not display whole thread counters
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Editor-only counter -->
+                <div class="row" style="margin-top: 8px">
+                  <label class="checkbox-row" for="tokenApproxShowEditorCounter"
+                    title="Show a separate counter for the active editor area.">
+                    <input type="checkbox" id="tokenApproxShowEditorCounter" />
+                    <span>Display separate counter for editor area</span>
+                  </label>
+                </div>
+
+                <!-- Placement -->
+                <div class="row" style="margin-top: 8px">
+                  <label class="checkbox-row" for="tokenApproxPlacementBefore"
+                    title="If checked, counters appear before buttons. If unchecked, counters appear after the buttons.">
+                    <input type="checkbox" id="tokenApproxPlacementBefore" />
+                    <span>Show counters before buttons?</span>
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -816,7 +891,6 @@
     <script src="/modules/popup-page-modules-inlineSelector.js"></script>
     <!-- Token Approximator UI handler script -->
     <script src="/modules/popup-page-modules-tokenApproximator.js"></script>
-    <!-- ChatGPT Token Approximator UI handler script -->
-    <script src="/modules/popup-page-modules-tokenApproximator.js"></script>
+    <!-- (kept single include to avoid double init) -->
   </body>
 </html>
