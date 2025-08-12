@@ -241,6 +241,9 @@ class InjectionTargetsOnWebsite {
                     'div.ProseMirror', // legacy fallback
                     'textarea', // ultimate fallback
                 ],
+                // Stable root for visible chat messages (token estimator default hook)
+                // ChatGPT currently renders the conversation inside #thread
+                threadRoot: '#thread',
                 buttonsContainerId: 'chatgpt-custom-buttons-container'
             },
             Claude: {
