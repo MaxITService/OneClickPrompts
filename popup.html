@@ -590,7 +590,7 @@
                       max="10"
                       value="1.00"
                       style="width: 100px"
-                      title="Default 1.00. Increase if counts are too low, decrease if too high"
+                      title="Multiplies all token estimates by this factor (default 1.00). Use values above 1.0 if counts seem consistently too low for your content, or below 1.0 if they're too high. Helpful for adjusting to your specific mix of languages, code, or writing style."
                       aria-label="Calibration multiplier"
                     />
                   </div>
@@ -605,19 +605,19 @@
                     <p style="margin: 0 0 8px 0; font-size: 0.9em; color: #666">Thread counter (T) shows tokens in entire conversation</p>
                     <div style="margin-left: 12px">
                       <div style="margin: 4px 0">
-                        <label title="Count thread + any text editors together">
+                        <label title="Shows one counter (T) that includes tokens from the entire conversation thread plus any active text editors. This gives you the total context size that would be sent to the AI, including your current draft.">
                           <input type="radio" name="tokenApproxThreadMode" value="withEditors" checked />
                           Thread + editors combined
                         </label>
                       </div>
                       <div style="margin: 4px 0">
-                        <label title="Count only the thread, ignore text editors">
+                        <label title="Shows one counter (T) that counts only the conversation thread, ignoring text in editors. Useful if you want to see just the conversation history without your current draft affecting the count.">
                           <input type="radio" name="tokenApproxThreadMode" value="ignoreEditors" />
                           Thread only (ignore editors)
                         </label>
                       </div>
                       <div style="margin: 4px 0">
-                        <label title="Don't show thread counter at all">
+                        <label title="Hides the thread counter completely if you only want to see editor token counts. Choose this if you only care about tracking tokens in your current draft text.">
                           <input type="radio" name="tokenApproxThreadMode" value="hide" />
                           Hide thread counter
                         </label>
@@ -651,13 +651,13 @@
                   <p style="margin: 0 0 8px 0; font-size: 0.9em; color: #666">Choose speed vs. accuracy tradeoff</p>
                   <div style="margin-left: 12px">
                     <div style="margin: 6px 0">
-                      <label title="Adapts to content type but uses more CPU">
+                      <label title="Uses intelligent heuristics that adapt to different content types (code, CJK text, etc.) for better accuracy. Slower but more precise - can use significant CPU on very long conversations. Blends word-based and character-based estimates.">
                         <input type="radio" name="tokenApproxCountingMethod" value="advanced" id="tokenApproxMethodAdvanced" />
                         <strong>Advanced heuristics</strong> (slower, more accurate)
                       </label>
                     </div>
                     <div style="margin: 6px 0">
-                      <label title="Fast but rough: 1 token = 4 characters">
+                      <label title="Simple approximation: 1 token ≈ 4 characters. Much faster and uses minimal CPU, but less accurate especially with code or non-English text. Good for modest machines or extremely long chats where speed matters more than precision.">
                         <input type="radio" name="tokenApproxCountingMethod" value="simple" id="tokenApproxMethodSimple" />
                         <strong>Simple counting</strong> (faster, 1 token ≈ 4 chars)
                       </label>
