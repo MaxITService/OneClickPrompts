@@ -22,6 +22,7 @@ Profiles are explicitly excluded. Keys under currentProfile and profiles.* remai
   - UI popup state (firstOpen, collapsibles, lastOpenedSection)
   - Cross-Chat module global settings and stored prompt
   - Inline Profile Selector module settings
+  - Token Approximator module settings (global)
   - Floating panel per-host settings
   - Custom selectors per-site
   - Optional meta: schemaVersion, dev.debugLogging
@@ -74,7 +75,7 @@ Meta
 - setDebugLogging(enabled: boolean): Promise<void>
 
 Broadcasts
-- uiThemeChanged, uiPopupChanged, crossChatChanged, crossChatPromptChanged, inlineProfileSelectorSettingsChanged, floatingPanelChanged, floatingPanelResetAll, floatingPanelReset, customSelectorsChanged
+- uiThemeChanged, uiPopupChanged, crossChatChanged, crossChatPromptChanged, inlineProfileSelectorSettingsChanged, floatingPanelChanged, floatingPanelResetAll, floatingPanelReset, customSelectorsChanged, tokenApproximatorSettingsChanged
 
 ## config.js Changes
 
@@ -104,6 +105,9 @@ Updated message handlers:
 - Inline Profile Selector module:
   - getInlineProfileSelectorSettings -> StateStore.getInlineProfileSelectorSettings()
   - saveInlineProfileSelectorSettings -> StateStore.saveInlineProfileSelectorSettings(settings)
+- Token Approximator module:
+  - getTokenApproximatorSettings -> StateStore.getTokenApproximatorSettings()
+  - saveTokenApproximatorSettings -> StateStore.saveTokenApproximatorSettings(settings)
 
 Unchanged message handlers:
 - Profiles: getConfig, saveConfig, switchProfile, listProfiles, deleteProfile, createDefaultProfile
@@ -118,6 +122,7 @@ New schema (logical paths):
 - ui.popup: { firstOpen: boolean, lastOpenedSection?: string, collapsibles?: Record<id, boolean> }
 - modules.crossChat: { settings: { enabled, autosendCopy, autosendPaste, placement }, storedPrompt: string }
 - modules.inlineProfileSelector: { enabled: boolean, placement: 'before' | 'after' }
+- modules.tokenApproximator: { enabled:boolean, calibration:number, threadMode:'withEditors'|'ignoreEditors'|'hide', showEditorCounter:boolean, placement:'before'|'after', countingMethod:'advanced'|'simple' }
 - floatingPanel: { [hostname]: FloatingPanelSettings }
 - global.customSelectors: { [site]: SelectorsConfig }
 - state.schemaVersion: number
@@ -188,6 +193,8 @@ Recommended checks:
   - Test profile switching works correctly
   - Confirm dark/light theme styling is applied properly
   - Check event propagation blocking prevents dropdown from closing immediately
+- Token Approximator:
+  - Popup toggles/radios persist and clamp calibration; chips render in ChatGPT button row; click-to-refresh works; visibility pause resumes once.
 
 ## File References
 
@@ -196,3 +203,15 @@ Recommended checks:
 - Styles: ['common-ui-elements/common-style.css'](common-ui-elements/common-style.css), ['common-ui-elements/dark-theme.css'](common-ui-elements/dark-theme.css)
 - HTML: ['popup.html'](popup.html), ['welcome.html'](welcome.html)
 - Inline Profile Selector: ['modules/popup-page-modules-inlineSelector.js'](modules/popup-page-modules-inlineSelector.js)
+- Token Approximator: ['modules/popup-page-modules-tokenApproximator.js'](modules/popup-page-modules-tokenApproximator.js), ['modules/backend-tokenApproximator.js'](modules/backend-tokenApproximator.js)
+
+## Token Approximator (overview)
+- **Popup**: `modules/popup-page-modules-tokenApproximator.js`
+  - `normalize`, `setUiFromSettings`, `collectSettingsFromUi`, `save`, `load`, `attachEvents`.
+- **Backend**: `modules/backend-tokenApproximator.js`
+  - UI: `createUiIfNeeded`, `placeUi`, `showHideBySettings`, `formatTokens`.
+  - Worker: `createEstimatorWorker()` (advanced|simple; applies calibration).
+  - Run: `estimateAndPaint()`.
+  - Schedulers: `makeScheduler()`; thread/editor cadences.
+- **State**: `modules/service-worker-auxiliary-state-store.js`
+  - `getTokenApproximatorSettings`, `saveTokenApproximatorSettings` (+broadcast).
