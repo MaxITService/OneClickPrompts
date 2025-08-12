@@ -59,7 +59,9 @@
   const elSettings = document.getElementById('tokenApproxSettingsContainer');
   const elModeRadios = () => Array.from(document.querySelectorAll('input[name="tokenApproxThreadMode"]'));
   const elEditorCb = document.getElementById('tokenApproxShowEditorCounter');
-  const elPlacementBeforeCb = document.getElementById('tokenApproxPlacementBefore');
+  const elPlacementBeforeCb = document.getElementById('tokenApproxPlacementBeforeCb'); // Hidden checkbox for compatibility
+  const elPlacementRadioBefore = document.getElementById('tokenApproxPlacementBefore');
+  const elPlacementRadioAfter = document.getElementById('tokenApproxPlacementAfter');
   const elSimpleMethodCb = document.getElementById('tokenApproxSimpleMethodToggle');
   const elMethodRadioAdvanced = document.getElementById('tokenApproxMethodAdvanced');
   const elMethodRadioSimple = document.getElementById('tokenApproxMethodSimple');
@@ -94,9 +96,14 @@
       }
     }
     if (elEditorCb) elEditorCb.checked = !!s.showEditorCounter;
-    if (elPlacementBeforeCb) elPlacementBeforeCb.checked = (s.placement === 'before');
     
-    // Update both the hidden checkbox and the visible radio buttons
+    // Update both the hidden checkbox and the visible radio buttons for placement
+    const isBefore = (s.placement === 'before');
+    if (elPlacementBeforeCb) elPlacementBeforeCb.checked = isBefore;
+    if (elPlacementRadioBefore) elPlacementRadioBefore.checked = isBefore;
+    if (elPlacementRadioAfter) elPlacementRadioAfter.checked = !isBefore;
+    
+    // Update both the hidden checkbox and the visible radio buttons for counting method
     const isSimple = (s.countingMethod === 'simple');
     if (elSimpleMethodCb) elSimpleMethodCb.checked = isSimple;
     if (elMethodRadioSimple) elMethodRadioSimple.checked = isSimple;
@@ -112,7 +119,7 @@
       calibration,
       threadMode: selected,
       showEditorCounter: !!(elEditorCb && elEditorCb.checked),
-      placement: (elPlacementBeforeCb && elPlacementBeforeCb.checked) ? 'before' : 'after',
+      placement: (elPlacementRadioBefore && elPlacementRadioBefore.checked) ? 'before' : 'after',
       countingMethod: (elSimpleMethodCb && elSimpleMethodCb.checked) ? 'simple' : 'advanced',
     });
   }
@@ -204,8 +211,20 @@
         await save(s);
       }, { passive: true });
     }
-    if (elPlacementBeforeCb) {
-      elPlacementBeforeCb.addEventListener('change', async () => {
+    // Placement radio buttons
+    if (elPlacementRadioBefore) {
+      elPlacementRadioBefore.addEventListener('change', async () => {
+        // Update the hidden checkbox to maintain compatibility
+        if (elPlacementBeforeCb) elPlacementBeforeCb.checked = elPlacementRadioBefore.checked;
+        const s = collectSettingsFromUi();
+        await save(s);
+      }, { passive: true });
+    }
+    
+    if (elPlacementRadioAfter) {
+      elPlacementRadioAfter.addEventListener('change', async () => {
+        // Update the hidden checkbox to maintain compatibility
+        if (elPlacementBeforeCb) elPlacementBeforeCb.checked = !elPlacementRadioAfter.checked;
         const s = collectSettingsFromUi();
         await save(s);
       }, { passive: true });

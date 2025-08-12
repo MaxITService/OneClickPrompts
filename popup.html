@@ -638,11 +638,23 @@
                 <!-- Position Section -->
                 <div class="text-inside-container" style="border: 1px solid #ddd; padding: 12px; margin-bottom: 16px; border-radius: 4px">
                   <h4 style="margin: 0 0 8px 0; padding-bottom: 8px; border-bottom: 1px solid #eee">📍 Position</h4>
-                  <label class="checkbox-row" for="tokenApproxPlacementBefore">
-                    <input type="checkbox" id="tokenApproxPlacementBefore" />
-                    <span>Show counters before buttons</span>
-                  </label>
-                  <p style="margin: 4px 0 0 24px; font-size: 0.85em; color: #666">Uncheck to show after buttons instead</p>
+                  <p style="margin: 0 0 8px 0; font-size: 0.9em; color: #666">Where to display token counters relative to buttons</p>
+                  <div style="margin-left: 12px">
+                    <div style="margin: 6px 0">
+                      <label title="Display token counters before your custom buttons">
+                        <input type="radio" name="tokenApproxPlacement" value="before" id="tokenApproxPlacementBefore" />
+                        <strong>Before buttons</strong>
+                      </label>
+                    </div>
+                    <div style="margin: 6px 0">
+                      <label title="Display token counters after your custom buttons">
+                        <input type="radio" name="tokenApproxPlacement" value="after" id="tokenApproxPlacementAfter" />
+                        <strong>After buttons</strong>
+                      </label>
+                    </div>
+                  </div>
+                  <!-- Hidden checkbox for compatibility with existing JavaScript -->
+                  <input type="checkbox" id="tokenApproxPlacementBeforeCb" style="display: none;" />
                 </div>
 
                 <!-- Algorithm Section -->
@@ -653,7 +665,7 @@
                     <div style="margin: 6px 0">
                       <label title="Uses intelligent heuristics that adapt to different content types (code, CJK text, etc.) for better accuracy. Slower but more precise - can use significant CPU on very long conversations. Blends word-based and character-based estimates.">
                         <input type="radio" name="tokenApproxCountingMethod" value="advanced" id="tokenApproxMethodAdvanced" />
-                        <strong>Advanced heuristics</strong> (slower, more accurate)
+                        <strong>Advanced heuristics</strong> (slower, more accurate... or not...)
                       </label>
                     </div>
                     <div style="margin: 6px 0">
