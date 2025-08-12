@@ -69,16 +69,9 @@
     user-select:none;cursor:pointer;border-radius:12px;padding:4px 8px;
     background:var(--ocp-chip-bg,rgba(127,127,127,.08));
     box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);
-    /* slow, gentle transitions only for state changes, not content */
-    transition: opacity 4.5s ease, filter 4.5s ease;
-    will-change: opacity, filter;
   }
   .ocp-tokapprox-chip .lbl{opacity:.8;margin-right:4px}
   .ocp-tokapprox-chip .val{letter-spacing:.2px}
-  /* states */
-  .ocp-tokapprox-chip.stale{opacity:.55; filter: grayscale(.35)}
-  .ocp-tokapprox-chip.loading{opacity:.7; filter: saturate(.85)}
-  .ocp-tokapprox-chip.paused{opacity:.45; filter: grayscale(.55)}
   .ocp-tokapprox-hidden{display:none !important}
   `;
 
@@ -101,13 +94,13 @@
       wrap.className = 'ocp-tokapprox-wrap';
       // Thread chip
       const t = document.createElement('div');
-      t.className = 'ocp-tokapprox-chip loading';
+      t.className = 'ocp-tokapprox-chip';
       t.dataset.kind = 'thread';
       t.title = 'Whole-thread tokens — calculating…';
       t.innerHTML = `<span class="lbl">T:</span><span class="val">-------</span>`;
       // Editor chip
       const e = document.createElement('div');
-      e.className = 'ocp-tokapprox-chip loading';
+      e.className = 'ocp-tokapprox-chip';
       e.dataset.kind = 'editor';
       e.title = 'Editor tokens — calculating…';
       e.innerHTML = `<span class="lbl">E:</span><span class="val">-------</span>`;
@@ -209,28 +202,24 @@
       clearTimeout(el.__staleTimer);
       el.__staleTimer = null;
     }
-    // go to "fresh"
-    el.classList.remove('loading', 'paused', 'stale');
+    // No visual class changes anymore
     setTooltip(el, kind, 'fresh', settings);
 
-    // after a delay, gently fade to stale (editor stays fresh longer)
+    // Still set up timer for tooltip state change
     const STALE_DELAY_MS = kind === 'editor' ? 12000 : 6500;
     el.__staleTimer = setTimeout(() => {
-      el.classList.add('stale');
       setTooltip(el, kind, 'stale', settings);
       el.__staleTimer = null;
     }, STALE_DELAY_MS);
   }
 
   function markLoading(el, kind, settings) {
-    el.classList.add('loading');
-    el.classList.remove('paused', 'stale');
+    // No class toggling; keep tooltip update
     setTooltip(el, kind, 'loading', settings);
   }
 
   function markPaused(el, kind, settings) {
-    el.classList.add('paused');
-    el.classList.remove('loading');
+    // No class toggling; keep tooltip update
     setTooltip(el, kind, 'paused', settings);
   }
 
@@ -552,14 +541,11 @@
     // Visibility control
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
-        // Immediately clear paused visuals; schedule normal (cooldown-aware) refresh
         if (settings.threadMode !== 'hide') {
-          threadChip.classList.remove('paused', 'stale');
           markLoading(threadChip, 'thread', settings);
           threadScheduler.runNow(); // respects cooldown
         }
         if (settings.showEditorCounter) {
-          editorChip.classList.remove('paused', 'stale');
           markLoading(editorChip, 'editor', settings);
           editorScheduler.runNow(); // respects cooldown
         }
