@@ -60,7 +60,7 @@
   const elModeRadios = () => Array.from(document.querySelectorAll('input[name="tokenApproxThreadMode"]'));
   const elEditorCb = document.getElementById('tokenApproxShowEditorCounter');
   const elPlacementBeforeCb = document.getElementById('tokenApproxPlacementBefore');
-  const elCountingMethodRadios = () => Array.from(document.querySelectorAll('input[name="tokenApproxCountingMethod"]'));
+  const elSimpleMethodCb = document.getElementById('tokenApproxSimpleMethodToggle');
 
   function normalize(settings) {
     const s = settings && typeof settings === 'object' ? settings : {};
@@ -93,13 +93,7 @@
     }
     if (elEditorCb) elEditorCb.checked = !!s.showEditorCounter;
     if (elPlacementBeforeCb) elPlacementBeforeCb.checked = (s.placement === 'before');
-    
-    const countingMethodRadios = elCountingMethodRadios();
-    if (countingMethodRadios.length) {
-      for (const r of countingMethodRadios) {
-        r.checked = (r.value === s.countingMethod);
-      }
-    }
+    if (elSimpleMethodCb) elSimpleMethodCb.checked = (s.countingMethod === 'simple');
   }
 
   function collectSettingsFromUi() {
@@ -112,7 +106,7 @@
       threadMode: selected,
       showEditorCounter: !!(elEditorCb && elEditorCb.checked),
       placement: (elPlacementBeforeCb && elPlacementBeforeCb.checked) ? 'before' : 'after',
-      countingMethod: (elCountingMethodRadios().find(r => r.checked) || {}).value || DEFAULTS.countingMethod,
+      countingMethod: (elSimpleMethodCb && elSimpleMethodCb.checked) ? 'simple' : 'advanced',
     });
   }
 
@@ -210,13 +204,13 @@
       }, { passive: true });
     }
     
-    // Counting method radios
-    elCountingMethodRadios().forEach(r => {
-      r.addEventListener('change', async () => {
+    // Counting method toggle
+    if (elSimpleMethodCb) {
+      elSimpleMethodCb.addEventListener('change', async () => {
         const s = collectSettingsFromUi();
         await save(s);
       }, { passive: true });
-    });
+    }
   }
 
   // Listen to external changes (keep UI in sync if settings update elsewhere)

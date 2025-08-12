@@ -630,24 +630,19 @@
                   <label class="checkbox-row" for="tokenApproxPlacementBefore"
                     title="If checked, counters appear before buttons. If unchecked, counters appear after the buttons.">
                     <input type="checkbox" id="tokenApproxPlacementBefore" />
-                    <span>Show counters before buttons?</span>
+                    <span>Show counters before buttons? (Uncheck to show after buttons)</span>
                   </label>
                 </div>
 
                 <!-- Counting Method -->
-                <div class="row" style="flex-direction: column; align-items: flex-start; margin-top: 16px">
-                  <label>Counting method:</label>
-                  <div style="margin-top: 8px">
-                    <label title="Uses advanced algorithm with word/character models, adapting to text content (code, CJK, etc.)">
-                      <input type="radio" name="tokenApproxCountingMethod" value="advanced" checked />
-                      Advanced (adapts to content type)
+                <div class="row" style="margin-top: 16px">
+                  <div class="switch-container" title="Choose between advanced algorithm (adapts to content type) or simple heuristic (1 token = 4 characters)">
+                    <span class="switch-label">Use some "advanced" heuristics (may use lots of CPU) </span>                  
+                    <label class="switch">
+                      <input type="checkbox" id="tokenApproxSimpleMethodToggle" />
+                      <span class="slider"></span>
                     </label>
-                  </div>
-                  <div>
-                    <label title="Simple heuristic: 1 token = 4 characters. Less accurate but consistent.">
-                      <input type="radio" name="tokenApproxCountingMethod" value="simple" />
-                      Simple (1 token = 4 characters)
-                    </label>
+                    <span class="switch-label">Use simple counting (1 token = 4 chars)</span>
                   </div>
                 </div>
               </div>
