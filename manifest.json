@@ -45,8 +45,9 @@
       "css": ["floating-panel.css", "common-ui-elements/ocp_toast.css"],
       "js": [
         "log.js",
-        "event-handlers.js",
-        "utils.js",
+          "event-handlers.js",
+          "utils.js",
+        "backend-token-approximator.js",
         "common-ui-elements/ocp_toast.js",
         "buttons-clicking-chatgpt.js",
         "buttons-clicking-copilot.js",
