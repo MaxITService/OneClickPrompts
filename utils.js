@@ -216,8 +216,6 @@ class InjectionTargetsOnWebsite {
             ChatGPT: {
                 // Updated May 2025 for new ChatGPT UI
                 containers: [
-
-
                     'form[data-type="unified-composer"] > div.rounded-\\[28px\\]',
                     'div.flex.basis-auto.flex-col.shrink.min-\\[510px\\]\\:max-\\[768px\\]\\:mt-\\[25dvh\\]\\!',
                     'div#conversation-header-actions',
