@@ -949,7 +949,7 @@
               return resolve();
             }
 
-            log(`Thread estimation success: ${modelUsed}`);
+            // log(`Thread estimation success: ${modelUsed}`);
             const tokens = estimates.threadText;
             currentThreadChip.querySelector('.val').textContent = formatTokens(tokens);
             markFreshThenStale(currentThreadChip, 'thread', effectiveSettings);
@@ -1045,7 +1045,7 @@
               return resolve();
             }
 
-            log(`Editor estimation success: ${modelUsed}`);
+            // log(`Editor estimation success: ${modelUsed}`);
             const tokens = estimates.editorText;
             currentEditorChip.querySelector('.val').textContent = formatTokens(tokens);
             markFreshThenStale(currentEditorChip, 'editor', effectiveSettings);
