@@ -361,7 +361,9 @@ class InjectionTargetsOnWebsite {
                     'textarea.w-full.px-2', // fallback for px-2 class
                     'textarea' // fallback: any textarea
                 ],
-                
+                // Updated thread root selector based on debugging - most reliable container
+                threadRoot: '.w-full.h-full.overflow-y-auto.overflow-x-hidden.scrollbar-gutter-stable.flex.flex-col.items-center.px-gutter',
+
                 buttonsContainerId: 'grok-custom-buttons-container'
             },
             Gemini: {
