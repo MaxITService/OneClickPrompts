@@ -287,6 +287,7 @@ class InjectionTargetsOnWebsite {
                     'button.rounded-submitButton', // fallback by class only
                     'button[type="submit"]', // legacy fallback
                 ],
+                threadRoot: 'div.max-w-chat[data-content="conversation"]',
                 buttonsContainerId: 'copilot-custom-buttons-container'
             },
             DeepSeek: {
