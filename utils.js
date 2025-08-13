@@ -361,6 +361,7 @@ class InjectionTargetsOnWebsite {
                     'textarea.w-full.px-2', // fallback for px-2 class
                     'textarea' // fallback: any textarea
                 ],
+                
                 buttonsContainerId: 'grok-custom-buttons-container'
             },
             Gemini: {
@@ -377,6 +378,7 @@ class InjectionTargetsOnWebsite {
                     'div.ql-editor[contenteditable="true"]', // Quill editor div
                     'rich-textarea div.ql-editor' // More specific path
                 ],
+                threadRoot: 'infinite-scroller[data-test-id="chat-history-container"]',
                 buttonsContainerId: 'gemini-custom-buttons-container' // Unique ID
             }
         };
