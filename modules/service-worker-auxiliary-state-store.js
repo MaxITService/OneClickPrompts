@@ -144,6 +144,22 @@ async function getValue(path) {
         }
       }
       
+      // Handle enabledSites property - default all sites to enabled if not present
+      const defaultEnabledSites = {
+        'ChatGPT': true,
+        'Claude': true,
+        'Copilot': true,
+        'DeepSeek': true,
+        'AIStudio': true,
+        'Grok': true,
+        'Gemini': true
+      };
+      
+      // Use provided enabledSites if exists, otherwise use defaults
+      const enabledSites = obj.enabledSites && typeof obj.enabledSites === 'object'
+        ? obj.enabledSites
+        : defaultEnabledSites;
+      
       return {
         enabled: !!obj.enabled,
         calibration: Number.isFinite(obj.calibration) && obj.calibration > 0 ? Number(obj.calibration) : 1.0,
@@ -153,7 +169,9 @@ async function getValue(path) {
         // placement of counters relative to buttons
         placement: (obj.placement === 'after') ? 'after' : 'before',
         // counting method: one of the available model IDs
-        countingMethod
+        countingMethod,
+        // per-site enablement
+        enabledSites
       };
     }
     return {
@@ -162,7 +180,16 @@ async function getValue(path) {
       threadMode: 'withEditors',
       showEditorCounter: true,
       placement: 'before',
-      countingMethod: 'ultralight-state-machine' // New default
+      countingMethod: 'ultralight-state-machine', // New default
+      enabledSites: {
+        'ChatGPT': true,
+        'Claude': true,
+        'Copilot': true,
+        'DeepSeek': true,
+        'AIStudio': true,
+        'Grok': true,
+        'Gemini': true
+      }
     };
   }
   if (path === KEYS.floatingPanel) {
@@ -254,13 +281,30 @@ async function setValue(path, value) {
       }
     }
     
+    // Default enabled sites
+    const defaultEnabledSites = {
+      'ChatGPT': true,
+      'Claude': true,
+      'Copilot': true,
+      'DeepSeek': true,
+      'AIStudio': true,
+      'Grok': true,
+      'Gemini': true
+    };
+    
+    // Use provided enabledSites if exists and is an object, otherwise use defaults
+    const enabledSites = settings.enabledSites && typeof settings.enabledSites === 'object'
+      ? settings.enabledSites
+      : defaultEnabledSites;
+    
     const normalized = {
       enabled: !!settings.enabled,
       calibration: Number.isFinite(settings.calibration) && settings.calibration > 0 ? Number(settings.calibration) : 1.0,
       threadMode: (settings.threadMode === 'ignoreEditors' || settings.threadMode === 'hide') ? settings.threadMode : 'withEditors',
       showEditorCounter: typeof settings.showEditorCounter === 'boolean' ? settings.showEditorCounter : true,
       placement: settings.placement === 'after' ? 'after' : 'before',
-      countingMethod
+      countingMethod,
+      enabledSites
     };
     await lsSet({ [KEYS.modules.tokenApproximator]: normalized });
     return;

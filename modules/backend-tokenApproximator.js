@@ -7,7 +7,6 @@
 
   // ---- Guards & site detection ----
   const Site = (window.InjectionTargetsOnWebsite && window.InjectionTargetsOnWebsite.activeSite) || 'Unknown';
-  if (Site !== 'ChatGPT') return; // Only ChatGPT supported in this step.
 
   // Logging helper required by project
   function log(...args) {
@@ -32,17 +31,44 @@
               threadMode: 'withEditors',
               showEditorCounter: true,
               placement: 'before',
-              countingMethod: 'ultralight-state-machine' // Default to ultralight
+              countingMethod: 'ultralight-state-machine', // Default to ultralight
+              enabledSites: {
+                'ChatGPT': true,
+                'Claude': true,
+                'Copilot': true,
+                'DeepSeek': true,
+                'AIStudio': true,
+                'Grok': true,
+                'Gemini': true
+              }
             });
           }
           const s = resp && resp.settings ? resp.settings : {};
+          
+          // Default enabled sites if not provided
+          const defaultEnabledSites = {
+            'ChatGPT': true,
+            'Claude': true,
+            'Copilot': true,
+            'DeepSeek': true,
+            'AIStudio': true,
+            'Grok': true,
+            'Gemini': true
+          };
+          
+          // Use provided enabledSites if exists, otherwise use defaults
+          const enabledSites = s.enabledSites && typeof s.enabledSites === 'object'
+            ? s.enabledSites
+            : defaultEnabledSites;
+          
           resolve({
             calibration: Number.isFinite(s.calibration) && s.calibration > 0 ? Number(s.calibration) : 1.0,
             enabled: !!s.enabled,
             threadMode: (s.threadMode === 'ignoreEditors' || s.threadMode === 'hide') ? s.threadMode : 'withEditors',
             showEditorCounter: typeof s.showEditorCounter === 'boolean' ? s.showEditorCounter : true,
             placement: s.placement === 'after' ? 'after' : 'before',
-            countingMethod: s.countingMethod || 'ultralight-state-machine' // Default to ultralight
+            countingMethod: s.countingMethod || 'ultralight-state-machine', // Default to ultralight
+            enabledSites
           });
         });
       } catch {
@@ -52,16 +78,20 @@
           threadMode: 'withEditors',
           showEditorCounter: false,
           placement: 'after',
-          countingMethod: 'ultralight-state-machine'
+          countingMethod: 'ultralight-state-machine',
+          enabledSites: {
+            'ChatGPT': true,
+            'Claude': true,
+            'Copilot': true,
+            'DeepSeek': true,
+            'AIStudio': true,
+            'Grok': true,
+            'Gemini': true
+          }
         });
       }
     });
   }
-
-  // ---- DOM targets from utils.js ----
-  const selectors = (window.InjectionTargetsOnWebsite && window.InjectionTargetsOnWebsite.selectors) || {};
-  const THREAD_SELECTOR = selectors.threadRoot || '#thread';
-  const BUTTONS_CONTAINER_ID = selectors.buttonsContainerId || 'chatgpt-custom-buttons-container';
 
   // ---- Mini CSS for counters ----
   const STYLE_ID = 'ocp-token-approx-style';
@@ -114,9 +144,9 @@
     return wrap;
   }
 
-  function placeUi(placement) {
+  function placeUi(placement, buttonsContainerId) {
     const wrap = createUiIfNeeded();
-    const container = document.getElementById(BUTTONS_CONTAINER_ID);
+    const container = document.getElementById(buttonsContainerId);
     if (!container) return;
 
     // behave nicely in a flex row
@@ -707,7 +737,10 @@
   }
 
   function getThreadRoot() {
-    return document.querySelector(THREAD_SELECTOR);
+    const selectors = (window.InjectionTargetsOnWebsite && window.InjectionTargetsOnWebsite.selectors) || {};
+    const threadSelector = selectors.threadRoot;
+    if (!threadSelector) return null;
+    return document.querySelector(threadSelector);
   }
 
   function getThreadText(excludeEditors = false) {
@@ -813,15 +846,33 @@
   (async () => {
     const settings = await loadSettings();
     if (!settings.enabled) return;
+    
+    // Skip if site is not enabled in settings
+    if (!settings.enabledSites || !settings.enabledSites[Site]) {
+      log(`Token Approximator disabled for site: ${Site}`);
+      return;
+    }
 
+    // --- DEFER SELECTOR LOADING UNTIL HERE ---
+    const selectors = (window.InjectionTargetsOnWebsite && window.InjectionTargetsOnWebsite.selectors) || {};
+    const THREAD_SELECTOR = selectors.threadRoot;
+    const BUTTONS_CONTAINER_ID = selectors.buttonsContainerId || 'chatgpt-custom-buttons-container';
+    
+    // Check if threadRoot selector is defined for this site
+    const effectiveSettings = { ...settings };
+    // If threadRoot is not defined and threadMode is not 'hide', hide thread counter
+    if (!THREAD_SELECTOR && effectiveSettings.threadMode !== 'hide') {
+      log(`Thread selector not defined for ${Site}, hiding thread counter`);
+      effectiveSettings.threadMode = 'hide';
+    }
     // One-time log line per spec (parameters only)
     log(`Loaded (site=${Site}) with`, {
-      calibration: settings.calibration,
-      threadMode: settings.threadMode,
-      showEditorCounter: settings.showEditorCounter,
-      placement: settings.placement,
+      calibration: effectiveSettings.calibration,
+      threadMode: effectiveSettings.threadMode,
+      showEditorCounter: effectiveSettings.showEditorCounter,
+      placement: effectiveSettings.placement,
       threadSelector: THREAD_SELECTOR,
-      countingMethod: settings.countingMethod
+      countingMethod: effectiveSettings.countingMethod
     });
 
     // Ensure UI exists and placed
@@ -839,8 +890,8 @@
     });
 
     await waitForButtons();
-    placeUi(settings.placement);
-    showHideBySettings(settings);
+    placeUi(settings.placement, BUTTONS_CONTAINER_ID);
+    showHideBySettings(effectiveSettings);
 
     // We'll use a more comprehensive observer defined below
 
@@ -883,28 +934,28 @@
           }
           
           // Paint Thread chip
-          if (settings.threadMode !== 'hide') {
-            const use = (settings.threadMode === 'ignoreEditors') ? estimates.threadOnly : estimates.all;
+          if (effectiveSettings.threadMode !== 'hide') {
+            const use = (effectiveSettings.threadMode === 'ignoreEditors') ? estimates.threadOnly : estimates.all;
             currentThreadChip.querySelector('.val').textContent = formatTokens(use);
-            markFreshThenStale(currentThreadChip, 'thread', settings);
+            markFreshThenStale(currentThreadChip, 'thread', effectiveSettings);
           }
           // Paint Editor chip (if visible)
-          if (settings.showEditorCounter) {
+          if (effectiveSettings.showEditorCounter) {
             currentEditorChip.querySelector('.val').textContent = formatTokens(estimates.editorsOnly);
-            markFreshThenStale(currentEditorChip, 'editor', settings);
+            markFreshThenStale(currentEditorChip, 'editor', effectiveSettings);
           }
           resolve();
         };
         // Set loading state
-        if (threadChip && settings.threadMode !== 'hide') {
-          markLoading(threadChip, 'thread', settings);
+        if (threadChip && effectiveSettings.threadMode !== 'hide') {
+          markLoading(threadChip, 'thread', effectiveSettings);
         }
-        if (editorChip && settings.showEditorCounter) {
-          markLoading(editorChip, 'editor', settings);
+        if (editorChip && effectiveSettings.showEditorCounter) {
+          markLoading(editorChip, 'editor', effectiveSettings);
         }
 
         // Get thread text, excluding editors if in ignoreEditors mode
-        const rootTxt = getThreadText(settings.threadMode === 'ignoreEditors');
+        const rootTxt = getThreadText(effectiveSettings.threadMode === 'ignoreEditors');
         const edTxt = editorsText();
         const texts = {
           all: `${rootTxt}\n${edTxt}`.trim(),
@@ -935,15 +986,15 @@
       if (!wrap) {
         // UI is missing, re-create and place it.
         log('Token Approximator UI is missing, re-injecting.');
-        placeUi(settings.placement);
-        showHideBySettings(settings);
+        placeUi(settings.placement, BUTTONS_CONTAINER_ID);
+        showHideBySettings(effectiveSettings);
         // Force an immediate calculation to populate the new UI.
-        threadScheduler.forceNow();
-        editorScheduler.forceNow();
+        if (effectiveSettings.threadMode !== 'hide') threadScheduler.forceNow();
+        if (effectiveSettings.showEditorCounter) editorScheduler.forceNow();
       } else if (!container.contains(wrap)) {
         // UI exists but is detached, just move it back.
         log('Token Approximator UI is misplaced, re-attaching.');
-        placeUi(settings.placement);
+        placeUi(settings.placement, BUTTONS_CONTAINER_ID);
       }
     });
     keepInRow.observe(document.documentElement, { childList: true, subtree: true });
@@ -979,17 +1030,17 @@
     // Visibility control
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
-        if (settings.threadMode !== 'hide') {
-          markLoading(threadChip, 'thread', settings);
+        if (effectiveSettings.threadMode !== 'hide') {
+          markLoading(threadChip, 'thread', effectiveSettings);
           threadScheduler.runNow(); // respects cooldown
         }
-        if (settings.showEditorCounter) {
-          markLoading(editorChip, 'editor', settings);
+        if (effectiveSettings.showEditorCounter) {
+          markLoading(editorChip, 'editor', effectiveSettings);
           editorScheduler.runNow(); // respects cooldown
         }
       } else {
-        if (settings.threadMode !== 'hide') markPaused(threadChip, 'thread', settings);
-        if (settings.showEditorCounter) markPaused(editorChip, 'editor', settings);
+        if (effectiveSettings.threadMode !== 'hide') markPaused(threadChip, 'thread', effectiveSettings);
+        if (effectiveSettings.showEditorCounter) markPaused(editorChip, 'editor', effectiveSettings);
       }
     });
 
@@ -1007,41 +1058,73 @@
       if (!el) return; // Click was not on one of our chips
 
       // el is now confirmed to be one of our chips
-      if (el.dataset.kind === 'thread' && settings.threadMode !== 'hide') {
-        markLoading(el, 'thread', settings);
+      if (el.dataset.kind === 'thread' && effectiveSettings.threadMode !== 'hide') {
+        markLoading(el, 'thread', effectiveSettings);
         threadScheduler.forceNow();
-      } else if (el.dataset.kind === 'editor' && settings.showEditorCounter) {
-        markLoading(el, 'editor', settings);
+      } else if (el.dataset.kind === 'editor' && effectiveSettings.showEditorCounter) {
+        markLoading(el, 'editor', effectiveSettings);
         editorScheduler.forceNow();
       }
     }, true); // Use capture phase to handle click before other listeners
 
     // First run
-    if (settings.threadMode !== 'hide') threadScheduler.runNow();
-    if (settings.showEditorCounter) editorScheduler.runNow();
+    if (effectiveSettings.threadMode !== 'hide') threadScheduler.runNow();
+    if (effectiveSettings.showEditorCounter) editorScheduler.runNow();
 
     // React to settings changes live
     try {
       chrome.runtime.onMessage.addListener((msg) => {
         if (!msg || msg.type !== 'tokenApproximatorSettingsChanged' || !msg.settings) return;
+        
+        // Store old enabled state for comparison
+        const wasEnabled = settings.enabled &&
+                          settings.enabledSites &&
+                          settings.enabledSites[Site];
+        
         Object.assign(settings, {
           enabled: !!msg.settings.enabled,
           calibration: Number.isFinite(msg.settings.calibration) && msg.settings.calibration > 0 ? Number(msg.settings.calibration) : settings.calibration,
           threadMode: (msg.settings.threadMode === 'ignoreEditors' || msg.settings.threadMode === 'hide') ? msg.settings.threadMode : 'withEditors',
-          showEditorCounter: !!msg.settings.showEditorCounter,
+          showEditorCounter: typeof msg.settings.showEditorCounter === 'boolean' ? msg.settings.showEditorCounter : settings.showEditorCounter,
           placement: msg.settings.placement === 'before' ? 'before' : 'after',
-          countingMethod: msg.settings.countingMethod || 'ultralight-state-machine'
+          countingMethod: msg.settings.countingMethod || 'ultralight-state-machine',
+          enabledSites: msg.settings.enabledSites || settings.enabledSites
         });
-        placeUi(settings.placement);
-        showHideBySettings(settings);
+        
+        // Check if this site is no longer enabled (either globally or for this site specifically)
+        const nowEnabled = settings.enabled &&
+                          settings.enabledSites &&
+                          settings.enabledSites[Site];
+                          
+        if (wasEnabled && !nowEnabled) {
+          // Remove the UI if this site was disabled
+          log(`Token Approximator was disabled for site: ${Site}, removing UI.`);
+          const wrap = document.getElementById(WRAP_ID);
+          if (wrap) wrap.remove();
+          return;
+        }
+        
+        // Update effectiveSettings for this site
+        Object.assign(effectiveSettings, settings);
+        
+        // Check if threadRoot selector is defined for this site
+        if (!THREAD_SELECTOR && effectiveSettings.threadMode !== 'hide') {
+          log(`Thread selector not defined for ${Site}, hiding thread counter`);
+          effectiveSettings.threadMode = 'hide';
+        }
+        
+        placeUi(settings.placement, BUTTONS_CONTAINER_ID);
+        showHideBySettings(effectiveSettings);
+        
         // Refresh tooltip prefixes (thread mode may have changed)
         try {
-          setTooltip(threadChip, 'thread', threadChip.__tooltipStatus || 'stale', settings);
-          setTooltip(editorChip, 'editor', editorChip.__tooltipStatus || 'stale', settings);
+          setTooltip(threadChip, 'thread', threadChip.__tooltipStatus || 'stale', effectiveSettings);
+          setTooltip(editorChip, 'editor', editorChip.__tooltipStatus || 'stale', effectiveSettings);
         } catch {}
+        
         // Refresh on change
-        if (settings.threadMode !== 'hide') threadScheduler.runNow();
-        if (settings.showEditorCounter) editorScheduler.runNow();
+        if (effectiveSettings.threadMode !== 'hide') threadScheduler.runNow();
+        if (effectiveSettings.showEditorCounter) editorScheduler.runNow();
       });
     } catch { /* noop */ }
   })();

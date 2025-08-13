@@ -66,6 +66,11 @@
   // New dropdown for counting method
   const elCountingMethodSelect = document.getElementById('tokenApproxCountingMethod');
   
+  // Website enablement checkboxes
+  const elWebsitesList = document.getElementById('tokenApproxWebsitesList');
+  // List of supported sites - must match the site names in InjectionTargetsOnWebsite
+  const SUPPORTED_SITES = ['ChatGPT', 'Claude', 'Copilot', 'DeepSeek', 'AIStudio', 'Grok', 'Gemini'];
+  
   // Legacy elements (kept for backward compatibility)
   const elSimpleMethodCb = document.getElementById('tokenApproxSimpleMethodToggle');
   const elMethodRadioAdvanced = document.getElementById('tokenApproxMethodAdvanced');
@@ -92,6 +97,13 @@
       }
     }
     
+    // Handle enabled sites
+    let enabledSites = { ...DEFAULTS.enabledSites };
+    if (s.enabledSites && typeof s.enabledSites === 'object') {
+      // Merge with defaults to ensure all sites are represented
+      enabledSites = { ...enabledSites, ...s.enabledSites };
+    }
+    
     return {
       enabled: !!s.enabled,
       calibration: Number.isFinite(s.calibration) && s.calibration > 0 ? Number(s.calibration) : DEFAULTS.calibration,
@@ -99,6 +111,7 @@
       showEditorCounter: typeof s.showEditorCounter === 'boolean' ? s.showEditorCounter : DEFAULTS.showEditorCounter,
       placement: s.placement === 'after' ? 'after' : DEFAULTS.placement,
       countingMethod,
+      enabledSites,
     };
   }
 
@@ -137,6 +150,11 @@
     if (elSimpleMethodCb) elSimpleMethodCb.checked = isSimple;
     if (elMethodRadioSimple) elMethodRadioSimple.checked = isSimple;
     if (elMethodRadioAdvanced) elMethodRadioAdvanced.checked = !isSimple;
+    
+    // Update website checkboxes
+    if (elWebsitesList) {
+      populateWebsiteCheckboxes(s.enabledSites || {});
+    }
   }
 
   function collectSettingsFromUi() {
@@ -147,6 +165,9 @@
     // Get selected counting method from dropdown
     const countingMethod = elCountingMethodSelect ? elCountingMethodSelect.value : DEFAULTS.countingMethod;
     
+    // Collect enabled sites from checkboxes
+    const enabledSites = collectEnabledSitesFromUi();
+    
     return normalize({
       enabled: !!(elEnable && elEnable.checked),
       calibration,
@@ -154,6 +175,7 @@
       showEditorCounter: !!(elEditorCb && elEditorCb.checked),
       placement: (elPlacementRadioBefore && elPlacementRadioBefore.checked) ? 'before' : 'after',
       countingMethod,
+      enabledSites,
     });
   }
 
@@ -326,6 +348,72 @@
     attachEvents();
     load();
   });
+  // Helper function to populate website checkboxes
+  function populateWebsiteCheckboxes(enabledSites) {
+    if (!elWebsitesList) return;
+    
+    // Clear existing content
+    elWebsitesList.innerHTML = '';
+    
+    // Create a grid layout for the checkboxes
+    const container = document.createElement('div');
+    container.style.display = 'grid';
+    container.style.gridTemplateColumns = 'repeat(2, 1fr)';
+    container.style.gap = '8px';
+    
+    // Create a checkbox for each supported site
+    SUPPORTED_SITES.forEach(site => {
+      const isEnabled = enabledSites && enabledSites[site] !== false;
+      
+      const label = document.createElement('label');
+      label.className = 'checkbox-row';
+      label.style.margin = '4px 0';
+      
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = isEnabled;
+      checkbox.dataset.site = site;
+      checkbox.className = 'tokenApproxSiteCheckbox';
+      checkbox.id = `tokenApproxSite_${site}`;
+      
+      const text = document.createTextNode(site);
+      
+      label.appendChild(checkbox);
+      label.appendChild(text);
+      container.appendChild(label);
+      
+      // Add change event listener
+      checkbox.addEventListener('change', async () => {
+        const s = collectSettingsFromUi();
+        await save(s);
+      }, { passive: true });
+    });
+    
+    elWebsitesList.appendChild(container);
+  }
+  
+  // Helper function to collect enabled sites from UI
+  function collectEnabledSitesFromUi() {
+    const enabledSites = {};
+    
+    // Default all sites to enabled
+    SUPPORTED_SITES.forEach(site => {
+      enabledSites[site] = true;
+    });
+    
+    // Update with checkbox values
+    if (elWebsitesList) {
+      const checkboxes = elWebsitesList.querySelectorAll('input[type="checkbox"].tokenApproxSiteCheckbox');
+      checkboxes.forEach(checkbox => {
+        if (checkbox.dataset.site) {
+          enabledSites[checkbox.dataset.site] = checkbox.checked;
+        }
+      });
+    }
+    
+    return enabledSites;
+  }
+
   // In case the script loads after DOMContentLoaded (popup is small), guard-init:
   if (document.readyState === 'interactive' || document.readyState === 'complete') {
     attachEvents();
