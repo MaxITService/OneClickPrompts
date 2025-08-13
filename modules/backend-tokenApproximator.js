@@ -908,72 +908,202 @@
     // Worker shared for both schedulers
     const worker = createEstimatorWorker();
 
-    function estimateAndPaint(mode) {
+    // ---- INDEPENDENT COUNTER FUNCTIONS ----
+    // Completely separate thread and editor estimation to prevent coupling issues
+    
+    function estimateThreadTokens() {
       return new Promise((resolve) => {
-        // ----- Query for elements inside the callback for resilience -----
+        // Skip if thread mode is hide or if no thread selector
+        if (effectiveSettings.threadMode === 'hide' || !THREAD_SELECTOR) {
+          return resolve();
+        }
+
         const wrap = document.getElementById(WRAP_ID);
         if (!wrap) return resolve();
         const threadChip = wrap.querySelector('.ocp-tokapprox-chip[data-kind="thread"]');
-        const editorChip = wrap.querySelector('.ocp-tokapprox-chip[data-kind="editor"]');
-        // ----- End query -----
+        if (!threadChip) return resolve();
 
-        worker.onmessage = (ev) => {
-          // Re-query elements inside the async callback to ensure they are fresh
-          const currentWrap = document.getElementById(WRAP_ID);
-          if (!currentWrap) return resolve();
-          const currentThreadChip = currentWrap.querySelector('.ocp-tokapprox-chip[data-kind="thread"]');
-          const currentEditorChip = currentWrap.querySelector('.ocp-tokapprox-chip[data-kind="editor"]');
-          if (!currentThreadChip || !currentEditorChip) return resolve();
+        // Create dedicated worker for thread estimation
+        const threadWorker = createEstimatorWorker();
+        
+        threadWorker.onmessage = (ev) => {
+          try {
+            const currentWrap = document.getElementById(WRAP_ID);
+            if (!currentWrap) return resolve();
+            const currentThreadChip = currentWrap.querySelector('.ocp-tokapprox-chip[data-kind="thread"]');
+            if (!currentThreadChip) return resolve();
 
-          const { ok, estimates, modelUsed } = ev.data || {};
-          if (!ok || !estimates) return resolve();
-          
-          // Log which model was used (helpful for debugging)
-          if (modelUsed) {
-            log(`Used model: ${modelUsed} for ${mode} calculation`);
-          }
-          
-          // Paint Thread chip
-          if (effectiveSettings.threadMode !== 'hide') {
-            const use = (effectiveSettings.threadMode === 'ignoreEditors') ? estimates.threadOnly : estimates.all;
-            currentThreadChip.querySelector('.val').textContent = formatTokens(use);
+            const { ok, estimates, modelUsed, error } = ev.data || {};
+            
+            if (!ok) {
+              log(`Thread estimation failed: ${error || 'Unknown error'}`);
+              currentThreadChip.querySelector('.val').textContent = '-------';
+              setTooltip(currentThreadChip, 'thread', 'error', effectiveSettings);
+              return resolve();
+            }
+            
+            if (!estimates || !estimates.threadText) {
+              log('Thread estimation returned no data');
+              currentThreadChip.querySelector('.val').textContent = '-------';
+              setTooltip(currentThreadChip, 'thread', 'error', effectiveSettings);
+              return resolve();
+            }
+
+            log(`Thread estimation success: ${modelUsed}`);
+            const tokens = estimates.threadText;
+            currentThreadChip.querySelector('.val').textContent = formatTokens(tokens);
             markFreshThenStale(currentThreadChip, 'thread', effectiveSettings);
+            
+          } catch (err) {
+            log(`Thread estimation error: ${err.message}`);
+          } finally {
+            threadWorker.terminate();
+            resolve();
           }
-          // Paint Editor chip (if visible)
-          if (effectiveSettings.showEditorCounter) {
-            currentEditorChip.querySelector('.val').textContent = formatTokens(estimates.editorsOnly);
-            markFreshThenStale(currentEditorChip, 'editor', effectiveSettings);
-          }
+        };
+
+        threadWorker.onerror = () => {
+          log('Thread worker error');
+          threadWorker.terminate();
           resolve();
         };
-        // Set loading state
-        if (threadChip && effectiveSettings.threadMode !== 'hide') {
-          markLoading(threadChip, 'thread', effectiveSettings);
-        }
-        if (editorChip && effectiveSettings.showEditorCounter) {
-          markLoading(editorChip, 'editor', effectiveSettings);
-        }
 
-        // Get thread text, excluding editors if in ignoreEditors mode
-        const rootTxt = getThreadText(effectiveSettings.threadMode === 'ignoreEditors');
-        const edTxt = editorsText();
-        const texts = {
-          all: `${rootTxt}\n${edTxt}`.trim(),
-          threadOnly: rootTxt,
-          editorsOnly: edTxt
-        };
-        worker.postMessage({
-          texts,
-          scale: settings.calibration,
-          countingMethod: settings.countingMethod
-        });
+        // Set loading state
+        markLoading(threadChip, 'thread', effectiveSettings);
+
+        try {
+          // Get thread text with error isolation
+          const rootTxt = getThreadText(effectiveSettings.threadMode === 'ignoreEditors');
+          const edTxt = editorsText();
+          
+          let threadText = '';
+          if (effectiveSettings.threadMode === 'ignoreEditors') {
+            threadText = rootTxt;
+          } else {
+            threadText = `${rootTxt}\n${edTxt}`.trim();
+          }
+
+          if (!threadText) {
+            log('No thread text found');
+            threadChip.querySelector('.val').textContent = '-------';
+            setTooltip(threadChip, 'thread', 'error', effectiveSettings);
+            threadWorker.terminate();
+            return resolve();
+          }
+
+          threadWorker.postMessage({
+            texts: { threadText },
+            scale: settings.calibration,
+            countingMethod: settings.countingMethod
+          });
+          
+        } catch (err) {
+          log(`Thread text extraction failed: ${err.message}`);
+          threadChip.querySelector('.val').textContent = '-------';
+          setTooltip(threadChip, 'thread', 'error', effectiveSettings);
+          threadWorker.terminate();
+          resolve();
+        }
       });
     }
 
-    // Thread scheduler (mutations + scroll + visibility)
+    function estimateEditorTokens() {
+      return new Promise((resolve) => {
+        // Skip if editor counter is disabled
+        if (!effectiveSettings.showEditorCounter) {
+          return resolve();
+        }
+
+        const wrap = document.getElementById(WRAP_ID);
+        if (!wrap) return resolve();
+        const editorChip = wrap.querySelector('.ocp-tokapprox-chip[data-kind="editor"]');
+        if (!editorChip) return resolve();
+
+        // Create dedicated worker for editor estimation
+        const editorWorker = createEstimatorWorker();
+        
+        editorWorker.onmessage = (ev) => {
+          try {
+            const currentWrap = document.getElementById(WRAP_ID);
+            if (!currentWrap) return resolve();
+            const currentEditorChip = currentWrap.querySelector('.ocp-tokapprox-chip[data-kind="editor"]');
+            if (!currentEditorChip) return resolve();
+
+            const { ok, estimates, modelUsed, error } = ev.data || {};
+            
+            if (!ok) {
+              log(`Editor estimation failed: ${error || 'Unknown error'}`);
+              currentEditorChip.querySelector('.val').textContent = '-------';
+              setTooltip(currentEditorChip, 'editor', 'error', effectiveSettings);
+              return resolve();
+            }
+            
+            if (!estimates || !Number.isFinite(estimates.editorText)) {
+              log('Editor estimation returned invalid data');
+              currentEditorChip.querySelector('.val').textContent = '-------';
+              setTooltip(currentEditorChip, 'editor', 'error', effectiveSettings);
+              return resolve();
+            }
+
+            log(`Editor estimation success: ${modelUsed}`);
+            const tokens = estimates.editorText;
+            currentEditorChip.querySelector('.val').textContent = formatTokens(tokens);
+            markFreshThenStale(currentEditorChip, 'editor', effectiveSettings);
+            
+          } catch (err) {
+            log(`Editor estimation error: ${err.message}`);
+          } finally {
+            editorWorker.terminate();
+            resolve();
+          }
+        };
+
+        editorWorker.onerror = () => {
+          log('Editor worker error');
+          editorWorker.terminate();
+          resolve();
+        };
+
+        // Set loading state
+        markLoading(editorChip, 'editor', effectiveSettings);
+
+        try {
+          // Get editor text - completely independent of thread
+          const edTxt = editorsText();
+          
+          if (!edTxt.trim()) {
+            // Empty editor is valid - show 0 tokens
+            editorChip.querySelector('.val').textContent = formatTokens(0);
+            markFreshThenStale(editorChip, 'editor', effectiveSettings);
+            editorWorker.terminate();
+            return resolve();
+          }
+
+          editorWorker.postMessage({
+            texts: { editorText: edTxt },
+            scale: settings.calibration,
+            countingMethod: settings.countingMethod
+          });
+          
+        } catch (err) {
+          log(`Editor text extraction failed: ${err.message}`);
+          editorChip.querySelector('.val').textContent = '-------';
+          setTooltip(editorChip, 'editor', 'error', effectiveSettings);
+          editorWorker.terminate();
+          resolve();
+        }
+      });
+    }
+
+    // INDEPENDENT SCHEDULERS - Thread and Editor are now completely separate
     const threadScheduler = makeScheduler({
-      minCooldown: 15000, // Reduced from 15000 for better responsiveness on change
-      runFn: () => estimateAndPaint('thread')
+      minCooldown: 15000,
+      runFn: () => estimateThreadTokens()
+    });
+    
+    const editorScheduler = makeScheduler({
+      minCooldown: 600, // faster editor updates
+      runFn: () => estimateEditorTokens()
     });
     
     // Replace the simple observer with one that can re-create the UI
@@ -988,9 +1118,13 @@
         log('Token Approximator UI is missing, re-injecting.');
         placeUi(settings.placement, BUTTONS_CONTAINER_ID);
         showHideBySettings(effectiveSettings);
-        // Force an immediate calculation to populate the new UI.
-        if (effectiveSettings.threadMode !== 'hide') threadScheduler.forceNow();
-        if (effectiveSettings.showEditorCounter) editorScheduler.forceNow();
+        // Force independent calculations - they won't affect each other
+        if (effectiveSettings.threadMode !== 'hide' && THREAD_SELECTOR) {
+          threadScheduler.forceNow();
+        }
+        if (effectiveSettings.showEditorCounter) {
+          editorScheduler.forceNow();
+        }
       } else if (!container.contains(wrap)) {
         // UI exists but is detached, just move it back.
         log('Token Approximator UI is misplaced, re-attaching.');
@@ -998,26 +1132,29 @@
       }
     });
     keepInRow.observe(document.documentElement, { childList: true, subtree: true });
-    // Editor scheduler (typing + lifecycle)
-    const editorScheduler = makeScheduler({
-      minCooldown: 600, // faster editor updates
-      runFn: () => estimateAndPaint('editor')
-    });
 
-    // Event wiring
+    // Event wiring (now keeps thread and editor completely separate)
     const threadRoot = getThreadRoot();
     if (threadRoot) {
-      const mo = new MutationObserver(() => { threadScheduler.markDirty(); editorScheduler.markDirty(); });
+      // Only attach thread observer if there's actually a thread root
+      const mo = new MutationObserver(() => {
+        // Only mark thread dirty, editors have their own observer
+        threadScheduler.markDirty();
+      });
       mo.observe(threadRoot, { childList: true, characterData: true, subtree: true });
-      // Scroll on container & window (virtualization)
+      
+      // Scroll on container & window (virtualization) - thread only
       const scrollTarget = threadRoot.closest('[class*="overflow"],[class*="scroll"],main,body') || window;
       (scrollTarget === window ? window : scrollTarget).addEventListener('scroll', () => {
         threadScheduler.markDirty();
       }, { passive: true });
     }
 
-    // Editors lifecycle: on any DOM change, rediscover
-    const moAll = new MutationObserver(() => { editorScheduler.markDirty(); });
+    // Editors lifecycle is completely independent from thread
+    const moAll = new MutationObserver(() => {
+      // Only mark editor dirty on DOM changes
+      editorScheduler.markDirty();
+    });
     moAll.observe(document.documentElement, { childList: true, subtree: true });
 
     // Typing
@@ -1027,49 +1164,94 @@
       if (t.matches(EDITOR_SELECTOR)) editorScheduler.markDirty();
     }, true);
 
-    // Visibility control
+    // Visibility control - keeps thread and editor separate
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
-        if (effectiveSettings.threadMode !== 'hide') {
-          markLoading(threadChip, 'thread', effectiveSettings);
-          threadScheduler.runNow(); // respects cooldown
+        // Thread refresh is optional and depends on selector existence
+        if (effectiveSettings.threadMode !== 'hide' && THREAD_SELECTOR) {
+          const threadChip = document.querySelector('.ocp-tokapprox-chip[data-kind="thread"]');
+          if (threadChip) {
+            markLoading(threadChip, 'thread', effectiveSettings);
+            threadScheduler.runNow(); // respects cooldown
+          }
         }
+        
+        // Editor refresh happens independently
         if (effectiveSettings.showEditorCounter) {
-          markLoading(editorChip, 'editor', effectiveSettings);
-          editorScheduler.runNow(); // respects cooldown
+          const editorChip = document.querySelector('.ocp-tokapprox-chip[data-kind="editor"]');
+          if (editorChip) {
+            markLoading(editorChip, 'editor', effectiveSettings);
+            editorScheduler.runNow(); // respects cooldown
+          }
         }
       } else {
-        if (effectiveSettings.threadMode !== 'hide') markPaused(threadChip, 'thread', effectiveSettings);
-        if (effectiveSettings.showEditorCounter) markPaused(editorChip, 'editor', effectiveSettings);
+        // Pause UI for inactive tab
+        const threadChip = document.querySelector('.ocp-tokapprox-chip[data-kind="thread"]');
+        const editorChip = document.querySelector('.ocp-tokapprox-chip[data-kind="editor"]');
+        
+        if (threadChip && effectiveSettings.threadMode !== 'hide') {
+          markPaused(threadChip, 'thread', effectiveSettings);
+        }
+        
+        if (editorChip && effectiveSettings.showEditorCounter) {
+          markPaused(editorChip, 'editor', effectiveSettings);
+        }
       }
     });
 
-    // Safety ticks (cooldown-aware)
+    // Safety ticks (cooldown-aware) - separate for thread and editor
     setInterval(() => {
       if (document.visibilityState !== 'visible') return;
-      threadScheduler.markDirty();
-      editorScheduler.markDirty();
+      
+      // Only trigger thread estimation if selector exists
+      if (effectiveSettings.threadMode !== 'hide' && THREAD_SELECTOR) {
+        threadScheduler.markDirty();
+      }
+      
+      // Editor estimation is independent
+      if (effectiveSettings.showEditorCounter) {
+        editorScheduler.markDirty();
+      }
     }, 45000);
 
-    // Click-to-refresh (debounced by scheduler)
+    // Click-to-refresh - now with more error protection
     // Use a delegated listener on document for resilience against UI re-creation
     document.addEventListener('click', (e) => {
       const el = e.target.closest(`#${WRAP_ID} .ocp-tokapprox-chip`);
       if (!el) return; // Click was not on one of our chips
 
-      // el is now confirmed to be one of our chips
-      if (el.dataset.kind === 'thread' && effectiveSettings.threadMode !== 'hide') {
-        markLoading(el, 'thread', effectiveSettings);
-        threadScheduler.forceNow();
-      } else if (el.dataset.kind === 'editor' && effectiveSettings.showEditorCounter) {
-        markLoading(el, 'editor', effectiveSettings);
-        editorScheduler.forceNow();
+      try {
+        // Thread chip click with additional safety checks
+        if (el.dataset.kind === 'thread' && effectiveSettings.threadMode !== 'hide') {
+          if (THREAD_SELECTOR) {
+            markLoading(el, 'thread', effectiveSettings);
+            threadScheduler.forceNow();
+          } else {
+            // If there's no thread selector, just show a message
+            el.querySelector('.val').textContent = '---';
+            setTooltip(el, 'thread', 'error', effectiveSettings);
+          }
+        }
+        // Editor chip click is completely independent
+        else if (el.dataset.kind === 'editor' && effectiveSettings.showEditorCounter) {
+          markLoading(el, 'editor', effectiveSettings);
+          editorScheduler.forceNow();
+        }
+      } catch (err) {
+        log(`Click handler error: ${err.message}`);
       }
     }, true); // Use capture phase to handle click before other listeners
 
-    // First run
-    if (effectiveSettings.threadMode !== 'hide') threadScheduler.runNow();
-    if (effectiveSettings.showEditorCounter) editorScheduler.runNow();
+    // First run - completely independent schedulers
+    // Only start thread estimation if selector exists
+    if (effectiveSettings.threadMode !== 'hide' && THREAD_SELECTOR) {
+      threadScheduler.runNow();
+    }
+    
+    // Always try to start editor estimation if enabled
+    if (effectiveSettings.showEditorCounter) {
+      editorScheduler.runNow();
+    }
 
     // React to settings changes live
     try {
@@ -1122,9 +1304,14 @@
           setTooltip(editorChip, 'editor', editorChip.__tooltipStatus || 'stale', effectiveSettings);
         } catch {}
         
-        // Refresh on change
-        if (effectiveSettings.threadMode !== 'hide') threadScheduler.runNow();
-        if (effectiveSettings.showEditorCounter) editorScheduler.runNow();
+        // Refresh on change - independent schedulers
+        if (effectiveSettings.threadMode !== 'hide' && THREAD_SELECTOR) {
+          threadScheduler.runNow();
+        }
+        
+        if (effectiveSettings.showEditorCounter) {
+          editorScheduler.runNow();
+        }
       });
     } catch { /* noop */ }
   })();
