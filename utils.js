@@ -259,6 +259,7 @@ class InjectionTargetsOnWebsite {
                     'button[type="button"][aria-label="Send message"]', // fallback: type and aria-label (language-dependent)
                 ],
                 editors: ['div.ProseMirror[contenteditable="true"]'],
+                threadRoot: 'div.flex-1.max-w-3xl.mx-auto:has([data-testid="user-message"])',
                 buttonsContainerId: 'claude-custom-buttons-container'
             },
             Copilot: {
