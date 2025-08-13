@@ -14,8 +14,8 @@
     calibration: 1.0,
     threadMode: 'withEditors',        // 'withEditors' | 'ignoreEditors' | 'hide'
     showEditorCounter: true,
-    placement: 'before',               // 'before' | 'after'
-    countingMethod: 'advanced',       // 'advanced' | 'simple'
+    placement: 'before',              // 'before' | 'after'
+    countingMethod: 'ultralight-state-machine', // Default to the fastest & accurate model
   });
 
   // Safe toast helper (works with ocp_toast.js or falls back to basic)
@@ -62,19 +62,43 @@
   const elPlacementBeforeCb = document.getElementById('tokenApproxPlacementBeforeCb'); // Hidden checkbox for compatibility
   const elPlacementRadioBefore = document.getElementById('tokenApproxPlacementBefore');
   const elPlacementRadioAfter = document.getElementById('tokenApproxPlacementAfter');
+  
+  // New dropdown for counting method
+  const elCountingMethodSelect = document.getElementById('tokenApproxCountingMethod');
+  
+  // Legacy elements (kept for backward compatibility)
   const elSimpleMethodCb = document.getElementById('tokenApproxSimpleMethodToggle');
   const elMethodRadioAdvanced = document.getElementById('tokenApproxMethodAdvanced');
   const elMethodRadioSimple = document.getElementById('tokenApproxMethodSimple');
+  
+  // Model details toggle elements
+  const elShowModelDetails = document.getElementById('tokenApproxShowModelDetails');
+  const elModelDetails = document.getElementById('tokenApproxModelDetails');
 
   function normalize(settings) {
     const s = settings && typeof settings === 'object' ? settings : {};
+    
+    // Validate counting method
+    let countingMethod = DEFAULTS.countingMethod;
+    if (s.countingMethod) {
+      // List of valid model IDs
+      const validModels = ['simple', 'advanced', 'cpt-blend-mix', 'single-regex-pass', 'ultralight-state-machine'];
+      if (validModels.includes(s.countingMethod)) {
+        countingMethod = s.countingMethod;
+      } else if (s.countingMethod === 'simple') {
+        countingMethod = 'simple';
+      } else if (s.countingMethod === 'advanced') {
+        countingMethod = 'advanced';
+      }
+    }
+    
     return {
       enabled: !!s.enabled,
       calibration: Number.isFinite(s.calibration) && s.calibration > 0 ? Number(s.calibration) : DEFAULTS.calibration,
       threadMode: (s.threadMode === 'ignoreEditors' || s.threadMode === 'hide') ? s.threadMode : DEFAULTS.threadMode,
       showEditorCounter: typeof s.showEditorCounter === 'boolean' ? s.showEditorCounter : DEFAULTS.showEditorCounter,
       placement: s.placement === 'after' ? 'after' : DEFAULTS.placement,
-      countingMethod: s.countingMethod === 'simple' ? 'simple' : DEFAULTS.countingMethod,
+      countingMethod,
     };
   }
 
@@ -103,7 +127,12 @@
     if (elPlacementRadioBefore) elPlacementRadioBefore.checked = isBefore;
     if (elPlacementRadioAfter) elPlacementRadioAfter.checked = !isBefore;
     
-    // Update both the hidden checkbox and the visible radio buttons for counting method
+    // Update the counting method dropdown
+    if (elCountingMethodSelect) {
+      elCountingMethodSelect.value = s.countingMethod;
+    }
+    
+    // Update the hidden elements for backward compatibility
     const isSimple = (s.countingMethod === 'simple');
     if (elSimpleMethodCb) elSimpleMethodCb.checked = isSimple;
     if (elMethodRadioSimple) elMethodRadioSimple.checked = isSimple;
@@ -114,13 +143,17 @@
     const selected = (elModeRadios().find(r => r.checked) || {}).value || DEFAULTS.threadMode;
     const calibParsed = Number(elCalib && elCalib.value ? elCalib.value : DEFAULTS.calibration);
     const calibration = Number.isFinite(calibParsed) && calibParsed > 0 ? Math.max(0.01, Math.min(10, calibParsed)) : DEFAULTS.calibration;
+    
+    // Get selected counting method from dropdown
+    const countingMethod = elCountingMethodSelect ? elCountingMethodSelect.value : DEFAULTS.countingMethod;
+    
     return normalize({
       enabled: !!(elEnable && elEnable.checked),
       calibration,
       threadMode: selected,
       showEditorCounter: !!(elEditorCb && elEditorCb.checked),
       placement: (elPlacementRadioBefore && elPlacementRadioBefore.checked) ? 'before' : 'after',
-      countingMethod: (elSimpleMethodCb && elSimpleMethodCb.checked) ? 'simple' : 'advanced',
+      countingMethod,
     });
   }
 
@@ -230,23 +263,52 @@
       }, { passive: true });
     }
     
-    // Counting method radio buttons
-    if (elMethodRadioSimple) {
-      elMethodRadioSimple.addEventListener('change', async () => {
-        // Update the hidden checkbox to maintain compatibility
-        if (elSimpleMethodCb) elSimpleMethodCb.checked = elMethodRadioSimple.checked;
+    // Counting method dropdown
+    if (elCountingMethodSelect) {
+      elCountingMethodSelect.addEventListener('change', async () => {
+        // Update the hidden elements for backward compatibility
+        if (elSimpleMethodCb) {
+          elSimpleMethodCb.checked = elCountingMethodSelect.value === 'simple';
+        }
+        if (elMethodRadioSimple) {
+          elMethodRadioSimple.checked = elCountingMethodSelect.value === 'simple';
+        }
+        if (elMethodRadioAdvanced) {
+          elMethodRadioAdvanced.checked = elCountingMethodSelect.value === 'advanced';
+        }
+        
         const s = collectSettingsFromUi();
         await save(s);
       }, { passive: true });
     }
     
-    if (elMethodRadioAdvanced) {
-      elMethodRadioAdvanced.addEventListener('change', async () => {
-        // Update the hidden checkbox to maintain compatibility
-        if (elSimpleMethodCb) elSimpleMethodCb.checked = !elMethodRadioAdvanced.checked;
-        const s = collectSettingsFromUi();
-        await save(s);
-      }, { passive: true });
+    // Model details toggle
+    if (elShowModelDetails) {
+      elShowModelDetails.addEventListener('click', () => {
+        const isHidden = elModelDetails.style.display === 'none';
+        elModelDetails.style.display = isHidden ? 'block' : 'none';
+        
+        // Update toggle icon
+        const toggleIcon = elShowModelDetails.querySelector('.toggle-icon');
+        if (toggleIcon) {
+          toggleIcon.textContent = isHidden ? '▼' : '▶';
+        }
+        
+        // Update text
+        elShowModelDetails.textContent = elShowModelDetails.textContent.replace(
+          isHidden ? 'Show model details' : 'Hide model details',
+          isHidden ? 'Hide model details' : 'Show model details'
+        );
+        
+        // Restore toggle icon if it was replaced
+        if (!elShowModelDetails.querySelector('.toggle-icon')) {
+          const span = document.createElement('span');
+          span.className = 'toggle-icon';
+          span.style.cssText = 'font-size: 10px; margin-right: 4px;';
+          span.textContent = isHidden ? '▼' : '▶';
+          elShowModelDetails.insertBefore(span, elShowModelDetails.firstChild);
+        }
+      });
     }
   }
 

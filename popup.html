@@ -662,23 +662,88 @@
                 <!-- Algorithm Section -->
                 <div class="text-inside-container" style="border: 1px solid #ddd; padding: 12px; border-radius: 4px">
                   <h4 style="margin: 0 0 8px 0; padding-bottom: 8px; border-bottom: 1px solid #eee">⚙️ Counting Algorithm</h4>
-                  <p style="margin: 0 0 8px 0; font-size: 0.9em; color: #666">Choose speed vs. accuracy tradeoff</p>
-                  <div style="margin-left: 12px">
-                    <div style="margin: 6px 0">
-                      <label title="Uses intelligent heuristics that adapt to different content types (code, CJK text, etc.) for better accuracy. Slower but more precise - can use significant CPU on very long conversations. Blends word-based and character-based estimates.">
-                        <input type="radio" name="tokenApproxCountingMethod" value="advanced" id="tokenApproxMethodAdvanced" />
-                        <strong>Advanced heuristics</strong> (slower, more accurate... or not...)
-                      </label>
-                    </div>
-                    <div style="margin: 6px 0">
-                      <label title="Simple approximation: 1 token ≈ 4 characters. Much faster and uses minimal CPU, but less accurate especially with code or non-English text. Good for modest machines or extremely long chats where speed matters more than precision.">
-                        <input type="radio" name="tokenApproxCountingMethod" value="simple" id="tokenApproxMethodSimple" />
-                        <strong>Simple counting</strong> (faster, 1 token ≈ 4 chars)
-                      </label>
+                  <p style="margin: 0 0 8px 0; font-size: 0.9em; color: #666">Choose a token counting model for your needs</p>
+                  
+                  <div class="row" style="margin-bottom: 10px;">
+                    <label for="tokenApproxCountingMethod" style="min-width: 100px">Model:</label>
+                    <select id="tokenApproxCountingMethod" style="flex-grow: 1;" title="Select which token counting model to use">
+                      <option value="ultralight-state-machine">Ultralight State Machine (fastest, good accuracy)</option>
+                      <option value="single-regex-pass">Single Regex Pass (accurate, 30% slower)</option>
+                      <option value="simple">Simple 1:4 Ratio (very fast, less accurate)</option>
+                      <option value="advanced">Advanced Heuristics (original algorithm)</option>
+                      <option value="cpt-blend-mix">CPT Blend/Mix (variable accuracy, slowest)</option>
+                    </select>
+                  </div>
+                  
+                  <!-- Hidden fields for backward compatibility -->
+                  <input type="checkbox" id="tokenApproxSimpleMethodToggle" style="display: none;" />
+                  <input type="radio" name="tokenApproxCountingMethod" value="advanced" id="tokenApproxMethodAdvanced" style="display: none;" />
+                  <input type="radio" name="tokenApproxCountingMethod" value="simple" id="tokenApproxMethodSimple" style="display: none;" />
+                  
+                  <!-- Model descriptions in collapsible section -->
+                  <div style="border-top: 1px solid #f0f0f0; padding-top: 10px; margin-top: 10px;">
+                    <p style="margin-bottom: 8px; font-size: 0.9em; cursor: pointer;" id="tokenApproxShowModelDetails">
+                      <span class="toggle-icon" style="font-size: 10px; margin-right: 4px;">▶</span>
+                      Show model details
+                    </p>
+                    
+                    <div id="tokenApproxModelDetails" style="display: none; margin-left: 10px; margin-top: 10px;">
+                      <!-- Ultralight State Machine -->
+                      <div class="model-description" style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed #eee;">
+                        <p><strong>Ultralight State Machine</strong> ⭐ <span style="color: #090;">⚡ Fastest</span></p>
+                        <p style="font-size: 0.85em; color: #555; margin: 4px 0 6px 0;">
+                          This scanner walks the string character by character, toggling an inWord flag to start a new token when word-like characters begin.
+                          Each CJK character and each separator symbol increments the token count, while spaces only reset the state.
+                          It aims for portability and speed without big regexes, sacrificing some nuance versus the blended model.
+                        </p>
+                      </div>
+                      
+                      <!-- Single Regex Pass -->
+                      <div class="model-description" style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed #eee;">
+                        <p><strong>Single Regex Pass</strong> <span style="color: #090;">✓ Accurate</span></p>
+                        <p style="font-size: 0.85em; color: #555; margin: 4px 0 6px 0;">
+                          A single Unicode regex matches letter sequences, numbers, individual CJK characters, or any non-whitespace symbol and returns
+                          the total matches as the token estimate. 30% slower than Ultralight state machine. The trade-off is coarse granularity—punctuation
+                          and symbols count as their own tokens, and there's no adjustment for code-heavy or CJK-heavy text.
+                        </p>
+                      </div>
+                      
+                      <!-- Simple 1:4 -->
+                      <div class="model-description" style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed #eee;">
+                        <p><strong>Simple 1:4 Ratio</strong> <span style="color: #f90;">⚠️ Less accurate</span></p>
+                        <p style="font-size: 0.85em; color: #555; margin: 4px 0 6px 0;">
+                          Simple approximation: 1 token ≈ 4 characters. Very fast and uses minimal CPU, but less accurate especially with code or non-English text.
+                          Good for modest machines or extremely long chats where speed matters more than precision.
+                        </p>
+                      </div>
+                      
+                      <!-- Advanced Heuristics -->
+                      <div class="model-description" style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed #eee;">
+                        <p><strong>Advanced Heuristics</strong> <span style="color: #e60;">🐢 Slower</span></p>
+                        <p style="font-size: 0.85em; color: #555; margin: 4px 0 6px 0;">
+                          Uses intelligent heuristics that adapt to different content types (code, CJK text, etc.) for better accuracy.
+                          Can use significant CPU on very long conversations. Blends word-based and character-based estimates.
+                        </p>
+                      </div>
+                      
+                      <!-- CPT Blend/Mix -->
+                      <div class="model-description" style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed #eee;">
+                        <p><strong>CPT Blend/Mix</strong> <span style="color: #c00;">🐌 Slowest</span></p>
+                        <p style="font-size: 0.85em; color: #555; margin: 4px 0 6px 0;">
+                          Sometimes best accuracy, sometimes off. 70% slower than Ultralight state machine. It first normalizes the text and gets a word-based count,
+                          then computes a character-per-token estimate weighted by content type. Code-ish text and CJK are detected with targeted regexes to adjust CPT
+                          and to derive ratios. The final estimate blends the word and char counts with scenario-specific weights and clamps divergence.
+                        </p>
+                      </div>
+                      
+                      <p style="font-size: 0.8em; margin-top: 10px;">
+                        <a href="https://github.com/NVIDIA/RULER" target="_blank" rel="noreferrer noopener">View RULER token counting benchmark</a>
+                      </p>
+                      <p style="font-size: 0.8em; margin-top: 4px; font-style: italic; color: #666;">
+                        We recommend experimenting with different models to find the best one for your specific use case.
+                      </p>
                     </div>
                   </div>
-                  <!-- Hidden checkbox for compatibility with existing JavaScript -->
-                  <input type="checkbox" id="tokenApproxSimpleMethodToggle" style="display: none;" />
                 </div>
               </div>
             </div>

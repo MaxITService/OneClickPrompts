@@ -129,6 +129,21 @@ async function getValue(path) {
     const obj = r[KEYS.modules.tokenApproximator];
     if (obj && typeof obj === 'object') {
       // Ensure shape and defaults
+      // Handle migration from old countingMethod values (simple/advanced) to new model IDs
+      let countingMethod = 'ultralight-state-machine'; // New default
+      
+      if (obj.countingMethod) {
+        // Map legacy values
+        if (obj.countingMethod === 'simple') {
+          countingMethod = 'simple';
+        } else if (obj.countingMethod === 'advanced') {
+          countingMethod = 'advanced';
+        } else {
+          // Already using a valid model ID
+          countingMethod = obj.countingMethod;
+        }
+      }
+      
       return {
         enabled: !!obj.enabled,
         calibration: Number.isFinite(obj.calibration) && obj.calibration > 0 ? Number(obj.calibration) : 1.0,
@@ -137,8 +152,8 @@ async function getValue(path) {
         showEditorCounter: typeof obj.showEditorCounter === 'boolean' ? obj.showEditorCounter : true, // separate editor counter
         // placement of counters relative to buttons
         placement: (obj.placement === 'after') ? 'after' : 'before',
-        // counting method: 'advanced' (default) or 'simple' (1 token = 4 chars)
-        countingMethod: obj.countingMethod === 'simple' ? 'simple' : 'advanced'
+        // counting method: one of the available model IDs
+        countingMethod
       };
     }
     return {
@@ -147,7 +162,7 @@ async function getValue(path) {
       threadMode: 'withEditors',
       showEditorCounter: true,
       placement: 'before',
-      countingMethod: 'advanced'
+      countingMethod: 'ultralight-state-machine' // New default
     };
   }
   if (path === KEYS.floatingPanel) {
@@ -222,13 +237,30 @@ async function setValue(path, value) {
   }
   if (path === KEYS.modules.tokenApproximator) {
     const settings = value && typeof value === 'object' ? value : {};
+    
+    // Handle counting method values
+    let countingMethod = 'ultralight-state-machine'; // Default
+    if (settings.countingMethod) {
+      // Valid model IDs
+      const validModels = ['simple', 'advanced', 'cpt-blend-mix', 'single-regex-pass', 'ultralight-state-machine'];
+      
+      // Map legacy values or use valid model ID
+      if (settings.countingMethod === 'simple') {
+        countingMethod = 'simple';
+      } else if (settings.countingMethod === 'advanced') {
+        countingMethod = 'advanced';
+      } else if (validModels.includes(settings.countingMethod)) {
+        countingMethod = settings.countingMethod;
+      }
+    }
+    
     const normalized = {
       enabled: !!settings.enabled,
       calibration: Number.isFinite(settings.calibration) && settings.calibration > 0 ? Number(settings.calibration) : 1.0,
       threadMode: (settings.threadMode === 'ignoreEditors' || settings.threadMode === 'hide') ? settings.threadMode : 'withEditors',
       showEditorCounter: typeof settings.showEditorCounter === 'boolean' ? settings.showEditorCounter : true,
       placement: settings.placement === 'after' ? 'after' : 'before',
-      countingMethod: settings.countingMethod === 'simple' ? 'simple' : 'advanced'
+      countingMethod
     };
     await lsSet({ [KEYS.modules.tokenApproximator]: normalized });
     return;

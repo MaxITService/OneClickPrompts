@@ -210,8 +210,25 @@ Recommended checks:
   - `normalize`, `setUiFromSettings`, `collectSettingsFromUi`, `save`, `load`, `attachEvents`.
 - **Backend**: `modules/backend-tokenApproximator.js`
   - UI: `createUiIfNeeded`, `placeUi`, `showHideBySettings`, `formatTokens`.
-  - Worker: `createEstimatorWorker()` (advanced|simple; applies calibration).
+  - Worker: `createEstimatorWorker()` (loads models from registry)
   - Run: `estimateAndPaint()`.
   - Schedulers: `makeScheduler()`; thread/editor cadences.
 - **State**: `modules/service-worker-auxiliary-state-store.js`
   - `getTokenApproximatorSettings`, `saveTokenApproximatorSettings` (+broadcast).
+- **Models**: `modules/token-models/`
+  - `base.js`: Base interface for all token counting models
+  - `registry.js`: Registry system to manage and load models
+  - `model-simple.js`: 1:4 ratio model (fast, less accurate)
+  - `model-advanced.js`: Original algorithm with heuristics
+  - `model-ultralight-state-machine.js`: New default - fast with good accuracy
+  - `model-single-regex-pass.js`: Single regex for accuracy (30% slower than ultralight)
+  - `model-cpt-blend-mix.js`: DeepSeek R1 blend (variable accuracy, 70% slower)
+
+### Token Models Architecture
+The token counting system is now modular with a plugin-like architecture:
+- All models implement common interface from `base.js`
+- Registry dynamically loads models based on settings
+- Each model exposes metadata for UI (name, description, performance metrics)
+- Ultralight State Machine is default for best speed/accuracy tradeoff
+- UI allows users to experiment with models via dropdown + details section
+- Backward compatible with legacy simple/advanced settings
