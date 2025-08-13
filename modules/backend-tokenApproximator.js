@@ -19,6 +19,86 @@
     } catch { /* noop */ }
   }
 
+  // ---- MODELS & REGISTRY (defined once for both worker and main thread) ----
+  class TokenCountingModelBase {
+    constructor() {
+      if (this.constructor === TokenCountingModelBase) {
+        throw new Error('TokenCountingModelBase is abstract and cannot be instantiated directly');
+      }
+    }
+    getMetadata() { throw new Error('getMetadata() must be implemented by subclass'); }
+    estimate(text, calibration = 1.0) { throw new Error('estimate() must be implemented by subclass'); }
+    normalizeText(rawInput) {
+      return String(rawInput || '').replace(/\s+/g, ' ').trim();
+    }
+    applyCalibration(tokens, calibration) {
+      const scale = Number.isFinite(calibration) && calibration > 0 ? calibration : 1.0;
+      return Math.round(tokens * scale);
+    }
+  }
+
+  class TokenModelRegistry {
+    constructor() {
+      this.models = new Map();
+      this.defaultModelId = 'ultralight-state-machine';
+    }
+    register(modelInstance) {
+      const metadata = modelInstance.getMetadata();
+      this.models.set(metadata.id, modelInstance);
+    }
+    getModel(modelId) { return this.models.get(modelId) || null; }
+    getDefaultModel() { return this.getModel(this.defaultModelId) || this.models.values().next().value; }
+    hasModel(modelId) { return this.models.has(modelId); }
+    mapLegacyMethod(legacy) { return legacy === 'simple' ? 'simple' : (legacy === 'advanced' ? 'advanced' : this.defaultModelId); }
+    resolveModelId(countingMethod) {
+      return this.hasModel(countingMethod) ? countingMethod : this.mapLegacyMethod(countingMethod);
+    }
+    setDefaultModel(modelId) { this.defaultModelId = modelId; }
+  }
+
+  class SimpleTokenModel extends TokenCountingModelBase {
+    getMetadata() { return { id: 'simple', name: '1 word is 4 tokens', shortName: 'Simple (1:4)', description: 'Simple approximation: 1 token ≈ 4 characters' }; }
+    estimate(rawInput, calibration = 1.0) {
+      const charCount = this.normalizeText(rawInput).length;
+      const rawTokens = Math.max(0, Math.round(charCount / 4));
+      return this.applyCalibration(rawTokens, calibration);
+    }
+  }
+
+  class AdvancedTokenModel extends TokenCountingModelBase {
+    getMetadata() { return { id: 'advanced', name: 'Advanced heuristics', shortName: 'Advanced', description: 'Uses intelligent heuristics that adapt to different content types' }; }
+    estimate(rawInput, calibration = 1.0) {
+      const text = this.normalizeText(rawInput); if (!text.length) return 0;
+      const wordsMatch = text.match(/\p{L}[\p{L}\p{M}\p{N}_'-]*|\p{N}+/gu); const wordsOnly = wordsMatch ? wordsMatch.length : 0;
+      const codeSymbols = (text.match(/[{}[\]();:.,=+\-*/<>|&]/g) || []).length;
+      const codeRatio = Math.min(1, codeSymbols / Math.max(1, wordsOnly + codeSymbols));
+      const cjkRatio = (text.match(/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/gu) || []).length / Math.max(1, text.length);
+      const cpt = 4.9 + 1.0 * codeRatio + 0.7 * cjkRatio;
+      const tokensByChars = Math.round(text.length / Math.max(3.8, cpt));
+      const tokensByWords = Math.round(wordsOnly / 0.75);
+      const cappedWords = Math.max(Math.round(tokensByChars * 0.88), Math.min(Math.round(tokensByChars * 1.12), tokensByWords));
+      const est = Math.round((cappedWords * 2 + tokensByChars) / 3);
+      return this.applyCalibration(est, calibration);
+    }
+  }
+
+  class CptBlendMixTokenModel extends TokenCountingModelBase {
+    getMetadata() { return { id: 'cpt-blend-mix', name: 'CPT Blend/Mix', shortName: 'Blend/Mix', description: 'Sometimes best accuracy, sometimes off. 70% slower than Ultralight state machine.' }; }
+    estimate(rawInput, calibration = 1.0) { /* Implementation unchanged, but will now use base class methods */ const text = this.normalizeText(rawInput); if (!text.length) return 0; const CFG = { wordsDivisor: 0.75, cptBase: 4.0, cjkCPT: 1.0, codeCPT: 3.0, weights: { default: [2, 1], code: [2, 1], cjk: [1, 3] }, capPct: 0.12 }; const normChars = text.length; let wordsOnly = 0; if (typeof Intl !== 'undefined' && Intl.Segmenter) { const seg = new Intl.Segmenter(undefined, { granularity: 'word' }); for (const s of seg.segment(text)) { if (s.isWordLike) wordsOnly++; } } else { const m = text.match(/\p{L}[\p{L}\p{M}\p{N}_'-]*|\p{N}+/gu); wordsOnly = m ? m.length : 0; } const codeSymbols = (text.match(/[{}\[\]();:.,=+\-*/<>|&]/g) || []).length; const codeWords = (text.match(/\b[A-Za-z]*[A-Z][a-z]+[A-Za-z]*\b|[_$][A-Za-z0-9_$]*|[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)+/g) || []).length; let codeRatio = Math.min(1, (codeSymbols + 0.5 * codeWords) / Math.max(1, wordsOnly + codeSymbols)); const cjkCount = (text.match(/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/gu) || []).length; let cjkRatio = cjkCount / Math.max(1, normChars); let otherRatio = 1 - cjkRatio - codeRatio; if (otherRatio < 0) { const total = cjkRatio + codeRatio; if (total > 0) { cjkRatio /= total; codeRatio /= total; } else { cjkRatio = 0; codeRatio = 0; } otherRatio = 0; } const tokens_by_words_raw = Math.round(wordsOnly / CFG.wordsDivisor); const cpt = CFG.cptBase * otherRatio + CFG.cjkCPT * cjkRatio + CFG.codeCPT * codeRatio; const tokens_by_chars_raw = Math.round(normChars / Math.max(1e-9, cpt)); let [wW, wC] = CFG.weights.default; if (cjkRatio > 0.15) [wW, wC] = CFG.weights.cjk; else if (codeRatio > 0.30) [wW, wC] = CFG.weights.code; const hiCap = Math.round(tokens_by_chars_raw * (1 + CFG.capPct)); const loCap = Math.round(tokens_by_chars_raw * (1 - CFG.capPct)); const words_capped = Math.max(loCap, Math.min(hiCap, tokens_by_words_raw)); const tokens_raw = (words_capped * wW + tokens_by_chars_raw * wC) / (wW + wC); return this.applyCalibration(Math.round(tokens_raw), calibration); }
+  }
+
+  class SingleRegexPassTokenModel extends TokenCountingModelBase {
+    constructor() { super(); this.TOKEN_REGEX = /\p{L}+|\p{N}+|\p{sc=Han}|\p{sc=Hiragana}|\p{sc=Katakana}|\p{sc=Hangul}|[^\s\p{L}\p{N}]/gu; }
+    getMetadata() { return { id: 'single-regex-pass', name: 'Single regex model', shortName: 'Single Regex', description: 'Seems to be most accurate. single-regex model. 30% slower than Ultralight state machine.' }; }
+    estimate(rawInput, calibration = 1.0) { const text = this.normalizeText(rawInput); if (!text.length) return 0; const matches = text.match(this.TOKEN_REGEX); return this.applyCalibration(matches ? matches.length : 0, calibration); }
+  }
+
+  class UltralightStateMachineTokenModel extends TokenCountingModelBase {
+    constructor() { super(); this.RE_WORDLIKE = /[\p{L}\p{N}_']/u; this.RE_CJK = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u; this.RE_SEP = /[.,;:=\-+/<>|&(){}[\]]/u; }
+    getMetadata() { return { id: 'ultralight-state-machine', name: 'Ultralight state machine', shortName: 'Ultralight SM', description: 'Fastest. Good accuracy. Ultralight state machine.' }; }
+    estimate(rawInput, calibration = 1.0) { const text = this.normalizeText(rawInput); const len = text.length; if (!len) return 0; let tokens = 0, inWord = false; for (let i = 0; i < len; i++) { const ch = text[i]; if (this.RE_CJK.test(ch)) { tokens++; inWord = false; continue; } if (ch === ' ') { inWord = false; continue; } if (this.RE_SEP.test(ch)) { tokens++; inWord = false; continue; } if (this.RE_WORDLIKE.test(ch)) { if (!inWord) { tokens++; inWord = true; } } else { tokens++; inWord = false; } } return this.applyCalibration(tokens, calibration); }
+  }
+
   // ---- Settings load/save bridge ----
   function loadSettings() {
     return new Promise((resolve) => {
@@ -44,7 +124,7 @@
             });
           }
           const s = resp && resp.settings ? resp.settings : {};
-          
+
           // Default enabled sites if not provided
           const defaultEnabledSites = {
             'ChatGPT': true,
@@ -55,12 +135,12 @@
             'Grok': true,
             'Gemini': true
           };
-          
+
           // Use provided enabledSites if exists, otherwise use defaults
           const enabledSites = s.enabledSites && typeof s.enabledSites === 'object'
             ? s.enabledSites
             : defaultEnabledSites;
-          
+
           resolve({
             calibration: Number.isFinite(s.calibration) && s.calibration > 0 ? Number(s.calibration) : 1.0,
             enabled: !!s.enabled,
@@ -154,7 +234,7 @@
     wrap.style.flex = '0 0 auto';
     wrap.style.gap = '8px';
     wrap.style.marginRight = placement === 'before' ? '8px' : '0';
-    wrap.style.marginLeft  = placement === 'after'  ? '8px' : '0';
+    wrap.style.marginLeft = placement === 'after' ? '8px' : '0';
 
     // move INSIDE the buttons container (not as a sibling)
     if (placement === 'before') {
@@ -205,18 +285,18 @@
     const prefix =
       kind === 'thread'
         ? (settings.threadMode === 'ignoreEditors'
-            ? 'Whole-thread tokens (thread only)'
-            : 'Whole-thread tokens (with editors)')
+          ? 'Whole-thread tokens (thread only)'
+          : 'Whole-thread tokens (with editors)')
         : 'Editor tokens';
 
     // State postfix
     let postfix = '';
     switch (status) {
       case 'loading': postfix = 'calculating…'; break;
-      case 'fresh':   postfix = 'updated just now'; break;
-      case 'stale':   postfix = 'stale — click to re-estimate'; break;
-      case 'paused':  postfix = 'paused while tab inactive'; break;
-      default:        postfix = ''; break;
+      case 'fresh': postfix = 'updated just now'; break;
+      case 'stale': postfix = 'stale — click to re-estimate'; break;
+      case 'paused': postfix = 'paused while tab inactive'; break;
+      default: postfix = ''; break;
     }
     // CTA: always present on thread; also helpful on editor
     const cta = kind === 'thread' ? ' • Click to re-estimate now.' : ' • Click to re-estimate.';
@@ -260,430 +340,94 @@
     setTooltip(el, kind, 'paused', settings);
   }
 
+  // ---- Create a shared registry instance ----
+  const tokenModelRegistry = new TokenModelRegistry();
+  tokenModelRegistry.register(new SimpleTokenModel());
+  tokenModelRegistry.register(new AdvancedTokenModel());
+  tokenModelRegistry.register(new CptBlendMixTokenModel());
+  tokenModelRegistry.register(new SingleRegexPassTokenModel());
+  tokenModelRegistry.register(new UltralightStateMachineTokenModel());
+  tokenModelRegistry.setDefaultModel('ultralight-state-machine');
+
+  // ---- On-thread estimation logic (for Gemini) ----
+  function runEstimation(data) {
+    try {
+      const { texts, scale, countingMethod } = data || {};
+      const modelId = tokenModelRegistry.resolveModelId(countingMethod);
+      const model = tokenModelRegistry.getModel(modelId) || tokenModelRegistry.getDefaultModel();
+      const out = {};
+      for (const key of Object.keys(texts || {})) {
+        out[key] = model.estimate(texts[key] || '', scale);
+      }
+      return { ok: true, estimates: out, modelUsed: model.getMetadata().id };
+    } catch (err) {
+      return { ok: false, error: (err && err.message) || String(err) };
+    }
+  }
+
   // ---- Worker (off-main-thread) with models ----
+  /**
+   * =================================================================================
+   * WORKER CREATION AND CSP FALLBACK EXPLANATION
+   * =================================================================================
+   *
+   * PROBLEM:
+   * Google Gemini's Content Security Policy (CSP) is very strict and prohibits the
+   * creation of Web Workers from 'blob:' URLs. Our standard approach was to build the
+   * worker's code as a string, create a Blob from it, and then generate a blob URL
+   * to pass to the Worker constructor (new Worker(URL.createObjectURL(blob))).
+   * This is a common and convenient technique for creating self-contained workers
+   * without needing a separate .js file in the extension package, but it fails on Gemini.
+   *
+   * SOLUTION:
+   * To solve this, we've implemented a fallback mechanism specifically for Gemini.
+   * The `createEstimatorWorker` function now acts as a factory that decides which
+   * type of "worker" to provide based on the current site.
+   *
+   * 1. FOR ALL SITES EXCEPT GEMINI:
+   *    - It creates a real, off-thread Web Worker.
+   *    - The token counting models (like `UltralightStateMachineTokenModel`) and the
+   *      registry are converted to strings (`.toString()`) and injected into a
+   *      template literal to build the worker's source code on the fly.
+   *    - This maintains the performance benefit of offloading heavy computation from
+   *      the main UI thread.
+   *
+   * 2. FOR GEMINI (THE FALLBACK):
+   *    - It returns a "mock worker" object. This is a simple JavaScript object that
+   *      *mimics* the interface of a real Web Worker.
+   *    - It has the same `postMessage`, `onmessage`, and `terminate` properties.
+   *    - When its `postMessage` is called, it executes the token estimation logic
+   *      *synchronously on the main thread*.
+   *    - To maintain compatibility with the rest of the codebase which expects an
+   *      asynchronous response, the result is sent back via its `onmessage`
+   *      handler inside a `setTimeout(..., 0)`. This ensures the response is
+   *      processed in a subsequent event loop tick, just like a real worker.
+   *
+   */
   function createEstimatorWorker() {
-    // Include the model base, registry, and all implementations directly in the worker
+    // Gemini's CSP blocks blob workers. Fallback to an on-thread mock worker.
+    if (Site === 'Gemini') {
+      log('Using synchronous on-thread estimator for Gemini due to CSP.');
+      const mockWorker = {
+        onmessage: null,
+        postMessage: (data) => {
+          const result = runEstimation(data);
+          // Mimic async behavior of a real worker
+          if (mockWorker.onmessage) {
+            setTimeout(() => mockWorker.onmessage({ data: result }), 0);
+          }
+        },
+        terminate: () => { } // no-op
+      };
+      return mockWorker;
+    }
+
+    // For all other sites, create a real worker from a blob.
+    // Build the worker code string from the class definitions to avoid duplication.
+    const modelsCode = [TokenCountingModelBase, TokenModelRegistry, SimpleTokenModel, AdvancedTokenModel, CptBlendMixTokenModel, SingleRegexPassTokenModel, UltralightStateMachineTokenModel].map(c => c.toString()).join('\n\n');
+
     const workerCode = `
-      // ----- Model Base -----
-      class TokenCountingModelBase {
-        constructor() {
-          if (this.constructor === TokenCountingModelBase) {
-            throw new Error('TokenCountingModelBase is abstract and cannot be instantiated directly');
-          }
-        }
-      
-        getMetadata() {
-          throw new Error('getMetadata() must be implemented by subclass');
-        }
-      
-        estimate(text, calibration = 1.0) {
-          throw new Error('estimate() must be implemented by subclass');
-        }
-      
-        normalizeText(rawInput) {
-          const text = String(rawInput || '').replace(/\\s+/g, ' ').trim();
-          return text;
-        }
-      
-        applyCalibration(tokens, calibration) {
-          const scale = Number.isFinite(calibration) && calibration > 0 ? calibration : 1.0;
-          return Math.round(tokens * scale);
-        }
-      }
-
-      // ----- Registry -----
-      class TokenModelRegistry {
-        constructor() {
-          this.models = new Map();
-          this.defaultModelId = 'ultralight-state-machine';
-        }
-      
-        register(modelInstance) {
-          if (!modelInstance || typeof modelInstance.getMetadata !== 'function') {
-            throw new Error('Model must implement getMetadata() method');
-          }
-          if (typeof modelInstance.estimate !== 'function') {
-            throw new Error('Model must implement estimate() method');
-          }
-      
-          const metadata = modelInstance.getMetadata();
-          if (!metadata.id || typeof metadata.id !== 'string') {
-            throw new Error('Model metadata must include a valid string id');
-          }
-      
-          this.models.set(metadata.id, modelInstance);
-        }
-      
-        getModel(modelId) {
-          return this.models.get(modelId) || null;
-        }
-      
-        getDefaultModel() {
-          return this.getModel(this.defaultModelId) || this.models.values().next().value;
-        }
-      
-        getAllModels() {
-          return Array.from(this.models.values());
-        }
-      
-        getAllMetadata() {
-          return this.getAllModels().map(model => model.getMetadata());
-        }
-      
-        hasModel(modelId) {
-          return this.models.has(modelId);
-        }
-      
-        mapLegacyMethod(legacyMethod) {
-          const mapping = {
-            'simple': 'simple',
-            'advanced': 'advanced'
-          };
-          return mapping[legacyMethod] || this.defaultModelId;
-        }
-      
-        resolveModelId(countingMethod) {
-          // If it's already a valid model ID, return it
-          if (this.hasModel(countingMethod)) {
-            return countingMethod;
-          }
-          
-          // Try to map from legacy method
-          const mappedId = this.mapLegacyMethod(countingMethod);
-          if (this.hasModel(mappedId)) {
-            return mappedId;
-          }
-          
-          // Fallback to default
-          return this.defaultModelId;
-        }
-      
-        setDefaultModel(modelId) {
-          if (!this.hasModel(modelId)) {
-            throw new Error(\`Model '\${modelId}' is not registered\`);
-          }
-          this.defaultModelId = modelId;
-        }
-      }
-
-      // ----- Simple Model -----
-      class SimpleTokenModel {
-        getMetadata() {
-          return {
-            id: 'simple',
-            name: '1 word is 4 tokens',
-            shortName: 'Simple (1:4)',
-            description: 'Simple approximation: 1 token ≈ 4 characters'
-          };
-        }
-      
-        estimate(rawInput, calibration = 1.0) {
-          const text = this.normalizeText(rawInput);
-          const charCount = text.length;
-          
-          // Simple heuristic: 1 token = 4 characters
-          const rawTokens = Math.max(0, Math.round(charCount / 4));
-          
-          return this.applyCalibration(rawTokens, calibration);
-        }
-      
-        normalizeText(rawInput) {
-          const text = String(rawInput || '').replace(/\\s+/g, ' ').trim();
-          return text;
-        }
-      
-        applyCalibration(tokens, calibration) {
-          const scale = Number.isFinite(calibration) && calibration > 0 ? calibration : 1.0;
-          return Math.round(tokens * scale);
-        }
-      }
-
-      // ----- Advanced Model -----
-      class AdvancedTokenModel {
-        getMetadata() {
-          return {
-            id: 'advanced',
-            name: 'Advanced heuristics',
-            shortName: 'Advanced',
-            description: 'Uses intelligent heuristics that adapt to different content types'
-          };
-        }
-      
-        estimate(rawInput, calibration = 1.0) {
-          const text = this.normalizeText(rawInput);
-          const normChars = text.length;
-          
-          if (!normChars) return 0;
-      
-          const CFG = {
-            wordsDivisor: 0.75,
-            cptBase: 4.9,
-            cptCodeBump: 1.0,
-            cptCjkBump: 0.7,
-            cptSpaceBump: 0.5,
-            weights: { default: [2, 1], code: [2, 1], cjk: [1, 3] },
-            capPct: 0.12
-          };
-      
-          // Words count using Intl.Segmenter or regex fallback
-          let wordsOnly = 0;
-          if (typeof Intl !== 'undefined' && Intl.Segmenter) {
-            const seg = new Intl.Segmenter(undefined, { granularity: 'word' });
-            for (const s of seg.segment(text)) {
-              if (s.isWordLike) wordsOnly++;
-            }
-          } else {
-            const m = text.match(/\\p{L}[\\p{L}\\p{M}\\p{N}_'-]*|\\p{N}+/gu);
-            wordsOnly = m ? m.length : 0;
-          }
-      
-          // Feature detection
-          const codeSymbols = (text.match(/[{}\\[\\]();:.,=+\\-*/<>|&]/g) || []).length;
-          const codeWords = (text.match(/\\b[A-Za-z]*[A-Z][a-z]+[A-Za-z]*\\b|[_$][A-Za-z0-9_$]*|[A-Za-z0-9_]+(?:\\.[A-Za-z0-9_]+)+/g) || []).length;
-          const codeRatio = Math.min(1, (codeSymbols + 0.5 * codeWords) / Math.max(1, wordsOnly + codeSymbols));
-          
-          const spaces = (text.match(/ /g) || []).length;
-          const whitespaceRatio = spaces / Math.max(1, normChars);
-          
-          const cjkCount = (text.match(/[\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Hangul}]/gu) || []).length;
-          const cjkRatio = cjkCount / Math.max(1, normChars);
-      
-          // Token estimates
-          const tokens_by_words_raw = Math.round(wordsOnly / CFG.wordsDivisor);
-          const cpt = CFG.cptBase + CFG.cptCodeBump * codeRatio + CFG.cptCjkBump * cjkRatio + CFG.cptSpaceBump * whitespaceRatio;
-          const tokens_by_chars_raw = Math.round(normChars / Math.max(3.8, cpt));
-      
-          // Blend weights selection
-          let [wW, wC] = CFG.weights.default;
-          if (cjkRatio > 0.15) [wW, wC] = CFG.weights.cjk;
-          else if (codeRatio > 0.30) [wW, wC] = CFG.weights.code;
-      
-          // Cap divergence
-          const hiCap = Math.round(tokens_by_chars_raw * (1 + CFG.capPct));
-          const loCap = Math.round(tokens_by_chars_raw * (1 - CFG.capPct));
-          const words_capped = Math.max(loCap, Math.min(hiCap, tokens_by_words_raw));
-      
-          // Final estimate
-          const est = Math.round((words_capped * wW + tokens_by_chars_raw * wC) / (wW + wC));
-          
-          return this.applyCalibration(est, calibration);
-        }
-      
-        normalizeText(rawInput) {
-          const text = String(rawInput || '').replace(/\\s+/g, ' ').trim();
-          return text;
-        }
-      
-        applyCalibration(tokens, calibration) {
-          const scale = Number.isFinite(calibration) && calibration > 0 ? calibration : 1.0;
-          return Math.round(tokens * scale);
-        }
-      }
-
-      // ----- CPT Blend Mix Model -----
-      class CptBlendMixTokenModel {
-        getMetadata() {
-          return {
-            id: 'cpt-blend-mix',
-            name: 'CPT Blend/Mix',
-            shortName: 'Blend/Mix',
-            description: 'Sometimes best accuracy, sometimes off. 70% slower than Ultralight state machine.'
-          };
-        }
-      
-        estimate(rawInput, calibration = 1.0) {
-          const text = this.normalizeText(rawInput);
-          if (!text.length) return 0;
-      
-          const CFG = {
-            wordsDivisor: 0.75,
-            cptBase: 4.0,
-            cjkCPT: 1.0,
-            codeCPT: 3.0,
-            weights: { default: [2, 1], code: [2, 1], cjk: [1, 3] },
-            capPct: 0.12
-          };
-      
-          const normChars = text.length;
-      
-          // Words count using Intl.Segmenter or regex fallback
-          let wordsOnly = 0;
-          if (typeof Intl !== 'undefined' && Intl.Segmenter) {
-            const seg = new Intl.Segmenter(undefined, { granularity: 'word' });
-            for (const s of seg.segment(text)) {
-              if (s.isWordLike) wordsOnly++;
-            }
-          } else {
-            const m = text.match(/\\p{L}[\\p{L}\\p{M}\\p{N}_'-]*|\\p{N}+/gu);
-            wordsOnly = m ? m.length : 0;
-          }
-      
-          // Code & CJK features
-          const codeSymbols = (text.match(/[{}\\[\\]();:.,=+\\-*/<>|&]/g) || []).length;
-          const codeWords = (text.match(/\\b[A-Za-z]*[A-Z][a-z]+[A-Za-z]*\\b|[_$][A-Za-z0-9_$]*|[A-Za-z0-9_]+(?:\\.[A-Za-z0-9_]+)+/g) || []).length;
-          let codeRatio = Math.min(1, (codeSymbols + 0.5 * codeWords) / Math.max(1, wordsOnly + codeSymbols));
-      
-          const cjkCount = (text.match(/[\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Hangul}]/gu) || []).length;
-          let cjkRatio = cjkCount / Math.max(1, normChars);
-      
-          let otherRatio = 1 - cjkRatio - codeRatio;
-          if (otherRatio < 0) {
-            const total = cjkRatio + codeRatio;
-            if (total > 0) {
-              cjkRatio /= total;
-              codeRatio /= total;
-            } else {
-              cjkRatio = 0;
-              codeRatio = 0;
-            }
-            otherRatio = 0;
-          }
-      
-          const tokens_by_words_raw = Math.round(wordsOnly / CFG.wordsDivisor);
-          const cpt = CFG.cptBase * otherRatio + CFG.cjkCPT * cjkRatio + CFG.codeCPT * codeRatio;
-          const tokens_by_chars_raw = Math.round(normChars / Math.max(1e-9, cpt));
-      
-          // Choose weights
-          let [wW, wC] = CFG.weights.default;
-          if (cjkRatio > 0.15) [wW, wC] = CFG.weights.cjk;
-          else if (codeRatio > 0.30) [wW, wC] = CFG.weights.code;
-      
-          // Cap divergence
-          const hiCap = Math.round(tokens_by_chars_raw * (1 + CFG.capPct));
-          const loCap = Math.round(tokens_by_chars_raw * (1 - CFG.capPct));
-          const words_capped = Math.max(loCap, Math.min(hiCap, tokens_by_words_raw));
-      
-          const tokens_raw = (words_capped * wW + tokens_by_chars_raw * wC) / (wW + wC);
-          const finalTokens = Math.round(tokens_raw);
-      
-          return this.applyCalibration(finalTokens, calibration);
-        }
-      
-        normalizeText(rawInput) {
-          const text = String(rawInput || '').replace(/\\s+/g, ' ').trim();
-          return text;
-        }
-      
-        applyCalibration(tokens, calibration) {
-          const scale = Number.isFinite(calibration) && calibration > 0 ? calibration : 1.0;
-          return Math.round(tokens * scale);
-        }
-      }
-
-      // ----- Single Regex Pass Model -----
-      class SingleRegexPassTokenModel {
-        constructor() {
-          // Single regex to match all token-like patterns
-          this.TOKEN_REGEX = /\\p{L}+|\\p{N}+|\\p{sc=Han}|\\p{sc=Hiragana}|\\p{sc=Katakana}|\\p{sc=Hangul}|[^\\s\\p{L}\\p{N}]/gu;
-        }
-      
-        getMetadata() {
-          return {
-            id: 'single-regex-pass',
-            name: 'Single regex model',
-            shortName: 'Single Regex',
-            description: 'Seems to be most accurate. single-regex model. 30% slower than Ultralight state machine.'
-          };
-        }
-      
-        estimate(rawInput, calibration = 1.0) {
-          const text = this.normalizeText(rawInput);
-          if (!text.length) return 0;
-      
-          // Single pass regex matching
-          const matches = text.match(this.TOKEN_REGEX);
-          const rawTokens = matches ? matches.length : 0;
-      
-          return this.applyCalibration(rawTokens, calibration);
-        }
-      
-        normalizeText(rawInput) {
-          const text = String(rawInput || '').replace(/\\s+/g, ' ').trim();
-          return text;
-        }
-      
-        applyCalibration(tokens, calibration) {
-          const scale = Number.isFinite(calibration) && calibration > 0 ? calibration : 1.0;
-          return Math.round(tokens * scale);
-        }
-      }
-
-      // ----- Ultralight State Machine Model -----
-      class UltralightStateMachineTokenModel {
-        constructor() {
-          // RegExp patterns for character classification
-          this.RE_WORDLIKE = /[\\p{L}\\p{N}_']/u;
-          this.RE_CJK = /[\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Hangul}]/u;
-          this.RE_SEP = /[.,;:=\\-+*/<>|&(){}\\[\\]]/u;
-        }
-      
-        getMetadata() {
-          return {
-            id: 'ultralight-state-machine',
-            name: 'Ultralight state machine',
-            shortName: 'Ultralight SM',
-            description: 'Fastest. Good accuracy. Ultralight state machine.'
-          };
-        }
-      
-        estimate(rawInput, calibration = 1.0) {
-          const text = this.normalizeText(rawInput);
-          const len = text.length;
-          if (!len) return 0;
-      
-          let tokens = 0, inWord = false;
-      
-          // Character-by-character state machine
-          for (let i = 0; i < len; i++) {
-            const ch = text[i];
-            
-            // CJK character handling
-            if (this.RE_CJK.test(ch)) {
-              tokens++;
-              inWord = false;
-              continue;
-            }
-            
-            // Space handling (reset word state)
-            if (ch === ' ') {
-              inWord = false;
-              continue;
-            }
-            
-            // Separator handling (count as tokens)
-            if (this.RE_SEP.test(ch)) {
-              tokens++;
-              inWord = false;
-              continue;
-            }
-            
-            // Word-like character handling
-            if (this.RE_WORDLIKE.test(ch)) {
-              // Only increment token count when starting a new word
-              if (!inWord) {
-                tokens++;
-                inWord = true;
-              }
-            } else {
-              // Other characters (not word-like, spaces, or separators)
-              tokens++;
-              inWord = false;
-            }
-          }
-      
-          return this.applyCalibration(tokens, calibration);
-        }
-      
-        normalizeText(rawInput) {
-          const text = String(rawInput || '').replace(/\\s+/g, ' ').trim();
-          return text;
-        }
-      
-        applyCalibration(tokens, calibration) {
-          const scale = Number.isFinite(calibration) && calibration > 0 ? calibration : 1.0;
-          return Math.round(tokens * scale);
-        }
-      }
+      ${modelsCode}
 
       // ----- Registry setup -----
       const registry = new TokenModelRegistry();
@@ -698,27 +442,18 @@
       // Set ultralight as default
       registry.setDefaultModel('ultralight-state-machine');
 
-      // ----- Worker message handler -----
+      // ----- Worker Self-Contained Estimation Logic -----
+      function runEstimation(data) {
+        const { texts, scale, countingMethod } = data || {};
+        const modelId = registry.resolveModelId(countingMethod);
+        const model = registry.getModel(modelId) || registry.getDefaultModel();
+        const out = {};
+        for (const key of Object.keys(texts || {})) { out[key] = model.estimate(texts[key] || '', scale); }
+        return { ok: true, estimates: out, modelUsed: model.getMetadata().id };
+      }
+
       self.onmessage = (e) => {
-        try {
-          const { texts, scale, countingMethod } = e.data || {};
-          
-          // Resolve model ID (handling legacy 'simple'/'advanced' values)
-          const modelId = registry.resolveModelId(countingMethod);
-          
-          // Get the model instance
-          const model = registry.getModel(modelId) || registry.getDefaultModel();
-          
-          // Apply the model to each text
-          const out = {};
-          for (const key of Object.keys(texts || {})) {
-            out[key] = model.estimate(texts[key] || '', scale);
-          }
-          
-          self.postMessage({ ok: true, estimates: out, modelUsed: model.getMetadata().id });
-        } catch (err) {
-          self.postMessage({ ok: false, error: (err && err.message) || String(err) });
-        }
+        try { self.postMessage(runEstimation(e.data)); } catch (err) { self.postMessage({ ok: false, error: (err && err.message) || String(err) }); }
       };
     `;
     const blob = new Blob([workerCode], { type: 'application/javascript' });
@@ -746,17 +481,17 @@
   function getThreadText(excludeEditors = false) {
     const root = getThreadRoot();
     if (!root) return '';
-    
+
     if (excludeEditors) {
       // For "ignoreEditors" mode, create a clone and remove editors
       const clone = root.cloneNode(true);
-      
+
       // Remove all editor elements from the clone
       const editorsInThread = clone.querySelectorAll(EDITOR_SELECTOR);
       for (const editor of editorsInThread) {
         editor.parentNode.removeChild(editor);
       }
-      
+
       // Get text from the modified clone
       try { return clone.innerText || ''; } catch { return clone.textContent || ''; }
     } else {
@@ -846,7 +581,7 @@
   (async () => {
     const settings = await loadSettings();
     if (!settings.enabled) return;
-    
+
     // Skip if site is not enabled in settings
     if (!settings.enabledSites || !settings.enabledSites[Site]) {
       log(`Token Approximator disabled for site: ${Site}`);
@@ -857,7 +592,7 @@
     const selectors = (window.InjectionTargetsOnWebsite && window.InjectionTargetsOnWebsite.selectors) || {};
     const THREAD_SELECTOR = selectors.threadRoot;
     const BUTTONS_CONTAINER_ID = selectors.buttonsContainerId || 'chatgpt-custom-buttons-container';
-    
+
     // Check if threadRoot selector is defined for this site
     const effectiveSettings = { ...settings };
     // If threadRoot is not defined and threadMode is not 'hide', hide thread counter
@@ -903,14 +638,14 @@
     try {
       setTooltip(threadChip, 'thread', 'loading', settings);
       setTooltip(editorChip, 'editor', 'loading', settings);
-    } catch {}
+    } catch { }
 
     // Worker shared for both schedulers
     const worker = createEstimatorWorker();
 
     // ---- INDEPENDENT COUNTER FUNCTIONS ----
     // Completely separate thread and editor estimation to prevent coupling issues
-    
+
     function estimateThreadTokens() {
       return new Promise((resolve) => {
         // Skip if thread mode is hide or if no thread selector
@@ -925,7 +660,7 @@
 
         // Create dedicated worker for thread estimation
         const threadWorker = createEstimatorWorker();
-        
+
         threadWorker.onmessage = (ev) => {
           try {
             const currentWrap = document.getElementById(WRAP_ID);
@@ -934,14 +669,14 @@
             if (!currentThreadChip) return resolve();
 
             const { ok, estimates, modelUsed, error } = ev.data || {};
-            
+
             if (!ok) {
               log(`Thread estimation failed: ${error || 'Unknown error'}`);
               currentThreadChip.querySelector('.val').textContent = '-------';
               setTooltip(currentThreadChip, 'thread', 'error', effectiveSettings);
               return resolve();
             }
-            
+
             if (!estimates || !estimates.threadText) {
               log('Thread estimation returned no data');
               currentThreadChip.querySelector('.val').textContent = '-------';
@@ -953,7 +688,7 @@
             const tokens = estimates.threadText;
             currentThreadChip.querySelector('.val').textContent = formatTokens(tokens);
             markFreshThenStale(currentThreadChip, 'thread', effectiveSettings);
-            
+
           } catch (err) {
             log(`Thread estimation error: ${err.message}`);
           } finally {
@@ -975,7 +710,7 @@
           // Get thread text with error isolation
           const rootTxt = getThreadText(effectiveSettings.threadMode === 'ignoreEditors');
           const edTxt = editorsText();
-          
+
           let threadText = '';
           if (effectiveSettings.threadMode === 'ignoreEditors') {
             threadText = rootTxt;
@@ -996,7 +731,7 @@
             scale: settings.calibration,
             countingMethod: settings.countingMethod
           });
-          
+
         } catch (err) {
           log(`Thread text extraction failed: ${err.message}`);
           threadChip.querySelector('.val').textContent = '-------';
@@ -1021,7 +756,7 @@
 
         // Create dedicated worker for editor estimation
         const editorWorker = createEstimatorWorker();
-        
+
         editorWorker.onmessage = (ev) => {
           try {
             const currentWrap = document.getElementById(WRAP_ID);
@@ -1030,14 +765,14 @@
             if (!currentEditorChip) return resolve();
 
             const { ok, estimates, modelUsed, error } = ev.data || {};
-            
+
             if (!ok) {
               log(`Editor estimation failed: ${error || 'Unknown error'}`);
               currentEditorChip.querySelector('.val').textContent = '-------';
               setTooltip(currentEditorChip, 'editor', 'error', effectiveSettings);
               return resolve();
             }
-            
+
             if (!estimates || !Number.isFinite(estimates.editorText)) {
               log('Editor estimation returned invalid data');
               currentEditorChip.querySelector('.val').textContent = '-------';
@@ -1049,7 +784,7 @@
             const tokens = estimates.editorText;
             currentEditorChip.querySelector('.val').textContent = formatTokens(tokens);
             markFreshThenStale(currentEditorChip, 'editor', effectiveSettings);
-            
+
           } catch (err) {
             log(`Editor estimation error: ${err.message}`);
           } finally {
@@ -1070,7 +805,7 @@
         try {
           // Get editor text - completely independent of thread
           const edTxt = editorsText();
-          
+
           if (!edTxt.trim()) {
             // Empty editor is valid - show 0 tokens
             editorChip.querySelector('.val').textContent = formatTokens(0);
@@ -1084,7 +819,7 @@
             scale: settings.calibration,
             countingMethod: settings.countingMethod
           });
-          
+
         } catch (err) {
           log(`Editor text extraction failed: ${err.message}`);
           editorChip.querySelector('.val').textContent = '-------';
@@ -1100,12 +835,12 @@
       minCooldown: 15000,
       runFn: () => estimateThreadTokens()
     });
-    
+
     const editorScheduler = makeScheduler({
       minCooldown: 600, // faster editor updates
       runFn: () => estimateEditorTokens()
     });
-    
+
     // Replace the simple observer with one that can re-create the UI
     const keepInRow = new MutationObserver(() => {
       const container = document.getElementById(BUTTONS_CONTAINER_ID);
@@ -1142,7 +877,7 @@
         threadScheduler.markDirty();
       });
       mo.observe(threadRoot, { childList: true, characterData: true, subtree: true });
-      
+
       // Scroll on container & window (virtualization) - thread only
       const scrollTarget = threadRoot.closest('[class*="overflow"],[class*="scroll"],main,body') || window;
       (scrollTarget === window ? window : scrollTarget).addEventListener('scroll', () => {
@@ -1175,7 +910,7 @@
             threadScheduler.runNow(); // respects cooldown
           }
         }
-        
+
         // Editor refresh happens independently
         if (effectiveSettings.showEditorCounter) {
           const editorChip = document.querySelector('.ocp-tokapprox-chip[data-kind="editor"]');
@@ -1188,11 +923,11 @@
         // Pause UI for inactive tab
         const threadChip = document.querySelector('.ocp-tokapprox-chip[data-kind="thread"]');
         const editorChip = document.querySelector('.ocp-tokapprox-chip[data-kind="editor"]');
-        
+
         if (threadChip && effectiveSettings.threadMode !== 'hide') {
           markPaused(threadChip, 'thread', effectiveSettings);
         }
-        
+
         if (editorChip && effectiveSettings.showEditorCounter) {
           markPaused(editorChip, 'editor', effectiveSettings);
         }
@@ -1202,12 +937,12 @@
     // Safety ticks (cooldown-aware) - separate for thread and editor
     setInterval(() => {
       if (document.visibilityState !== 'visible') return;
-      
+
       // Only trigger thread estimation if selector exists
       if (effectiveSettings.threadMode !== 'hide' && THREAD_SELECTOR) {
         threadScheduler.markDirty();
       }
-      
+
       // Editor estimation is independent
       if (effectiveSettings.showEditorCounter) {
         editorScheduler.markDirty();
@@ -1247,7 +982,7 @@
     if (effectiveSettings.threadMode !== 'hide' && THREAD_SELECTOR) {
       threadScheduler.runNow();
     }
-    
+
     // Always try to start editor estimation if enabled
     if (effectiveSettings.showEditorCounter) {
       editorScheduler.runNow();
@@ -1257,12 +992,12 @@
     try {
       chrome.runtime.onMessage.addListener((msg) => {
         if (!msg || msg.type !== 'tokenApproximatorSettingsChanged' || !msg.settings) return;
-        
+
         // Store old enabled state for comparison
         const wasEnabled = settings.enabled &&
-                          settings.enabledSites &&
-                          settings.enabledSites[Site];
-        
+          settings.enabledSites &&
+          settings.enabledSites[Site];
+
         Object.assign(settings, {
           enabled: !!msg.settings.enabled,
           calibration: Number.isFinite(msg.settings.calibration) && msg.settings.calibration > 0 ? Number(msg.settings.calibration) : settings.calibration,
@@ -1272,12 +1007,12 @@
           countingMethod: msg.settings.countingMethod || 'ultralight-state-machine',
           enabledSites: msg.settings.enabledSites || settings.enabledSites
         });
-        
+
         // Check if this site is no longer enabled (either globally or for this site specifically)
         const nowEnabled = settings.enabled &&
-                          settings.enabledSites &&
-                          settings.enabledSites[Site];
-                          
+          settings.enabledSites &&
+          settings.enabledSites[Site];
+
         if (wasEnabled && !nowEnabled) {
           // Remove the UI if this site was disabled
           log(`Token Approximator was disabled for site: ${Site}, removing UI.`);
@@ -1285,30 +1020,30 @@
           if (wrap) wrap.remove();
           return;
         }
-        
+
         // Update effectiveSettings for this site
         Object.assign(effectiveSettings, settings);
-        
+
         // Check if threadRoot selector is defined for this site
         if (!THREAD_SELECTOR && effectiveSettings.threadMode !== 'hide') {
           log(`Thread selector not defined for ${Site}, hiding thread counter`);
           effectiveSettings.threadMode = 'hide';
         }
-        
+
         placeUi(settings.placement, BUTTONS_CONTAINER_ID);
         showHideBySettings(effectiveSettings);
-        
+
         // Refresh tooltip prefixes (thread mode may have changed)
         try {
           setTooltip(threadChip, 'thread', threadChip.__tooltipStatus || 'stale', effectiveSettings);
           setTooltip(editorChip, 'editor', editorChip.__tooltipStatus || 'stale', effectiveSettings);
-        } catch {}
-        
+        } catch { }
+
         // Refresh on change - independent schedulers
         if (effectiveSettings.threadMode !== 'hide' && THREAD_SELECTOR) {
           threadScheduler.runNow();
         }
-        
+
         if (effectiveSettings.showEditorCounter) {
           editorScheduler.runNow();
         }
