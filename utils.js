@@ -304,6 +304,8 @@ class InjectionTargetsOnWebsite {
                     'div.b13855df', // Div-based editor
                     '[contenteditable="true"]' // Generic contenteditable
                 ],
+                // thread 
+                threadRoot: '.scrollable:has(textarea, [contenteditable="true"])',
                 buttonsContainerId: 'deepseek-custom-buttons-container'
             },
             AIStudio: {
