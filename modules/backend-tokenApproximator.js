@@ -710,11 +710,27 @@
     return document.querySelector(THREAD_SELECTOR);
   }
 
-  function getThreadText() {
+  function getThreadText(excludeEditors = false) {
     const root = getThreadRoot();
     if (!root) return '';
-    // innerText respects visibility & layout; good enough and fast to snapshot.
-    try { return root.innerText || ''; } catch { return root.textContent || ''; }
+    
+    if (excludeEditors) {
+      // For "ignoreEditors" mode, create a clone and remove editors
+      const clone = root.cloneNode(true);
+      
+      // Remove all editor elements from the clone
+      const editorsInThread = clone.querySelectorAll(EDITOR_SELECTOR);
+      for (const editor of editorsInThread) {
+        editor.parentNode.removeChild(editor);
+      }
+      
+      // Get text from the modified clone
+      try { return clone.innerText || ''; } catch { return clone.textContent || ''; }
+    } else {
+      // For normal mode, get all text including editors
+      // innerText respects visibility & layout; good enough and fast to snapshot.
+      try { return root.innerText || ''; } catch { return root.textContent || ''; }
+    }
   }
 
   function listEditors() {
@@ -887,7 +903,8 @@
           markLoading(editorChip, 'editor', settings);
         }
 
-        const rootTxt = getThreadText();
+        // Get thread text, excluding editors if in ignoreEditors mode
+        const rootTxt = getThreadText(settings.threadMode === 'ignoreEditors');
         const edTxt = editorsText();
         const texts = {
           all: `${rootTxt}\n${edTxt}`.trim(),
