@@ -414,9 +414,11 @@
    *
    */
   function createEstimatorWorker() {
-    // Gemini's CSP blocks blob workers. Fallback to an on-thread mock worker.
-    if (Site === 'Gemini') {
-      log('Using synchronous on-thread estimator for Gemini due to CSP.');
+    // CSP workaround: some sites (Gemini / AI Studio) block blob workers.
+    // In that case, return an on-thread mock worker.
+    if (Site === 'Gemini' || Site === 'AIStudio') {
+      // Use project logger; keep message site-specific for easier debugging.
+      log(`Using synchronous on-thread estimator for ${Site} due to CSP.`);
       const mockWorker = {
         onmessage: null,
         postMessage: (data) => {
