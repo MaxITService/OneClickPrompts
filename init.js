@@ -41,7 +41,7 @@ if (!window.__OCP_messageListenerRegistered_v2) {
 
     // Lightweight UI refresh that preserves the floating panel state
     // Accepts an optional `origin` parameter to limit refreshing to the initiator (e.g. 'panel' or 'inline').
-    window.__OCP_partialRefreshUI = function(optionalNewConfig, origin = null) {
+    window.__OCP_partialRefreshUI = function (optionalNewConfig, origin = null) {
         try {
             if (optionalNewConfig) {
                 window.globalMaxExtensionConfig = optionalNewConfig;
@@ -60,12 +60,12 @@ if (!window.__OCP_messageListenerRegistered_v2) {
 
     // Expose a single entry to perform partial or full refresh depending on panel presence
     // Accepts optional `origin` so partial refresh can be targeted when appropriate.
-    window.__OCP_nukeAndRefresh = function(optionalNewConfig, origin = null) {
+    window.__OCP_nukeAndRefresh = function (optionalNewConfig, origin = null) {
         if (window.__OCP_nukeInProgress) return;
         window.__OCP_nukeInProgress = true;
         try {
             const hasPanel = !!(window.MaxExtensionFloatingPanel && window.MaxExtensionFloatingPanel.panelElement);
-    
+
             if (hasPanel) {
                 // Preserve panel DOM/state; only refresh buttons/inline
                 window.__OCP_partialRefreshUI(optionalNewConfig, origin);
@@ -74,7 +74,7 @@ if (!window.__OCP_messageListenerRegistered_v2) {
                 if (optionalNewConfig) {
                     window.globalMaxExtensionConfig = optionalNewConfig;
                 }
-    
+
                 // 1) Stop resiliency monitors and timers from previous run
                 try {
                     if (window.OneClickPropmts_currentResiliencyTimeout) {
@@ -85,21 +85,21 @@ if (!window.__OCP_messageListenerRegistered_v2) {
                         window.OneClickPropmts_extendedMonitoringObserver.disconnect();
                         window.OneClickPropmts_extendedMonitoringObserver = null;
                     }
-                } catch (e) {}
-    
+                } catch (e) { }
+
                 // 2) Remove inline buttons container(s)
                 try {
                     const containerId = window?.InjectionTargetsOnWebsite?.selectors?.buttonsContainerId;
                     if (containerId) {
                         document.querySelectorAll('#' + CSS.escape(containerId)).forEach(node => node.remove());
                     }
-                } catch (e) {}
-    
+                } catch (e) { }
+
                 // 3) Do NOT remove the panel here (it is already absent in this branch)
-    
+
                 // 4) Detach keyboard listener to avoid duplicates
-                try { window.removeEventListener('keydown', manageKeyboardShortcutEvents); } catch (e) {}
-    
+                try { window.removeEventListener('keydown', manageKeyboardShortcutEvents); } catch (e) { }
+
                 // 5) Re-run full initialization
                 publicStaticVoidMain();
             }
@@ -238,7 +238,7 @@ async function commenceExtensionInitialization(configurationObject) {
                 let modsExist = (() => {
                     const containerId = window?.InjectionTargetsOnWebsite?.selectors?.buttonsContainerId;
                     if (!containerId) return false;
-                        const el = document.getElementById(containerId);
+                    const el = document.getElementById(containerId);
                     return !!(el && el.children && el.children.length > 0);
                 })();
                 // Only trigger fallback if no mods exist and the panel isn’t already visible.
@@ -367,13 +367,14 @@ function resilientStartAndRetryOnSPANavigation(callback) {
             window.__OCP_urlChangeObserver.disconnect();
             window.__OCP_urlChangeObserver = null;
         }
-    } catch (e) {}
+    } catch (e) { }
 
     let previousUrl = location.href;
     const urlChangeObserver = new MutationObserver(() => {
         const currentUrl = location.href;
         if (currentUrl !== previousUrl) {
             previousUrl = currentUrl;
+            document.dispatchEvent(new CustomEvent('ocp-page-navigated'));
             callback();
         }
     });
@@ -393,6 +394,7 @@ function patchHistoryMethods() {
         history[method] = function (...args) {
             const result = original.apply(this, args);
             logConCgp(`[init] ${method} called. URL:`, args[2]);
+            document.dispatchEvent(new CustomEvent('ocp-page-navigated'));
             publicStaticVoidMain(); // Re-run the full initialization logic
             return result;
         };

@@ -5,6 +5,15 @@
   if (window.__OCP_tokApprox_backend_initDone) return;
   window.__OCP_tokApprox_backend_initDone = true;
 
+  // A standard debounce utility function.
+  function debounce(func, delay) {
+    let timeout;
+    return function(...args) {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func.apply(this, args), delay);
+    };
+  }
+
   // ---- Guards & site detection ----
   const Site = (window.InjectionTargetsOnWebsite && window.InjectionTargetsOnWebsite.activeSite) || 'Unknown';
 
@@ -1314,5 +1323,15 @@
         }
       });
     } catch { /* noop */ }
+
+    // Create a debounced handler for page navigation events. This prevents
+    // excessive recalculations when a user navigates rapidly in a SPA.
+    const handlePageNavigation = debounce(() => {
+      log('Debounced navigation event triggered, forcing thread token update.');
+      threadScheduler.forceNow();
+    }, 2000);
+
+    // Listen for the custom event dispatched by init.js on SPA navigation.
+    document.addEventListener('ocp-page-navigated', handlePageNavigation);
   })();
 })();
