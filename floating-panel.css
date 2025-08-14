@@ -11,6 +11,7 @@
     resize: both;
     pointer-events: auto;
     color: rgba(255, 255, 255, 0.9);
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
 }
 
 /* Panel Header */
