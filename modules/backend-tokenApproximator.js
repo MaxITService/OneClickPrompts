@@ -18,13 +18,13 @@
   const Site = (window.InjectionTargetsOnWebsite && window.InjectionTargetsOnWebsite.activeSite) || 'Unknown';
 
   // Logging helper required by project
+  // Log only through logConCgp - no fallback to console.*
   function log(...args) {
     try {
       if (typeof window.logConCgp === 'function') {
         window.logConCgp('[tok-approx]', ...args);
-      } else {
-        console.log('[tok-approx]', ...args);
       }
+      // If logConCgp is not available, do nothing (project policy)
     } catch { /* noop */ }
   }
 
