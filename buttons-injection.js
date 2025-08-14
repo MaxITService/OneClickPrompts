@@ -78,6 +78,12 @@ function buttonBoxCheckingAndInjection(enableResiliency = true, activeWebsite) {
             // Insert custom elements (custom send buttons and toggles) into the target container.
             window.MaxExtensionButtonsInit.createAndInsertCustomElements(targetDiv);
 
+            // Mark this tab as "inline healthy" — once we have ever injected successfully,
+            // we never auto-summon the fallback panel again in this tab.
+            try {
+                window.__OCP_inlineHealthy = true;
+            } catch (_) {}
+
             // Ensure the inline selector inside does not close due to bubbling site handlers
             try {
                 const selector = targetDiv.querySelector('select');

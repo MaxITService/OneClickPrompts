@@ -63,7 +63,13 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
         this.updatePanelFromSettings();
 
         // Attach event listeners
-        closeButton.addEventListener('click', () => this.togglePanel());
+        closeButton.addEventListener('click', () => {
+            // If the user closes the panel, don’t auto-reopen it for this tab.
+            try {
+                window.__OCP_userDisabledFallback = true;
+            } catch (_) {}
+            this.togglePanel();
+        });
 
         this.makeDraggable(panel, panelHeader);
         this.makeDraggable(panel, profileSwitcherContainer);

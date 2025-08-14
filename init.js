@@ -223,7 +223,8 @@ async function commenceExtensionInitialization(configurationObject) {
     } else {
         logConCgp('[init] Decide-first: Panel is hidden. Using standard inline injection.');
         buttonBoxCheckingAndInjection(true);
-
+        // Initialize per-tab flags if absent
+        if (typeof window.__OCP_inlineHealthy === 'undefined') window.__OCP_inlineHealthy = false;
         /**
          * When inline injection fails (e.g., because the target container cannot be found),
          * there is no user click event to supply a mouse position for the floating panel.
@@ -234,18 +235,16 @@ async function commenceExtensionInitialization(configurationObject) {
         setTimeout(() => {
             try {
                 // Check if inline buttons were injected by looking for the container and its children.
-                let modsExist = false;
-                try {
+                let modsExist = (() => {
                     const containerId = window?.InjectionTargetsOnWebsite?.selectors?.buttonsContainerId;
-                    if (containerId) {
+                    if (!containerId) return false;
                         const el = document.getElementById(containerId);
-                        modsExist = !!(el && el.children && el.children.length > 0);
-                    }
-                } catch (_) {
-                    modsExist = false;
-                }
+                    return !!(el && el.children && el.children.length > 0);
+                })();
                 // Only trigger fallback if no mods exist and the panel isn’t already visible.
-                if (!modsExist && window.MaxExtensionFloatingPanel && !window.MaxExtensionFloatingPanel.isPanelVisible) {
+                const userDisabled = !!window.__OCP_userDisabledFallback;
+                if (!modsExist && !window.__OCP_inlineHealthy && !userDisabled &&
+                    window.MaxExtensionFloatingPanel && !window.MaxExtensionFloatingPanel.isPanelVisible) {
                     logConCgp("[init] We haven't found the place to inject buttons, so we will fall back to a floating panel instead.");
                     window.MaxExtensionFloatingPanel.createFloatingPanel().then(() => {
                         const panelElement = window.MaxExtensionFloatingPanel.panelElement;
@@ -267,6 +266,7 @@ async function commenceExtensionInitialization(configurationObject) {
                             panelElement.style.display = 'flex';
                             window.MaxExtensionFloatingPanel.isPanelVisible = true;
                             if (window.MaxExtensionFloatingPanel.currentPanelSettings) {
+                                // note: do not set inlineHealthy here — we are in fallback mode
                                 window.MaxExtensionFloatingPanel.currentPanelSettings.isVisible = true;
                                 window.MaxExtensionFloatingPanel.debouncedSavePanelSettings?.();
                             }
