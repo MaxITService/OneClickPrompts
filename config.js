@@ -425,9 +425,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case 'getTheme':
             (async () => {
                 try {
-                    const theme = await StateStore.getUiTheme();
-                    logConfigurationRelatedStuff('Retrieved theme preference: ' + theme);
-                    sendResponse({ darkTheme: theme });
+                    const theme = await StateStore.getUiTheme(); // 'light' | 'dark'
+                    // Minimal check: was ui.theme ever set? (without changing StateStore)
+                    let initialized = false;
+                    try {
+                        const raw = await chrome.storage.local.get(['ui.theme']);
+                        initialized = Object.prototype.hasOwnProperty.call(raw, 'ui.theme');
+                    } catch {}
+                    logConfigurationRelatedStuff(`Retrieved theme preference: ${theme} (initialized=${initialized})`);
+                    // Return both a canonical string and a legacy boolean, plus init flag
+                    sendResponse({ theme, darkTheme: theme === 'dark', initialized });
                 } catch (error) {
                     handleStorageError(error);
                     sendResponse({ error: error.message });
@@ -437,8 +444,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case 'setTheme':
             (async () => {
                 try {
-                    await StateStore.setUiTheme(request.darkTheme);
-                    logConfigurationRelatedStuff('Set theme preference to: ' + request.darkTheme);
+                    // Accept either { theme: 'light'|'dark' } or { darkTheme: boolean|string }
+                    let incoming = request.theme;
+                    if (incoming !== 'light' && incoming !== 'dark') {
+                        if (request.darkTheme === 'dark' || request.darkTheme === true) incoming = 'dark';
+                        else incoming = 'light';
+                    }
+                    await StateStore.setUiTheme(incoming);
+                    logConfigurationRelatedStuff('Set theme preference to: ' + incoming);
                     sendResponse({ success: true });
                 } catch (error) {
                     handleStorageError(error);

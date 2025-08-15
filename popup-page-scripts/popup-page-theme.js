@@ -1,6 +1,7 @@
 // popup-page-theme.js
 // Version: 1.0
 // Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS.
+// NOTE: On first run, initialize theme from OS preference and persist it.
 // This file handles the dark theme toggle functionality in the popup interface.
 
 'use strict';
@@ -24,13 +25,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Retrieve the current theme preference from the service worker storage
     chrome.runtime.sendMessage({ type: 'getTheme' }, (response) => {
-        let theme = 'light';
-        if (response && response.darkTheme) {
-            theme = response.darkTheme;
+        // Normalize response
+        let theme = (response && (response.theme === 'dark' || response.theme === 'light'))
+            ? response.theme
+            : (response && typeof response.darkTheme === 'boolean')
+                ? (response.darkTheme ? 'dark' : 'light')
+                : (response && (response.darkTheme === 'dark' || response.darkTheme === 'light'))
+                    ? response.darkTheme
+                    : 'light';
+
+        const initialized = !!(response && response.initialized === true);
+        if (!initialized) {
+            // First run: adopt OS preference and persist immediately
+            const osDark = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            theme = osDark ? 'dark' : 'light';
+            chrome.runtime.sendMessage({ type: 'setTheme', theme }, () => {});
         }
-        // Apply the retrieved theme
+
         applyTheme(theme);
-        // Set the toggle checkbox state based on the theme
         darkThemeToggle.checked = (theme === 'dark');
     });
 
@@ -39,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const newTheme = darkThemeToggle.checked ? 'dark' : 'light';
         applyTheme(newTheme);
         // Save the new theme preference using the service worker
-        chrome.runtime.sendMessage({ type: 'setTheme', darkTheme: newTheme }, (response) => {
+        chrome.runtime.sendMessage({ type: 'setTheme', theme: newTheme }, (response) => {
             if (response && response.success) {
                 console.log('Theme preference saved successfully.');
             } else if (response && response.error) {
