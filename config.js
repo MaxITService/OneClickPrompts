@@ -7,7 +7,7 @@ Service worker responsibilities (current):
 - Single entry point for extension messaging (onMessage) and lifecycle (install/activate).
 - Owns profile storage and related handlers (getConfig/saveConfig/switchProfile/etc.).
 - Delegates non‑profile storage (theme, custom selectors, floating panel, cross‑chat) to modules/service-worker-auxiliary-state-store.js.
-- Opens the welcome page on fresh install and runs migration checks.
+- Opens the welcome page on fresh install.
 */
 'use strict';
 // when you right click on extension icon in broser
@@ -717,11 +717,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
             url: chrome.runtime.getURL('welcome.html')
         });
 
-        // Preserve existing migration logic from activate event
-        const migrationSuccessful = await migrateSyncToLocal();
-        if (!migrationSuccessful) {
-            await createDefaultProfile();
-        }
+        await createDefaultProfile();
     }
 });
 
