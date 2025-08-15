@@ -24,19 +24,30 @@ const minimalDefaultConfig = {
  */
 async function loadProfiles() {
     try {
-        const response = await chrome.runtime.sendMessage({ type: 'listProfiles' });
-        profileSelect.innerHTML = ''; // Clear existing options
+        // Ensure a profile exists before listing; creates Default on first run.
+        const configResponse = await chrome.runtime.sendMessage({ type: 'getConfig' });
+        currentProfile = configResponse.config;
 
-        response.profiles.forEach(profile => {
+        // Retrieve all stored profiles.
+        const profilesResponse = await chrome.runtime.sendMessage({ type: 'listProfiles' });
+        profileSelect.innerHTML = ''; // Clear existing options.
+
+        // Use returned profiles or fall back to the current profile name if none exist.
+        const profiles = (profilesResponse.profiles && profilesResponse.profiles.length > 0)
+            ? profilesResponse.profiles
+            : [currentProfile.PROFILE_NAME];
+        if (!profilesResponse.profiles || profilesResponse.profiles.length === 0) {
+            logToGUIConsole('No stored profiles found; using current profile as fallback.');
+        }
+
+        profiles.forEach(profile => {
             const option = document.createElement('option');
             option.value = profile;
             option.textContent = profile;
             profileSelect.appendChild(option);
         });
 
-        // Load current profile
-        const configResponse = await chrome.runtime.sendMessage({ type: 'getConfig' });
-        currentProfile = configResponse.config;
+        // Set the current profile as selected
         profileSelect.value = currentProfile.PROFILE_NAME;
 
         updateInterface();

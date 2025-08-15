@@ -12,6 +12,8 @@ This document summarizes the non-profile state centralization changes and how to
 
 Profiles are explicitly excluded. Keys under currentProfile and profiles.* remain owned by their existing logic.
 
++- Popup loadProfiles ensures the default profile is created before listing profiles and falls back to the current profile name when none are returned, preventing an empty selector on first load.
+
 ## New Module
 
 1) modules/service-worker-auxiliary-state-store.js
