@@ -74,89 +74,102 @@ window.MaxExtensionButtonsInit = {
      * @param {boolean} isPanel - Flag indicating if the container is the floating panel.
      */
     generateAndAppendAllButtons: async function (container, isPanel) {
-       // --- Create a unified list of all buttons to be rendered ---
-       const allButtonDefs = [];
-       let nonSeparatorCount = 0;
+        const SETTINGS_BUTTON_MAGIC_TEXT = '%OCP_APP_SETTINGS_SYSTEM_BUTTON%';
+        // --- Create a unified list of all buttons to be rendered ---
+        const allButtonDefs = [];
+        let nonSeparatorCount = 0;
 
-       // 1. Add Cross-Chat buttons if they should be placed 'before'
-       if (window.globalCrossChatConfig?.enabled && window.globalCrossChatConfig.placement === 'before') {
-           allButtonDefs.push({ type: 'copy' });
-           allButtonDefs.push({ type: 'paste' });
-       }
+        // 1. Add Cross-Chat buttons if they should be placed 'before'
+        if (window.globalCrossChatConfig?.enabled && window.globalCrossChatConfig.placement === 'before') {
+            allButtonDefs.push({ type: 'copy' });
+            allButtonDefs.push({ type: 'paste' });
+        }
 
-       // 2. Add standard custom buttons
-       globalMaxExtensionConfig.customButtons.forEach(config => {
-           allButtonDefs.push({ type: 'custom', config: config });
-       });
+        // 2. Add standard custom buttons
+        globalMaxExtensionConfig.customButtons.forEach(config => {
+            allButtonDefs.push({ type: 'custom', config: config });
+        });
 
-       // 3. Add Cross-Chat buttons if they should be placed 'after'
-       if (window.globalCrossChatConfig?.enabled && window.globalCrossChatConfig.placement === 'after') {
-           allButtonDefs.push({ type: 'copy' });
-           allButtonDefs.push({ type: 'paste' });
-       }
+        // 3. Add Cross-Chat buttons if they should be placed 'after'
+        if (window.globalCrossChatConfig?.enabled && window.globalCrossChatConfig.placement === 'after') {
+            allButtonDefs.push({ type: 'copy' });
+            allButtonDefs.push({ type: 'paste' });
+        }
 
-       // --- Render all buttons from the unified list ---
+        // --- Render all buttons from the unified list ---
 
-       // Add floating panel toggle first, if applicable
-       if (window.MaxExtensionFloatingPanel && !isPanel) {
-           const floatingPanelToggleButton = window.MaxExtensionFloatingPanel.createPanelToggleButton();
-           container.appendChild(floatingPanelToggleButton);
-           logConCgp('[init] Floating panel toggle button has been created and appended for inline container.');
-       }
+        // Add floating panel toggle first, if applicable
+        if (window.MaxExtensionFloatingPanel && !isPanel) {
+            const floatingPanelToggleButton = window.MaxExtensionFloatingPanel.createPanelToggleButton();
+            container.appendChild(floatingPanelToggleButton);
+            logConCgp('[init] Floating panel toggle button has been created and appended for inline container.');
+        }
 
-       // Inline Profile Selector BEFORE buttons
-       if (window.globalInlineSelectorConfig?.enabled && window.globalInlineSelectorConfig.placement === 'before' && !isPanel) {
-           if (typeof this.createInlineProfileSelector === 'function') {
-               const selectorElBefore = await this.createInlineProfileSelector();
-               if (selectorElBefore) {
-                   container.appendChild(selectorElBefore);
-                   logConCgp('[init] Inline Profile Selector appended before buttons.');
-               }
-           }
-       }
+        // Inline Profile Selector BEFORE buttons
+        if (window.globalInlineSelectorConfig?.enabled && window.globalInlineSelectorConfig.placement === 'before' && !isPanel) {
+            if (typeof this.createInlineProfileSelector === 'function') {
+                const selectorElBefore = await this.createInlineProfileSelector();
+                if (selectorElBefore) {
+                    container.appendChild(selectorElBefore);
+                    logConCgp('[init] Inline Profile Selector appended before buttons.');
+                }
+            }
+        }
 
-       // Process the unified list to create and append buttons
-       allButtonDefs.forEach((def, index) => {
-           // Handle separators from custom buttons
-           if (def.type === 'custom' && def.config.separator) {
-               const separatorElement = MaxExtensionUtils.createSeparator();
-               container.appendChild(separatorElement);
-               logConCgp('[init] Separator element has been created and appended.');
-               return; // Skip to next item
-           }
+        // Process the unified list to create and append buttons
+        allButtonDefs.forEach((def, index) => {
+            // Handle separators from custom buttons
+            if (def.type === 'custom' && def.config.separator) {
+                const separatorElement = MaxExtensionUtils.createSeparator();
+                container.appendChild(separatorElement);
+                logConCgp('[init] Separator element has been created and appended.');
+                return; // Skip to next item
+            }
 
-           // Assign a shortcut key if enabled and available
-           let shortcutKey = null;
-           if (globalMaxExtensionConfig.enableShortcuts && nonSeparatorCount < 10) {
-               shortcutKey = nonSeparatorCount + 1;
-           }
+            // Assign a shortcut key if enabled and available
+            let shortcutKey = null;
+            if (globalMaxExtensionConfig.enableShortcuts && nonSeparatorCount < 10) {
+                shortcutKey = nonSeparatorCount + 1;
+            }
 
-           let buttonElement;
-           if (def.type === 'copy' || def.type === 'paste') {
-               buttonElement = MaxExtensionButtons.createCrossChatButton(def.type, shortcutKey);
-           } else { // 'custom'
-               buttonElement = MaxExtensionButtons.createCustomSendButton(def.config, index, processCustomSendButtonClick, shortcutKey);
-           }
+            let buttonElement;
+            if (def.type === 'copy' || def.type === 'paste') {
+                buttonElement = MaxExtensionButtons.createCrossChatButton(def.type, shortcutKey);
+            } else { // 'custom' button type
+                if (def.config.text === SETTINGS_BUTTON_MAGIC_TEXT) {
+                    // Special handling for the settings button.
+                    const settingsButtonConfig = { ...def.config, text: 'Settings' };
+                    const settingsClickHandler = () => {
+                       // Send a message to the service worker to open the settings page.
+                       // This avoids the popup blocker (ERR_BLOCKED_BY_CLIENT).
+                       chrome.runtime.sendMessage({ type: 'openSettingsPage' });
+                    };
+                    buttonElement = MaxExtensionButtons.createCustomSendButton(settingsButtonConfig, index, settingsClickHandler, shortcutKey);
+                    buttonElement.title = 'Open extension settings in a new tab';
+                } else {
+                    buttonElement = MaxExtensionButtons.createCustomSendButton(def.config, index, processCustomSendButtonClick, shortcutKey);
+                }
+            }
 
-           container.appendChild(buttonElement);
-           nonSeparatorCount++;
-           logConCgp(`[init] Button ${nonSeparatorCount} (${def.type}) has been created and appended.`);
-       });
+            container.appendChild(buttonElement);
+            nonSeparatorCount++;
+            logConCgp(`[init] Button ${nonSeparatorCount} (${def.type}) has been created and appended.`);
+        });
 
-       // Inline Profile Selector AFTER buttons
-       if (window.globalInlineSelectorConfig?.enabled && window.globalInlineSelectorConfig.placement === 'after' && !isPanel) {
-           if (typeof this.createInlineProfileSelector === 'function') {
-               const selectorElAfter = await this.createInlineProfileSelector();
-               if (selectorElAfter) {
-                   container.appendChild(selectorElAfter);
-                   logConCgp('[init] Inline Profile Selector appended after buttons.');
-               }
-           }
-       }
+        // Inline Profile Selector AFTER buttons
+        if (window.globalInlineSelectorConfig?.enabled && window.globalInlineSelectorConfig.placement === 'after' && !isPanel) {
+            if (typeof this.createInlineProfileSelector === 'function') {
+                const selectorElAfter = await this.createInlineProfileSelector();
+                if (selectorElAfter) {
+                    container.appendChild(selectorElAfter);
+                    logConCgp('[init] Inline Profile Selector appended after buttons.');
+                }
+            }
+        }
 
-       // --- Add toggles at the very end, always after everything else ---
-       this.generateAndAppendToggles(container);
-   },
+        // --- Add toggles at the very end, always after everything else ---
+        this.generateAndAppendToggles(container);
+    },
 
     /**
      * Creates and inserts custom buttons and toggles into the target container element.
@@ -218,7 +231,7 @@ window.MaxExtensionButtonsInit = {
             }
             return;
         }
-    
+
         // If origin is 'inline', only update the inline/original container
         if (origin === 'inline') {
             const originalContainer = document.getElementById(window.InjectionTargetsOnWebsite.selectors.buttonsContainerId);
@@ -260,12 +273,12 @@ window.MaxExtensionButtonsInit.createInlineProfileSelector = async function () {
         select.style.backgroundPosition = 'right 2px center';
         select.style.backgroundSize = '16px';
         select.tabIndex = 0;
-        
+
         // Check if dark theme is active and apply appropriate styling
         const isDarkTheme = document.body.classList.contains('dark-theme') ||
-                           document.documentElement.classList.contains('dark-theme') ||
-                           window.matchMedia('(prefers-color-scheme: dark)').matches;
-        
+            document.documentElement.classList.contains('dark-theme') ||
+            window.matchMedia('(prefers-color-scheme: dark)').matches;
+
         if (isDarkTheme) {
             select.style.background = '#333';
             select.style.color = '#eee';
@@ -279,7 +292,7 @@ window.MaxExtensionButtonsInit.createInlineProfileSelector = async function () {
 
         // Prevent hostile site handlers from closing the dropdown immediately on SPA UIs (e.g. ChatGPT)
         const stop = (e) => { e.stopPropagation(); };
-        ['pointerdown','mousedown','mouseup','click','touchstart','touchend','keydown'].forEach(evt => {
+        ['pointerdown', 'mousedown', 'mouseup', 'click', 'touchstart', 'touchend', 'keydown'].forEach(evt => {
             select.addEventListener(evt, stop, { capture: true });
         });
 

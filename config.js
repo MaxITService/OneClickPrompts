@@ -715,6 +715,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             return true;
         // ===== End Token Approximator Cases =====
 
+        case 'openSettingsPage':
+            (async () => {
+                try {
+                    await chrome.tabs.create({
+                        url: chrome.runtime.getURL('popup.html?isTab=true')
+                    });
+                    logConfigurationRelatedStuff('Settings page opened on request.');
+                    sendResponse({ success: true });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ success: false, error: error.message });
+                }
+            })();
+            return true;
+
         default:
             logConfigurationRelatedStuff('Unknown message type received:', request.type);
             sendResponse({ error: 'Unknown message type' });
