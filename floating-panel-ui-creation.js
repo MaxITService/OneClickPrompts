@@ -52,6 +52,7 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
         const panelHeader = document.getElementById('max-extension-floating-panel-header');
         const closeButton = document.getElementById('max-extension-panel-close-btn');
         const collapseButton = document.getElementById('max-extension-panel-collapse-btn');
+        const collapseFooterButton = document.getElementById('max-extension-panel-collapse-footer-btn');
         const profileSwitcherContainer = document.getElementById('max-extension-profile-switcher');
 
         // Ensure settings object exists before trying to access its properties.
@@ -69,6 +70,13 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
                 this.toggleHeaderCollapse();
             }
         });
+        if (collapseFooterButton) {
+            collapseFooterButton.addEventListener('click', () => {
+                if (typeof this.toggleFooterCollapse === 'function') {
+                    this.toggleFooterCollapse();
+                }
+            });
+        }
         closeButton.addEventListener('click', () => {
             // If the user closes the panel, don’t auto-reopen it for this tab.
             try {
@@ -171,7 +179,7 @@ window.MaxExtensionFloatingPanel.createProfileSwitcher = function () {
         margin-right: 16px;
     `;
 
-    // Append both containers to the switcher container - queue toggle on left, profile on right
+    // Append queue toggle and profile containers to the switcher (they will appear on the left)
     switcherContainer.appendChild(queueToggleContainer);
     switcherContainer.appendChild(profileContainer);
 

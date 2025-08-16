@@ -137,6 +137,50 @@ window.MaxExtensionFloatingPanel.applyHeaderCollapsedState = function (isCollaps
     }
 };
 
+/**
+ * Toggles the collapsed state of the panel footer and saves it.
+ */
+window.MaxExtensionFloatingPanel.toggleFooterCollapse = function () {
+    if (!this.panelElement || !this.currentPanelSettings) return;
+
+    // Toggle the state
+    this.currentPanelSettings.isFooterCollapsed = !this.currentPanelSettings.isFooterCollapsed;
+
+    // Apply the visual change
+    this.applyFooterCollapsedState(this.currentPanelSettings.isFooterCollapsed);
+
+    // Save the new state
+    this.debouncedSavePanelSettings();
+};
+
+/**
+ * Applies the visual collapsed/expanded state to the footer elements.
+ * This function only handles the DOM changes.
+ * @param {boolean} isCollapsed - The desired state.
+ */
+window.MaxExtensionFloatingPanel.applyFooterCollapsedState = function (isCollapsed) {
+    const footer = document.getElementById('max-extension-profile-switcher');
+    const collapseButton = document.getElementById('max-extension-panel-collapse-footer-btn');
+
+    if (!footer || !collapseButton) return;
+
+    if (isCollapsed) {
+        footer.classList.add('collapsed');
+        collapseButton.classList.add('collapsed');
+        collapseButton.title = 'Expand footer';
+        if (this.panelElement) {
+            this.panelElement.classList.add('has-collapsed-footer');
+        }
+    } else {
+        footer.classList.remove('collapsed');
+        collapseButton.classList.remove('collapsed');
+        collapseButton.title = 'Collapse footer';
+        if (this.panelElement) {
+            this.panelElement.classList.remove('has-collapsed-footer');
+        }
+    }
+};
+
 
 /**
  * Updates the panel's dynamic styles based on current settings.
@@ -184,6 +228,12 @@ window.MaxExtensionFloatingPanel.updatePanelFromSettings = function () {
         // Ensure settings has the property, fallback to default if not.
         const isCollapsed = this.currentPanelSettings.isHeaderCollapsed ?? this.defaultPanelSettings.isHeaderCollapsed;
         this.applyHeaderCollapsedState(isCollapsed);
+    }
+
+    // Restore footer collapsed state from settings
+    if (typeof this.applyFooterCollapsedState === 'function') {
+        const isCollapsed = this.currentPanelSettings.isFooterCollapsed ?? this.defaultPanelSettings.isFooterCollapsed;
+        this.applyFooterCollapsedState(isCollapsed);
     }
 
     // Opacity

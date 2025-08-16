@@ -67,6 +67,19 @@
     z-index: 100;                   /* Higher than header & content stacking */
 }
 
+/* Container for the footer controls */
+#max-extension-panel-footer-controls {
+    position: absolute;             /* Position relative to the main panel */
+    bottom: 5px;                    /* Visual placement */
+    right: 5px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    pointer-events: auto;           /* Ensure this layer receives pointer events */
+    z-index: 100;                   /* Higher than header, content, and footer stacking */
+}
+
+
 /* New collapse button */
 #max-extension-panel-collapse-btn {
     background: none;
@@ -80,6 +93,22 @@
 }
 
 #max-extension-panel-collapse-btn.collapsed {
+    transform: rotate(180deg);
+}
+
+/* New collapse button for the footer */
+#max-extension-panel-collapse-footer-btn {
+    background: none;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0 3px;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.9);
+    transition: transform 0.3s ease-in-out;
+}
+
+#max-extension-panel-collapse-footer-btn.collapsed {
     transform: rotate(180deg);
 }
 
@@ -109,6 +138,13 @@
    This prevents the content from overlaying the control buttons' hit area. */
 #max-extension-floating-panel.has-collapsed-header #max-extension-floating-panel-content {
     padding-top: 24px;   /* Should be >= visual height of controls strip */
+}
+
+/* When footer is collapsed, reserve a thin click-safe strip for the controls.
+   This prevents the queue section from overlaying the control buttons' hit area. */
+#max-extension-floating-panel.has-collapsed-footer #max-extension-queue-section {
+    padding-bottom: 24px; /* Should be >= visual height of controls strip */
+    position: relative;
 }
 
 /* Queue section also needs protection from header controls overlay when collapsed */
@@ -296,13 +332,33 @@
 
 /* Profile Switcher Footer */
 #max-extension-profile-switcher {
-    padding: 4px 8px;
+    padding: 4px 30px 4px 8px; /* Make space on the right for collapse button */
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start; /* Align profile selector to the left */
     align-items: center;
     border-top: 1px solid rgba(100, 100, 100, 0.3);
     cursor: move;
     gap: 8px;
+    /* Added for collapse functionality */
+    overflow: hidden;
+    transition: height 0.3s ease-in-out, padding 0.3s ease-in-out, border-color 0.3s ease-in-out;
+    height: 32px; /* Explicit height is crucial for animation */
+    position: relative; /* Ensure stacking context for children opacity transitions */
+}
+
+/* Collapsed state for the footer */
+#max-extension-profile-switcher.collapsed {
+    height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-top-color: transparent;
+    cursor: default;
+    pointer-events: none;
+}
+
+#max-extension-profile-switcher.collapsed > * {
+    opacity: 0;
+    transition: opacity 0.1s ease-out;
 }
 
 /* Profile elements container */
