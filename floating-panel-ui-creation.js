@@ -355,7 +355,7 @@ window.MaxExtensionFloatingPanel.initializeResponsiveQueueToggle = function () {
 
         const panelWidth = this.panelElement.offsetWidth;
         // More aggressive threshold - move toggle at smaller widths
-        const minWidthForFooterPlacement = 320;
+        const minWidthForFooterPlacement = 350;
 
         if (panelWidth >= minWidthForFooterPlacement) {
             // Move toggle to footer if it's not already there
