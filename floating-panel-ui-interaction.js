@@ -1,3 +1,4 @@
+// floating-panel-ui-interaction.js
 // Version: 1.1
 //
 // Documentation:
@@ -91,6 +92,51 @@ window.MaxExtensionFloatingPanel.togglePanel = async function (event) {
     }
 };
 
+/**
+ * Toggles the collapsed state of the panel header and saves it.
+ */
+window.MaxExtensionFloatingPanel.toggleHeaderCollapse = function () {
+    if (!this.panelElement || !this.currentPanelSettings) return;
+
+    // Toggle the state
+    this.currentPanelSettings.isHeaderCollapsed = !this.currentPanelSettings.isHeaderCollapsed;
+
+    // Apply the visual change
+    this.applyHeaderCollapsedState(this.currentPanelSettings.isHeaderCollapsed);
+
+    // Save the new state
+    this.debouncedSavePanelSettings();
+};
+
+/**
+ * Applies the visual collapsed/expanded state to the header elements.
+ * This function only handles the DOM changes.
+ * @param {boolean} isCollapsed - The desired state.
+ */
+window.MaxExtensionFloatingPanel.applyHeaderCollapsedState = function (isCollapsed) {
+    const header = document.getElementById('max-extension-floating-panel-header');
+    const collapseButton = document.getElementById('max-extension-panel-collapse-btn');
+
+    if (!header || !collapseButton) return;
+
+    if (isCollapsed) {
+        header.classList.add('collapsed');
+        collapseButton.classList.add('collapsed');
+        collapseButton.title = 'Expand header';
+        // Expose a state class on the root to drive layout/stacking (CSS uses it to add top padding)
+        if (this.panelElement) {
+            this.panelElement.classList.add('has-collapsed-header'); // Allows content to reserve click-safe strip
+        }
+    } else {
+        header.classList.remove('collapsed');
+        collapseButton.classList.remove('collapsed');
+        collapseButton.title = 'Collapse header';
+        if (this.panelElement) {
+            this.panelElement.classList.remove('has-collapsed-header');
+        }
+    }
+};
+
 
 /**
  * Updates the panel's dynamic styles based on current settings.
@@ -131,6 +177,13 @@ window.MaxExtensionFloatingPanel.updatePanelFromSettings = function () {
             this.positionPanelBottomRight();
             return;
         }
+    }
+
+    // Restore header collapsed state from settings
+    if (typeof this.applyHeaderCollapsedState === 'function') {
+        // Ensure settings has the property, fallback to default if not.
+        const isCollapsed = this.currentPanelSettings.isHeaderCollapsed ?? this.defaultPanelSettings.isHeaderCollapsed;
+        this.applyHeaderCollapsedState(isCollapsed);
     }
 
     // Opacity

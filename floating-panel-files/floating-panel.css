@@ -1,3 +1,4 @@
+/* floating-panel-files/floating-panel.css */
 /* Main Panel Container */
 #max-extension-floating-panel {
     position: fixed;
@@ -19,15 +20,67 @@
     padding: 4px 8px;
     cursor: move;
     display: flex;
-    justify-content: space-between;
     align-items: center;
     user-select: none;
+    overflow: hidden;
+    /* To hide smoothly when collapsing */
+    transition: height 0.3s ease-in-out, padding 0.3s ease-in-out;
+    height: 28px;
+    /* Explicit height is crucial for animation */
+    position: relative; /* Establish a stacking context */
+    z-index: 1; /* Ensure header is explicitly below the controls */
+}
+
+/* Collapsed state for the header */
+#max-extension-floating-panel-header.collapsed {
+    height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    cursor: default;
+    /* No move cursor when collapsed */
+    pointer-events: none;
+    /* Prevent the zero-height header from capturing mouse events */
 }
 
 #max-extension-panel-title {
     font-weight: bold;
     font-size: 12px;
     color: rgba(255, 255, 255, 0.9);
+    transition: opacity 0.2s ease-out;
+    padding-right: 60px;
+    /* Ensure title doesn't go under the absolute-positioned controls */
+}
+
+#max-extension-floating-panel-header.collapsed #max-extension-panel-title {
+    opacity: 0;
+}
+
+/* Container for the buttons in the header */
+#max-extension-panel-header-controls {
+    position: absolute;             /* Position relative to the main panel */
+    top: 5px;                       /* Visual placement */
+    right: 5px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    pointer-events: auto;           /* Ensure this layer receives pointer events */
+    z-index: 100;                   /* Higher than header & content stacking */
+}
+
+/* New collapse button */
+#max-extension-panel-collapse-btn {
+    background: none;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0 3px;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.9);
+    transition: transform 0.3s ease-in-out;
+}
+
+#max-extension-panel-collapse-btn.collapsed {
+    transform: rotate(180deg);
 }
 
 #max-extension-panel-close-btn {
@@ -48,6 +101,21 @@
     flex-wrap: wrap;
     gap: 4px;
     align-content: flex-start;
+    position: relative;  /* Create a local stacking context */
+    z-index: 0;          /* Keep content below the controls layer */
+}
+
+/* When header is collapsed, reserve a thin click-safe strip for the controls.
+   This prevents the content from overlaying the control buttons' hit area. */
+#max-extension-floating-panel.has-collapsed-header #max-extension-floating-panel-content {
+    padding-top: 24px;   /* Should be >= visual height of controls strip */
+}
+
+/* Queue section also needs protection from header controls overlay when collapsed */
+#max-extension-floating-panel.has-collapsed-header #max-extension-queue-section {
+    position: relative;  /* Ensure proper stacking context */
+    z-index: 1;          /* Keep queue below controls but above base content */
+    margin-top: 4px;     /* Small additional buffer to prevent control overlap */
 }
 
 /* Queue Section */
@@ -75,7 +143,8 @@
 
 /* Adjust queue section layout when toggle is moved to footer */
 #max-extension-queue-section.toggle-in-footer .controls-container {
-    justify-content: flex-end; /* Align controls to the right when toggle is gone */
+    justify-content: flex-end;
+    /* Align controls to the right when toggle is gone */
 }
 
 #max-extension-queue-section .expandable-queue-controls {
@@ -119,7 +188,7 @@
     border: 1px solid #666;
     border-radius: 4px;
     padding: 2px 4px;
-    font-size: 12px;   
+    font-size: 12px;
 }
 
 #max-extension-queue-section .action-buttons-container {
@@ -270,7 +339,7 @@
 .queue-toggle-footer-container .toggle-container {
     margin-top: 0 !important;
     padding-left: 0 !important;
-    margin-right: auto !important; 
+    margin-right: auto !important;
 }
 
 .queue-toggle-footer-container label {
@@ -306,14 +375,15 @@
 /*without this there are no up and down arrows next to number imput */
 #max-extension-queue-delay-input::-webkit-inner-spin-button,
 #max-extension-queue-delay-input::-webkit-outer-spin-button {
-    -webkit-appearance: auto;   
+    -webkit-appearance: auto;
     opacity: 1;
     margin: 0;
 }
 
 /* Style all checkboxes inside your panel */
 #max-extension-floating-panel input[type="checkbox"] {
-    accent-color: #444; /* Modern browsers support this */
+    accent-color: #444;
+    /* Modern browsers support this */
     background-color: rgba(60, 60, 60, 1);
     border: 1px solid #888;
     width: 16px;

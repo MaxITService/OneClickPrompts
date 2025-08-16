@@ -45,7 +45,8 @@ window.MaxExtensionFloatingPanel = {
         posX: 100,
         posY: 100,
         opacity: 0.7,
-        isVisible: false
+        isVisible: false,
+        isHeaderCollapsed: false
     },
     currentPanelSettings: null,
     savePositionTimer: null,

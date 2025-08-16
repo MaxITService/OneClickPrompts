@@ -1,13 +1,18 @@
 <div id="max-extension-floating-panel">
-  <!-- Header for dragging and closing -->
-  <div id="max-extension-floating-panel-header">
-    <div id="max-extension-panel-title">OneClickPrompts</div>
+  <!-- Header controls are now a direct child of the panel for persistent visibility -->
+  <div id="max-extension-panel-header-controls">
+    <button id="max-extension-panel-collapse-btn" title="Collapse header">▼</button>
     <button
       id="max-extension-panel-close-btn"
       title="Close panel and return to injected buttons"
     >
       ×
     </button>
+  </div>
+
+  <!-- Header for dragging and closing -->
+  <div id="max-extension-floating-panel-header">
+    <span id="max-extension-panel-title">OneClickPrompts</span>
   </div>
 
   <!-- Container for prompt buttons -->

@@ -51,6 +51,7 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
         this.panelElement = panel;
         const panelHeader = document.getElementById('max-extension-floating-panel-header');
         const closeButton = document.getElementById('max-extension-panel-close-btn');
+        const collapseButton = document.getElementById('max-extension-panel-collapse-btn');
         const profileSwitcherContainer = document.getElementById('max-extension-profile-switcher');
 
         // Ensure settings object exists before trying to access its properties.
@@ -63,6 +64,11 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
         this.updatePanelFromSettings();
 
         // Attach event listeners
+        collapseButton.addEventListener('click', () => {
+            if (typeof this.toggleHeaderCollapse === 'function') {
+                this.toggleHeaderCollapse();
+            }
+        });
         closeButton.addEventListener('click', () => {
             // If the user closes the panel, don’t auto-reopen it for this tab.
             try {
