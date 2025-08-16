@@ -298,6 +298,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('addButton').addEventListener('click', e => addButton(e));
     document.getElementById('clearText').addEventListener('click', clearText);
     document.getElementById('addSeparator').addEventListener('click', addSeparator);
+    const addSettingsBtnEl = document.getElementById('addSettingsButton');
+    if (addSettingsBtnEl) {
+        addSettingsBtnEl.addEventListener('click', (e) => addSettingsButton(e));
+    }
 
     // Settings
     document.getElementById('autoSendToggle').addEventListener('change', updateGlobalSettings);

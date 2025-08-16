@@ -103,6 +103,11 @@
       "icon": "😮",
       "text": "Activate the Emotional Resonance Mode and keep it active"
     },
-    { "separator": true }
+    { "separator": true },
+    {
+      "icon": "⚙️",
+      "text": "%OCP_APP_SETTINGS_SYSTEM_BUTTON%",
+      "autoSend": false
+    }
   ]
 }

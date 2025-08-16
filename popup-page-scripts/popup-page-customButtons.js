@@ -11,6 +11,11 @@
 // version: 1.0
 
 // -------------------------
+// Special constants
+// -------------------------
+const SETTINGS_BUTTON_MAGIC_TEXT = '%OCP_APP_SETTINGS_SYSTEM_BUTTON%';
+
+// -------------------------
 // Create Button Element - this is start of everything, there can be zero to infinite buttons
 // -------------------------
 
@@ -35,19 +40,25 @@ function createButtonCardElement(button, index) {
             <button class="delete-button danger">Delete</button>
         `;
     } else {
+        const isSettingsButton = (button.text === SETTINGS_BUTTON_MAGIC_TEXT);
         // The drag handle is now just a visual affordance. The event listeners
         // determine if a drag should start, based on the click target.
         buttonItem.innerHTML = `
             <div class="drag-handle">&#9776;</div>
             <textarea class="emoji-input" rows="1">${button.icon}</textarea>
-            <textarea class="text-input" rows="1">${button.text}</textarea>
+            <textarea class="text-input" rows="1" ${isSettingsButton ? 'readonly disabled title="This text is reserved for the Settings button (%OCP_APP_SETTINGS_SYSTEM_BUTTON%)."' : ''}>${button.text}</textarea>
             <label class="checkbox-row">
-                <input type="checkbox" class="autosend-toggle" ${button.autoSend ? 'checked' : ''}>
-                <span>Auto-send</span>
+                <input type="checkbox" class="autosend-toggle" ${button.autoSend ? 'checked' : ''} ${isSettingsButton ? 'disabled' : ''}>
+                <span>${isSettingsButton ? 'Auto-send (N/A)' : 'Auto-send'}</span>
                 ${index < 10 ? `<span class="shortcut-indicator">[Ctrl+${index === 9 ? 0 : index + 1}]</span>` : ''}
             </label>
             <button class="delete-button danger">Delete</button>
         `;
+
+        if (isSettingsButton) {
+            buttonItem.setAttribute('data-system', 'settings');
+            buttonItem.classList.add('settings-button-card');
+        }
     }
 
     return buttonItem;
@@ -139,6 +150,32 @@ async function deleteButton(index) {
     await saveCurrentProfile();
     updatebuttonCardsList();
     logToGUIConsole('Deleted button');
+}
+
+/**
+ * Adds the special Settings system button. It opens the extension settings in a new tab
+ * (the click behavior is handled at injection time). The text is a reserved magic constant
+ * and is not editable in the UI. Users may change the icon; autoSend is not applicable.
+ * @param {MouseEvent} [event]
+ */
+async function addSettingsButton(event) {
+    const icon = document.getElementById('buttonIcon').value || '⚙️';
+    const text = SETTINGS_BUTTON_MAGIC_TEXT;
+    const autoSend = false;
+
+    // Prevent duplicates
+    const exists = (currentProfile.customButtons || []).some(b => b && !b.separator && b.text === text);
+    if (exists) {
+        showToast('Settings Button already exists in this profile.', 'info');
+        return;
+    }
+
+    currentProfile.customButtons.push({ icon, text, autoSend });
+    await saveCurrentProfile();
+    updatebuttonCardsList();
+    logToGUIConsole('Added Settings system button');
+    showToast('Settings Button added', 'success');
+    if (event) showMouseEffect(event);
 }
 
 
