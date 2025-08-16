@@ -130,7 +130,7 @@ window.MaxExtensionFloatingPanel.applyHeaderCollapsedState = function (isCollaps
     } else {
         header.classList.remove('collapsed');
         collapseButton.classList.remove('collapsed');
-        collapseButton.title = 'Collapse header';
+        collapseButton.title = 'Collapse header - This will collapse this header to save some window space. You can then click again to uncollapse. ';
         if (this.panelElement) {
             this.panelElement.classList.remove('has-collapsed-header');
         }
@@ -174,7 +174,7 @@ window.MaxExtensionFloatingPanel.applyFooterCollapsedState = function (isCollaps
     } else {
         footer.classList.remove('collapsed');
         collapseButton.classList.remove('collapsed');
-        collapseButton.title = 'Collapse footer';
+        collapseButton.title = 'Collapse footer - This will collapse this footer to save some window space. You can then click again to uncollapse. ';
         if (this.panelElement) {
             this.panelElement.classList.remove('has-collapsed-footer');
         }
