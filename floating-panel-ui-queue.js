@@ -1,3 +1,4 @@
+// floating-panel-ui-queue.js
 // Version: 1.1
 //
 // Documentation:
@@ -26,7 +27,7 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
     // Get references to elements from the loaded HTML
     this.queueSectionElement = document.getElementById('max-extension-queue-section');
     const togglePlaceholder = document.getElementById('max-extension-queue-toggle-placeholder');
-    const expandableSection = this.queueSectionElement.querySelector('.expandable-queue-controls');
+    const expandableSection = this.queueSectionElement?.querySelector('.expandable-queue-controls');
     this.delayInputElement = document.getElementById('max-extension-queue-delay-input');
     this.delayUnitToggle = document.getElementById('max-extension-delay-unit-toggle');
     this.playQueueButton = document.getElementById('max-extension-play-queue-btn');
@@ -103,6 +104,10 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
     const toggleCallback = (state) => {
         // Check global TOS setting first
         if (state && !window.MaxExtensionGlobalSettings.acceptedQueueTOS) {
+            // Make sure the queue section is visible so the warning isn't hidden by responsive/footer logic.
+            if (this.queueSectionElement) {
+                this.queueSectionElement.style.display = 'flex';
+            }
             tosWarningContainer.style.display = 'block';
             this.queueModeToggle.style.display = 'none'; // Hide toggle
             this.queueModeToggle.querySelector('input').checked = false; // Uncheck it
@@ -111,20 +116,21 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
 
         // If TOS is accepted, proceed with profile setting
         window.globalMaxExtensionConfig.enableQueueMode = state;
-        expandableSection.style.display = state ? 'contents' : 'none';
-        this.queueDisplayArea.style.display = state ? 'flex' : 'none';
+        if (expandableSection) {
+            expandableSection.style.display = state ? 'contents' : 'none';
+        }
+        if (this.queueDisplayArea) {
+            this.queueDisplayArea.style.display = state ? 'flex' : 'none';
+        }
         this.saveCurrentProfileConfig(); // Save to profile
-        
-        // Update queue section visibility when toggle is in footer
+
+        // If the toggle lives in the footer, keep the queue section visible only when enabled.
         const queueToggleFooter = document.getElementById('max-extension-queue-toggle-footer');
         const queueSection = document.getElementById('max-extension-queue-section');
         if (queueToggleFooter && queueToggleFooter.children.length > 0) {
-            // Toggle is in footer
             if (state) {
-                // Show queue section with controls when enabled
                 queueSection.style.display = 'flex';
             } else {
-                // Hide entire queue section when disabled
                 queueSection.style.display = 'none';
             }
         }
@@ -141,8 +147,12 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
     this.queueModeToggle.title = 'When enabled, clicking buttons adds them to a queue instead of sending immediately.';
     togglePlaceholder.appendChild(this.queueModeToggle);
 
-    expandableSection.style.display = isQueueEnabled ? 'contents' : 'none';
-    this.queueDisplayArea.style.display = isQueueEnabled ? 'flex' : 'none';
+    if (expandableSection) {
+        expandableSection.style.display = isQueueEnabled ? 'contents' : 'none';
+    }
+    if (this.queueDisplayArea) {
+        this.queueDisplayArea.style.display = isQueueEnabled ? 'flex' : 'none';
+    }
 
     // Initialize responsive positioning after toggle is created
     if (this.initializeResponsiveQueueToggle) {
@@ -163,15 +173,19 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         tosWarningContainer.style.display = 'none';
         this.queueModeToggle.style.display = ''; // Show toggle again
         this.queueModeToggle.querySelector('input').checked = true;
-        expandableSection.style.display = 'contents';
-        this.queueDisplayArea.style.display = 'flex';
+        if (expandableSection) expandableSection.style.display = 'contents';
+        if (this.queueDisplayArea) this.queueDisplayArea.style.display = 'flex';
+        // Ensure the queue section is visible after acceptance
+        if (this.queueSectionElement) {
+            this.queueSectionElement.style.display = 'flex';
+        }
     });
 
     tosDeclineButton.addEventListener('click', () => {
         tosWarningContainer.style.display = 'none';
         this.queueModeToggle.style.display = ''; // Show toggle again
+        // Intentionally leave queue disabled; any responsive hiding will be handled by resize logic.
     });
-
 
     // Attach event listeners to queue action buttons
     this.playQueueButton.addEventListener('click', () => {

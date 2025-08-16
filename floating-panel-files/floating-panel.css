@@ -255,6 +255,9 @@
     border-radius: 4px;
     padding: 10px;
     margin-top: 8px;
+    /* Ensure the warning stays visually above the queue items and progress bar within this isolated panel */
+    position: relative;
+    z-index: 2;
 }
 
 #max-extension-queue-tos-warning .warning-text {

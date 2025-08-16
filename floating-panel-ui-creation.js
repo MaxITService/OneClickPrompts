@@ -350,12 +350,16 @@ window.MaxExtensionFloatingPanel.initializeResponsiveQueueToggle = function () {
         const profileSwitcher = document.getElementById('max-extension-profile-switcher');
         const queueSection = document.getElementById('max-extension-queue-section');
         const controlsContainer = queueSection?.querySelector('.controls-container');
-        
+        const expandableSection = queueSection?.querySelector('.expandable-queue-controls');
+        const tosWarning = document.getElementById('max-extension-queue-tos-warning');
+
         if (!queueToggleOriginal || !queueToggleFooter || !profileSwitcher || !queueSection || !controlsContainer) return;
 
         const panelWidth = this.panelElement.offsetWidth;
-        // More aggressive threshold - move toggle at smaller widths
         const minWidthForFooterPlacement = 350;
+
+        // Determine if TOS warning is currently visible using computed style (works regardless of inline or stylesheet rules).
+        const tosVisible = !!tosWarning && window.getComputedStyle(tosWarning).display !== 'none';
 
         if (panelWidth >= minWidthForFooterPlacement) {
             // Move toggle to footer if it's not already there
@@ -363,22 +367,20 @@ window.MaxExtensionFloatingPanel.initializeResponsiveQueueToggle = function () {
             if (toggle && toggle.parentElement === queueToggleOriginal) {
                 queueToggleFooter.appendChild(toggle);
                 queueToggleFooter.style.display = 'block';
-                
-                // Hide only the toggle placeholder in the queue section
+                // Hide only the placeholder in the queue section
                 queueToggleOriginal.style.display = 'none';
-                
-                // Check if queue mode is enabled to determine if we should show the queue controls
+            }
+
+            // Show/hide the queue section depending on state — BUT always show if the TOS warning is visible.
+            if (tosVisible) {
+                queueSection.style.display = 'flex';
+                if (expandableSection) expandableSection.style.display = 'none';
+            } else {
                 const isQueueEnabled = window.globalMaxExtensionConfig?.enableQueueMode || false;
                 if (isQueueEnabled) {
-                    // Keep the queue section visible but without the toggle
                     queueSection.style.display = 'flex';
-                    // Hide the controls container header but keep the expandable controls visible
-                    const expandableSection = queueSection.querySelector('.expandable-queue-controls');
-                    if (expandableSection) {
-                        expandableSection.style.display = 'contents';
-                    }
+                    if (expandableSection) expandableSection.style.display = 'contents';
                 } else {
-                    // Hide the entire queue section if queue mode is disabled
                     queueSection.style.display = 'none';
                 }
             }
@@ -388,13 +390,12 @@ window.MaxExtensionFloatingPanel.initializeResponsiveQueueToggle = function () {
             if (toggle && toggle.parentElement === queueToggleFooter) {
                 queueToggleOriginal.appendChild(toggle);
                 queueToggleFooter.style.display = 'none';
-                
                 // Show the toggle placeholder
                 queueToggleOriginal.style.display = 'block';
-                
-                // Show the queue section
-                queueSection.style.display = 'flex';
             }
+            // Always show the queue section at narrow widths. If queue is disabled,
+            // the expandable controls are hidden elsewhere; TOS (if any) can remain visible.
+            queueSection.style.display = 'flex';
         }
     };
 
@@ -414,15 +415,24 @@ window.MaxExtensionFloatingPanel.initializeResponsiveQueueToggle = function () {
 
 /**
  * Updates the visibility of the queue section based on toggle placement and state.
- * This function is now simplified since the entire section visibility is managed in checkSpaceAndMoveToggle
+ * This function now respects the TOS warning visibility: if the warning is showing,
+ * the queue section must remain visible to display it.
  */
 window.MaxExtensionFloatingPanel.updateQueueSectionVisibility = function (isToggleInFooter) {
     const queueSection = document.getElementById('max-extension-queue-section');
-    
+    const tosWarning = document.getElementById('max-extension-queue-tos-warning');
     if (!queueSection) return;
 
+    const tosVisible = !!tosWarning && window.getComputedStyle(tosWarning).display !== 'none';
+
+    if (tosVisible) {
+        // Force visible to keep the warning accessible
+        queueSection.style.display = 'flex';
+        return;
+    }
+
     if (isToggleInFooter) {
-        // Hide the entire queue section when toggle is in footer
+        // Hide the entire queue section when toggle is in footer and no TOS warning is shown
         queueSection.style.display = 'none';
     } else {
         // Show the queue section when toggle is back in original position
