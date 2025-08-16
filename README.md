@@ -38,6 +38,7 @@ Tired of retyping the same prompts in your AI chats?  **OneClickPrompts** lets y
 - Auto-Send Convenience:  Optionally send messages automatically when you click a button. Use Shift-click to toggle auto-send behavior.
 - Keyboard Shortcuts (Alt + 1-9):  Quickly access your first nine buttons with keyboard shortcuts for maximum speed.
 - Button Separators:  Visually organize your prompt buttons with customizable separators for a cleaner workspace.
+- **Token Counter**: Monitor your prompt token usage with a built-in token counter that supports multiple counting algorithms for different speed/accuracy needs.
 - Simple In-Browser Settings:  Manage all your prompts and settings directly within your browser – no external accounts needed.
 - **Floating Panel & Prompt Queue:** Summon a draggable, resizable floating panel (click the '🔼' button) that contains the new Queue feature. Chain multiple prompts to send them sequentially with a configurable delay, perfect for complex, multi-step tasks.
 
@@ -62,4 +63,3 @@ If you encounter any issues, simply reload your browser. For persistent problems
 **Do whatever you like!**  Attribution is appreciated – a link back to me and the Chrome Web Store listing would be great.  Pull requests with improvements are welcome!
 
 ---
-
