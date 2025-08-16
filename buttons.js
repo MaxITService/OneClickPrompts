@@ -32,7 +32,7 @@
      Depends on:
      - utils.js (selectors and shared utilities)
      - buttons-init-and-render.js (composition/placement)
-     - buttons-clicking-*.js (site handlers: chatgpt/claude/copilot/deepseek/aistudio/grok/gemini)
+     - per-website-button-clicking-mechanics/buttons-clicking-*.js (site handlers: chatgpt/claude/copilot/deepseek/aistudio/grok/gemini)
 
      Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS. This one too!
 */

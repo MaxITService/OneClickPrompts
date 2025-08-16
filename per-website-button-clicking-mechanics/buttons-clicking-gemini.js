@@ -1,4 +1,4 @@
-// buttons-clicking-gemini.js
+// per-website-button-clicking-mechanics/buttons-clicking-gemini.js
 // This file provides functions to handle the send button clicking process for Google Gemini.
 'use strict';
 

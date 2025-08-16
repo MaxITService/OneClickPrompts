@@ -1,5 +1,5 @@
 /**
- * File: buttons-clicking-grok.js
+ * File: per-website-button-clicking-mechanics/buttons-clicking-grok.js
  * Version: 1.1
  *
  * Description:

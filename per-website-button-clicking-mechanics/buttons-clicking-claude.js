@@ -1,4 +1,4 @@
-// buttons-clicking-claude.js
+// per-website-button-clicking-mechanics/buttons-clicking-claude.js
 // This file is a dependency for buttons.js. It provides functions to handle the send button clicking process for Claude.
 
 'use strict';

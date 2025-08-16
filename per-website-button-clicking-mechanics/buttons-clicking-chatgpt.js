@@ -1,4 +1,4 @@
-// buttons-clicking-chatgpt.js
+// per-website-button-clicking-mechanics/buttons-clicking-chatgpt.js
 // This file provides functions to handle the send button clicking process for ChatGPT.
 
 'use strict';

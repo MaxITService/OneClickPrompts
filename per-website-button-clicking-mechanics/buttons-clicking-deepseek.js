@@ -1,4 +1,4 @@
-// buttons-clicking-deepseek.js
+// per-website-button-clicking-mechanics/buttons-clicking-deepseek.js
 
 // Version: 2.0 - Robust implementation
 
