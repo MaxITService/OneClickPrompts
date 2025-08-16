@@ -21,50 +21,54 @@
     cursor: move;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     user-select: none;
     overflow: hidden;
-    /* To hide smoothly when collapsing */
-    transition: height 0.3s ease-in-out, padding 0.3s ease-in-out;
+    /* Smooth collapse/expand */
+    transition: height 0.3s ease-in-out, min-height 0.3s ease-in-out, padding 0.3s ease-in-out;
     height: 28px;
+    min-height: 28px;
     /* Explicit height is crucial for animation */
-    position: relative; /* Establish a stacking context */
-    z-index: 1; /* Ensure header is explicitly below the controls */
 }
 
 /* Collapsed state for the header */
 #max-extension-floating-panel-header.collapsed {
+    /* Remove header from layout completely */
     height: 0;
+    min-height: 0;
     padding-top: 0;
     padding-bottom: 0;
-    cursor: default;
-    /* No move cursor when collapsed */
-    pointer-events: none;
-    /* Prevent the zero-height header from capturing mouse events */
+    cursor: default; /* No move cursor when collapsed */
+    pointer-events: none; /* Allow clicks to pass through header area */
 }
 
 #max-extension-panel-title {
     font-weight: bold;
     font-size: 12px;
     color: rgba(255, 255, 255, 0.9);
-    transition: opacity 0.2s ease-out;
-    padding-right: 60px;
-    /* Ensure title doesn't go under the absolute-positioned controls */
+    transition: opacity 0.2s ease-out, max-width 0.3s ease-in-out, margin-right 0.3s ease-in-out;
+    max-width: 1000px; /* Some large value for transition */
+    white-space: nowrap;
+    overflow: hidden;
+    margin-right: 8px; /* Space between title and buttons */
 }
 
 #max-extension-floating-panel-header.collapsed #max-extension-panel-title {
     opacity: 0;
+    max-width: 0;
+    margin-right: 0;
 }
 
-/* Container for the buttons in the header */
+/* Header controls: float above content and remain clickable even when header is collapsed */
 #max-extension-panel-header-controls {
-    position: absolute;             /* Position relative to the main panel */
-    top: 5px;                       /* Visual placement */
+    position: absolute;            /* Overlay inside the fixed panel container */
+    top: 5px;
     right: 5px;
     display: flex;
     align-items: center;
     gap: 4px;
-    pointer-events: auto;           /* Ensure this layer receives pointer events */
-    z-index: 100;                   /* Higher than header & content stacking */
+    pointer-events: auto;          /* Ensure buttons capture clicks */
+    z-index: 100;                  /* Above content and header */
 }
 
 /* Container for the footer controls */
@@ -78,7 +82,6 @@
     pointer-events: auto;           /* Ensure this layer receives pointer events */
     z-index: 100;                   /* Higher than header, content, and footer stacking */
 }
-
 
 /* New collapse button */
 #max-extension-panel-collapse-btn {
@@ -130,15 +133,10 @@
     flex-wrap: wrap;
     gap: 4px;
     align-content: flex-start;
-    position: relative;  /* Create a local stacking context */
-    z-index: 0;          /* Keep content below the controls layer */
 }
 
-/* When header is collapsed, reserve a thin click-safe strip for the controls.
-   This prevents the content from overlaying the control buttons' hit area. */
-#max-extension-floating-panel.has-collapsed-header #max-extension-floating-panel-content {
-    padding-top: 24px;   /* Should be >= visual height of controls strip */
-}
+/* No extra padding when header is collapsed — header is removed from flow and
+   header controls float above content, so content can use the full height. */
 
 /* When footer is collapsed, reserve a thin click-safe strip for the controls.
    This prevents the queue section from overlaying the control buttons' hit area. */
@@ -151,7 +149,7 @@
 #max-extension-floating-panel.has-collapsed-header #max-extension-queue-section {
     position: relative;  /* Ensure proper stacking context */
     z-index: 1;          /* Keep queue below controls but above base content */
-    margin-top: 4px;     /* Small additional buffer to prevent control overlap */
+    /* No extra margin — we don't want to consume vertical space when header is collapsed */
 }
 
 /* Queue Section */
@@ -284,7 +282,6 @@
     background-color: rgba(255, 255, 255, 0.2);
 }
 
-
 #max-extension-queue-display {
     min-height: 30px;
     background-color: rgba(30, 30, 30, 0.7);
@@ -328,7 +325,6 @@
     background-color: white;
     border-radius: 2px;
 }
-
 
 /* Profile Switcher Footer */
 #max-extension-profile-switcher {
@@ -402,8 +398,6 @@
     font-size: 12px !important;
     color: rgba(255, 255, 255, 0.9) !important;
 }
-
-
 
 /* Responsive behavior for queue section */
 @media (min-width: 400px) {
