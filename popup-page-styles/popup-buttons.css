@@ -152,6 +152,11 @@ button.danger:hover {
 }
 
 /* Special styling for the Settings button card */
+.settings-button-card {
+    /* More conservative padding adjustment */
+    padding: 2px 8px;
+}
+
 .settings-button-card > .text-input {
     /* This is a div, not a textarea. Make it look like a label. */
     background-color: transparent;
@@ -163,10 +168,15 @@ button.danger:hover {
     font-style: normal; /* Remove italic */
     font-weight: 500; /* Medium weight for better visibility */
     cursor: default; /* Not grab/text */
-    padding: 8px; /* Align with textareas */
+    padding: 6px; /* Moderate padding */
     border: 1px solid transparent; /* Maintain layout alignment with bordered textareas */
     box-shadow: none;
     text-align: center; /* Ensure text is centered */
+}
+
+/* Slightly reduce the space between elements in settings card */
+.settings-button-card.button-item {
+    gap: 1px;
 }
 
 /* ------------------------------------------------------------------------- */
