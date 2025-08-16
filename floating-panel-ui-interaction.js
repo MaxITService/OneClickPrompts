@@ -94,7 +94,7 @@ window.MaxExtensionFloatingPanel.togglePanel = async function (event) {
 
 /**
  * Updates the panel's dynamic styles based on current settings.
- * Static styles are now in floating-panel.css.
+ * Static styles are now in floating-panel-files/floating-panel.css.
  */
 /**
  * Updates the panel’s dynamic styles based on current settings.

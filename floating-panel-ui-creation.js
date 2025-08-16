@@ -6,7 +6,7 @@
 // and creating the toggle button that summons it.
 //
 // Methods included:
-// - createFloatingPanel(): Fetches floating-panel.html and injects it into the page.
+// - createFloatingPanel(): Fetches floating-panel-files/floating-panel.html and injects it into the page.
 // - createProfileSwitcher(): Builds the profile dropdown in the panel footer.
 // - makeDraggable(): Enables drag functionality on an element via a handle.
 // - positionPanelAtCursor(): Positions the panel relative to the mouse cursor.
@@ -35,9 +35,9 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
     }
 
     try {
-        const response = await fetch(chrome.runtime.getURL('floating-panel.html'));
+        const response = await fetch(chrome.runtime.getURL('floating-panel-files/floating-panel.html'));
         if (!response.ok) {
-            throw new Error(`Failed to fetch floating-panel.html: ${response.statusText}`);
+            throw new Error(`Failed to fetch floating-panel-files/floating-panel.html: ${response.statusText}`);
         }
         const html = await response.text();
 

@@ -42,7 +42,7 @@
         "https://grok.com/*",
         "https://gemini.google.com/*"
       ],
-      "css": ["floating-panel.css", "common-ui-elements/ocp_toast.css"],
+      "css": ["floating-panel-files/floating-panel.css", "common-ui-elements/ocp_toast.css"],
       "js": [
         "log.js",
           "event-handlers.js",
@@ -80,7 +80,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["floating-panel.html"],
+      "resources": ["floating-panel-files/floating-panel.html"],
       "matches": ["<all_urls>"]
     }
   ]
