@@ -1,4 +1,5 @@
-/* buttons.js
+// buttons.js
+/* 
      Version: 1.0
 
      Documentation:
@@ -52,7 +53,7 @@ window.MaxExtensionButtons = {
         const buttonElement = document.createElement('button');
         buttonElement.type = 'button';
 
-        const icons = { copy: '📋', paste: '📥' };
+        const icons = { copy: '??', paste: '??' };
         const baseTooltips = { copy: 'Copy prompt from input area', paste: 'Paste stored prompt' };
 
         buttonElement.innerHTML = icons[type];
@@ -237,16 +238,23 @@ window.MaxExtensionButtons = {
  * Orchestrates different text insertion and send strategies based on the active site.
  * This is it, from there the functions are called that are located in different sites:
  * buttons-claude.js, buttons-copilot.js, buttons-chatgpt.js
- * @param {Event} event - The click event object
+ * @param {Event|Object} event - The click event object. May be a synthetic object with { __fromQueue: true }.
  * @param {string} customText - The custom text to be inserted
  * @param {boolean} autoSend - Flag indicating whether to automatically send the message
  */
 function processCustomSendButtonClick(event, customText, autoSend) {
+    // Detect if this invocation originates from the queue engine.
+    const invokedByQueue = !!(event && event.__fromQueue);
+
     // Check if we are in queue mode in the floating panel.
-    // This check must be first.
-    if (window.MaxExtensionFloatingPanel && window.MaxExtensionFloatingPanel.isPanelVisible && globalMaxExtensionConfig.enableQueueMode) {
+    // IMPORTANT: When invoked by the queue itself, do NOT re-enqueue.
+    if (!invokedByQueue &&
+        window.MaxExtensionFloatingPanel &&
+        window.MaxExtensionFloatingPanel.isPanelVisible &&
+        globalMaxExtensionConfig.enableQueueMode) {
+
         const buttonConfig = {
-            icon: event.target.innerHTML,
+            icon: (event && event.target) ? event.target.innerHTML : '',
             text: customText,
             autoSend: autoSend
         };
@@ -255,20 +263,22 @@ function processCustomSendButtonClick(event, customText, autoSend) {
         return;
     }
 
-    event.preventDefault();
+    if (event && typeof event.preventDefault === 'function') {
+        event.preventDefault();
+    }
     logConCgp('[buttons] Custom send button clicked');
 
-    // Invert autoSend if Shift key is pressed during the click
-    if (event.shiftKey) {
+    // Invert autoSend if Shift key is pressed during a real click (not for queued dispatches)
+    if (!invokedByQueue && event && event.shiftKey) {
         autoSend = !autoSend;
         logConCgp('[buttons] Shift key detected. autoSend inverted to:', autoSend);
     }
+
     // Get the active site from the injection targets
     const activeSite = window.InjectionTargetsOnWebsite.activeSite;
     logConCgp('[buttons] Active site:', activeSite);
 
-    // Handle different sites
-    // In processCustomSendButtonClick function
+    // Route to site-specific handlers (unchanged)
     switch (activeSite) {
         case 'ChatGPT':
             processChatGPTCustomSendButtonClick(event, customText, autoSend);

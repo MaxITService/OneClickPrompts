@@ -66,6 +66,18 @@ window.MaxExtensionFloatingPanel.togglePanel = async function (event) {
 
         } else {
             logConCgp('[floating-panel] Toggling panel OFF. Re-initializing extension for inline buttons.');
+
+            // When closing panel, disable and reset the queue.
+            if (window.globalMaxExtensionConfig) {
+                window.globalMaxExtensionConfig.enableQueueMode = false;
+                if (typeof this.saveCurrentProfileConfig === 'function') {
+                    this.saveCurrentProfileConfig();
+                }
+            }
+            if (typeof this.resetQueue === 'function') {
+                this.resetQueue();
+            }
+
             // 1. Destroy buttons inside the panel.
             const panelContent = document.getElementById('max-extension-floating-panel-content');
             if (panelContent) {
