@@ -53,7 +53,7 @@ window.MaxExtensionButtons = {
         const buttonElement = document.createElement('button');
         buttonElement.type = 'button';
 
-        const icons = { copy: '??', paste: '??' };
+        const icons = { copy: '📋', paste: '📥' };
         const baseTooltips = { copy: 'Copy prompt from input area', paste: 'Paste stored prompt' };
 
         buttonElement.innerHTML = icons[type];
