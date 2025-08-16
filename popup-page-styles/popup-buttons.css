@@ -172,11 +172,20 @@ button.danger:hover {
     border: 1px solid transparent; /* Maintain layout alignment with bordered textareas */
     box-shadow: none;
     text-align: center; /* Ensure text is centered */
+    width: 100%; /* Ensure it takes full width for proper centering */
 }
 
-/* Slightly reduce the space between elements in settings card */
+/* Ensure hotkey text in settings card is properly centered */
+.settings-button-card .shortcut-line {
+    text-align: center;
+    margin: 0 auto;
+    display: block;
+    width: 100%;
+}
+
+/* Adjust space between elements in settings card for better hotkey positioning */
 .settings-button-card.button-item {
-    gap: 1px;
+    gap: 8px;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -185,11 +194,13 @@ button.danger:hover {
 .button-item .meta-block {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center; /* Center content horizontally */
     gap: 2px;
 }
 .button-item .shortcut-line {
     line-height: 1.2;
+    text-align: center; /* Center hotkey text */
+    width: 100%; /* Ensure the text centers within the full width */
 }
 
 /* ------------------------------------------------------------------------- */
