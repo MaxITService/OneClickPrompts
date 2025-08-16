@@ -13,6 +13,8 @@
     pointer-events: auto;
     color: rgba(255, 255, 255, 0.9);
     font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+    /* Create a dedicated stacking context so our internal z-index ordering is predictable */
+    isolation: isolate; /* MDN: forces a new stacking context */
 }
 
 /* Panel Header */
@@ -68,7 +70,8 @@
     align-items: center;
     gap: 4px;
     pointer-events: auto;          /* Ensure buttons capture clicks */
-    z-index: 100;                  /* Above content and header */
+    /* Must be above ANY child inside the panel; use very high index inside our isolated context */
+    z-index: 2147483647;
 }
 
 /* Container for the footer controls */
@@ -80,7 +83,8 @@
     align-items: center;
     gap: 4px;
     pointer-events: auto;           /* Ensure this layer receives pointer events */
-    z-index: 100;                   /* Higher than header, content, and footer stacking */
+    /* Keep this very high too, so play nice with any queued overlays in content */
+    z-index: 2147483646;
 }
 
 /* New collapse button */
@@ -326,6 +330,7 @@
     border-radius: 2px;
 }
 
+
 /* Profile Switcher Footer */
 #max-extension-profile-switcher {
     padding: 4px 30px 4px 8px; /* Make space on the right for collapse button */
@@ -398,6 +403,8 @@
     font-size: 12px !important;
     color: rgba(255, 255, 255, 0.9) !important;
 }
+
+
 
 /* Responsive behavior for queue section */
 @media (min-width: 400px) {

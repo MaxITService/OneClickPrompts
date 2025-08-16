@@ -1,99 +1,99 @@
-<div id="max-extension-floating-panel">
-  <!-- Header controls are now a direct child of the panel for persistent visibility -->
-  <div id="max-extension-panel-header-controls">
-    <button id="max-extension-panel-collapse-btn" title="Collapse header">▲</button>
-    <button
-      id="max-extension-panel-close-btn"
-      title="Close panel and return to injected buttons"
-    >
-      ×
-    </button>
-  </div>
-
-  <!-- Header for dragging and closing -->
-  <div id="max-extension-floating-panel-header">
-    <span id="max-extension-panel-title">OneClickPrompts</span>
-  </div>
-
-  <!-- Container for prompt buttons -->
-  <div id="max-extension-floating-panel-content">
-    <!-- Buttons will be moved here by JS -->
-  </div>
-
-  <!-- Queue Section -->
-  <div id="max-extension-queue-section">
-    <div class="controls-container">
-      <!-- Toggle will be inserted here by JS -->
-      <div id="max-extension-queue-toggle-placeholder"></div>
-
-      <div class="expandable-queue-controls">
-        <div class="delay-container">
-          <label for="max-extension-queue-delay-input"
-            >Delay (<button
-              id="max-extension-delay-unit-toggle"
-              title="Click to switch between minutes and seconds"
-            >
-              min</button
-            >):</label
-          >
-          <input
-            id="max-extension-queue-delay-input"
-            type="number"
-            min="1"
-            max="64000"
-            title="Delay in minutes between sending each queued prompt. Min: 1, Max: 64000."
-          />
-        </div>
-        <div class="action-buttons-container">
-          <button
-            id="max-extension-play-queue-btn"
-            title="Start sending the queued prompts."
-          >
-            ▶️
-          </button>
-          <button
-            id="max-extension-reset-queue-btn"
-            title="Clear all prompts from the queue."
-          >
-            🔄
-          </button>
-        </div>
-      </div>
-    </div>
-    <!-- TOS Confirmation -->
-    <div id="max-extension-queue-tos-warning" style="display: none">
-      <p class="warning-text">
-        Please make sure that using this feature does not violate the Terms of
-        Service of the website you are using it with.
-      </p>
-      <div class="tos-buttons">
-        <button id="max-extension-tos-accept-btn">
-          I have received permission from the website owner to use this feature
-        </button>
-        <button id="max-extension-tos-decline-btn">
-          I have not received permission
-        </button>
-      </div>
-    </div>
-    <div
-      id="max-extension-queue-display"
-      title="Queued prompts. Click an icon to remove it from the queue."
-    >
-      <!-- Queued items will be shown here -->
-    </div>
-    <!-- Progress bar for queue delay -->
-    <div id="max-extension-queue-progress-container">
-      <div id="max-extension-queue-progress-bar"></div>
-    </div>
-  </div>
-
-  <!-- Footer for profile switching -->
-  <div id="max-extension-profile-switcher">
-    <!-- Profile switcher will be created here by JS -->
-  </div>
-
-  <!-- Footer controls -->
-  <div id="max-extension-panel-footer-controls">
-    <button id="max-extension-panel-collapse-footer-btn" title="Collapse footer">▼</button>
-  </div>
-</div>
+ <div id="max-extension-floating-panel">
+   <!-- Header for dragging and closing -->
+   <div id="max-extension-floating-panel-header">
+     <span id="max-extension-panel-title">OneClickPrompts</span>
+   </div>
+ 
+   <!-- Header controls (always visible; overlay, not part of header flow) -->
+   <div id="max-extension-panel-header-controls" title="Panel controls (always visible)">
+     <button id="max-extension-panel-collapse-btn" title="Collapse header">▲</button>
+     <button
+       id="max-extension-panel-close-btn"
+       title="Close panel and return to injected buttons"
+     >
+       ×
+     </button>
+   </div>
+ 
+   <!-- Container for prompt buttons -->
+   <div id="max-extension-floating-panel-content">
+     <!-- Buttons will be moved here by JS -->
+   </div>
+ 
+   <!-- Queue Section -->
+   <div id="max-extension-queue-section">
+     <div class="controls-container">
+       <!-- Toggle will be inserted here by JS -->
+       <div id="max-extension-queue-toggle-placeholder"></div>
+ 
+       <div class="expandable-queue-controls">
+         <div class="delay-container">
+           <label for="max-extension-queue-delay-input"
+             >Delay (<button
+               id="max-extension-delay-unit-toggle"
+               title="Click to switch between minutes and seconds"
+             >
+               min</button
+             >):</label
+           >
+           <input
+             id="max-extension-queue-delay-input"
+             type="number"
+             min="1"
+             max="64000"
+             title="Delay in minutes between sending each queued prompt. Min: 1, Max: 64000."
+           />
+         </div>
+         <div class="action-buttons-container">
+           <button
+             id="max-extension-play-queue-btn"
+             title="Start sending the queued prompts."
+           >
+             ▶️
+           </button>
+           <button
+             id="max-extension-reset-queue-btn"
+             title="Clear all prompts from the queue."
+           >
+             🔄
+           </button>
+         </div>
+       </div>
+     </div>
+     <!-- TOS Confirmation -->
+     <div id="max-extension-queue-tos-warning" style="display: none">
+       <p class="warning-text">
+         Please make sure that using this feature does not violate the Terms of
+         Service of the website you are using it with.
+       </p>
+       <div class="tos-buttons">
+         <button id="max-extension-tos-accept-btn">
+           I have received permission from the website owner to use this feature
+         </button>
+         <button id="max-extension-tos-decline-btn">
+           I have not received permission
+         </button>
+       </div>
+     </div>
+     <div
+       id="max-extension-queue-display"
+       title="Queued prompts. Click an icon to remove it from the queue."
+     >
+       <!-- Queued items will be shown here -->
+     </div>
+     <!-- Progress bar for queue delay -->
+     <div id="max-extension-queue-progress-container">
+       <div id="max-extension-queue-progress-bar"></div>
+     </div>
+   </div>
+ 
+   <!-- Footer for profile switching -->
+   <div id="max-extension-profile-switcher">
+     <!-- Profile switcher will be created here by JS -->
+   </div>
+ 
+   <!-- Footer controls -->
+   <div id="max-extension-panel-footer-controls">
+     <button id="max-extension-panel-collapse-footer-btn" title="Collapse footer">▼</button>
+   </div>
+ </div>
