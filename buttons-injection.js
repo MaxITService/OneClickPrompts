@@ -84,17 +84,6 @@ function buttonBoxCheckingAndInjection(enableResiliency = true, activeWebsite) {
                 window.__OCP_inlineHealthy = true;
             } catch (_) {}
 
-            // Ensure the inline selector inside does not close due to bubbling site handlers
-            try {
-                const selector = targetDiv.querySelector('select');
-                if (selector) {
-                    const stop = (e) => { e.stopPropagation(); };
-                    ['pointerdown','mousedown','mouseup','click','touchstart','touchend','keydown'].forEach(evt => {
-                        selector.addEventListener(evt, stop, { capture: true });
-                    });
-                }
-            } catch (e) {}
-
             // Always start resiliency checks when enableResiliency is true.
             if (enableResiliency) {
                 logConCgp('[button-injection] Starting resiliency checks.');
