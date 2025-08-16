@@ -51,7 +51,7 @@ function createButtonCardElement(button, index) {
             : '';
 
         const hotkeyHintHTML = index < 10
-            ? `<div class="shortcut-line"><span class="shortcut-indicator">[Ctrl+${index === 9 ? 0 : index + 1}]</span></div>`
+            ? `<div class="shortcut-line"><span class="shortcut-indicator">[Alt+${index === 9 ? 0 : index + 1}]</span></div>`
             : '';
 
         buttonItem.innerHTML = `
