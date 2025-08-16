@@ -157,12 +157,16 @@ button.danger:hover {
     background-color: transparent;
     display: flex;
     align-items: center;
+    justify-content: center; /* Center text horizontally */
     color: var(--text-muted, #666);
-    font-style: italic;
+    font-size: 16px; /* Make text bigger */
+    font-style: normal; /* Remove italic */
+    font-weight: 500; /* Medium weight for better visibility */
     cursor: default; /* Not grab/text */
     padding: 8px; /* Align with textareas */
     border: 1px solid transparent; /* Maintain layout alignment with bordered textareas */
     box-shadow: none;
+    text-align: center; /* Ensure text is centered */
 }
 
 /* ------------------------------------------------------------------------- */
