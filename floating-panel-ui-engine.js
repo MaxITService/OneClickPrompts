@@ -1,5 +1,5 @@
-// Version: 1.0
-// floating-panel-ui-engine.js
+// /floating-panel-ui-engine.js
+// Version: 1.2
 // Documentation:
 // This file contains the core engine logic for the prompt queue feature.
 // It manages the queue's state, adding/removing items, and the sequential
@@ -27,6 +27,12 @@
  * @param {object} buttonConfig - The configuration of the button clicked.
  */
 window.MaxExtensionFloatingPanel.addToQueue = function (buttonConfig) {
+    // Prevent adding if queue mode is disabled
+    if (!window.globalMaxExtensionConfig?.enableQueueMode) {
+        logConCgp('[queue-engine] Queue mode is disabled. Ignoring addToQueue.');
+        return;
+    }
+
     if (this.promptQueue.length >= this.QUEUE_MAX_SIZE) {
         logConCgp('[queue-engine] Queue is full. Cannot add more prompts.');
         if (this.queueDisplayArea) {
@@ -61,6 +67,12 @@ window.MaxExtensionFloatingPanel.removeFromQueue = function (index) {
  * Starts or resumes the queue processing.
  */
 window.MaxExtensionFloatingPanel.startQueue = function () {
+    // Do not start if queue mode is disabled
+    if (!window.globalMaxExtensionConfig?.enableQueueMode) {
+        logConCgp('[queue-engine] Queue mode is disabled. startQueue aborted.');
+        return;
+    }
+
     // Prevent starting if already running, or if there's nothing to do.
     if (this.isQueueRunning || (this.promptQueue.length === 0 && this.remainingTimeOnPause <= 0)) {
         return;
@@ -164,6 +176,12 @@ window.MaxExtensionFloatingPanel.resetQueue = function () {
  * This function adjusts the progress bar and timer to reflect the new total delay.
  */
 window.MaxExtensionFloatingPanel.recalculateRunningTimer = function () {
+    // Do nothing if queue mode is disabled
+    if (!window.globalMaxExtensionConfig?.enableQueueMode) {
+        logConCgp('[queue-engine] Queue mode is disabled. Recalculate timer skipped.');
+        return;
+    }
+
     // Only act if a timer is currently running.
     if (!this.isQueueRunning || !this.queueTimerId) {
         return;
@@ -220,6 +238,13 @@ window.MaxExtensionFloatingPanel.recalculateRunningTimer = function () {
  * Processes the next item in the queue.
  */
 window.MaxExtensionFloatingPanel.processNextQueueItem = function () {
+    // If queue mode was turned off mid-cycle, freeze (pause) instead of clearing.
+    if (!window.globalMaxExtensionConfig?.enableQueueMode) {
+        logConCgp('[queue-engine] Queue mode disabled mid-cycle. Pausing to freeze state.');
+        this.pauseQueue();
+        return;
+    }
+
     if (!this.isQueueRunning) {
         return;
     }
@@ -240,7 +265,7 @@ window.MaxExtensionFloatingPanel.processNextQueueItem = function () {
         sendFunction(mockEvent, item.text, true);
     } else {
         logConCgp('[queue-engine] No send function found for this site. Stopping queue.');
-        this.resetQueue();
+        this.pauseQueue(); // freeze state without clearing items already queued
         return;
     }
 

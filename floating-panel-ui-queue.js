@@ -1,5 +1,5 @@
-// floating-panel-ui-queue.js
-// Version: 1.1
+// /floating-panel-ui-queue.js
+// Version: 1.3
 //
 // Documentation:
 // This file contains the UI initialization logic for the prompt queue section
@@ -116,6 +116,20 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
 
         // If TOS is accepted, proceed with profile setting
         window.globalMaxExtensionConfig.enableQueueMode = state;
+
+        // Freeze-on-disable behavior:
+        if (!state) {
+            // If it was running, pause (capture remaining time). Do not clear items.
+            if (this.isQueueRunning || this.remainingTimeOnPause > 0) {
+                logConCgp('[floating-panel-queue] Queue Mode disabled. Pausing to freeze state.');
+            } else {
+                logConCgp('[floating-panel-queue] Queue Mode disabled. Nothing running; preserving items.');
+            }
+            this.pauseQueue();
+            // Hide progress container while disabled (keeps bar width frozen).
+            if (this.queueProgressContainer) this.queueProgressContainer.style.display = 'none';
+        }
+
         if (expandableSection) {
             expandableSection.style.display = state ? 'contents' : 'none';
         }
@@ -134,6 +148,9 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
                 queueSection.style.display = 'none';
             }
         }
+
+        // Controls refresh after toggle
+        this.updateQueueControlsState();
     };
 
     this.queueModeToggle = MaxExtensionInterface.createToggle(
@@ -152,6 +169,13 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
     }
     if (this.queueDisplayArea) {
         this.queueDisplayArea.style.display = isQueueEnabled ? 'flex' : 'none';
+    }
+
+    // If queue mode is off on init but state exists, freeze (pause) and hide visuals (do not clear).
+    if (!isQueueEnabled && (this.isQueueRunning || (this.promptQueue && this.promptQueue.length > 0))) {
+        logConCgp('[floating-panel-queue] Queue Mode disabled on init. Freezing any lingering state.');
+        this.pauseQueue();
+        if (this.queueProgressContainer) this.queueProgressContainer.style.display = 'none';
     }
 
     // Initialize responsive positioning after toggle is created
@@ -179,12 +203,16 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         if (this.queueSectionElement) {
             this.queueSectionElement.style.display = 'flex';
         }
+
+        // Controls become available again
+        this.updateQueueControlsState();
     });
 
     tosDeclineButton.addEventListener('click', () => {
         tosWarningContainer.style.display = 'none';
         this.queueModeToggle.style.display = ''; // Show toggle again
         // Intentionally leave queue disabled; any responsive hiding will be handled by resize logic.
+        this.updateQueueControlsState();
     });
 
     // Attach event listeners to queue action buttons
@@ -230,6 +258,21 @@ window.MaxExtensionFloatingPanel.updateQueueControlsState = function () {
 
     const hasItems = this.promptQueue.length > 0;
     const isPaused = this.remainingTimeOnPause > 0;
+    const queueEnabled = !!(window.globalMaxExtensionConfig && window.globalMaxExtensionConfig.enableQueueMode);
+
+    // If queue mode is OFF, disable controls regardless of items, and hide progress bar.
+    if (!queueEnabled) {
+        this.playQueueButton.innerHTML = '▶️';
+        this.playQueueButton.title = 'Enable Queue Mode to start.';
+        this.playQueueButton.disabled = true;
+
+        this.resetQueueButton.disabled = true;
+
+        if (this.queueProgressContainer) {
+            this.queueProgressContainer.style.display = 'none';
+        }
+        return;
+    }
 
     // Play/Pause Button
     if (this.isQueueRunning) {
