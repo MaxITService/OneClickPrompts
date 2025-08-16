@@ -41,17 +41,27 @@ function createButtonCardElement(button, index) {
         `;
     } else {
         const isSettingsButton = (button.text === SETTINGS_BUTTON_MAGIC_TEXT);
-        // The drag handle is now just a visual affordance. The event listeners
-        // determine if a drag should start, based on the click target.
+
+        const textElementHTML = isSettingsButton
+            ? `<div class="text-input" title="This action opens the extension settings.">${'Open app settings'}</div>`
+            : `<textarea class="text-input" rows="1">${button.text}</textarea>`;
+
+        const autoSendHTML = !isSettingsButton
+            ? `<div class="autosend-line"><label class="checkbox-row"><input type="checkbox" class="autosend-toggle" ${button.autoSend ? 'checked' : ''}><span>Auto-send</span></label></div>`
+            : '';
+
+        const hotkeyHintHTML = index < 10
+            ? `<div class="shortcut-line"><span class="shortcut-indicator">[Ctrl+${index === 9 ? 0 : index + 1}]</span></div>`
+            : '';
+
         buttonItem.innerHTML = `
             <div class="drag-handle">&#9776;</div>
             <textarea class="emoji-input" rows="1">${button.icon}</textarea>
-            <textarea class="text-input" rows="1" ${isSettingsButton ? 'readonly disabled title="This text is reserved for the Settings button (%OCP_APP_SETTINGS_SYSTEM_BUTTON%)."' : ''}>${button.text}</textarea>
-            <label class="checkbox-row">
-                <input type="checkbox" class="autosend-toggle" ${button.autoSend ? 'checked' : ''} ${isSettingsButton ? 'disabled' : ''}>
-                <span>${isSettingsButton ? 'Auto-send (N/A)' : 'Auto-send'}</span>
-                ${index < 10 ? `<span class="shortcut-indicator">[Ctrl+${index === 9 ? 0 : index + 1}]</span>` : ''}
-            </label>
+            ${textElementHTML}
+            <div class="meta-block">
+                ${autoSendHTML}
+                ${hotkeyHintHTML}
+            </div>
             <button class="delete-button danger">Delete</button>
         `;
 

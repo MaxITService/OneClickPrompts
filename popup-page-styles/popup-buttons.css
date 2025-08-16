@@ -151,6 +151,33 @@ button.danger:hover {
     /* Keep will-change */
 }
 
+/* Special styling for the Settings button card */
+.settings-button-card > .text-input {
+    /* This is a div, not a textarea. Make it look like a label. */
+    background-color: transparent;
+    display: flex;
+    align-items: center;
+    color: var(--text-muted, #666);
+    font-style: italic;
+    cursor: default; /* Not grab/text */
+    padding: 8px; /* Align with textareas */
+    border: 1px solid transparent; /* Maintain layout alignment with bordered textareas */
+    box-shadow: none;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Meta block: stacks autosend + hotkey vertically                           */
+/* ------------------------------------------------------------------------- */
+.button-item .meta-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+}
+.button-item .shortcut-line {
+    line-height: 1.2;
+}
+
 /* ------------------------------------------------------------------------- */
 /* Drag Handle Styling                                                       */
 /* ------------------------------------------------------------------------- */
