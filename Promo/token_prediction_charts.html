@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token Prediction Accuracy</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            font-size: 2.5rem;
+            margin-bottom: 40px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .chart-container:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+        }
+
+        .chart-title {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        /* Chart 1 - Classic Gradient */
+        .chart1 {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .bar-item1 {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .bar-label1 {
+            width: 280px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .bar-track1 {
+            flex: 1;
+            height: 40px;
+            background: #f0f0f0;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .bar-fill1 {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #ffa726);
+            border-radius: 20px;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+        }
+
+        .bar-value1 {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Token Prediction Accuracy Variations</h1>
+        
+        <!-- Chart 1: Classic Gradient -->
+        <div class="chart-container">
+            <h2 class="chart-title">Token Prediction Accuracy</h2>
+            <div class="chart1">
+                <div class="bar-item1">
+                    <div class="bar-label1">Most popular token counter for Chrome</div>
+                    <div class="bar-track1">
+                        <div class="bar-fill1" style="width: 68.1%;">
+                            <div class="bar-value1">68091</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bar-item1">
+                    <div class="bar-label1">Algorithm in my extension</div>
+                    <div class="bar-track1">
+                        <div class="bar-fill1" style="width: 80%;">
+                            <div class="bar-value1">81000</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bar-item1">
+                    <div class="bar-label1">Actual tokens</div>
+                    <div class="bar-track1">
+                        <div class="bar-fill1" style="width: 86%;">
+                            <div class="bar-value1">86000</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
