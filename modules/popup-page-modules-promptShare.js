@@ -141,10 +141,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Event Listeners ---
-    enableToggle.addEventListener('change', () => {
+    enableToggle.addEventListener('change', async () => {
         currentSettings.enabled = enableToggle.checked;
         // The toggle now only changes the setting and saves it; it does not control UI visibility.
-        saveModuleSettings();
+        await saveModuleSettings();
+        
+        // Trigger button cards re-render when enable/disable is toggled
+        // This is needed because hotkey numbering depends on whether cross-chat is enabled
+        if (typeof updatebuttonCardsList === 'function') {
+            try {
+                await updatebuttonCardsList();
+                console.log('Button cards updated after toggling cross-chat module');
+            } catch (error) {
+                console.error('Error updating button cards after toggling cross-chat module:', error);
+            }
+        }
     });
 
     autosendCopyToggle.addEventListener('change', () => {
@@ -158,10 +169,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     for (const radio of placementRadios) {
-        radio.addEventListener('change', () => {
+        radio.addEventListener('change', async () => {
             if (radio.checked) {
                 currentSettings.placement = radio.value;
-                saveModuleSettings();
+                await saveModuleSettings();
+                
+                // Trigger button cards re-render to update hotkey numbering
+                if (typeof updatebuttonCardsList === 'function') {
+                    try {
+                        await updatebuttonCardsList();
+                        console.log('Button cards updated with new hotkey numbering');
+                    } catch (error) {
+                        console.error('Error updating button cards after placement change:', error);
+                    }
+                }
             }
         });
     }

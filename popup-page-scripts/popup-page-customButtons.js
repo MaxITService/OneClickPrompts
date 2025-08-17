@@ -5,15 +5,29 @@
 // as cards in  <div id="buttonCardsList" ...> </div>
 // This file creates elements that represent custom buttons (card like elements)
 // Button cards contain: emoji input, text input, auto-send toggle, delete button, that are
-// used to create custom buttons for the extension. 
+// used to create custom buttons for the extension.
 // and separators for mostly visual funciton (separatprs behave like button cards with less stuff)
-// separator cards contain: visuals, delete button. 
-// version: 1.0
+// separator cards contain: visuals, delete button.
+// version: 1.1
 
 // -------------------------
 // Special constants
 // -------------------------
 const SETTINGS_BUTTON_MAGIC_TEXT = '%OCP_APP_SETTINGS_SYSTEM_BUTTON%';
+
+/**
+ * Gets the Cross-Chat module settings.
+ * @returns {Promise<Object>} - The Cross-Chat module settings.
+ */
+async function getCrossChatSettings() {
+    try {
+        const response = await chrome.runtime.sendMessage({ type: 'getCrossChatModuleSettings' });
+        return response && response.settings ? response.settings : { enabled: false, placement: 'after' };
+    } catch (error) {
+        console.error('Error fetching Cross-Chat settings:', error);
+        return { enabled: false, placement: 'after' }; // Default fallback
+    }
+}
 
 // -------------------------
 // Create Button Element - this is start of everything, there can be zero to infinite buttons
@@ -25,7 +39,7 @@ const SETTINGS_BUTTON_MAGIC_TEXT = '%OCP_APP_SETTINGS_SYSTEM_BUTTON%';
  * @param {number} index - The index of the button in the customButtons array.
  * @returns {HTMLElement} - The button item element.
  */
-function createButtonCardElement(button, index) {
+function createButtonCardElement(button, index, crossChatSettings = null) {
     const buttonItem = document.createElement('div');
     buttonItem.className = 'button-item';
     buttonItem.dataset.index = index;
@@ -50,9 +64,27 @@ function createButtonCardElement(button, index) {
             ? `<div class="autosend-line"><label class="checkbox-row"><input type="checkbox" class="autosend-toggle" ${button.autoSend ? 'checked' : ''}><span>Auto-send</span></label></div>`
             : '';
 
-        const hotkeyHintHTML = index < 10
-            ? `<div class="shortcut-line"><span class="shortcut-indicator">[Alt+${index === 9 ? 0 : index + 1}]</span></div>`
-            : '';
+        // Calculate hotkey with consideration for CrossChat buttons and separators
+        let hotkeyHintHTML = '';
+        if (!button.separator) {
+            // Calculate how many non-separator buttons are before this one
+            let nonSeparatorButtonsCount = 0;
+            for (let i = 0; i < index; i++) {
+                if (!currentProfile.customButtons[i].separator) {
+                    nonSeparatorButtonsCount++;
+                }
+            }
+            
+            // Apply the shift if CrossChat buttons are placed before
+            const shift = (crossChatSettings && crossChatSettings.enabled && crossChatSettings.placement === 'before') ? 2 : 0;
+            const hotkeyIndex = nonSeparatorButtonsCount + shift;
+            
+            // Only show hotkey if it's within the 1-0 range (Alt+1 to Alt+0)
+            if (hotkeyIndex < 10) {
+                const displayKey = hotkeyIndex === 9 ? 0 : hotkeyIndex + 1;
+                hotkeyHintHTML = `<div class="shortcut-line"><span class="shortcut-indicator">[Alt+${displayKey}]</span></div>`;
+            }
+        }
 
         buttonItem.innerHTML = `
             <div class="drag-handle">&#9776;</div>
@@ -78,11 +110,14 @@ function createButtonCardElement(button, index) {
 /**
  * Updates the list of custom button cards in the buttonCardsList.
  */
-function updatebuttonCardsList() {
+async function updatebuttonCardsList() {
+    // Get Cross-Chat module settings
+    const crossChatSettings = await getCrossChatSettings();
+    
     buttonCardsList.innerHTML = ''; // This already removes old listeners
     if (currentProfile.customButtons && currentProfile.customButtons.length > 0) {
         currentProfile.customButtons.forEach((button, index) => {
-            const buttonElement = createButtonCardElement(button, index);
+            const buttonElement = createButtonCardElement(button, index, crossChatSettings);
             buttonCardsList.appendChild(buttonElement);
         });
     } else {

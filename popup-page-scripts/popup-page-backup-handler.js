@@ -131,7 +131,7 @@ async function saveAndSwitchToImportedProfile(parsedProfile, isOverwrite) {
         profileSelect.value = parsedProfile.PROFILE_NAME;
         await switchProfile(parsedProfile.PROFILE_NAME);
 
-        updateInterface();
+        await updateInterface(); // Now awaiting the async function
         logToGUIConsole(`Profile "${parsedProfile.PROFILE_NAME}" ${actionText} successfully.`);
         showToast(`Profile "${parsedProfile.PROFILE_NAME}" has been ${actionText} successfully.`, 'success');
     } catch (error) {

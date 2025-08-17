@@ -94,7 +94,7 @@ async function revertToDefault() {
         const response = await chrome.runtime.sendMessage({ type: 'createDefaultProfile' });
         currentProfile = response.config;
         await saveCurrentProfile();
-        updateInterface();
+        await updateInterface(); // Now awaiting the async function
         showToast('Reverted to default settings successfully.', 'success');
         logToGUIConsole('Reverted to default settings');
     } catch (error) {
@@ -137,24 +137,30 @@ function updateSaveStatus() {
 /**
  * Updates the entire interface based on the current profile.
  */
-function updateInterface() {
+async function updateInterface() {
     // --- Added guard to check if currentProfile is valid ---
     if (!currentProfile || !currentProfile.customButtons) {
         logToGUIConsole('No valid current profile found. Attempting to retrieve default profile...');
-        chrome.runtime.sendMessage({ type: 'getConfig' }, (response) => {
+        try {
+            const response = await chrome.runtime.sendMessage({ type: 'getConfig' });
             if (response && response.config) {
                 currentProfile = response.config;
-                updateInterface(); // Call updateInterface again after retrieving default
+                await updateInterface(); // Call updateInterface again after retrieving default
             } else {
                 logToGUIConsole('Failed to retrieve default profile in updateInterface.');
             }
-        });
+        } catch (error) {
+            logToGUIConsole(`Error retrieving default profile: ${error.message}`);
+        }
         return;
     }
+    
     // Update buttons, settings, etc. based on currentProfile
-    updatebuttonCardsList();
+    await updatebuttonCardsList(); // Now awaiting this async function
+    
     document.getElementById('autoSendToggle').checked = currentProfile.globalAutoSendEnabled;
     document.getElementById('shortcutsToggle').checked = currentProfile.enableShortcuts;
+    
     // Clear input fields
     document.getElementById('buttonIcon').value = '';
     document.getElementById('buttonText').value = '';
