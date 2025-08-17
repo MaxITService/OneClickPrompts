@@ -189,8 +189,9 @@ window.MaxExtensionButtons = {
         const autoSendDescription = buttonConfig.autoSend ? ' (Auto-sends)' : '';
         const shortcutDescription = assignedShortcutKey !== null ? ` (Shortcut: Alt+${assignedShortcutKey === 10 ? 0 : assignedShortcutKey})` : '';
 
-        // Set the tooltip (title attribute) combining the button text with auto-send and shortcut info
-        customButtonElement.setAttribute('title', `${buttonConfig.text}${autoSendDescription}${shortcutDescription}`);
+        // Set the tooltip (title attribute) combining the button text (or a custom tooltip) with auto-send and shortcut info
+        const baseTooltipText = buttonConfig.tooltip || buttonConfig.text;
+        customButtonElement.setAttribute('title', `${baseTooltipText}${autoSendDescription}${shortcutDescription}`);
 
         customButtonElement.style.cssText = `
             background-color: transparent;

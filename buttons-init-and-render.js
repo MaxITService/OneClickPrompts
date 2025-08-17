@@ -138,14 +138,13 @@ window.MaxExtensionButtonsInit = {
             } else { // 'custom' button type
                 if (def.config.text === SETTINGS_BUTTON_MAGIC_TEXT) {
                     // Special handling for the settings button.
-                    const settingsButtonConfig = { ...def.config, text: 'Settings' };
+                    const settingsButtonConfig = { ...def.config, text: 'Settings', tooltip: 'Open extension settings in a new tab' };
                     const settingsClickHandler = () => {
                        // Send a message to the service worker to open the settings page.
                        // This avoids the popup blocker (ERR_BLOCKED_BY_CLIENT).
                        chrome.runtime.sendMessage({ type: 'openSettingsPage' });
                     };
                     buttonElement = MaxExtensionButtons.createCustomSendButton(settingsButtonConfig, index, settingsClickHandler, shortcutKey);
-                    buttonElement.title = 'Open extension settings in a new tab';
                 } else {
                     buttonElement = MaxExtensionButtons.createCustomSendButton(def.config, index, processCustomSendButtonClick, shortcutKey);
                 }
