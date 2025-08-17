@@ -43,7 +43,7 @@ function createButtonCardElement(button, index) {
         const isSettingsButton = (button.text === SETTINGS_BUTTON_MAGIC_TEXT);
 
         const textElementHTML = isSettingsButton
-            ? `<div class="text-input" title="This action opens the extension settings.">${'Open app settings'}</div>`
+            ? `<div class="text-input" title="This button opens the extension settings - this exact page you are seeing right now - in a new tab. You can move it or remove it.">${'Open app settings'}</div>`
             : `<textarea class="text-input" rows="1">${button.text}</textarea>`;
 
         const autoSendHTML = !isSettingsButton
