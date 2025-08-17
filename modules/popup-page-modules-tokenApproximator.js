@@ -316,19 +316,28 @@
           toggleIcon.textContent = isHidden ? '▼' : '▶';
         }
         
-        // Update text
-        elShowModelDetails.textContent = elShowModelDetails.textContent.replace(
-          isHidden ? 'Show model details' : 'Hide model details',
-          isHidden ? 'Hide model details' : 'Show model details'
-        );
+        // Update text content while preserving the icon
+        // The HTML structure has the text as a text node after the span
+        // We need to find and update only that text node
+        const childNodes = Array.from(elShowModelDetails.childNodes);
         
-        // Restore toggle icon if it was replaced
-        if (!elShowModelDetails.querySelector('.toggle-icon')) {
-          const span = document.createElement('span');
-          span.className = 'toggle-icon';
-          span.style.cssText = 'font-size: 10px; margin-right: 4px;';
-          span.textContent = isHidden ? '▼' : '▶';
-          elShowModelDetails.insertBefore(span, elShowModelDetails.firstChild);
+        // Find the last text node (should be after the toggle icon span)
+        let textNodeFound = false;
+        for (let i = childNodes.length - 1; i >= 0; i--) {
+          const node = childNodes[i];
+          if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+            // Update the text node
+            node.textContent = isHidden ? 'Hide model details' : 'Show model details';
+            textNodeFound = true;
+            break;
+          }
+        }
+        
+        // If no text node was found (shouldn't happen with the HTML structure),
+        // create one to avoid breaking the functionality
+        if (!textNodeFound && toggleIcon) {
+          const textNode = document.createTextNode(isHidden ? 'Hide model details' : 'Show model details');
+          elShowModelDetails.appendChild(textNode);
         }
       });
     }
