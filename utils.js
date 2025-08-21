@@ -216,12 +216,11 @@ class InjectionTargetsOnWebsite {
             ChatGPT: {
                 // Updated May 2025 for new ChatGPT UI
                 containers: [
-  'form[data-type="unified-composer"] .\\[grid-area\\:footer\\]',
-  'form[data-type="unified-composer"] > div.rounded-\\[28px\\]',
-  'form[data-type="unified-composer"] > div:has(#prompt-textarea)',
-  'form[data-type="unified-composer"]',
-  'main.flex.flex-col.items-center'
-
+                    'form[data-type="unified-composer"] .\\[grid-area\\:footer\\]',
+                    'form[data-type="unified-composer"] > div.rounded-\\[28px\\]',
+                    'form[data-type="unified-composer"] > div:has(#prompt-textarea)',
+                    'form[data-type="unified-composer"]',
+                    'main.flex.flex-col.items-center'
                 ],
                 sendButtons: [
                     'button[aria-label="Send message"]', // new main send button
