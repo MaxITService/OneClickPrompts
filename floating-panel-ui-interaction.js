@@ -256,12 +256,17 @@ window.MaxExtensionFloatingPanel.updatePanelFromSettings = function () {
         this.applyFooterCollapsedState(isCollapsed);
     }
 
-    // Opacity
-    const bgOpacity = this.currentPanelSettings.opacity;
+    // Opacity (clamped)
+    let bgOpacity = this.currentPanelSettings.opacity;
+    if (typeof bgOpacity !== 'number' || Number.isNaN(bgOpacity)) {
+        bgOpacity = this.defaultPanelSettings.opacity;
+    }
+    // Clamp to avoid fully invisible panel or over-opaque values
+    bgOpacity = Math.max(0.3, Math.min(1, bgOpacity));
     this.panelElement.style.backgroundColor = `rgba(50, 50, 50, ${bgOpacity})`;
 
     // Header, footer, and queue section opacity
-    const headerFooterOpacity = bgOpacity + 0.1;
+    const headerFooterOpacity = Math.min(1, bgOpacity + 0.1);
     const header = document.getElementById('max-extension-floating-panel-header');
     const footer = document.getElementById('max-extension-profile-switcher');
     const queueSection = document.getElementById('max-extension-queue-section');

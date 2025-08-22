@@ -74,6 +74,45 @@
     z-index: 2147483647;
 }
 
+/* Transparency (opacity) button */
+#max-extension-panel-transparency-btn {
+    background: none;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0 3px;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Popover container for transparency slider */
+#max-extension-transparency-popover {
+    position: absolute;  /* Positioned relative to header-controls overlay */
+    top: 26px;           /* Below the header controls row */
+    right: 0;
+    background-color: rgba(30, 30, 30, 0.95);
+    border: 1px solid rgba(100, 100, 100, 0.5);
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: rgba(255, 255, 255, 0.95);
+    min-width: 220px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+}
+
+.max-extension-popover-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.max-extension-popover-label {
+    font-size: 12px;
+}
+
+#max-extension-transparency-slider {
+    width: 100%;
+}
+
 /* Container for the footer controls */
 #max-extension-panel-footer-controls {
     position: absolute;             /* Position relative to the main panel */

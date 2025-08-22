@@ -52,6 +52,10 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
         const panelHeader = document.getElementById('max-extension-floating-panel-header');
         const closeButton = document.getElementById('max-extension-panel-close-btn');
         const collapseButton = document.getElementById('max-extension-panel-collapse-btn');
+        const transparencyButton = document.getElementById('max-extension-panel-transparency-btn');
+        const transparencyPopover = document.getElementById('max-extension-transparency-popover');
+        const transparencySlider = document.getElementById('max-extension-transparency-slider');
+        const transparencyValue = document.getElementById('max-extension-transparency-value');
         const collapseFooterButton = document.getElementById('max-extension-panel-collapse-footer-btn');
         const profileSwitcherContainer = document.getElementById('max-extension-profile-switcher');
 
@@ -84,6 +88,83 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
             } catch (_) {}
             this.togglePanel();
         });
+
+        // --- Transparency controls ---
+        const clampPercent = (p) => Math.min(70, Math.max(0, Math.round(p)));
+        const clampOpacity = (o) => Math.min(1, Math.max(0.3, o));
+        const updateTransparencyLabel = (p) => {
+            if (transparencyValue) transparencyValue.textContent = `${p}%`;
+        };
+        const applyTransparencyPercent = (percent) => {
+            const clampedPercent = clampPercent(percent);
+            if (transparencySlider && String(transparencySlider.value) !== String(clampedPercent)) {
+                transparencySlider.value = clampedPercent;
+            }
+            updateTransparencyLabel(clampedPercent);
+            const newOpacity = clampOpacity(1 - (clampedPercent / 100));
+            if (!this.currentPanelSettings) this.currentPanelSettings = { ...this.defaultPanelSettings };
+            this.currentPanelSettings.opacity = newOpacity;
+            this.updatePanelFromSettings();
+            this.debouncedSavePanelSettings();
+        };
+
+        const getCurrentTransparencyPercent = () => {
+            let currentOpacity = this.currentPanelSettings?.opacity;
+            if (typeof currentOpacity !== 'number' || Number.isNaN(currentOpacity)) {
+                currentOpacity = this.defaultPanelSettings.opacity;
+            }
+            currentOpacity = clampOpacity(currentOpacity);
+            const percent = Math.round((1 - currentOpacity) * 100);
+            return clampPercent(percent);
+        };
+
+        if (transparencyButton && transparencyPopover && transparencySlider) {
+            // Initialize slider position from current settings
+            const initialPercent = getCurrentTransparencyPercent();
+            transparencySlider.value = initialPercent;
+            updateTransparencyLabel(initialPercent);
+
+            // Toggle popover
+            transparencyButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isVisible = transparencyPopover.style.display === 'block';
+                transparencyPopover.style.display = isVisible ? 'none' : 'block';
+                if (!isVisible) {
+                    // Sync slider each time it opens
+                    const p = getCurrentTransparencyPercent();
+                    transparencySlider.value = p;
+                    updateTransparencyLabel(p);
+                }
+            });
+
+            // Close on outside click
+            const outsideClickHandler = (e) => {
+                if (!transparencyPopover || transparencyPopover.style.display !== 'block') return;
+                const withinPopover = transparencyPopover.contains(e.target);
+                const onButton = transparencyButton.contains(e.target);
+                if (!withinPopover && !onButton) {
+                    transparencyPopover.style.display = 'none';
+                }
+            };
+            document.addEventListener('mousedown', outsideClickHandler, true);
+
+            // Close on ESC
+            const escHandler = (e) => {
+                if (e.key === 'Escape' && transparencyPopover.style.display === 'block') {
+                    transparencyPopover.style.display = 'none';
+                }
+            };
+            document.addEventListener('keydown', escHandler, true);
+
+            // Slider input -> live preview + save (debounced)
+            transparencySlider.addEventListener('input', (e) => {
+                const val = Number(e.target.value);
+                applyTransparencyPercent(val);
+            });
+            // Prevent drag interference while interacting with slider
+            transparencySlider.addEventListener('mousedown', (event) => event.stopPropagation());
+            transparencySlider.addEventListener('click', (event) => event.stopPropagation());
+        }
 
         this.makeDraggable(panel, panelHeader);
         this.makeDraggable(panel, profileSwitcherContainer);

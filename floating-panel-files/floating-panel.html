@@ -6,6 +6,21 @@
  
    <!-- Header controls (always visible; overlay, not part of header flow) -->
    <div id="max-extension-panel-header-controls" title="Panel controls (always visible)">
+    <button id="max-extension-panel-transparency-btn" title="Adjust transparency">◑</button>
+    <div id="max-extension-transparency-popover" class="max-extension-popover" style="display: none;">
+      <div class="max-extension-popover-inner">
+        <label for="max-extension-transparency-slider" class="max-extension-popover-label">
+          Transparency: <span id="max-extension-transparency-value">30%</span>
+        </label>
+        <input
+          id="max-extension-transparency-slider"
+          type="range"
+          min="0"
+          max="70"
+          step="5"
+        />
+      </div>
+    </div>
      <button id="max-extension-panel-collapse-btn" title="Collapse header">▲</button>
      <button
        id="max-extension-panel-close-btn"
