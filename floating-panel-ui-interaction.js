@@ -136,6 +136,8 @@ window.MaxExtensionFloatingPanel.toggleHeaderCollapse = function () {
 window.MaxExtensionFloatingPanel.applyHeaderCollapsedState = function (isCollapsed) {
     const header = document.getElementById('max-extension-floating-panel-header');
     const collapseButton = document.getElementById('max-extension-panel-collapse-btn');
+    const transparencyPopover = document.getElementById('max-extension-transparency-popover');
+    const transparencyButton = document.getElementById('max-extension-panel-transparency-btn');
 
     if (!header || !collapseButton) return;
 
@@ -147,12 +149,24 @@ window.MaxExtensionFloatingPanel.applyHeaderCollapsedState = function (isCollaps
         if (this.panelElement) {
             this.panelElement.classList.add('has-collapsed-header'); // Allows content to reserve click-safe strip
         }
+        // Hide transparency popover when header collapses
+        if (transparencyPopover) {
+            transparencyPopover.style.display = 'none';
+        }
+        // Hide the transparency button itself when header is collapsed
+        if (transparencyButton) {
+            transparencyButton.style.display = 'none';
+        }
     } else {
         header.classList.remove('collapsed');
         collapseButton.classList.remove('collapsed');
         collapseButton.title = 'Collapse header - This will collapse this header to save some window space. You can then click again to uncollapse. ';
         if (this.panelElement) {
             this.panelElement.classList.remove('has-collapsed-header');
+        }
+        // Show the transparency button again when header is expanded
+        if (transparencyButton) {
+            transparencyButton.style.display = '';
         }
     }
 };
