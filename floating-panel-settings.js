@@ -81,13 +81,22 @@ window.MaxExtensionFloatingPanel.loadPanelSettings = function () {
             // Apply settings to panel if it exists.
             if (this.panelElement) {
                 this.updatePanelFromSettings();
+                // After applying saved position, clamp within the current viewport once
+                if (typeof this.ensurePanelWithinViewport === 'function') {
+                    try { requestAnimationFrame(() => this.ensurePanelWithinViewport()); } catch (_) { this.ensurePanelWithinViewport(); }
+                }
             }
+
+            // Mark settings as loaded so toggling logic can respect saved position
+            this.panelSettingsLoaded = true;
 
             // Initial panel state restoration is now handled by init.js (the Director).
         });
     } catch (error) {
         logConCgp('[floating-panel] Error loading panel settings: ' + error.message);
         this.currentPanelSettings = { ...this.defaultPanelSettings };
+        // Even on error, mark as loaded to avoid overwriting user position on toggle
+        this.panelSettingsLoaded = true;
     }
 };
 

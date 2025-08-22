@@ -67,7 +67,10 @@ window.MaxExtensionFloatingPanel = {
     resetQueueButton: null,
     delayInputElement: null,
     queueModeToggle: null,
-    QUEUE_MAX_SIZE: 10
+    QUEUE_MAX_SIZE: 10,
+
+    // Internal runtime flags
+    panelSettingsLoaded: false
 };
 
 // Define a separate namespace for global, non-profile settings.

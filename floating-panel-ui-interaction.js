@@ -56,12 +56,20 @@ window.MaxExtensionFloatingPanel.togglePanel = async function (event) {
 
             // 3. Show and position the panel.
             this.panelElement.style.display = 'flex';
-            if (event) {
+            // Prefer previously saved position when settings are loaded; otherwise fall back
+            if (this.panelSettingsLoaded) {
+                this.updatePanelFromSettings();
+            } else if (event) {
+                // Early user summon before settings arrive: place near cursor but do not persist
                 this.positionPanelAtCursor(event);
             } else {
                 // Non-user summon: ensure we have a sane position
                 logConCgp('[floating-panel][fallback] Non-user summon path engaged; ensuring default position (bottom-right) if needed.');
                 this.updatePanelFromSettings();
+            }
+            // One-time bounds correction to avoid initial out-of-viewport spawn
+            if (typeof this.ensurePanelWithinViewport === 'function') {
+                requestAnimationFrame(() => this.ensurePanelWithinViewport());
             }
 
         } else {

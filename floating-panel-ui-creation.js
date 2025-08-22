@@ -252,7 +252,6 @@ window.MaxExtensionFloatingPanel.positionPanelAtCursor = function (event) {
     this.panelElement.style.top = (cursorY - this.currentPanelSettings.height) + 'px';
     this.currentPanelSettings.posX = parseInt(this.panelElement.style.left);
     this.currentPanelSettings.posY = parseInt(this.panelElement.style.top);
-    this.debouncedSavePanelSettings();
 };
 
 /**
@@ -334,6 +333,45 @@ window.MaxExtensionFloatingPanel.createPanelToggleButton = function () {
     });
 
     return toggleButton;
+};
+
+/**
+ * Ensures the floating panel stays fully within the current viewport.
+ * Applies a single clamping adjustment and saves the corrected position.
+ * This mirrors the drag-time bounds logic and is intended for a one-time
+ * correction right after spawn or settings load.
+ */
+window.MaxExtensionFloatingPanel.ensurePanelWithinViewport = function () {
+    if (!this.panelElement) return;
+
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // Prefer actual rendered size; fall back to settings if not measured yet
+    const panelWidth = this.panelElement.offsetWidth || this.currentPanelSettings?.width || 300;
+    const panelHeight = this.panelElement.offsetHeight || this.currentPanelSettings?.height || 400;
+
+    // Read the intended position (style wins; then settings)
+    let left = parseInt(this.panelElement.style.left, 10);
+    if (Number.isNaN(left)) left = parseInt(this.currentPanelSettings?.posX, 10) || 0;
+    let top = parseInt(this.panelElement.style.top, 10);
+    if (Number.isNaN(top)) top = parseInt(this.currentPanelSettings?.posY, 10) || 0;
+
+    const maxLeft = Math.max(0, viewportWidth - panelWidth);
+    const maxTop = Math.max(0, viewportHeight - panelHeight);
+    const clampedLeft = Math.min(Math.max(0, left), maxLeft);
+    const clampedTop = Math.min(Math.max(0, top), maxTop);
+
+    if (clampedLeft !== left || clampedTop !== top) {
+        this.panelElement.style.left = clampedLeft + 'px';
+        this.panelElement.style.top = clampedTop + 'px';
+        if (this.currentPanelSettings) {
+            this.currentPanelSettings.posX = clampedLeft;
+            this.currentPanelSettings.posY = clampedTop;
+            this.debouncedSavePanelSettings?.();
+        }
+        try { logConCgp('[floating-panel] Adjusted panel inside viewport bounds after spawn/settings load.'); } catch (_) {}
+    }
 };
 
 /**
