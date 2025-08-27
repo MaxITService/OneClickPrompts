@@ -175,35 +175,67 @@ window.MaxExtensionButtonsInit = {
      * @param {HTMLElement} targetContainer - The DOM element where custom elements will be inserted.
      */
     createAndInsertCustomElements: function (targetContainer) {
-        // Prevent duplication by checking if the container already exists using dynamic selector
-        const existingContainer = document.getElementById(window.InjectionTargetsOnWebsite.selectors.buttonsContainerId);
-        if (existingContainer && existingContainer.parentElement === targetContainer) {
-            logConCgp('[init] Custom buttons container already exists in this target. Skipping creation.');
+        // Prevent duplication across SPA re-renders by reusing or moving the existing container if present
+        const containerId = window.InjectionTargetsOnWebsite.selectors.buttonsContainerId;
+        let existingContainer = document.getElementById(containerId);
+        const isPanel = targetContainer.id === 'max-extension-floating-panel-content';
+
+        // If multiple containers with the same id exist (should not happen), keep the first and remove the rest
+        try {
+            const dups = Array.from(document.querySelectorAll(`[id="${containerId}"]`));
+            if (dups.length > 1) {
+                const [keep, ...extras] = dups;
+                extras.forEach(el => {
+                    try { el.remove(); } catch (_) {}
+                });
+                existingContainer = keep;
+                logConCgp(`[init] Detected and removed ${extras.length} duplicate container(s) with id ${containerId}.`);
+            }
+        } catch (_) { /* safe best-effort cleanup */ }
+
+        // If a container already exists, prefer moving it to the new target instead of creating a new one
+        if (existingContainer) {
+            if (existingContainer.parentElement !== targetContainer) {
+                try {
+                    targetContainer.appendChild(existingContainer); // This moves the node
+                    logConCgp('[init] Moved existing custom buttons container to a new target container.');
+                } catch (err) {
+                    logConCgp('[init] Failed moving existing container, will re-create instead:', err?.message || err);
+                    existingContainer = null; // Fallback to recreation below
+                }
+            } else {
+                logConCgp('[init] Custom buttons container already exists in this target. Reusing it.');
+            }
+        }
+
+        // If we do not have a reusable container, create a fresh one
+        if (!existingContainer) {
+            const customElementsContainer = document.createElement('div');
+            customElementsContainer.id = containerId; // where to insert buttons
+            customElementsContainer.style.cssText = `
+                display: flex;
+                justify-content: flex-start;
+                flex-wrap: wrap;
+                gap: 8px;
+                padding: 8px;
+                width: 100%;
+                z-index: 1000;
+            `;
+
+            // Append custom send buttons, passing the context.
+            // Note: toggles are appended within generateAndAppendAllButtons() at the very end
+            this.generateAndAppendAllButtons(customElementsContainer, isPanel);
+
+            targetContainer.appendChild(customElementsContainer);
+            logConCgp('[init] Custom elements have been inserted into the DOM.');
             return;
         }
 
-        const customElementsContainer = document.createElement('div');
-        // This should be created already by 
-        customElementsContainer.id = window.InjectionTargetsOnWebsite.selectors.buttonsContainerId; // where to insert buttons
-        customElementsContainer.style.cssText = `
-            display: flex;
-            justify-content: flex-start;
-            flex-wrap: wrap;
-            gap: 8px;
-            padding: 8px;
-            width: 100%;
-            z-index: 1000;
-        `;
-
-        // Determine if we are creating buttons for the panel or for an inline container.
-        const isPanel = targetContainer.id === 'max-extension-floating-panel-content';
-
-        // Append custom send buttons, passing the context.
-        // Note: toggles are now appended within generateAndAppendAllButtons() at the very end
-        this.generateAndAppendAllButtons(customElementsContainer, isPanel);
-
-        targetContainer.appendChild(customElementsContainer);
-        logConCgp('[init] Custom elements have been inserted into the DOM.');
+        // If a reusable container exists but is empty (e.g., after SPA wipe), re-render its contents
+        if (existingContainer && existingContainer.children.length === 0) {
+            this.generateAndAppendAllButtons(existingContainer, isPanel);
+            logConCgp('[init] Existing container was empty; regenerated buttons and toggles.');
+        }
     },
 
     /**
