@@ -15,9 +15,10 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
     logConCgp('[buttons] Custom send button was clicked.');
 
     // Locate the editor area using the provided selectors from the global InjectionTargetsOnWebsite object
-    const editorArea = document.querySelector(
-        window.InjectionTargetsOnWebsite.selectors.editors.find(selector => document.querySelector(selector))
-    );
+    // Map selectors to elements and pick the first existing match (avoids duplicate queries)
+    const editorArea = window.InjectionTargetsOnWebsite.selectors.editors
+        .map((selector) => document.querySelector(selector))
+        .find(Boolean);
 
     if (!editorArea) {
         logConCgp('[buttons] Editor area not found. Unable to proceed.');
@@ -42,57 +43,92 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
     };
 
     /**
-     * Creates an input or keyboard event for a given character.
-     * @param {string} type - The event type ('keydown', 'input', or 'keyup').
-     * @param {string} char - The character associated with the event.
-     * @returns {Event} - The constructed event.
+     * Inserts the whole text into ChatGPT's editor without per-character emulation.
+     * Handles both textarea and contenteditable editors in one place.
+     * @param {HTMLElement} editorElement - The editor element (textarea or contenteditable).
+     * @param {string} textToInsert - The text to insert.
+     * @param {boolean} replace - When true, treats editor as empty and inserts as fresh content; otherwise appends at the end.
      */
-    const createInputEvent = (type, char) => {
-        const eventInit = {
-            key: char,
-            code: `Key${char.toUpperCase()}`,
-            bubbles: true,
-            composed: true,
-            cancelable: true
-        };
+    const insertTextIntoChatGPTEditor = (editorElement, textToInsert, replace = false) => {
+        try {
+            // Textarea path (robust detection)
+            if (editorElement instanceof HTMLTextAreaElement) {
+                const existing = replace ? '' : (editorElement.value || '');
+                editorElement.focus();
+                editorElement.value = existing + textToInsert;
+                editorElement.dispatchEvent(new Event('input', { bubbles: true }));
+                editorElement.dispatchEvent(new Event('change', { bubbles: true }));
+                if (editorElement.setSelectionRange) {
+                    const end = editorElement.value.length;
+                    editorElement.setSelectionRange(end, end);
+                }
+                return true;
+            }
 
-        return type === 'input'
-            ? new InputEvent(type, {
-                data: char,
-                inputType: 'insertText',
-                bubbles: true,
-                composed: true,
-                cancelable: true
-            })
-            : new KeyboardEvent(type, eventInit);
-    };
+            // contenteditable path
+            if (editorElement.isContentEditable || editorElement.getAttribute('contenteditable') === 'true') {
+                editorElement.focus();
 
-    /**
-     * Simulates typing text into a ProseMirror editor. THIS IS NEEDED FOR AUTOSIZING EDITORS!
-     * Uses modern for‑of loops and dispatches key events for each character.
-     * @param {HTMLElement} editorElement - The ProseMirror editor element.
-     * @param {string} text - The text to type into the editor.
-     */
-    const simulateTypingIntoProseMirror = (editorElement, text) => {
-        editorElement.focus();
-        const eventTypes = ['keydown', 'input', 'keyup'];
-        for (const char of text) {
-            for (const eventType of eventTypes) {
-                const evt = createInputEvent(eventType, char);
-                editorElement.dispatchEvent(evt);
-                if (eventType === 'input') {
-                    // Modern approach to insert text
+                // If replacing and editor looks empty or has placeholder, normalize minimal structure
+                const looksEmpty = editorElement.textContent.trim() === '' || !!editorElement.querySelector('p.placeholder');
+                if (replace && looksEmpty) {
+                    editorElement.innerHTML = '<p><br></p>';
+                }
+
+                // Move caret to the end and try a single operation insert
+                if (window.MaxExtensionUtils && typeof window.MaxExtensionUtils.moveCursorToEnd === 'function') {
+                    window.MaxExtensionUtils.moveCursorToEnd(editorElement);
+                } else {
+                    const range = document.createRange();
+                    range.selectNodeContents(editorElement);
+                    range.collapse(false);
+                    const sel = window.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                }
+
+                // First attempt: execCommand('insertText') — widely handled by editors
+                let inserted = false;
+                try {
+                    inserted = document.execCommand('insertText', false, textToInsert);
+                } catch (e) {
+                    inserted = false;
+                }
+
+                // Fallback: direct Range insertion of a text node
+                if (!inserted) {
                     const selection = window.getSelection();
                     if (selection && selection.rangeCount > 0) {
                         const range = selection.getRangeAt(0);
-                        const textNode = document.createTextNode(char);
+                        const textNode = document.createTextNode(textToInsert);
                         range.insertNode(textNode);
-                        range.collapse(false);
+                        range.setStartAfter(textNode);
+                        range.collapse(true);
                         selection.removeAllRanges();
                         selection.addRange(range);
+                    } else {
+                        editorElement.appendChild(document.createTextNode(textToInsert));
                     }
                 }
+
+                // Notify the framework/editor
+                editorElement.dispatchEvent(new Event('input', { bubbles: true }));
+                // Keep caret at the end for UX
+                if (window.MaxExtensionUtils && typeof window.MaxExtensionUtils.moveCursorToEnd === 'function') {
+                    window.MaxExtensionUtils.moveCursorToEnd(editorElement);
+                }
+                return true;
             }
+
+            // Fallback — treat as generic node with textContent
+            const base = replace ? '' : (editorElement.textContent || '');
+            editorElement.textContent = base + textToInsert;
+            editorElement.dispatchEvent(new Event('input', { bubbles: true }));
+            return true;
+        } catch (err) {
+            logConCgp('[buttons][ChatGPT] insertTextIntoChatGPTEditor error:', err);
+            showToast('Failed to insert text.', 'error');
+            return false;
         }
     };
 
@@ -222,21 +258,11 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
         logConCgp('[buttons] handleMessageInsertion called.');
         const initialState = isEditorInInitialState(editorArea);
 
-        // Threshold for using direct insertion instead of simulated typing for large prompts.
-        const LARGE_PROMPT_THRESHOLD = 200;
-
         if (initialState) {
-            // If the prompt is large, use direct insertion to improve performance.
-            if (customText.length > LARGE_PROMPT_THRESHOLD) {
-                logConCgp('[buttons] Editor is in initial state and large prompt detected. Using direct insertion.');
-                MaxExtensionUtils.insertTextIntoEditor(editorArea, customText);
-                // Move the cursor to the end after direct insertion.
-                MaxExtensionUtils.moveCursorToEnd(editorArea);
-            } else {
-                logConCgp('[buttons] Editor is in initial state. Simulating typing.');
-                simulateTypingIntoProseMirror(editorArea, customText);
-            }
-            logConCgp('[buttons] Custom text inserted into editor.');
+            // Insert whole text in one go (no per-character emulation)
+            logConCgp('[buttons][ChatGPT] Editor empty/placeholder. Inserting text (bulk).');
+            insertTextIntoChatGPTEditor(editorArea, customText, true);
+            logConCgp('[buttons][ChatGPT] Custom text inserted.');
 
             // Use the promise-based helper to wait for send buttons instead of duplicating MutationObserver logic
             setTimeout(() => {
@@ -251,16 +277,9 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
                     });
             }, 500); // Delay to allow the editor to update
         } else {
-            logConCgp('[buttons] Editor is already in active state. Proceeding with existing logic.');
-
-            // --- MODIFICATION START ---
-            // Use the paste simulation utility to append the text
-            MaxExtensionUtils.simulatePaste(editorArea, customText);
-            logConCgp('[buttons] Custom text appended via simulated paste.');
-            // --- MODIFICATION END ---
-
+            logConCgp('[buttons][ChatGPT] Editor has content. Appending text (bulk insert).');
+            insertTextIntoChatGPTEditor(editorArea, customText, false);
             // Proceed to handle send buttons immediately
-            // Note: simulatePaste includes focusing and moving cursor, so no extra calls needed here.
             handleSendButtons(originalSendButtons);
         }
     };
