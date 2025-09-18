@@ -142,6 +142,10 @@ Key areas:
     animation: saveStatusFade 2s ease-out forwards;
 }
 
+.profile-version {
+    margin-top: 0;
+}
+
 @keyframes saveStatusFade {
     0% {
         opacity: 1;

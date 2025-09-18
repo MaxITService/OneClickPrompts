@@ -91,6 +91,11 @@ body:has(#copyProfileContainer:not([style*="display: none"])) #versionContainer 
     transition: box-shadow var(--transition-duration) ease, background-color var(--transition-duration) ease;
 }
 
+.section.profile-section {
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
 /* Section Hover Effects: Enhance shadow and background on hover */
 .section:hover {
     box-shadow: var(--box-shadow-hover);
