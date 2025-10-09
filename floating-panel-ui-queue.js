@@ -35,6 +35,7 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
     this.queueDisplayArea = document.getElementById('max-extension-queue-display');
     this.queueProgressContainer = document.getElementById('max-extension-queue-progress-container');
     this.queueProgressBar = document.getElementById('max-extension-queue-progress-bar');
+    this.randomDelayBadge = document.getElementById('max-extension-random-delay-toggle');
     const tosWarningContainer = document.getElementById('max-extension-queue-tos-warning');
     const tosAcceptButton = document.getElementById('max-extension-tos-accept-btn');
     const tosDeclineButton = document.getElementById('max-extension-tos-decline-btn');
@@ -98,89 +99,112 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         this.recalculateRunningTimer(); // Recalculate timer if it's running
     });
 
-    // --- TOS Confirmation (Global) and Queue Toggle (Profile-specific) ---
-    const isQueueEnabled = window.globalMaxExtensionConfig.enableQueueMode || false;
+    if (this.randomDelayBadge) {
+        this.randomDelayBadge.addEventListener('click', (event) => {
+            event.preventDefault();
+            this.toggleRandomDelayFromBadge();
+        });
+    }
 
-    const toggleCallback = (state) => {
-        // Check global TOS setting first
-        if (state && !window.MaxExtensionGlobalSettings.acceptedQueueTOS) {
-            // Make sure the queue section is visible so the warning isn't hidden by responsive/footer logic.
-            if (this.queueSectionElement) {
-                this.queueSectionElement.style.display = 'flex';
+    // --- TOS Confirmation (Global) and Queue Toggle (Profile-specific) ---
+    const hideQueueToggle = Boolean(window.globalMaxExtensionConfig.queueHideActivationToggle);
+    let isQueueEnabled = Boolean(window.globalMaxExtensionConfig.enableQueueMode);
+
+    if (hideQueueToggle) {
+        if (window.globalMaxExtensionConfig.enableQueueMode) {
+            window.globalMaxExtensionConfig.enableQueueMode = false;
+        }
+        isQueueEnabled = false;
+        if (togglePlaceholder) {
+            togglePlaceholder.innerHTML = '';
+            const disabledNotice = document.createElement('div');
+            disabledNotice.className = 'queue-toggle-disabled-note';
+            disabledNotice.textContent = 'Queue disabled in settings';
+            togglePlaceholder.appendChild(disabledNotice);
+        }
+    } else {
+        const toggleCallback = (state) => {
+            // Check global TOS setting first
+            if (state && !window.MaxExtensionGlobalSettings.acceptedQueueTOS) {
+                // Make sure the queue section is visible so the warning isn't hidden by responsive/footer logic.
+                if (this.queueSectionElement) {
+                    this.queueSectionElement.style.display = 'flex';
+                }
+                tosWarningContainer.style.display = 'block';
+                if (this.queueModeToggle) {
+                    this.queueModeToggle.style.display = 'none'; // Hide toggle
+                    const inputEl = this.queueModeToggle.querySelector('input');
+                    if (inputEl) {
+                        inputEl.checked = false; // Uncheck it
+                    }
+                }
+                return;
             }
-            tosWarningContainer.style.display = 'block';
-            this.queueModeToggle.style.display = 'none'; // Hide toggle
-            this.queueModeToggle.querySelector('input').checked = false; // Uncheck it
-            return;
+
+            // If TOS is accepted, proceed with profile setting
+            window.globalMaxExtensionConfig.enableQueueMode = state;
+
+            // Freeze-on-disable behavior:
+            if (!state) {
+                // If it was running, pause (capture remaining time). Do not clear items.
+                if (this.isQueueRunning || this.remainingTimeOnPause > 0) {
+                    logConCgp('[floating-panel-queue] Queue Mode disabled. Pausing to freeze state.');
+                } else {
+                    logConCgp('[floating-panel-queue] Queue Mode disabled. Nothing running; preserving items.');
+                }
+                this.pauseQueue();
+                // Hide progress container while disabled (keeps bar width frozen).
+                if (this.queueProgressContainer) this.queueProgressContainer.style.display = 'none';
+            }
+
+            if (expandableSection) {
+                expandableSection.style.display = state ? 'contents' : 'none';
+            }
+            if (this.queueDisplayArea) {
+                this.queueDisplayArea.style.display = state ? 'flex' : 'none';
+            }
+            this.saveCurrentProfileConfig(); // Save to profile
+
+            // If the toggle lives in the footer, keep the queue section visible only when enabled.
+            const queueToggleFooter = document.getElementById('max-extension-queue-toggle-footer');
+            const queueSection = document.getElementById('max-extension-queue-section');
+            if (queueToggleFooter && queueToggleFooter.children.length > 0) {
+                queueSection.style.display = state ? 'flex' : 'none';
+            }
+
+            // Controls refresh after toggle
+            this.updateQueueControlsState();
+        };
+
+        this.queueModeToggle = MaxExtensionInterface.createToggle(
+            'enableQueueMode',
+            'Enable Queue Mode',
+            isQueueEnabled,
+            toggleCallback
+        );
+        this.queueModeToggle.style.margin = '0';
+        this.queueModeToggle.querySelector('label').style.fontSize = '12px';
+        this.queueModeToggle.title = 'When enabled, clicking buttons adds them to a queue instead of sending immediately.';
+        togglePlaceholder.appendChild(this.queueModeToggle);
+
+        if (expandableSection) {
+            expandableSection.style.display = isQueueEnabled ? 'contents' : 'none';
+        }
+        if (this.queueDisplayArea) {
+            this.queueDisplayArea.style.display = isQueueEnabled ? 'flex' : 'none';
         }
 
-        // If TOS is accepted, proceed with profile setting
-        window.globalMaxExtensionConfig.enableQueueMode = state;
-
-        // Freeze-on-disable behavior:
-        if (!state) {
-            // If it was running, pause (capture remaining time). Do not clear items.
-            if (this.isQueueRunning || this.remainingTimeOnPause > 0) {
-                logConCgp('[floating-panel-queue] Queue Mode disabled. Pausing to freeze state.');
-            } else {
-                logConCgp('[floating-panel-queue] Queue Mode disabled. Nothing running; preserving items.');
-            }
+        // If queue mode is off on init but state exists, freeze (pause) and hide visuals (do not clear).
+        if (!isQueueEnabled && (this.isQueueRunning || (this.promptQueue && this.promptQueue.length > 0))) {
+            logConCgp('[floating-panel-queue] Queue Mode disabled on init. Freezing any lingering state.');
             this.pauseQueue();
-            // Hide progress container while disabled (keeps bar width frozen).
             if (this.queueProgressContainer) this.queueProgressContainer.style.display = 'none';
         }
 
-        if (expandableSection) {
-            expandableSection.style.display = state ? 'contents' : 'none';
+        // Initialize responsive positioning after toggle is created
+        if (this.initializeResponsiveQueueToggle) {
+            this.initializeResponsiveQueueToggle();
         }
-        if (this.queueDisplayArea) {
-            this.queueDisplayArea.style.display = state ? 'flex' : 'none';
-        }
-        this.saveCurrentProfileConfig(); // Save to profile
-
-        // If the toggle lives in the footer, keep the queue section visible only when enabled.
-        const queueToggleFooter = document.getElementById('max-extension-queue-toggle-footer');
-        const queueSection = document.getElementById('max-extension-queue-section');
-        if (queueToggleFooter && queueToggleFooter.children.length > 0) {
-            if (state) {
-                queueSection.style.display = 'flex';
-            } else {
-                queueSection.style.display = 'none';
-            }
-        }
-
-        // Controls refresh after toggle
-        this.updateQueueControlsState();
-    };
-
-    this.queueModeToggle = MaxExtensionInterface.createToggle(
-        'enableQueueMode',
-        'Enable Queue Mode',
-        isQueueEnabled,
-        toggleCallback
-    );
-    this.queueModeToggle.style.margin = '0';
-    this.queueModeToggle.querySelector('label').style.fontSize = '12px';
-    this.queueModeToggle.title = 'When enabled, clicking buttons adds them to a queue instead of sending immediately.';
-    togglePlaceholder.appendChild(this.queueModeToggle);
-
-    if (expandableSection) {
-        expandableSection.style.display = isQueueEnabled ? 'contents' : 'none';
-    }
-    if (this.queueDisplayArea) {
-        this.queueDisplayArea.style.display = isQueueEnabled ? 'flex' : 'none';
-    }
-
-    // If queue mode is off on init but state exists, freeze (pause) and hide visuals (do not clear).
-    if (!isQueueEnabled && (this.isQueueRunning || (this.promptQueue && this.promptQueue.length > 0))) {
-        logConCgp('[floating-panel-queue] Queue Mode disabled on init. Freezing any lingering state.');
-        this.pauseQueue();
-        if (this.queueProgressContainer) this.queueProgressContainer.style.display = 'none';
-    }
-
-    // Initialize responsive positioning after toggle is created
-    if (this.initializeResponsiveQueueToggle) {
-        this.initializeResponsiveQueueToggle();
     }
 
     // TOS Button Listeners
@@ -195,8 +219,13 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
 
         // 3. Update UI
         tosWarningContainer.style.display = 'none';
-        this.queueModeToggle.style.display = ''; // Show toggle again
-        this.queueModeToggle.querySelector('input').checked = true;
+        if (this.queueModeToggle) {
+            this.queueModeToggle.style.display = ''; // Show toggle again
+            const inputEl = this.queueModeToggle.querySelector('input');
+            if (inputEl) {
+                inputEl.checked = true;
+            }
+        }
         if (expandableSection) expandableSection.style.display = 'contents';
         if (this.queueDisplayArea) this.queueDisplayArea.style.display = 'flex';
         // Ensure the queue section is visible after acceptance
@@ -210,7 +239,9 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
 
     tosDeclineButton.addEventListener('click', () => {
         tosWarningContainer.style.display = 'none';
-        this.queueModeToggle.style.display = ''; // Show toggle again
+        if (this.queueModeToggle) {
+            this.queueModeToggle.style.display = ''; // Show toggle again
+        }
         // Intentionally leave queue disabled; any responsive hiding will be handled by resize logic.
         this.updateQueueControlsState();
     });
@@ -292,4 +323,84 @@ window.MaxExtensionFloatingPanel.updateQueueControlsState = function () {
     if (this.queueProgressContainer && !this.isQueueRunning && !hasItems) {
         this.queueProgressContainer.style.display = 'none';
     }
+
+    if (typeof this.updateRandomDelayBadge === 'function') {
+        this.updateRandomDelayBadge();
+    }
+};
+
+/**
+ * Toggles random delay when the badge is clicked.
+ */
+window.MaxExtensionFloatingPanel.toggleRandomDelayFromBadge = function () {
+    if (!window.globalMaxExtensionConfig) return;
+    const newState = !window.globalMaxExtensionConfig.queueRandomizeEnabled;
+    window.globalMaxExtensionConfig.queueRandomizeEnabled = newState;
+    if (newState && !Number.isFinite(window.globalMaxExtensionConfig.queueRandomizePercent)) {
+        window.globalMaxExtensionConfig.queueRandomizePercent = 5;
+    }
+
+    const baseMs = (typeof this.getQueueBaseDelayMs === 'function')
+        ? this.getQueueBaseDelayMs()
+        : 0;
+    const percent = Number.isFinite(window.globalMaxExtensionConfig.queueRandomizePercent)
+        ? window.globalMaxExtensionConfig.queueRandomizePercent
+        : 5;
+    this.lastQueueDelaySample = {
+        baseMs,
+        offsetMs: 0,
+        totalMs: baseMs,
+        percent,
+        timestamp: Date.now()
+    };
+
+    this.updateRandomDelayBadge();
+    this.recalculateRunningTimer();
+    this.saveCurrentProfileConfig();
+    logConCgp(`[floating-panel-queue] Random delay offset ${newState ? 'enabled' : 'disabled'} via floating panel.`);
+};
+
+/**
+ * Updates the random delay badge icon and tooltip.
+ */
+window.MaxExtensionFloatingPanel.updateRandomDelayBadge = function () {
+    if (!this.randomDelayBadge || !window.globalMaxExtensionConfig) return;
+
+    const config = window.globalMaxExtensionConfig;
+    const randomEnabled = Boolean(config.queueRandomizeEnabled);
+    const percent = Number.isFinite(config.queueRandomizePercent)
+        ? config.queueRandomizePercent
+        : 5;
+    const unit = (config.queueDelayUnit === 'sec') ? 'sec' : 'min';
+    const formatDelay = (ms) => {
+        if (typeof this.formatQueueDelayForUnit === 'function') {
+            return this.formatQueueDelayForUnit(ms, unit);
+        }
+        if (!Number.isFinite(ms) || ms <= 0) {
+            return unit === 'sec' ? '0s' : '0min';
+        }
+        if (unit === 'sec') {
+            return `${(ms / 1000).toFixed(1)}s`;
+        }
+        return `${(ms / 60000).toFixed(2)}min`;
+    };
+
+    let tooltip;
+    if (randomEnabled) {
+        tooltip = `Random delay offset enabled (up to ${percent}% of base delay). Click to disable.`;
+        if (this.lastQueueDelaySample) {
+            const offsetMs = this.lastQueueDelaySample.offsetMs || 0;
+            const totalMs = this.lastQueueDelaySample.totalMs || this.lastQueueDelaySample.baseMs;
+            const offsetStr = formatDelay(offsetMs);
+            const totalStr = formatDelay(totalMs);
+            tooltip += ` Last sample: ${totalStr} (${offsetStr} offset).`;
+        }
+    } else {
+        tooltip = `Random delay offset disabled. Click to enable (uses up to ${percent}% of base delay).`;
+    }
+
+    this.randomDelayBadge.textContent = randomEnabled ? '🎲' : '🚫🎲';
+    this.randomDelayBadge.title = tooltip;
+    this.randomDelayBadge.classList.toggle('random-enabled', randomEnabled);
+    this.randomDelayBadge.classList.toggle('random-disabled', !randomEnabled);
 };

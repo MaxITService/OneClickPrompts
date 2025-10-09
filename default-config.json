@@ -8,6 +8,9 @@
   "queueDelayMinutes": 5,
   "queueDelaySeconds": 300,
   "queueDelayUnit": "min",
+  "queueRandomizeEnabled": false,
+  "queueRandomizePercent": 5,
+  "queueHideActivationToggle": false,
   "customButtons": [
     {
       "icon": "🧠",

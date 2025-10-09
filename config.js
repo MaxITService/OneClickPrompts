@@ -249,6 +249,18 @@ async function getCurrentProfileConfig() {
                     profile.enableQueueMode = false;
                     logConfigurationRelatedStuff(`Initialized missing 'enableQueueMode' for profile: ${profileName}`);
                 }
+                if (typeof profile.queueRandomizeEnabled === 'undefined') {
+                    profile.queueRandomizeEnabled = false;
+                    logConfigurationRelatedStuff(`Initialized missing 'queueRandomizeEnabled' for profile: ${profileName}`);
+                }
+                if (typeof profile.queueRandomizePercent === 'undefined') {
+                    profile.queueRandomizePercent = 5;
+                    logConfigurationRelatedStuff(`Initialized missing 'queueRandomizePercent' for profile: ${profileName}`);
+                }
+                if (typeof profile.queueHideActivationToggle === 'undefined') {
+                    profile.queueHideActivationToggle = false;
+                    logConfigurationRelatedStuff(`Initialized missing 'queueHideActivationToggle' for profile: ${profileName}`);
+                }
                 return profile;
             }
         }
@@ -275,6 +287,18 @@ async function getCurrentProfileConfig() {
         if (typeof defaultProfile.enableQueueMode === 'undefined') {
             defaultProfile.enableQueueMode = false;
             logConfigurationRelatedStuff("Initialized missing 'enableQueueMode' for default profile");
+        }
+        if (typeof defaultProfile.queueRandomizeEnabled === 'undefined') {
+            defaultProfile.queueRandomizeEnabled = false;
+            logConfigurationRelatedStuff("Initialized missing 'queueRandomizeEnabled' for default profile");
+        }
+        if (typeof defaultProfile.queueRandomizePercent === 'undefined') {
+            defaultProfile.queueRandomizePercent = 5;
+            logConfigurationRelatedStuff("Initialized missing 'queueRandomizePercent' for default profile");
+        }
+        if (typeof defaultProfile.queueHideActivationToggle === 'undefined') {
+            defaultProfile.queueHideActivationToggle = false;
+            logConfigurationRelatedStuff("Initialized missing 'queueHideActivationToggle' for default profile");
         }
         return defaultProfile;
     } catch (error) {

@@ -43,6 +43,12 @@ const cancelCopyProfileButton = document.getElementById('cancelCopyProfile');
 const openInTabButton = document.getElementById('open-in-tab-button');
 const toggleWidthButton = document.getElementById('toggle-width-button');
 
+// Advanced queue settings elements
+const queueHideActivationToggleEl = document.getElementById('queueHideActivationToggle');
+const queueRandomizeEnabledEl = document.getElementById('queueRandomizeEnabled');
+const queueRandomizePercentInput = document.getElementById('queueRandomizePercent');
+const queueRandomizePercentRow = document.getElementById('queueRandomizePercentRow');
+
 // -------------------------
 // Debounced Save Function
 // -------------------------
@@ -82,6 +88,101 @@ async function updateGlobalSettings() {
     await saveCurrentProfile();
     logToGUIConsole('Updated global settings');
     showToast('Global settings updated', 'success');
+}
+
+/**
+ * Ensures advanced queue controls reflect the current profile.
+ */
+function updateQueueSettingsUIFromProfile() {
+    if (!currentProfile) {
+        return;
+    }
+
+    const hideToggle = Boolean(currentProfile.queueHideActivationToggle);
+    const randomizeEnabled = Boolean(currentProfile.queueRandomizeEnabled);
+    const randomizePercent = Number.isFinite(currentProfile.queueRandomizePercent)
+        ? currentProfile.queueRandomizePercent
+        : 5;
+
+    if (queueHideActivationToggleEl) {
+        queueHideActivationToggleEl.checked = hideToggle;
+    }
+    if (queueRandomizeEnabledEl) {
+        queueRandomizeEnabledEl.checked = randomizeEnabled;
+    }
+    if (queueRandomizePercentInput) {
+        queueRandomizePercentInput.value = randomizePercent;
+    }
+    toggleQueueRandomizePercentRow(randomizeEnabled);
+}
+
+/**
+ * Shows or hides the randomization percent row based on the toggle state.
+ * @param {boolean} isVisible
+ */
+function toggleQueueRandomizePercentRow(isVisible) {
+    if (!queueRandomizePercentRow) return;
+    queueRandomizePercentRow.style.display = isVisible ? 'flex' : 'none';
+}
+
+/**
+ * Parses and clamps the randomization percentage between 1 and 100.
+ * @param {number} value
+ * @returns {number}
+ */
+function sanitizeQueueRandomizePercent(value) {
+    if (!Number.isFinite(value)) {
+        return 5;
+    }
+    const clamped = Math.round(value);
+    return Math.min(100, Math.max(1, clamped));
+}
+
+/**
+ * Handles the hide queue activation toggle.
+ */
+function handleQueueHideActivationChange(event) {
+    if (!currentProfile) return;
+    const shouldHide = event.target.checked;
+    currentProfile.queueHideActivationToggle = shouldHide;
+
+    if (shouldHide) {
+        currentProfile.enableQueueMode = false;
+    }
+
+    debouncedSaveCurrentProfile();
+    logToGUIConsole(`Queue activation toggle ${shouldHide ? 'hidden and disabled' : 'visible'}.`);
+    showToast(shouldHide ? 'Queue activation toggle will be hidden.' : 'Queue activation toggle restored.', 'info');
+}
+
+/**
+ * Handles the randomization toggle.
+ */
+function handleQueueRandomizeToggleChange(event) {
+    if (!currentProfile) return;
+    const enabled = event.target.checked;
+    currentProfile.queueRandomizeEnabled = enabled;
+
+    if (enabled && !Number.isFinite(currentProfile.queueRandomizePercent)) {
+        currentProfile.queueRandomizePercent = 5;
+    }
+
+    toggleQueueRandomizePercentRow(enabled);
+    debouncedSaveCurrentProfile();
+    logToGUIConsole(`Queue delay randomization ${enabled ? 'enabled' : 'disabled'}.`);
+    showToast(enabled ? 'Random delay offset enabled.' : 'Random delay offset disabled.', 'success');
+}
+
+/**
+ * Handles changes to the randomization percent input.
+ */
+function handleQueueRandomizePercentChange(event) {
+    if (!currentProfile) return;
+    const parsedValue = sanitizeQueueRandomizePercent(parseInt(event.target.value, 10));
+    currentProfile.queueRandomizePercent = parsedValue;
+    queueRandomizePercentInput.value = parsedValue;
+    debouncedSaveCurrentProfile();
+    logToGUIConsole(`Random delay offset set to ${parsedValue}% of base delay.`);
 }
 
 /**
@@ -160,7 +261,7 @@ async function updateInterface() {
     
     document.getElementById('autoSendToggle').checked = currentProfile.globalAutoSendEnabled;
     document.getElementById('shortcutsToggle').checked = currentProfile.enableShortcuts;
-    
+
     // Clear input fields
     document.getElementById('buttonIcon').value = '';
     document.getElementById('buttonText').value = '';
@@ -168,6 +269,8 @@ async function updateInterface() {
 
     // Set the profileSelect dropdown to the current profile
     profileSelect.value = currentProfile.PROFILE_NAME;
+
+    updateQueueSettingsUIFromProfile();
 }
 
 /**
@@ -313,6 +416,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('autoSendToggle').addEventListener('change', updateGlobalSettings);
     document.getElementById('shortcutsToggle').addEventListener('change', updateGlobalSettings);
     document.getElementById('revertDefault').addEventListener('click', revertToDefault);
+    if (queueHideActivationToggleEl) {
+        queueHideActivationToggleEl.addEventListener('change', handleQueueHideActivationChange);
+    }
+    if (queueRandomizeEnabledEl) {
+        queueRandomizeEnabledEl.addEventListener('change', handleQueueRandomizeToggleChange);
+    }
+    if (queueRandomizePercentInput) {
+        queueRandomizePercentInput.addEventListener('change', handleQueueRandomizePercentChange);
+    }
 
     // Drag and drop events - implementation in popup-page-customButtons.js
     // We use a two-phase check to allow dragging the whole card while preventing

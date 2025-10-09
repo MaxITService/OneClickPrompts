@@ -63,6 +63,80 @@ window.MaxExtensionFloatingPanel.removeFromQueue = function (index) {
 };
 
 /**
+ * Calculates the base queue delay in milliseconds, without randomization.
+ * @returns {number}
+ */
+window.MaxExtensionFloatingPanel.getQueueBaseDelayMs = function () {
+    const config = window.globalMaxExtensionConfig || {};
+    const unit = (config.queueDelayUnit === 'sec') ? 'sec' : 'min';
+    if (unit === 'sec') {
+        const secondsValue = Number(config.queueDelaySeconds);
+        const seconds = Number.isFinite(secondsValue) ? secondsValue : 300;
+        return Math.max(10, seconds) * 1000;
+    }
+    const minutesValue = Number(config.queueDelayMinutes);
+    const minutes = Number.isFinite(minutesValue) ? minutesValue : 5;
+    return Math.max(1, minutes) * 60 * 1000;
+};
+
+/**
+ * Calculates the effective queue delay in milliseconds, applying randomization when enabled.
+ * @param {Object} [options]
+ * @param {boolean} [options.log=true] - Whether to log when a random offset is applied.
+ * @returns {number}
+ */
+window.MaxExtensionFloatingPanel.getQueueDelayWithRandomMs = function (options = {}) {
+    const { log = true } = options;
+    const config = window.globalMaxExtensionConfig || {};
+    const baseMs = this.getQueueBaseDelayMs();
+
+    let totalMs = baseMs;
+    let offsetMs = 0;
+    const percentValue = Number(config.queueRandomizePercent);
+    let percent = Number.isFinite(percentValue) ? percentValue : 5;
+
+    if (config.queueRandomizeEnabled) {
+        percent = Math.max(0, percent);
+        const maxOffsetMs = Math.round(baseMs * (percent / 100));
+        if (maxOffsetMs > 0) {
+            offsetMs = Math.floor(Math.random() * (maxOffsetMs + 1));
+            totalMs = baseMs + offsetMs;
+            if (log) {
+                logConCgp(`[queue-engine] Randomized delay applied. Base: ${baseMs}ms, Offset: ${offsetMs}ms (max ${maxOffsetMs}ms).`);
+            }
+        }
+    }
+
+    this.lastQueueDelaySample = {
+        baseMs,
+        offsetMs,
+        totalMs,
+        percent,
+        timestamp: Date.now()
+    };
+
+    return totalMs;
+};
+
+/**
+ * Formats a delay (in milliseconds) into a human-readable string based on unit.
+ * @param {number} ms
+ * @param {'sec'|'min'} unit
+ * @returns {string}
+ */
+window.MaxExtensionFloatingPanel.formatQueueDelayForUnit = function (ms, unit) {
+    if (!Number.isFinite(ms) || ms <= 0) {
+        return unit === 'sec' ? '0s' : '0min';
+    }
+    if (unit === 'sec') {
+        const seconds = ms / 1000;
+        return `${Number.isInteger(seconds) ? seconds.toFixed(0) : seconds.toFixed(1)}s`;
+    }
+    const minutes = ms / 60000;
+    return `${Number.isInteger(minutes) ? minutes.toFixed(0) : minutes.toFixed(2)}min`;
+};
+
+/**
  * Starts or resumes the queue processing.
  */
 window.MaxExtensionFloatingPanel.startQueue = function () {
@@ -192,14 +266,8 @@ window.MaxExtensionFloatingPanel.recalculateRunningTimer = function () {
     // Elapsed time on current timer.
     const elapsedTime = Date.now() - this.timerStartTime;
 
-    // New total delay from config.
-    const unit = globalMaxExtensionConfig.queueDelayUnit || 'min';
-    let newTotalDelayMs;
-    if (unit === 'sec') {
-        newTotalDelayMs = (globalMaxExtensionConfig.queueDelaySeconds || 300) * 1000;
-    } else { // 'min'
-        newTotalDelayMs = (globalMaxExtensionConfig.queueDelayMinutes || 5) * 60 * 1000;
-    }
+    // New total delay from config (includes random offset if enabled).
+    const newTotalDelayMs = this.getQueueDelayWithRandomMs({ log: false });
 
     if (elapsedTime >= newTotalDelayMs) {
         logConCgp('[queue-engine] New delay < elapsed time. Processing next item.');
@@ -276,16 +344,18 @@ window.MaxExtensionFloatingPanel.processNextQueueItem = function () {
 
     // If there are more items, schedule the next one.
     if (this.promptQueue.length > 0) {
-        const unit = globalMaxExtensionConfig.queueDelayUnit || 'min';
-        let delayMs;
-        if (unit === 'sec') {
-            const delaySec = globalMaxExtensionConfig.queueDelaySeconds || 300;
-            delayMs = delaySec * 1000;
-            logConCgp(`[queue-engine] Waiting for ${delaySec} seconds before next item.`);
-        } else { // 'min'
-            const delayMin = globalMaxExtensionConfig.queueDelayMinutes || 5;
-            delayMs = delayMin * 60 * 1000;
-            logConCgp(`[queue-engine] Waiting for ${delayMin} minutes before next item.`);
+        const config = window.globalMaxExtensionConfig || {};
+        const unit = (config.queueDelayUnit === 'sec') ? 'sec' : 'min';
+        const delayMs = this.getQueueDelayWithRandomMs();
+        const sample = this.lastQueueDelaySample || { baseMs: delayMs, offsetMs: 0, totalMs: delayMs };
+
+        const totalStr = this.formatQueueDelayForUnit(delayMs, unit);
+        if (config.queueRandomizeEnabled && sample.offsetMs > 0) {
+            const baseStr = this.formatQueueDelayForUnit(sample.baseMs, unit);
+            const offsetStr = this.formatQueueDelayForUnit(sample.offsetMs, unit);
+            logConCgp(`[queue-engine] Waiting for ${totalStr} (base ${baseStr} + offset ${offsetStr}) before next item.`);
+        } else {
+            logConCgp(`[queue-engine] Waiting for ${totalStr} before next item.`);
         }
 
         // Animate progress bar

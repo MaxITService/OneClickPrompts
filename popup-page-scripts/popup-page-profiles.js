@@ -12,7 +12,10 @@ const minimalDefaultConfig = {
     globalAutoSendEnabled: true,
     enableShortcuts: true,
     firstModificationDone: false,
-    customButtons: [] // No buttons or separators
+    customButtons: [], // No buttons or separators
+    queueRandomizeEnabled: false,
+    queueRandomizePercent: 5,
+    queueHideActivationToggle: false
 };
 
 // -------------------------

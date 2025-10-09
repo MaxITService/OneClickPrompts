@@ -239,6 +239,40 @@
     font-size: 12px;
 }
 
+#max-extension-queue-toggle-placeholder .queue-toggle-disabled-note {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px dashed rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
+    padding: 4px 8px;
+}
+
+#max-extension-queue-section .random-delay-badge {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.9);
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+#max-extension-queue-section .random-delay-badge:hover {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+#max-extension-queue-section .random-delay-badge.random-disabled {
+    opacity: 0.75;
+}
+
+#max-extension-queue-section .random-delay-badge.random-enabled {
+    background: rgba(46, 204, 113, 0.2);
+    border-color: rgba(46, 204, 113, 0.55);
+}
+
 #max-extension-delay-unit-toggle {
     background: transparent;
     border: none;

@@ -261,6 +261,56 @@
                 Reset settings for all websites
               </button>
             </div>
+            <div class="advanced-queue-settings" id="advancedQueueSettings">
+              <div class="subsection-header">
+                <h3>Advanced Queue Settings</h3>
+              </div>
+              <div class="text-inside-container">
+                <p>
+                  Configure optional queue controls that apply to every profile. Random
+                  delay adds a slight positive offset to the base delay to help space
+                  requests. Hiding the activation toggle prevents enabling the queue
+                  from the floating panel.
+                </p>
+              </div>
+              <div class="row queue-setting-row">
+                <label
+                  class="checkbox-row"
+                  for="queueHideActivationToggle"
+                  title="Hide the queue activation toggle in the floating panel. This also turns queue mode off immediately."
+                >
+                  <input type="checkbox" id="queueHideActivationToggle" />
+                  <span>Hide queue activation toggle</span>
+                </label>
+              </div>
+              <div class="row queue-setting-row">
+                <label
+                  class="checkbox-row"
+                  for="queueRandomizeEnabled"
+                  title="Add a random positive offset to the queue delay based on the percentage below."
+                >
+                  <input type="checkbox" id="queueRandomizeEnabled" />
+                  <span>Enable random delay offset</span>
+                </label>
+              </div>
+              <div class="row queue-setting-row" id="queueRandomizePercentRow">
+                <label
+                  for="queueRandomizePercent"
+                  title="Maximum percentage of the base delay used as the random offset. Range: 1% to 100%."
+                >
+                  Random offset range (%)
+                </label>
+                <input
+                  type="number"
+                  id="queueRandomizePercent"
+                  min="1"
+                  max="100"
+                  step="1"
+                  value="5"
+                  title="Maximum percent of the base delay used as the random offset (1–100)."
+                />
+              </div>
+            </div>
           </div>
         </div>
       </section>
