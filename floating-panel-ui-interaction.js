@@ -294,4 +294,15 @@ window.MaxExtensionFloatingPanel.updatePanelFromSettings = function () {
     if (queueSection) {
         queueSection.style.backgroundColor = `rgba(60, 60, 60, ${headerFooterOpacity})`;
     }
+
+    // Keep transparency slider and label aligned with the applied opacity.
+    const transparencySlider = document.getElementById('max-extension-transparency-slider');
+    const transparencyValue = document.getElementById('max-extension-transparency-value');
+    const transparencyPercent = Math.min(70, Math.max(0, Math.round((1 - bgOpacity) * 100)));
+    if (transparencySlider && String(transparencySlider.value) !== String(transparencyPercent)) {
+        transparencySlider.value = transparencyPercent;
+    }
+    if (transparencyValue) {
+        transparencyValue.textContent = `${transparencyPercent}%`;
+    }
 };
