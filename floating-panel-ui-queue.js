@@ -31,6 +31,7 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
     this.delayInputElement = document.getElementById('max-extension-queue-delay-input');
     this.delayUnitToggle = document.getElementById('max-extension-delay-unit-toggle');
     this.playQueueButton = document.getElementById('max-extension-play-queue-btn');
+    this.skipQueueButton = document.getElementById('max-extension-skip-queue-btn');
     this.resetQueueButton = document.getElementById('max-extension-reset-queue-btn');
     this.queueDisplayArea = document.getElementById('max-extension-queue-display');
     this.queueProgressContainer = document.getElementById('max-extension-queue-progress-container');
@@ -103,6 +104,40 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         this.randomDelayBadge.addEventListener('click', (event) => {
             event.preventDefault();
             this.toggleRandomDelayFromBadge();
+        });
+    }
+
+    if (this.skipQueueButton) {
+        this.skipQueueButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            if (typeof this.skipToNextQueueItem === 'function') {
+                this.skipToNextQueueItem();
+            }
+        });
+    }
+
+    if (this.queueProgressContainer) {
+        this.queueProgressContainer.addEventListener('mousedown', (event) => {
+            // Prevent dragging the panel while interacting with the progress bar.
+            event.stopPropagation();
+        });
+        this.queueProgressContainer.addEventListener('click', (event) => {
+            event.preventDefault();
+            if (!window.globalMaxExtensionConfig?.enableQueueMode) {
+                return;
+            }
+            const hasTimer = (this.isQueueRunning && this.queueTimerId) || this.remainingTimeOnPause > 0;
+            if (!hasTimer || !this.queueProgressBar) {
+                return;
+            }
+            const rect = this.queueProgressContainer.getBoundingClientRect();
+            if (!rect || rect.width <= 0) {
+                return;
+            }
+            const ratio = (event.clientX - rect.left) / rect.width;
+            if (typeof this.seekQueueTimerToRatio === 'function') {
+                this.seekQueueTimerToRatio(ratio);
+            }
         });
     }
 
@@ -297,6 +332,11 @@ window.MaxExtensionFloatingPanel.updateQueueControlsState = function () {
         this.playQueueButton.title = 'Enable Queue Mode to start.';
         this.playQueueButton.disabled = true;
 
+        if (this.skipQueueButton) {
+            this.skipQueueButton.disabled = true;
+            this.skipQueueButton.title = 'Enable Queue Mode to skip.';
+        }
+
         this.resetQueueButton.disabled = true;
 
         if (this.queueProgressContainer) {
@@ -314,6 +354,18 @@ window.MaxExtensionFloatingPanel.updateQueueControlsState = function () {
         this.playQueueButton.innerHTML = '▶️'; // Play icon
         this.playQueueButton.title = 'Start sending the queued prompts.';
         this.playQueueButton.disabled = !hasItems && !isPaused; // Disabled if no items and not paused
+    }
+
+    if (this.skipQueueButton) {
+        if (!hasItems) {
+            this.skipQueueButton.disabled = true;
+            this.skipQueueButton.title = 'No queued prompts to skip.';
+        } else {
+            this.skipQueueButton.disabled = false;
+            this.skipQueueButton.title = this.isQueueRunning
+                ? 'Skip to the next queued prompt immediately.'
+                : 'Send the next queued prompt immediately.';
+        }
     }
 
     // Reset Button

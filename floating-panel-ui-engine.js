@@ -137,6 +137,124 @@ window.MaxExtensionFloatingPanel.formatQueueDelayForUnit = function (ms, unit) {
 };
 
 /**
+ * Immediately advances to the next item in the queue, bypassing the remaining delay.
+ */
+window.MaxExtensionFloatingPanel.skipToNextQueueItem = function () {
+    if (!window.globalMaxExtensionConfig?.enableQueueMode) {
+        logConCgp('[queue-engine] Skip ignored because queue mode is disabled.');
+        return;
+    }
+
+    if (!Array.isArray(this.promptQueue) || this.promptQueue.length === 0) {
+        logConCgp('[queue-engine] Skip ignored because the queue is empty.');
+        return;
+    }
+
+    const wasRunning = this.isQueueRunning;
+    const wasPaused = !this.isQueueRunning && (this.remainingTimeOnPause > 0);
+
+    if (this.queueTimerId) {
+        clearTimeout(this.queueTimerId);
+        this.queueTimerId = null;
+    }
+
+    this.remainingTimeOnPause = 0;
+    if (!this.isQueueRunning) {
+        this.isQueueRunning = true;
+    }
+
+    if (this.queueProgressBar) {
+        this.queueProgressBar.style.transition = 'none';
+        this.queueProgressBar.style.width = '100%';
+    }
+
+    logConCgp('[queue-engine] Skip requested. Sending next queued prompt immediately.');
+    this.processNextQueueItem();
+
+    if (wasPaused && this.isQueueRunning) {
+        // Restore paused state after dispatching the item.
+        this.pauseQueue();
+    } else if (!wasRunning && !this.isQueueRunning) {
+        // Queue finished while we were idle; ensure UI reflects the stopped state.
+        this.updateQueueControlsState();
+    }
+};
+
+/**
+ * Adjusts the current queue timer progress based on a ratio between 0 and 1.
+ * @param {number} ratio
+ */
+window.MaxExtensionFloatingPanel.seekQueueTimerToRatio = function (ratio) {
+    if (!window.globalMaxExtensionConfig?.enableQueueMode) {
+        logConCgp('[queue-engine] Seek ignored because queue mode is disabled.');
+        return;
+    }
+
+    const total = Number(this.currentTimerDelay);
+    if (!Number.isFinite(total) || total <= 0) {
+        logConCgp('[queue-engine] Seek ignored because there is no active delay.');
+        return;
+    }
+
+    const clampedRatio = Math.min(Math.max(Number(ratio), 0), 1);
+    const elapsed = clampedRatio * total;
+    const remaining = Math.max(total - elapsed, 0);
+    const config = window.globalMaxExtensionConfig || {};
+    const unit = (config.queueDelayUnit === 'sec') ? 'sec' : 'min';
+
+    if (this.isQueueRunning && this.queueTimerId) {
+        clearTimeout(this.queueTimerId);
+
+        if (remaining <= 20) {
+            // Treat as an immediate skip when user selects the end of the bar.
+            if (this.queueProgressBar) {
+                this.queueProgressBar.style.transition = 'none';
+                this.queueProgressBar.style.width = '100%';
+            }
+            logConCgp('[queue-engine] Seek reached the end of the interval. Dispatching next item.');
+            this.remainingTimeOnPause = 0;
+            this.queueTimerId = null;
+            this.timerStartTime = Date.now() - total;
+            this.processNextQueueItem();
+            return;
+        }
+
+        this.timerStartTime = Date.now() - elapsed;
+        this.remainingTimeOnPause = 0;
+        this.queueTimerId = setTimeout(() => this.processNextQueueItem(), remaining);
+
+        if (this.queueProgressBar) {
+            this.queueProgressBar.style.transition = 'none';
+            this.queueProgressBar.style.width = `${clampedRatio * 100}%`;
+            void this.queueProgressBar.offsetWidth;
+            this.queueProgressBar.style.transition = `width ${remaining / 1000}s linear`;
+            this.queueProgressBar.style.width = '100%';
+        }
+
+        const remainingStr = this.formatQueueDelayForUnit(remaining, unit);
+        logConCgp(`[queue-engine] Seeked queue timer to ${(clampedRatio * 100).toFixed(0)}% (${remainingStr} remaining).`);
+        if (this.lastQueueDelaySample) {
+            this.lastQueueDelaySample.timestamp = Date.now();
+        }
+    } else if (!this.isQueueRunning && this.remainingTimeOnPause > 0) {
+        this.remainingTimeOnPause = remaining;
+
+        if (this.queueProgressBar) {
+            this.queueProgressBar.style.transition = 'none';
+            this.queueProgressBar.style.width = `${clampedRatio * 100}%`;
+        }
+
+        const remainingStr = this.formatQueueDelayForUnit(remaining, unit);
+        logConCgp(`[queue-engine] Adjusted paused queue timer to ${(clampedRatio * 100).toFixed(0)}% (${remainingStr} remaining).`);
+        if (this.lastQueueDelaySample) {
+            this.lastQueueDelaySample.timestamp = Date.now();
+        }
+    } else {
+        logConCgp('[queue-engine] Seek ignored because no timer is active.');
+    }
+};
+
+/**
  * Starts or resumes the queue processing.
  */
 window.MaxExtensionFloatingPanel.startQueue = function () {
