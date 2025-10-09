@@ -115,6 +115,14 @@ window.MaxExtensionFloatingPanel.getQueueDelayWithRandomMs = function (options =
         timestamp: Date.now()
     };
 
+    if (typeof this.updateRandomDelayBadge === 'function') {
+        try {
+            this.updateRandomDelayBadge();
+        } catch (_) {
+            // Ignore badge update errors to avoid breaking queue processing.
+        }
+    }
+
     return totalMs;
 };
 
