@@ -452,7 +452,7 @@ window.MaxExtensionFloatingPanel.processNextQueueItem = function () {
         processCustomSendButtonClick(
             mockEvent,
             item.text,
-            (typeof item.autoSend === 'boolean') ? item.autoSend : true
+            true // Queue dispatch must always auto-send regardless of button toggle.
         );
     } catch (err) {
         logConCgp('[queue-engine] Error while dispatching queued click:', err?.message || err);
