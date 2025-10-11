@@ -479,6 +479,7 @@ window.MaxExtensionFloatingPanel.initializeResponsiveQueueToggle = function () {
         const toggle = this.queueModeToggle;
         const isToggleInOriginal = toggle && toggle.parentElement === queueToggleOriginal;
         const toggleLabel = toggle?.querySelector('label');
+        const footer = document.getElementById('max-extension-profile-switcher');
 
         let forcedFooter = this.queueToggleForcedToFooter === true;
         let labelOverflowing = false;
@@ -496,6 +497,10 @@ window.MaxExtensionFloatingPanel.initializeResponsiveQueueToggle = function () {
         }
 
         const shouldMoveToFooter = panelWidth >= minWidthForFooterPlacement || forcedFooter;
+        const footerCollapsed = !!footer && footer.classList.contains('collapsed');
+        const queueEnabled = !!window.globalMaxExtensionConfig?.enableQueueMode;
+        const footerAllowsDisplay = (!footerCollapsed || queueEnabled);
+        const shouldDisplayFooterToggle = shouldMoveToFooter && footerAllowsDisplay;
 
         // Determine if TOS warning is currently visible using computed style (works regardless of inline or stylesheet rules).
         const tosVisible = !!tosWarning && window.getComputedStyle(tosWarning).display !== 'none';
@@ -503,9 +508,9 @@ window.MaxExtensionFloatingPanel.initializeResponsiveQueueToggle = function () {
         if (shouldMoveToFooter) {
             if (toggle && toggle.parentElement === queueToggleOriginal) {
                 queueToggleFooter.appendChild(toggle);
-                queueToggleFooter.style.display = 'flex';
                 queueToggleOriginal.style.display = 'none';
             }
+            queueToggleFooter.style.display = shouldDisplayFooterToggle ? 'flex' : 'none';
 
             if (tosVisible) {
                 queueSection.style.display = 'flex';
@@ -529,13 +534,22 @@ window.MaxExtensionFloatingPanel.initializeResponsiveQueueToggle = function () {
                 if (toggleLabel && (toggleLabel.scrollWidth - toggleLabel.clientWidth) > 1) {
                     this.queueToggleForcedToFooter = true;
                     queueToggleFooter.appendChild(toggle);
-                    queueToggleFooter.style.display = 'flex';
+                    queueToggleFooter.style.display = footerAllowsDisplay ? 'flex' : 'none';
                     queueToggleOriginal.style.display = 'none';
                 }
             }
-            queueSection.style.display = 'flex';
+            // At narrow widths, keep the queue section hidden if the footer is
+            // collapsed and the queue is not enabled (unless a TOS warning must show).
+            if (tosVisible) {
+                queueSection.style.display = 'flex';
+            } else {
+                const showNarrow = !footerCollapsed || queueEnabled;
+                queueSection.style.display = showNarrow ? 'flex' : 'none';
+            }
         }
     };
+
+    this.updateQueueTogglePlacement = checkSpaceAndMoveToggle;
 
     // Initial check
     setTimeout(checkSpaceAndMoveToggle, 100);

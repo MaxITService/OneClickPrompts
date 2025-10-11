@@ -244,6 +244,9 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
 
             // Controls refresh after toggle
             this.updateQueueControlsState();
+            if (typeof this.updateQueueTogglePlacement === 'function') {
+                this.updateQueueTogglePlacement();
+            }
         };
 
         this.queueModeToggle = MaxExtensionInterface.createToggle(
@@ -305,6 +308,9 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
 
         // Controls become available again
         this.updateQueueControlsState();
+        if (typeof this.updateQueueTogglePlacement === 'function') {
+            this.updateQueueTogglePlacement();
+        }
     });
 
     tosDeclineButton.addEventListener('click', () => {
@@ -314,6 +320,9 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         }
         // Intentionally leave queue disabled; any responsive hiding will be handled by resize logic.
         this.updateQueueControlsState();
+        if (typeof this.updateQueueTogglePlacement === 'function') {
+            this.updateQueueTogglePlacement();
+        }
     });
 
     // Attach event listeners to queue action buttons

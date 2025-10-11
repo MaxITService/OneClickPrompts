@@ -213,6 +213,10 @@ window.MaxExtensionFloatingPanel.applyFooterCollapsedState = function (isCollaps
             this.panelElement.classList.remove('has-collapsed-footer');
         }
     }
+
+    if (typeof this.updateQueueTogglePlacement === 'function') {
+        this.updateQueueTogglePlacement();
+    }
 };
 
 
