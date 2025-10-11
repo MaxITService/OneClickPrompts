@@ -77,6 +77,8 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         window.globalMaxExtensionConfig = {};
     }
 
+    this.queueFinishedState = false;
+
     this.queueAutoScrollEnabled = Boolean(window.globalMaxExtensionConfig.queueAutoScrollBeforeSend);
     this.queueBeepEnabled = Boolean(window.globalMaxExtensionConfig.queueBeepBeforeSend);
     this.queueSpeakEnabled = Boolean(window.globalMaxExtensionConfig.queueSpeakBeforeSend);
@@ -212,6 +214,10 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
             }
 
             // If TOS is accepted, proceed with profile setting
+            if (typeof this.clearQueueFinishedState === 'function') {
+                this.clearQueueFinishedState();
+            }
+
             window.globalMaxExtensionConfig.enableQueueMode = state;
 
             // Freeze-on-disable behavior:
@@ -305,6 +311,9 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         if (this.queueSectionElement) {
             this.queueSectionElement.style.display = 'flex';
         }
+        if (typeof this.clearQueueFinishedState === 'function') {
+            this.clearQueueFinishedState();
+        }
 
         // Controls become available again
         this.updateQueueControlsState();
@@ -320,6 +329,9 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         }
         // Intentionally leave queue disabled; any responsive hiding will be handled by resize logic.
         this.updateQueueControlsState();
+        if (typeof this.clearQueueFinishedState === 'function') {
+            this.clearQueueFinishedState();
+        }
         if (typeof this.updateQueueTogglePlacement === 'function') {
             this.updateQueueTogglePlacement();
         }
@@ -391,6 +403,21 @@ window.MaxExtensionFloatingPanel.setupQueueAutomationButtons = function (parentE
         this.queuePreSendControlsWrapper.appendChild(button);
         this.applyQueueAutomationButtonState(definition.flagProp);
     });
+
+    if (!this.queueFinishedIndicatorButton) {
+        const finishedButton = document.createElement('button');
+        finishedButton.type = 'button';
+        finishedButton.className = 'max-extension-queue-finished-indicator';
+        finishedButton.textContent = 'Queue is finished';
+        finishedButton.disabled = true;
+        finishedButton.setAttribute('aria-hidden', 'true');
+        this.queueFinishedIndicatorButton = finishedButton;
+        this.queuePreSendControlsWrapper.appendChild(finishedButton);
+    }
+
+    if (typeof this.updateQueueFinishedIndicator === 'function') {
+        this.updateQueueFinishedIndicator();
+    }
 };
 
 window.MaxExtensionFloatingPanel.applyQueueAutomationButtonState = function (flagProp) {
@@ -406,6 +433,24 @@ window.MaxExtensionFloatingPanel.updateQueueAutomationButtons = function () {
     Object.keys(this.queueAutomationButtons).forEach((flagProp) => {
         this.applyQueueAutomationButtonState(flagProp);
     });
+};
+
+window.MaxExtensionFloatingPanel.updateQueueFinishedIndicator = function () {
+    const indicator = this.queueFinishedIndicatorButton;
+    if (!indicator) return;
+    const shouldShow = Boolean(this.queueFinishedState);
+    indicator.style.display = shouldShow ? 'inline-flex' : 'none';
+    indicator.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
+};
+
+window.MaxExtensionFloatingPanel.clearQueueFinishedState = function () {
+    this.queueFinishedState = false;
+    this.updateQueueFinishedIndicator?.();
+};
+
+window.MaxExtensionFloatingPanel.markQueueFinished = function () {
+    this.queueFinishedState = true;
+    this.updateQueueFinishedIndicator?.();
 };
 
 /**

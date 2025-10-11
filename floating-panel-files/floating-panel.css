@@ -480,6 +480,26 @@
     box-shadow: 0 0 10px rgba(190, 120, 255, 0.55);
 }
 
+.max-extension-queue-finished-indicator {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(46, 204, 113, 0.6);
+    background-color: rgba(46, 204, 113, 0.22);
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    cursor: default;
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+    box-shadow: 0 0 8px rgba(46, 204, 113, 0.35);
+}
+
 #max-extension-queue-progress-container {
     height: 4px;
     background-color: rgba(0, 0, 0, 0.2);

@@ -57,6 +57,10 @@ window.MaxExtensionFloatingPanel.addToQueue = function (buttonConfig) {
         queueId: `queue-item-${this.nextQueueItemId++}`
     };
 
+    if (typeof this.clearQueueFinishedState === 'function') {
+        this.clearQueueFinishedState();
+    }
+
     this.promptQueue.push(queueEntry);
     logConCgp('[queue-engine] Added to queue:', queueEntry.text);
     this.renderQueueDisplay();
@@ -71,6 +75,9 @@ window.MaxExtensionFloatingPanel.removeFromQueue = function (index) {
     if (index > -1 && index < this.promptQueue.length) {
         const removed = this.promptQueue.splice(index, 1);
         logConCgp('[queue-engine] Removed from queue:', removed[0].text);
+        if (typeof this.clearQueueFinishedState === 'function') {
+            this.clearQueueFinishedState();
+        }
         this.renderQueueDisplay();
         this.updateQueueControlsState();
     }
@@ -288,6 +295,10 @@ window.MaxExtensionFloatingPanel.startQueue = function () {
         return;
     }
 
+    if (typeof this.clearQueueFinishedState === 'function') {
+        this.clearQueueFinishedState();
+    }
+
     // Prevent starting if already running, or if there's nothing to do.
     if (this.isQueueRunning || (this.promptQueue.length === 0 && this.remainingTimeOnPause <= 0)) {
         return;
@@ -370,6 +381,9 @@ window.MaxExtensionFloatingPanel.resetQueue = function () {
     this.remainingTimeOnPause = 0;
     this.timerStartTime = 0;
     this.currentTimerDelay = 0;
+    if (typeof this.clearQueueFinishedState === 'function') {
+        this.clearQueueFinishedState();
+    }
     logConCgp('[queue-engine] Queue reset.');
 
     // Hide and reset progress bar to 0%.
@@ -715,6 +729,9 @@ window.MaxExtensionFloatingPanel.processNextQueueItem = async function () {
             this.queueProgressBar.style.width = '100%';
         }
         this.pauseQueue();
+        if (typeof this.markQueueFinished === 'function') {
+            this.markQueueFinished();
+        }
         setTimeout(() => {
             if (this.queueProgressContainer && !this.isQueueRunning) {
                 this.queueProgressContainer.style.display = 'none';
