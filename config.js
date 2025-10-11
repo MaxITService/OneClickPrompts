@@ -466,7 +466,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 }
             })();
             return true;
-        // ----- New Cases for Dark Theme Support -----
+        // ----- Dark Theme Saving -----
         case 'getTheme':
             (async () => {
                 try {
@@ -489,7 +489,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case 'setTheme':
             (async () => {
                 try {
-                    // Accept either { theme: 'light'|'dark' } or { darkTheme: boolean|string }
+                    
                     let incoming = request.theme;
                     if (incoming !== 'light' && incoming !== 'dark') {
                         if (request.darkTheme === 'dark' || request.darkTheme === true) incoming = 'dark';
