@@ -254,15 +254,19 @@
 }
 
 #max-extension-queue-section .random-delay-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    padding: 0 10px;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.25);
     border-radius: 12px;
-    padding: 2px 8px;
     font-size: 11px;
     cursor: pointer;
     line-height: 1;
     color: rgba(255, 255, 255, 0.9);
-    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 }
 
 #max-extension-queue-section .random-delay-badge:hover {
@@ -310,20 +314,40 @@
 #max-extension-queue-section .action-buttons-container {
     display: flex;
     gap: 8px;
+    align-items: center;
 }
 
 #max-extension-queue-section .action-buttons-container button {
-    background: none;
-    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background-color: rgba(40, 90, 140, 0.7);
+    border: 1px solid rgba(90, 140, 200, 0.65);
+    border-radius: 6px;
     font-size: 18px;
+    line-height: 1;
     cursor: pointer;
     padding: 0;
-    color: white;
+    color: rgba(255, 255, 255, 0.95);
+    transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+}
+
+#max-extension-queue-section .action-buttons-container button:hover:not(:disabled) {
+    background-color: rgba(50, 110, 170, 0.85);
+    box-shadow: 0 0 6px rgba(80, 140, 210, 0.45);
+    transform: translateY(-1px);
+}
+
+#max-extension-queue-section .action-buttons-container button:active:not(:disabled) {
+    transform: scale(0.95);
 }
 
 #max-extension-queue-section .action-buttons-container button:disabled {
     cursor: not-allowed;
-    opacity: 0.4;
+    opacity: 0.45;
+    box-shadow: none;
 }
 
 /* TOS Warning Section */
