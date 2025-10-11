@@ -90,8 +90,8 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
         });
 
         // --- Transparency controls ---
-        const clampPercent = (p) => Math.min(70, Math.max(0, Math.round(p)));
-        const clampOpacity = (o) => Math.min(1, Math.max(0.3, o));
+        const clampPercent = (p) => Math.min(100, Math.max(0, Math.round(p)));
+        const clampOpacity = (o) => Math.min(1, Math.max(0, o));
         const updateTransparencyLabel = (p) => {
             if (transparencyValue) transparencyValue.textContent = `${p}%`;
         };

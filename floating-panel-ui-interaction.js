@@ -280,7 +280,7 @@ window.MaxExtensionFloatingPanel.updatePanelFromSettings = function () {
         bgOpacity = this.defaultPanelSettings.opacity;
     }
     // Clamp to avoid fully invisible panel or over-opaque values
-    bgOpacity = Math.max(0.3, Math.min(1, bgOpacity));
+    bgOpacity = Math.max(0, Math.min(1, bgOpacity));
     this.panelElement.style.backgroundColor = `rgba(50, 50, 50, ${bgOpacity})`;
 
     // Header, footer, and queue section opacity
@@ -302,7 +302,7 @@ window.MaxExtensionFloatingPanel.updatePanelFromSettings = function () {
     // Keep transparency slider and label aligned with the applied opacity.
     const transparencySlider = document.getElementById('max-extension-transparency-slider');
     const transparencyValue = document.getElementById('max-extension-transparency-value');
-    const transparencyPercent = Math.min(70, Math.max(0, Math.round((1 - bgOpacity) * 100)));
+    const transparencyPercent = Math.min(100, Math.max(0, Math.round((1 - bgOpacity) * 100)));
     if (transparencySlider && String(transparencySlider.value) !== String(transparencyPercent)) {
         transparencySlider.value = transparencyPercent;
     }
