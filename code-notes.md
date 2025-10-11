@@ -1,10 +1,10 @@
 # Code Notes
 
-Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS.
+Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS. Unless asked.
 
 This document summarizes the non-profile state centralization changes and how to work with them. Profile management remains unchanged and continues to use the existing implementation and keys.
 
-## Overview
+## Overview of profile handling:
 
 - Centralized non-profile state is handled by a new service-worker module: modules/service-worker-auxiliary-state-store.js.
 - config.js remains the single messaging entry point and now delegates only non-profile handlers to StateStore.
@@ -234,3 +234,13 @@ The token counting system is now modular with a plugin-like architecture:
 - Ultralight State Machine is default for best speed/accuracy tradeoff
 - UI allows users to experiment with models via dropdown + details section
 - Backward compatible with legacy simple/advanced settings
+
+# Floating Panel UI
+A large set of files that display floating panel that allows buttons to be displayed in it along with additional features:
+
+## Prompt Queue
+- Controls: Play/Pause, Skip, Reset at 32px; random-delay chip 32px.
+- Toggle placement: moves to footer when wide; hidden if footer collapsed and queue is off.
+- Label: “Enable Queue Mode” never wraps; relocates earlier to avoid overflow.
+- Automation: 🔚 Auto‑scroll, 🔔 Beep, 🗣️ “Next item”, 🏁 Finish beep (plays completion chime).
+- Completion: shows “Queue is finished” banner; Shift‑click 🏁 briefly shows “The queue has been finished.”
