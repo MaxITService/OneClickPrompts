@@ -1,243 +1,98 @@
 # Code Notes
 
-Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS. Unless asked.
+Current architecture reference for the OneClickPrompts Chrome extension (Manifest V3, ES modules).
 
-This document summarizes the non-profile state centralization changes and how to work with them. Profile management remains unchanged and continues to use the existing implementation and keys.
+## Project Overview
+- Purpose: inject configurable prompt buttons and auxiliary UI into supported AI chat interfaces (ChatGPT, Claude, Copilot, DeepSeek, AI Studio, Grok, Gemini).
+- Modalities: inline toolbar in the site editor and an optional floating panel with prompt queue controls.
+- Source structure: root JS modules plus feature folders (`popup-page-scripts/`, `per-website-button-clicking-mechanics/`, `floating-panel-files/`, `modules/`, `common-ui-elements/`).
 
-## Project Structure & Module Organization
+## Runtime Flow Overview
+1. Browser navigates to a matched domain (`manifest.json`) and loads declared CSS then the ordered JS stack.
+2. `config.js` service worker handles installation, opens `welcome.html`, manages storage, and answers `chrome.runtime` messages.
+3. `init.js` runs last on the page, pulls configuration via the service worker, chooses inline or floating panel UI (or both), wires SPA navigation observers, and triggers button rendering.
+4. `utils.js` exposes selector helpers; `buttons.js` builds button elements and routes clicks to site-specific handlers; `buttons-init-and-render.js` composes the toolbar with toggles, cross-chat buttons, profile selector, and panel toggle.
+5. Site handler modules in `per-website-button-clicking-mechanics/` perform DOM interactions specific to each platform.
 
-Project is OneClickPrompts, a JavaScript Chrome extension using Manifest V3 and ES modules, (previously called ChatGPT Quick Buttons for your text)
+## Service Worker & Storage
+- Primary entry point: `config.js`
+  - Registers context menu (`context-menu.js`), runs `StateStore`, migrates sync→local storage, creates the default profile using `default-config.json`, and logs via `logConfigurationRelatedStuff`.
+  - Exposes message handlers for profile CRUD, cross-chat, floating panel persistence, inline selector settings, token approximator settings, custom selectors, backup/restore, welcome-page launch, and settings tab open.
+- Central storage module: `modules/service-worker-auxiliary-state-store.js`
+  - Maintains non-profile state under namespaced keys (`ui`, `modules`, `floatingPanel`, `global`, `meta`) with dual-read/write to legacy keys.
+  - Provides API methods for theme, popup UI state, cross-chat, inline selector, token approximator, floating panel per-host configs, custom selectors, and debug meta toggles.
+  - Broadcasts tab messages when state changes to keep inline UI and popup synchronized.
+- Profile data: stored in `chrome.storage.local` under `profiles.<name>` with `currentProfile`; service worker functions marshal these records.
+- Logging policy: use `logConCgp` from `log.js` everywhere outside the service worker (which keeps its own prefixed logger).
 
-OneClickPrompts is a Chrome extension that enhances AI chat interfaces through content script injection and modular architecture. The extension operates across multiple AI platforms, providing prompt automation, UI enhancements, and advanced interaction features through a sophisticated button management system (popup.html) by injection buttons to the page itself and alternativelay by toggelable floating panel interface which aslo have queue mode.
+## Content Script Surfaces
+- Inline toolbar:
+  - `buttons-init-and-render.js` orchestrates button list, separators, toggles, floating panel toggle, and inline profile selector placement.
+  - `buttons.js` assigns shortcuts, handles queue-aware click routing, and calls per-site injectors (`buttons-clicking-*.js`).
+  - `buttons-injection.js` finds target containers, injects markup once, and runs resiliency loops/mutation observers to survive SPA changes.
+  - `interface.js` builds reusable toggle UI and persists local toggle states.
+- Floating panel system:
+  - Base namespace: `floating-panel.js` (state, defaults, queue properties).
+  - UI creation/layout: `floating-panel-ui-creation.js`, `floating-panel-ui-engine.js`.
+  - Interaction logic: `floating-panel-ui-interaction.js`, `floating-panel-ui-queue.js`, `floating-panel-ui-queue-dnd.js`.
+  - Settings persistence: `floating-panel-settings.js` calls service worker for host-specific storage and global queue toggles.
+  - Queue automation: supports scheduling, random delays, audio cues, and finish indicators.
 
-- Service worker: `config.js` (messaging, lifecycle, profiles). Central state: `modules/service-worker-auxiliary-state-store.js` (theme, selectors, floating panel, cross‑chat, token approximator).
-- UI: `popup.html`, `popup-page-scripts/`, `popup-page-styles/`, and shared styles in `common-ui-elements/`. Welcome page: `welcome.html`.
-- Content/UI logic: `init.js`, `buttons*.js`, `utils.js`, `event-handlers.js`, and site hooks in `per-website-button-clicking-mechanics/`.
-- Modules: `modules/` (e.g., inline profile selector, token models under `modules/token-models/`).
-- Assets & tooling: icons (`icon*.png`)
+## Popup & Management UI
+- Root HTML: `popup.html` (mirrors extension action and options page).
+- Main controller: `popup-page-scripts/popup-page-script.js`
+  - Loads profile list, handles add/copy/delete, manages drag-and-drop ordering (`popup-page-customButtons.js`), updates global settings, and coordinates with backup/import.
+  - Manages queue configuration toggles (`handleQueue*` functions) and triggers `chrome.runtime` messages.
+- Supporting modules:
+  - `popup-page-profiles.js`: service worker messaging for profile CRUD.
+  - `popup-page-advanced.js`, `popup-page-backup-handler.js`: advanced options and backup/export/import.
+  - `popup-page-theme.js`, `popup-page-visuals.js`, `popup-page-collapsible.js`: theme switching, animations, collapsible sections.
+  - `popup-page-floating-window-handler.js`: opens popup UI in a tab with responsive widths.
+- Shared styling: `popup-page-styles/` and `common-ui-elements/` (`common-style.css`, `dark-theme.css`, `ocp_toast.css`, `popup-toggle.css`).
 
-## Overview of profile handling:
+## Inline Profile Selector
+- Configuration UI: `modules/popup-page-modules-inlineSelector.js` exposes toggles in the popup and saves via service worker.
+- Runtime integration: `buttons-init-and-render.js` injects selector before/after button stack; events trigger profile switching through existing refresh helpers.
+- Profile change refresh: `window.__OCP_partialRefreshUI` and `window.__OCP_nukeAndRefresh` from `init.js` keep inline toolbar and floating panel synced without destroying the panel.
 
-- Centralized non-profile state is handled by a new service-worker module: modules/service-worker-auxiliary-state-store.js.
-- config.js remains the single messaging entry point and now delegates only non-profile handlers to StateStore.
-- Backward compatibility is preserved via dual-read (prefer new schema, fallback to legacy) and dual-write (mirror writes to legacy keys).
+## Token Approximator
+- Popup controls: `modules/popup-page-modules-tokenApproximator.js` (model selection, calibration, UI).
+- Backend worker: `modules/backend-tokenApproximator.js` (creates estimator worker, manages chips in floating panel/inline UI, schedules refresh).
+- Models: `modules/token-models/` (registry plus multiple counting strategies; default is `model-ultralight-state-machine.js`).
+- State coordination: service worker methods to persist settings and broadcast updates to content scripts.
 
-Profiles are explicitly excluded. Keys under currentProfile and profiles.* remain owned by their existing logic.
+## Cross-Chat Prompt Sharing
+- Popup controls: `modules/popup-page-modules-promptShare.js`.
+- Runtime buttons: `buttons.js` exposes copy/paste buttons with autosend, tooltip feedback, and stored prompt retrieval.
+- State entries run through `StateStore` to mirror legacy keys and broadcast updates.
 
-+- Popup loadProfiles ensures the default profile is created before listing profiles and falls back to the current profile name when none are returned, preventing an empty selector on first load.
+## Site Detection & Utilities
+- `utils.js` contains DOM helpers (wait for selectors, simulate clicks/paste, cursor management, separators).
+- `init.js` builds `InjectionTargetsOnWebsite` (site-specific selectors) and attaches SPA observers:
+  - Mutation observers and History API patches detect URL changes.
+  - `publicStaticVoidMain()` fetches config, sets `window.globalMaxExtensionConfig`, bootstraps inline or panel UI, and registers keyboard shortcuts.
+- `per-website-button-clicking-mechanics/` modules implement DOM writing and send-button activation for each supported site, respecting autosend and queue behavior.
 
-## New Module
+## Configuration Assets & Misc
+- `manifest.json`: declares permissions (`storage`, `contextMenus`), action popup, option page alias, service worker module, content script order, CSS, and web-accessible HTML for floating panel iframe usage.
+- `default-config.json`: default profile payload consumed during first-run profile creation.
+- `welcome.html` + `welcome-page-files/`: onboarding content, screenshots, and theming script for install flow.
+- `floating-panel-files/`: html/css shell used when rendering the panel as an iframe resource; referenced via web accessible resources.
+- `common-ui-elements/ocp_toast.js`: shared toast notifications for popup and floating panel.
+- Icons (`icon*.png`, `Full_logo.png`) provide extension branding.
+- `Promo/`: marketing captures (screenshots, video demos, PSD) used externally.
+- `tests.js`: harness used for manual regression aids (no automated test execution in repo policies).
 
-1) modules/service-worker-auxiliary-state-store.js
-- Purpose: Encapsulate non-profile state (UI and module/global settings) with a stable API and event broadcasts.
-- Context: Imported and executed in the service worker. It exports StateStore.
-- Responsibilities:
-  - Theme
-  - UI popup state (firstOpen, collapsibles, lastOpenedSection)
-  - Cross-Chat module global settings and stored prompt
-  - Inline Profile Selector module settings
-  - Token Approximator module settings (global)
-  - Floating panel per-host settings
-  - Custom selectors per-site
-  - Optional meta: schemaVersion, dev.debugLogging
-- Backward compatibility (legacy keys mirrored):
-  - ui.theme <-> darkTheme
-  - modules.crossChat.settings <-> crossChatModuleSettings
-  - modules.crossChat.storedPrompt <-> crossChatStoredPrompt
-  - floatingPanel.{hostname} <-> floating_panel_{hostname}
-  - global.customSelectors <-> customSelectors
-- Not touching:
-  - currentProfile, profiles.*, listProfiles/saveConfig/switchProfile/getConfig/deleteProfile and related behavior.
-
-### StateStore API
-
-Theme
-- getUiTheme(): 'light' | 'dark'
-- setUiTheme(theme: 'light' | 'dark'): Promise<void> (broadcasts uiThemeChanged)
-
-UI popup
-- getUiPopupState(): { firstOpen: boolean, lastOpenedSection?: string, collapsibles?: Record<string, boolean> }
-- setUiPopupState(patch: Partial<UiPopupState>): Promise<void> (broadcasts uiPopupChanged)
-
-Cross-Chat
-- getCrossChat(): { settings: { enabled, autosendCopy, autosendPaste, placement }, storedPrompt: string }
-- saveCrossChat(settingsPatch): Promise<void> (broadcasts crossChatChanged)
-- getStoredPrompt(): string
-- saveStoredPrompt(text: string): Promise<void> (broadcasts crossChatPromptChanged)
-- clearStoredPrompt(): Promise<void> (broadcasts crossChatPromptChanged)
-
-Inline Profile Selector
-- getInlineProfileSelectorSettings(): { enabled: boolean, placement: 'before' | 'after' }
-- saveInlineProfileSelectorSettings(settings): Promise<void> (broadcasts inlineProfileSelectorSettingsChanged)
-
-Floating Panel
-- getFloatingPanelSettings(hostname: string): object | null
-- saveFloatingPanelSettings(hostname: string, settings: object): Promise<void> (broadcasts floatingPanelChanged)
-- listFloatingPanelHostnames(): string[]
-- resetFloatingPanelSettings(): Promise<number> (broadcasts floatingPanelResetAll)
-- resetFloatingPanelSettingsForHostname(hostname: string): Promise<void> (broadcasts floatingPanelReset)
-
-Custom Selectors
-- getCustomSelectors(site?: string): object | null | map
-- saveCustomSelectors(site: string, selectors: object | null): Promise<void> (broadcasts customSelectorsChanged)
-- resetAdvancedSelectors(site?: string): Promise<number> (broadcasts customSelectorsChanged)
-
-Meta
-- getSchemaVersion(): number
-- setSchemaVersion(v: number): Promise<void>
-- getDebugLogging(): boolean
-- setDebugLogging(enabled: boolean): Promise<void>
-
-Broadcasts
-- uiThemeChanged, uiPopupChanged, crossChatChanged, crossChatPromptChanged, inlineProfileSelectorSettingsChanged, floatingPanelChanged, floatingPanelResetAll, floatingPanelReset, customSelectorsChanged, tokenApproximatorSettingsChanged
-
-## config.js Changes
-
-- Imports StateStore and delegates only non-profile message handlers.
-- No changes to profile handlers or keys.
-
-Updated message handlers:
-- Theme:
-  - getTheme -> StateStore.getUiTheme()
-  - setTheme -> StateStore.setUiTheme()
-- Custom selectors:
-  - getCustomSelectors -> StateStore.getCustomSelectors(site)
-  - saveCustomSelectors -> StateStore.saveCustomSelectors(site, selectors)
-  - resetAdvancedSelectors -> StateStore.resetAdvancedSelectors(site?)
-- Floating panel:
-  - getFloatingPanelSettings -> StateStore.getFloatingPanelSettings(hostname)
-  - saveFloatingPanelSettings -> StateStore.saveFloatingPanelSettings(hostname, settings)
-  - resetFloatingPanelSettings -> StateStore.resetFloatingPanelSettings()
-  - getFloatingPanelHostnames -> StateStore.listFloatingPanelHostnames()
-  - resetFloatingPanelSettingsForHostname -> StateStore.resetFloatingPanelSettingsForHostname(hostname)
-- Cross-Chat module:
-  - getCrossChatModuleSettings -> StateStore.getCrossChat().settings
-  - saveCrossChatModuleSettings -> StateStore.saveCrossChat(settingsPatch)
-  - saveStoredPrompt -> StateStore.saveStoredPrompt(text)
-  - getStoredPrompt -> StateStore.getStoredPrompt()
-  - clearStoredPrompt -> StateStore.clearStoredPrompt()
-- Inline Profile Selector module:
-  - getInlineProfileSelectorSettings -> StateStore.getInlineProfileSelectorSettings()
-  - saveInlineProfileSelectorSettings -> StateStore.saveInlineProfileSelectorSettings(settings)
-- Token Approximator module:
-  - getTokenApproximatorSettings -> StateStore.getTokenApproximatorSettings()
-  - saveTokenApproximatorSettings -> StateStore.saveTokenApproximatorSettings(settings)
-
-Unchanged message handlers:
-- Profiles: getConfig, saveConfig, switchProfile, listProfiles, deleteProfile, createDefaultProfile
-- Global settings: getGlobalSettings, saveGlobalSettings
-- Storage: clearStorage
-- Install/welcome/migration: unchanged
-
-## Storage Schema
-
-New schema (logical paths):
-- ui.theme: 'light' | 'dark' (mirrors darkTheme)
-- ui.popup: { firstOpen: boolean, lastOpenedSection?: string, collapsibles?: Record<id, boolean> }
-- modules.crossChat: { settings: { enabled, autosendCopy, autosendPaste, placement }, storedPrompt: string }
-- modules.inlineProfileSelector: { enabled: boolean, placement: 'before' | 'after' }
-- modules.tokenApproximator: { enabled:boolean, calibration:number, threadMode:'withEditors'|'ignoreEditors'|'hide', showEditorCounter:boolean, placement:'before'|'after', countingMethod:'advanced'|'simple' }
-- floatingPanel: { [hostname]: FloatingPanelSettings }
-- global.customSelectors: { [site]: SelectorsConfig }
-- state.schemaVersion: number
-- dev.debugLogging: boolean
-
-Legacy keys preserved during transition:
-- darkTheme
-- crossChatModuleSettings
-- crossChatStoredPrompt
-- floating_panel_{hostname}
-- customSelectors
-
-Read precedence and writes:
-- Reads: prefer new schema; fallback to legacy; fallback to defaults.
-- Writes: to new schema and legacy (dual-write) for compatibility.
-
-## UI/Caller Expectations
-
-- Existing popup and content scripts continue to send the same messages; behavior remains compatible.
-- For per-site selector reset, popup uses saveCustomSelectors(site, null).
-- For global selector reset (if any caller uses it): resetAdvancedSelectors is supported and will clear all or one site accordingly.
-
-## UI Theming and Styles
-
-- Shared vars: ['common-ui-elements/common-style.css'](common-ui-elements/common-style.css) defines root tokens (colors, hover, transitions, shadows, checkbox size). Used by popup and welcome.
-- Dark theme: ['common-ui-elements/dark-theme.css'](common-ui-elements/dark-theme.css) applies on body.dark-theme; adjusts tokens and components (buttons, inputs, sections, links, toasts, dialogs).
-- Dialogs: use .dialog with variants .dialog-confirmation and .dialog-error (see ['popup.html'](popup.html:284)).
-- Toasts: base .toast plus type classes toast-success/error/info from ['common-ui-elements/ocp_toast.js'](common-ui-elements/ocp_toast.js) with styles in ['common-ui-elements/ocp_toast.css'](common-ui-elements/ocp_toast.css). In dark mode, neutral fallback applies only without a type class.
-
-## Inline Profile Selector Module
-
-The Inline Profile Selector module adds a dropdown menu directly in the button row of chat interfaces, allowing users to quickly switch between profiles without opening the extension popup.
-
-### Features
-- Adds a dropdown selector in the button row that displays all available profiles
-- Can be positioned either before or after custom buttons
-- Automatically updates UI when profile is changed
-- Preserves state across page refreshes and navigation
-- Handles dark/light theme detection for appropriate styling
-
-### Implementation
-- UI settings in popup: ['modules/popup-page-modules-inlineSelector.js'](modules/popup-page-modules-inlineSelector.js)
-- DOM creation: ['buttons-init-and-render.js'](buttons-init-and-render.js) (createInlineProfileSelector function)
-- Storage: ['modules/service-worker-auxiliary-state-store.js'](modules/service-worker-auxiliary-state-store.js) (inlineProfileSelector key)
-- Global config loading: ['init.js'](init.js) (loads settings during initialization)
-
-### Integration Points
-- Initialization: Settings loaded in init.js before main UI initialization
-- Button Row: Rendered in generateAndAppendAllButtons based on placement setting
-- Profile Switching: Uses the same profile switching mechanism as the floating panel
-- UI Refresh: Leverages the centralized refresh helpers (__OCP_partialRefreshUI, __OCP_nukeAndRefresh)
-
-## Future Adoption (Optional)
-
-- ui.popup.firstOpen/collapsibles/lastOpenedSection are available for a future pass to persist popup section states.
-- A thin client SDK (modules/state-store-client.js) can be added later to simplify callers and consume broadcasts.
-- A versioning policy and quotas/backoff strategy can be layered into StateStore without affecting existing endpoints.
-
-## File References
-
-- Service worker: ['config.js'](config.js)
-- State: ['modules/service-worker-auxiliary-state-store.js'](modules/service-worker-auxiliary-state-store.js)
-- Styles: ['common-ui-elements/common-style.css'](common-ui-elements/common-style.css), ['common-ui-elements/dark-theme.css'](common-ui-elements/dark-theme.css)
-- HTML: ['popup.html'](popup.html), ['welcome.html'](welcome.html)
-- Inline Profile Selector: ['modules/popup-page-modules-inlineSelector.js'](modules/popup-page-modules-inlineSelector.js)
-- Token Approximator: ['modules/popup-page-modules-tokenApproximator.js'](modules/popup-page-modules-tokenApproximator.js), ['modules/backend-tokenApproximator.js'](modules/backend-tokenApproximator.js)
-
-## Token Approximator (overview)
-- **Popup**: `modules/popup-page-modules-tokenApproximator.js`
-  - `normalize`, `setUiFromSettings`, `collectSettingsFromUi`, `save`, `load`, `attachEvents`.
-- **Backend**: `modules/backend-tokenApproximator.js`
-  - UI: `createUiIfNeeded`, `placeUi`, `showHideBySettings`, `formatTokens`.
-  - Worker: `createEstimatorWorker()` (loads models from registry)
-  - Run: `estimateAndPaint()`.
-  - Schedulers: `makeScheduler()`; thread/editor cadences.
-- **State**: `modules/service-worker-auxiliary-state-store.js`
-  - `getTokenApproximatorSettings`, `saveTokenApproximatorSettings` (+broadcast).
-- **Models**: `modules/token-models/`
-  - `base.js`: Base interface for all token counting models
-  - `registry.js`: Registry system to manage and load models
-  - `model-simple.js`: 1:4 ratio model (fast, less accurate)
-  - `model-advanced.js`: Original algorithm with heuristics
-  - `model-ultralight-state-machine.js`: New default - fast with good accuracy
-  - `model-single-regex-pass.js`: Single regex for accuracy (30% slower than ultralight)
-  - `model-cpt-blend-mix.js`: DeepSeek R1 blend (variable accuracy, 70% slower)
-
-### Token Models Architecture
-The token counting system is now modular with a plugin-like architecture:
-- All models implement common interface from `base.js`
-- Registry dynamically loads models based on settings
-- Each model exposes metadata for UI (name, description, performance metrics)
-- Ultralight State Machine is default for best speed/accuracy tradeoff
-- UI allows users to experiment with models via dropdown + details section
-- Backward compatible with legacy simple/advanced settings
-
-# Floating Panel UI
-A large set of files that display floating panel that allows buttons to be displayed in it along with additional features:
-
-## Prompt Queue
-- Controls: Play/Pause, Skip, Reset at 32px; random-delay chip 32px.
-- Toggle placement: moves to footer when wide; hidden if footer collapsed and queue is off.
-- Label: “Enable Queue Mode” never wraps; relocates earlier to avoid overflow.
-- Automation: 🔚 Auto‑scroll, 🔔 Beep, 🗣️ “Next item”, 🏁 Finish beep (plays completion chime).
-- Completion: shows “Queue is finished” banner; Shift‑click 🏁 briefly shows “The queue has been finished.”
+## Core Feature Summary
+| Capability | Description | Primary Files |
+|------------|-------------|----------------|
+| Button Management System | Custom prompt buttons with emoji/text, separators, numeric shortcuts, site-aware click flows | `buttons.js`, `buttons-init-and-render.js`, `per-website-button-clicking-mechanics/*` |
+| Profile System | Multiple button sets with create/copy/delete, current profile tracking, default bootstrap | `popup-page-scripts/popup-page-script.js`, `popup-page-profiles.js`, `config.js` |
+| Drag-and-Drop Ordering | Reorder buttons and separators in popup interface | `popup-page-customButtons.js` |
+| Floating Panel | Resizable panel with per-host persistence, toolbar mirror, global toggles | `floating-panel.js`, `floating-panel-ui-creation.js`, `floating-panel-settings.js` |
+| Queue System | Sequential prompt execution with delays, automation toggles, randomization, finish cues | `floating-panel-ui-queue.js`, `floating-panel-ui-queue-dnd.js`, `floating-panel-ui-engine.js` |
+| Cross-Chat Sharing | Copy/paste prompt storage across sites with autosend options | `buttons.js`, `modules/popup-page-modules-promptShare.js`, `modules/service-worker-auxiliary-state-store.js` |
+| Token Approximation | Real-time token estimates using pluggable models | `modules/backend-tokenApproximator.js`, `modules/token-models/*`, `modules/popup-page-modules-tokenApproximator.js` |
+| Platform Integration | Selector-driven injection into AI chat UIs with SPA resiliency | `manifest.json`, `init.js`, `utils.js`, `per-website-button-clicking-mechanics/*` |
+| Configuration & Persistence | StateStore-backed storage for themes, popup state, module configs, custom selectors, backups | `config.js`, `modules/service-worker-auxiliary-state-store.js`, `popup-page-backup-handler.js` |
+| Theme System | Light/dark theme sync with OS preference; shared stylesheets | `popup-page-theme.js`, `common-ui-elements/dark-theme.css`, `common-ui-elements/common-style.css` |
