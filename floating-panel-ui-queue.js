@@ -43,6 +43,14 @@ const QUEUE_AUTOMATION_BUTTONS = [
         emoji: '🗣️',
         ariaLabel: 'Announce “Next item” before sending the queued prompt',
         tooltip: 'Uses the browser’s speech synthesis to say “Next item” just before the queued prompt is sent.'
+    },
+    {
+        flagProp: 'queueFinishBeepEnabled',
+        storageKey: 'queueBeepOnFinish',
+        label: 'Finish beep',
+        emoji: '🏁',
+        ariaLabel: 'Play a completion beep when the queue finishes sending all prompts',
+        tooltip: 'Plays a celebratory tone once all queued prompts have been sent.'
     }
 ];
 
@@ -82,6 +90,7 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
     this.queueAutoScrollEnabled = Boolean(window.globalMaxExtensionConfig.queueAutoScrollBeforeSend);
     this.queueBeepEnabled = Boolean(window.globalMaxExtensionConfig.queueBeepBeforeSend);
     this.queueSpeakEnabled = Boolean(window.globalMaxExtensionConfig.queueSpeakBeforeSend);
+    this.queueFinishBeepEnabled = Boolean(window.globalMaxExtensionConfig.queueBeepOnFinish);
 
     // Prevent dragging when interacting with the queue section
     this.queueSectionElement.addEventListener('mousedown', (event) => {
@@ -450,6 +459,9 @@ window.MaxExtensionFloatingPanel.clearQueueFinishedState = function () {
 
 window.MaxExtensionFloatingPanel.markQueueFinished = function () {
     this.queueFinishedState = true;
+    if (this.queueFinishBeepEnabled && typeof this.playQueueCompletionBeep === 'function') {
+        void this.playQueueCompletionBeep();
+    }
     this.updateQueueFinishedIndicator?.();
 };
 

@@ -486,6 +486,7 @@
     justify-content: center;
     height: 32px;
     padding: 0 12px;
+    margin-left: 6px;
     border-radius: 10px;
     border: 1px solid rgba(46, 204, 113, 0.6);
     background-color: rgba(46, 204, 113, 0.22);

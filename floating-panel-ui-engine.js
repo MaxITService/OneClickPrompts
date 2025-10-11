@@ -550,6 +550,47 @@ window.MaxExtensionFloatingPanel.playQueueNotificationBeep = async function () {
     }
 };
 
+window.MaxExtensionFloatingPanel.playQueueCompletionBeep = async function () {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) {
+            logConCgp('[queue-engine] AudioContext not available. Skipping completion chime.');
+            return;
+        }
+
+        if (!this.queueAudioContext) {
+            this.queueAudioContext = new AudioCtx();
+        }
+
+        const ctx = this.queueAudioContext;
+        if (ctx.state === 'suspended') {
+            await ctx.resume().catch(() => {});
+        }
+
+        const scheduleBurst = (startTime, frequency) => {
+            const oscillator = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(frequency, startTime);
+            gain.gain.setValueAtTime(0.0001, startTime);
+            gain.gain.linearRampToValueAtTime(0.32, startTime + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.22);
+
+            oscillator.connect(gain).connect(ctx.destination);
+            oscillator.start(startTime);
+            oscillator.stop(startTime + 0.3);
+        };
+
+        const now = ctx.currentTime;
+        scheduleBurst(now, 784);
+        scheduleBurst(now + 0.28, 1175);
+        logConCgp('[queue-engine] Queue completion chime played.');
+    } catch (err) {
+        logConCgp('[queue-engine] Failed to play queue completion chime:', err?.message || err);
+    }
+};
+
 window.MaxExtensionFloatingPanel.speakQueueNextItem = async function () {
     try {
         if (!('speechSynthesis' in window) || typeof window.SpeechSynthesisUtterance !== 'function') {
