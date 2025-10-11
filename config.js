@@ -132,15 +132,36 @@ async function createDefaultProfile() {
     }
 }
 
+function areProfileConfigsEqual(existingConfig, newConfig) {
+    try {
+        return JSON.stringify(existingConfig) === JSON.stringify(newConfig);
+    } catch (error) {
+        handleStorageError(error);
+        return false;
+    }
+}
+
 // Function to save profile configuration
 async function saveProfileConfig(profileName, config) {
     logConfigurationRelatedStuff(`Saving profile: ${profileName}`);
     try {
+        const snapshot = await chrome.storage.local.get([`profiles.${profileName}`, 'currentProfile']);
+        const existingConfig = snapshot[`profiles.${profileName}`];
+        const wasActiveProfile = snapshot.currentProfile ? snapshot.currentProfile === profileName : true;
+
         await chrome.storage.local.set({
             'currentProfile': profileName,
             [`profiles.${profileName}`]: config
         });
         logConfigurationRelatedStuff(`Profile ${profileName} saved successfully`);
+
+        const configChanged = !areProfileConfigsEqual(existingConfig, config);
+        if (configChanged && wasActiveProfile) {
+            logConfigurationRelatedStuff(`Detected changes for active profile ${profileName}; broadcasting updates.`);
+            await broadcastProfileChange(profileName, config, null, 'inline');
+            await broadcastProfileChange(profileName, config, null, 'panel');
+        }
+
         return true;
     } catch (error) {
         handleStorageError(error);
