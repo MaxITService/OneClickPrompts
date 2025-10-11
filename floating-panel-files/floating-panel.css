@@ -404,9 +404,51 @@
 
 .max-extension-queued-item--placeholder {
     border: 1px dashed rgba(255, 255, 255, 0.4);
-    background-color: rgba(255, 255, 255, 0.08);
-    opacity: 0.5;
-    pointer-events: none;
+   background-color: rgba(255, 255, 255, 0.08);
+   opacity: 0.5;
+   pointer-events: none;
+}
+
+.max-extension-queue-automation-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+    align-items: center;
+}
+
+.max-extension-queue-option-button {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(160, 120, 220, 0.35);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.95);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 30px;
+    font-size: 18px;
+    line-height: 1;
+    padding: 2px;
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+    vertical-align: middle;
+}
+
+.max-extension-queue-option-button:hover {
+    background-color: rgba(220, 200, 255, 0.18);
+    transform: translateY(-1px);
+}
+
+.max-extension-queue-option-button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(190, 150, 255, 0.9);
+}
+
+.max-extension-queue-option-button.active {
+    background-color: rgba(160, 90, 255, 0.32);
+    border-color: rgba(210, 170, 255, 0.95);
+    box-shadow: 0 0 10px rgba(190, 120, 255, 0.55);
 }
 
 #max-extension-queue-progress-container {

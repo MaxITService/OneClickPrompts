@@ -69,6 +69,12 @@ window.MaxExtensionFloatingPanel = {
     queueModeToggle: null,
     QUEUE_MAX_SIZE: 10,
     nextQueueItemId: 1,
+    queueAutoScrollEnabled: false,
+    queueBeepEnabled: false,
+    queueSpeakEnabled: false,
+    queueAutomationButtons: null,
+    queuePreSendControlsWrapper: null,
+    queueAudioContext: null,
 
     // Internal runtime flags
     panelSettingsLoaded: false

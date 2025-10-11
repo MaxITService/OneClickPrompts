@@ -21,6 +21,11 @@
 
 'use strict';
 
+const queueSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const QUEUE_SCROLL_REPETITIONS = 3;
+const QUEUE_SCROLL_DELAY_MS = 250;
+const QUEUE_SCROLL_FINAL_SETTLE_MS = 400;
+
 /**
  * Adds a prompt configuration to the queue.
  * @param {object} buttonConfig - The configuration of the button clicked.
@@ -186,7 +191,7 @@ window.MaxExtensionFloatingPanel.skipToNextQueueItem = function () {
     }
 
     logConCgp('[queue-engine] Skip requested. Sending next queued prompt immediately.');
-    this.processNextQueueItem();
+    void this.processNextQueueItem();
 
     if (wasPaused && this.isQueueRunning) {
         // Restore paused state after dispatching the item.
@@ -232,13 +237,15 @@ window.MaxExtensionFloatingPanel.seekQueueTimerToRatio = function (ratio) {
             this.remainingTimeOnPause = 0;
             this.queueTimerId = null;
             this.timerStartTime = Date.now() - total;
-            this.processNextQueueItem();
+            void this.processNextQueueItem();
             return;
         }
 
         this.timerStartTime = Date.now() - elapsed;
         this.remainingTimeOnPause = 0;
-        this.queueTimerId = setTimeout(() => this.processNextQueueItem(), remaining);
+        this.queueTimerId = setTimeout(() => {
+            void this.processNextQueueItem();
+        }, remaining);
 
         if (this.queueProgressBar) {
             this.queueProgressBar.style.transition = 'none';
@@ -313,13 +320,13 @@ window.MaxExtensionFloatingPanel.startQueue = function () {
 
         this.queueTimerId = setTimeout(() => {
             this.remainingTimeOnPause = 0; // Clear remainder
-            this.processNextQueueItem();
+            void this.processNextQueueItem();
         }, this.remainingTimeOnPause);
 
     } else {
         // Fresh start: send first item immediately.
         logConCgp('[queue-engine] Queue started.');
-        this.processNextQueueItem();
+        void this.processNextQueueItem();
     }
 };
 
@@ -407,13 +414,15 @@ window.MaxExtensionFloatingPanel.recalculateRunningTimer = function () {
     if (elapsedTime >= newTotalDelayMs) {
         logConCgp('[queue-engine] New delay < elapsed time. Processing next item.');
         this.remainingTimeOnPause = 0;
-        this.processNextQueueItem();
+        void this.processNextQueueItem();
     } else {
         const newRemainingTime = newTotalDelayMs - elapsedTime;
         logConCgp(`[queue-engine] New remaining time is ${newRemainingTime}ms.`);
 
         this.currentTimerDelay = newTotalDelayMs;
-        this.queueTimerId = setTimeout(() => this.processNextQueueItem(), newRemainingTime);
+        this.queueTimerId = setTimeout(() => {
+            void this.processNextQueueItem();
+        }, newRemainingTime);
 
         // Update progress bar instantly to new percentage.
         if (this.queueProgressBar) {
@@ -427,11 +436,173 @@ window.MaxExtensionFloatingPanel.recalculateRunningTimer = function () {
     }
 };
 
+window.MaxExtensionFloatingPanel.isElementVerticallyScrollable = function (element) {
+    if (!element) return false;
+    const computed = window.getComputedStyle(element);
+    const scrollableValues = ['auto', 'scroll', 'overlay'];
+    const overflowY = computed.overflowY;
+    const overflow = computed.overflow;
+    const canScroll = scrollableValues.includes(overflowY) || scrollableValues.includes(overflow);
+    return canScroll && (element.scrollHeight - element.clientHeight > 1);
+};
+
+window.MaxExtensionFloatingPanel.collectQueueScrollTargets = function () {
+    const targets = new Set();
+    const scrollingElement = document.scrollingElement;
+    if (scrollingElement) targets.add(scrollingElement);
+    targets.add(document.documentElement);
+    targets.add(document.body);
+
+    try {
+        document.querySelectorAll('*').forEach((element) => {
+            if (this.isElementVerticallyScrollable(element)) {
+                targets.add(element);
+            }
+        });
+    } catch (err) {
+        logConCgp('[queue-engine] Unable to enumerate all elements for scrolling:', err?.message || err);
+    }
+
+    const active = document.activeElement;
+    if (active &&
+        active !== document.body &&
+        active !== document.documentElement &&
+        this.isElementVerticallyScrollable(active)) {
+        targets.add(active);
+    }
+
+    return [...targets].filter(Boolean);
+};
+
+window.MaxExtensionFloatingPanel.scrollElementToBottom = function (element) {
+    if (!element) return;
+    if (element === document.body ||
+        element === document.documentElement ||
+        element === document.scrollingElement) {
+        const top = Math.max(
+            document.scrollingElement?.scrollHeight || 0,
+            document.documentElement?.scrollHeight || 0,
+            document.body?.scrollHeight || 0
+        );
+        window.scrollTo({ top, behavior: 'auto' });
+        return;
+    }
+    element.scrollTop = element.scrollHeight;
+};
+
+window.MaxExtensionFloatingPanel.performQueueAutoScrollSequence = async function () {
+    for (let i = 0; i < QUEUE_SCROLL_REPETITIONS; i++) {
+        const targets = this.collectQueueScrollTargets();
+        targets.forEach((target) => this.scrollElementToBottom(target));
+        logConCgp(`[queue-engine] Auto-scroll pass ${i + 1}/${QUEUE_SCROLL_REPETITIONS} executed on ${targets.length} targets.`);
+        await queueSleep(QUEUE_SCROLL_DELAY_MS);
+    }
+    await queueSleep(QUEUE_SCROLL_FINAL_SETTLE_MS);
+};
+
+window.MaxExtensionFloatingPanel.playQueueNotificationBeep = async function () {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) {
+            logConCgp('[queue-engine] AudioContext not available. Skipping beep.');
+            return;
+        }
+
+        if (!this.queueAudioContext) {
+            this.queueAudioContext = new AudioCtx();
+        }
+
+        const ctx = this.queueAudioContext;
+        if (ctx.state === 'suspended') {
+            await ctx.resume().catch(() => {});
+        }
+
+        const now = ctx.currentTime;
+        const oscillator = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, now);
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.3, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+
+        oscillator.connect(gain).connect(ctx.destination);
+        oscillator.start(now);
+        oscillator.stop(now + 0.3);
+        logConCgp('[queue-engine] Queue notification beep played.');
+    } catch (err) {
+        logConCgp('[queue-engine] Failed to play queue notification beep:', err?.message || err);
+    }
+};
+
+window.MaxExtensionFloatingPanel.speakQueueNextItem = async function () {
+    try {
+        if (!('speechSynthesis' in window) || typeof window.SpeechSynthesisUtterance !== 'function') {
+            logConCgp('[queue-engine] Speech synthesis unavailable. Skipping spoken prompt.');
+            return;
+        }
+
+        const utterance = new SpeechSynthesisUtterance('Next item');
+        utterance.rate = 1;
+        utterance.pitch = 1;
+
+        if (window.speechSynthesis.speaking) {
+            window.speechSynthesis.cancel();
+        }
+
+        const waitForVoices = () => new Promise((resolve) => {
+            const voices = window.speechSynthesis.getVoices();
+            if (voices.length) {
+                resolve();
+                return;
+            }
+            const handleVoicesChanged = () => {
+                window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
+                resolve();
+            };
+            window.speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged, { once: true });
+            setTimeout(() => {
+                window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
+                resolve();
+            }, 500);
+        });
+
+        await waitForVoices();
+        window.speechSynthesis.speak(utterance);
+        logConCgp('[queue-engine] Spoken "Next item" notification issued.');
+    } catch (err) {
+        logConCgp('[queue-engine] Speech synthesis attempt failed:', err?.message || err);
+    }
+};
+
+window.MaxExtensionFloatingPanel.performQueuePreSendActions = async function () {
+    const shouldAutoScroll = Boolean(this.queueAutoScrollEnabled);
+    const shouldBeep = Boolean(this.queueBeepEnabled);
+    const shouldSpeak = Boolean(this.queueSpeakEnabled);
+
+    if (!shouldAutoScroll && !shouldBeep && !shouldSpeak) {
+        return;
+    }
+
+    if (shouldBeep) {
+        await this.playQueueNotificationBeep();
+    }
+
+    if (shouldSpeak) {
+        await this.speakQueueNextItem();
+    }
+
+    if (shouldAutoScroll) {
+        await this.performQueueAutoScrollSequence();
+    }
+};
+
 /**
  * Processes the next item in the queue.
  * Calls the same entry-point used by manual clicks, so site code paths remain identical.
  */
-window.MaxExtensionFloatingPanel.processNextQueueItem = function () {
+window.MaxExtensionFloatingPanel.processNextQueueItem = async function () {
     // If queue mode was turned off mid-cycle, freeze (pause).
     if (!window.globalMaxExtensionConfig?.enableQueueMode) {
         logConCgp('[queue-engine] Queue mode disabled mid-cycle. Pausing to freeze state.');
@@ -443,13 +614,41 @@ window.MaxExtensionFloatingPanel.processNextQueueItem = function () {
         return;
     }
 
-    if (this.promptQueue.length === 0) {
+    if (!Array.isArray(this.promptQueue) || this.promptQueue.length === 0) {
         logConCgp('[queue-engine] Queue is empty. Stopping.');
         this.pauseQueue();
         return;
     }
 
+    try {
+        await this.performQueuePreSendActions();
+    } catch (err) {
+        logConCgp('[queue-engine] Pre-send actions failed:', err?.message || err);
+    }
+
+    if (!window.globalMaxExtensionConfig?.enableQueueMode) {
+        logConCgp('[queue-engine] Queue mode disabled after pre-send actions. Pausing.');
+        this.pauseQueue();
+        return;
+    }
+
+    if (!this.isQueueRunning) {
+        return;
+    }
+
+    if (!Array.isArray(this.promptQueue) || this.promptQueue.length === 0) {
+        logConCgp('[queue-engine] Queue became empty before dispatch.');
+        this.pauseQueue();
+        return;
+    }
+
     const item = this.promptQueue.shift();
+    if (!item) {
+        logConCgp('[queue-engine] No queued item available to dispatch after pre-send actions.');
+        this.pauseQueue();
+        return;
+    }
+
     this.renderQueueDisplay();
     logConCgp('[queue-engine] Sending item:', item.text);
 
@@ -506,7 +705,9 @@ window.MaxExtensionFloatingPanel.processNextQueueItem = function () {
         this.timerStartTime = Date.now();
         this.currentTimerDelay = delayMs;
         this.remainingTimeOnPause = 0;
-        this.queueTimerId = setTimeout(() => this.processNextQueueItem(), delayMs);
+        this.queueTimerId = setTimeout(() => {
+            void this.processNextQueueItem();
+        }, delayMs);
     } else {
         logConCgp('[queue-engine] All items have been sent.');
         if (this.queueProgressBar) {

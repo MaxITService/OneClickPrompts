@@ -19,6 +19,33 @@
 
 'use strict';
 
+const QUEUE_AUTOMATION_BUTTONS = [
+    {
+        flagProp: 'queueAutoScrollEnabled',
+        storageKey: 'queueAutoScrollBeforeSend',
+        label: 'Auto-scroll',
+        emoji: '🔚',
+        ariaLabel: 'Auto-scroll to the bottom before sending the queued prompt',
+        tooltip: 'Scrolls every detected scrollable area to the bottom (like pressing the End key three times) before dispatching the queued prompt.'
+    },
+    {
+        flagProp: 'queueBeepEnabled',
+        storageKey: 'queueBeepBeforeSend',
+        label: 'Beep',
+        emoji: '🔔',
+        ariaLabel: 'Play a confirmation beep before sending the queued prompt',
+        tooltip: 'Plays a short confirmation tone right before the queued prompt is sent so you can hear that the automation is about to run.'
+    },
+    {
+        flagProp: 'queueSpeakEnabled',
+        storageKey: 'queueSpeakBeforeSend',
+        label: 'Say "Next item"',
+        emoji: '🗣️',
+        ariaLabel: 'Announce “Next item” before sending the queued prompt',
+        tooltip: 'Uses the browser’s speech synthesis to say “Next item” just before the queued prompt is sent.'
+    }
+];
+
 /**
  * Initializes the queue section UI inside the floating panel.
  * It finds elements from the pre-loaded HTML template and attaches functionality.
@@ -45,6 +72,14 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         logConCgp('[floating-panel-queue] Queue section element not found in the DOM.');
         return;
     }
+
+    if (!window.globalMaxExtensionConfig) {
+        window.globalMaxExtensionConfig = {};
+    }
+
+    this.queueAutoScrollEnabled = Boolean(window.globalMaxExtensionConfig.queueAutoScrollBeforeSend);
+    this.queueBeepEnabled = Boolean(window.globalMaxExtensionConfig.queueBeepBeforeSend);
+    this.queueSpeakEnabled = Boolean(window.globalMaxExtensionConfig.queueSpeakBeforeSend);
 
     // Prevent dragging when interacting with the queue section
     this.queueSectionElement.addEventListener('mousedown', (event) => {
@@ -294,11 +329,74 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         this.resetQueue();
     });
 
+    if (expandableSection) {
+        this.setupQueueAutomationButtons(expandableSection);
+    }
+
     if (typeof this.initializeQueueDragAndDrop === 'function') {
         this.initializeQueueDragAndDrop();
     }
 
     this.updateQueueControlsState();
+};
+
+window.MaxExtensionFloatingPanel.setupQueueAutomationButtons = function (parentElement) {
+    if (!parentElement) return;
+
+    if (!this.queuePreSendControlsWrapper) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'max-extension-queue-automation-buttons';
+        parentElement.appendChild(wrapper);
+        this.queuePreSendControlsWrapper = wrapper;
+    }
+
+    if (!this.queueAutomationButtons) {
+        this.queueAutomationButtons = {};
+    }
+
+    QUEUE_AUTOMATION_BUTTONS.forEach((definition) => {
+        if (this.queueAutomationButtons[definition.flagProp]) return;
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'max-extension-queue-option-button';
+        button.textContent = definition.emoji || definition.label;
+        button.title = definition.tooltip || definition.label;
+        button.setAttribute('aria-label', definition.ariaLabel || definition.label);
+
+        button.addEventListener('click', () => {
+            const newState = !Boolean(this[definition.flagProp]);
+            this[definition.flagProp] = newState;
+            if (!window.globalMaxExtensionConfig) {
+                window.globalMaxExtensionConfig = {};
+            }
+            window.globalMaxExtensionConfig[definition.storageKey] = newState;
+            this.applyQueueAutomationButtonState(definition.flagProp);
+            if (typeof this.saveCurrentProfileConfig === 'function') {
+                this.saveCurrentProfileConfig();
+            }
+            logConCgp(`[floating-panel-queue] ${definition.label} ${newState ? 'enabled' : 'disabled'} for pre-send actions.`);
+        });
+
+        this.queueAutomationButtons[definition.flagProp] = button;
+        this.queuePreSendControlsWrapper.appendChild(button);
+        this.applyQueueAutomationButtonState(definition.flagProp);
+    });
+};
+
+window.MaxExtensionFloatingPanel.applyQueueAutomationButtonState = function (flagProp) {
+    if (!this.queueAutomationButtons || !this.queueAutomationButtons[flagProp]) return;
+    const button = this.queueAutomationButtons[flagProp];
+    const isActive = Boolean(this[flagProp]);
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+};
+
+window.MaxExtensionFloatingPanel.updateQueueAutomationButtons = function () {
+    if (!this.queueAutomationButtons) return;
+    Object.keys(this.queueAutomationButtons).forEach((flagProp) => {
+        this.applyQueueAutomationButtonState(flagProp);
+    });
 };
 
 /**
@@ -412,6 +510,10 @@ window.MaxExtensionFloatingPanel.updateQueueControlsState = function () {
 
     if (typeof this.updateRandomDelayBadge === 'function') {
         this.updateRandomDelayBadge();
+    }
+
+    if (typeof this.updateQueueAutomationButtons === 'function') {
+        this.updateQueueAutomationButtons();
     }
 };
 
