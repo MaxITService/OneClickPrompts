@@ -318,7 +318,7 @@ window.MaxExtensionFloatingPanel.renderQueueDisplay = function () {
         const queuedItemElement = document.createElement('button');
         queuedItemElement.className = 'max-extension-queued-item';
         queuedItemElement.innerHTML = item.icon;
-        queuedItemElement.title = `Click to remove: ${item.text}`;
+        queuedItemElement.title = `Click to remove, hold to drag: ${item.text}`;
         if (item.queueId) {
             queuedItemElement.dataset.queueId = item.queueId;
         }
