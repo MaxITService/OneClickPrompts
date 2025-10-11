@@ -248,6 +248,11 @@
     padding: 4px 8px;
 }
 
+#max-extension-queue-toggle-placeholder .toggle-container label,
+.queue-toggle-footer-container .toggle-container label {
+    white-space: nowrap;
+}
+
 #max-extension-queue-section .random-delay-badge {
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.25);

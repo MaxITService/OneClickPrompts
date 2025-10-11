@@ -476,21 +476,37 @@ window.MaxExtensionFloatingPanel.initializeResponsiveQueueToggle = function () {
 
         const panelWidth = this.panelElement.offsetWidth;
         const minWidthForFooterPlacement = 350;
+        const toggle = this.queueModeToggle;
+        const isToggleInOriginal = toggle && toggle.parentElement === queueToggleOriginal;
+        const toggleLabel = toggle?.querySelector('label');
+
+        let forcedFooter = this.queueToggleForcedToFooter === true;
+        let labelOverflowing = false;
+        if (isToggleInOriginal && toggleLabel) {
+            labelOverflowing = (toggleLabel.scrollWidth - toggleLabel.clientWidth) > 1;
+            if (labelOverflowing) {
+                forcedFooter = true;
+                this.queueToggleForcedToFooter = true;
+            }
+        }
+
+        if (panelWidth >= minWidthForFooterPlacement && !labelOverflowing) {
+            forcedFooter = false;
+            this.queueToggleForcedToFooter = false;
+        }
+
+        const shouldMoveToFooter = panelWidth >= minWidthForFooterPlacement || forcedFooter;
 
         // Determine if TOS warning is currently visible using computed style (works regardless of inline or stylesheet rules).
         const tosVisible = !!tosWarning && window.getComputedStyle(tosWarning).display !== 'none';
 
-        if (panelWidth >= minWidthForFooterPlacement) {
-            // Move toggle to footer if it's not already there
-            const toggle = this.queueModeToggle;
+        if (shouldMoveToFooter) {
             if (toggle && toggle.parentElement === queueToggleOriginal) {
                 queueToggleFooter.appendChild(toggle);
-                queueToggleFooter.style.display = 'block';
-                // Hide only the placeholder in the queue section
+                queueToggleFooter.style.display = 'flex';
                 queueToggleOriginal.style.display = 'none';
             }
 
-            // Show/hide the queue section depending on state — BUT always show if the TOS warning is visible.
             if (tosVisible) {
                 queueSection.style.display = 'flex';
                 if (expandableSection) expandableSection.style.display = 'none';
@@ -504,16 +520,19 @@ window.MaxExtensionFloatingPanel.initializeResponsiveQueueToggle = function () {
                 }
             }
         } else {
-            // Move toggle back to original position if it's in the footer
-            const toggle = this.queueModeToggle;
             if (toggle && toggle.parentElement === queueToggleFooter) {
-                queueToggleOriginal.appendChild(toggle);
                 queueToggleFooter.style.display = 'none';
-                // Show the toggle placeholder
                 queueToggleOriginal.style.display = 'block';
+                queueToggleOriginal.appendChild(toggle);
+                this.queueToggleForcedToFooter = false;
+
+                if (toggleLabel && (toggleLabel.scrollWidth - toggleLabel.clientWidth) > 1) {
+                    this.queueToggleForcedToFooter = true;
+                    queueToggleFooter.appendChild(toggle);
+                    queueToggleFooter.style.display = 'flex';
+                    queueToggleOriginal.style.display = 'none';
+                }
             }
-            // Always show the queue section at narrow widths. If queue is disabled,
-            // the expandable controls are hidden elsewhere; TOS (if any) can remain visible.
             queueSection.style.display = 'flex';
         }
     };

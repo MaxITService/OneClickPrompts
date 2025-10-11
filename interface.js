@@ -8,6 +8,7 @@ window.MaxExtensionInterface = {
     // Function to create a toggle checkbox
     createToggle: function (id, labelText, initialState, onChangeCallback) {
         const toggleContainer = document.createElement('div');
+        toggleContainer.className = 'toggle-container';
         toggleContainer.style.cssText = `
             display: flex;
             align-items: center;
