@@ -294,6 +294,10 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         this.resetQueue();
     });
 
+    if (typeof this.initializeQueueDragAndDrop === 'function') {
+        this.initializeQueueDragAndDrop();
+    }
+
     this.updateQueueControlsState();
 };
 
@@ -303,17 +307,47 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
 window.MaxExtensionFloatingPanel.renderQueueDisplay = function () {
     if (!this.queueDisplayArea) return;
 
+    if (typeof this.captureQueuePreRender === 'function') {
+        this.captureQueuePreRender();
+    }
+
     this.queueDisplayArea.innerHTML = ''; // Clear previous items
+    const fragment = document.createDocumentFragment();
+
     this.promptQueue.forEach((item, index) => {
         const queuedItemElement = document.createElement('button');
         queuedItemElement.className = 'max-extension-queued-item';
         queuedItemElement.innerHTML = item.icon;
         queuedItemElement.title = `Click to remove: ${item.text}`;
-        queuedItemElement.addEventListener('click', () => {
-            this.removeFromQueue(index);
+        if (item.queueId) {
+            queuedItemElement.dataset.queueId = item.queueId;
+        }
+        queuedItemElement.dataset.queueIndex = String(index);
+        queuedItemElement.addEventListener('click', (event) => {
+            if (typeof this.handleQueueItemClick === 'function') {
+                this.handleQueueItemClick(event, index);
+            } else {
+                this.removeFromQueue(index);
+            }
         });
-        this.queueDisplayArea.appendChild(queuedItemElement);
+
+        if (typeof this.decorateQueueItemForDrag === 'function') {
+            this.decorateQueueItemForDrag(queuedItemElement, item, index);
+        }
+
+        fragment.appendChild(queuedItemElement);
     });
+
+    this.queueDisplayArea.appendChild(fragment);
+    if (this.promptQueue.length > 0) {
+        this.queueDisplayArea.style.display = 'flex';
+    } else if (window.globalMaxExtensionConfig?.enableQueueMode) {
+        this.queueDisplayArea.style.display = 'none';
+    }
+
+    if (typeof this.applyQueuePostRenderEffects === 'function') {
+        this.applyQueuePostRenderEffects();
+    }
 };
 
 /**

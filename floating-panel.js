@@ -68,6 +68,7 @@ window.MaxExtensionFloatingPanel = {
     delayInputElement: null,
     queueModeToggle: null,
     QUEUE_MAX_SIZE: 10,
+    nextQueueItemId: 1,
 
     // Internal runtime flags
     panelSettingsLoaded: false

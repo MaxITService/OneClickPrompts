@@ -43,8 +43,17 @@ window.MaxExtensionFloatingPanel.addToQueue = function (buttonConfig) {
         return;
     }
 
-    this.promptQueue.push(buttonConfig);
-    logConCgp('[queue-engine] Added to queue:', buttonConfig.text);
+    if (!Number.isFinite(this.nextQueueItemId)) {
+        this.nextQueueItemId = 1;
+    }
+
+    const queueEntry = {
+        ...buttonConfig,
+        queueId: `queue-item-${this.nextQueueItemId++}`
+    };
+
+    this.promptQueue.push(queueEntry);
+    logConCgp('[queue-engine] Added to queue:', queueEntry.text);
     this.renderQueueDisplay();
     this.updateQueueControlsState();
 };

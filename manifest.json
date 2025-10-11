@@ -68,6 +68,7 @@
         "interface.js",
         "floating-panel.js",
         "floating-panel-ui-engine.js",
+        "floating-panel-ui-queue-dnd.js",
         "floating-panel-ui-queue.js",
         "floating-panel-ui-creation.js",
         "floating-panel-ui-interaction.js",

@@ -373,6 +373,7 @@
     flex-wrap: wrap;
     gap: 6px;
     align-items: center;
+    position: relative;
 }
 
 .max-extension-queued-item {
@@ -383,11 +384,29 @@
     font-size: 18px;
     cursor: pointer;
     line-height: 1;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s, transform 0.18s ease;
+    will-change: transform;
 }
 
 .max-extension-queued-item:hover {
     background-color: rgba(255, 0, 0, 0.3);
+}
+
+.max-extension-queue-drag-active .max-extension-queued-item {
+    transition: background-color 0.2s, transform 0.18s ease;
+}
+
+.max-extension-queued-item--dragging {
+    cursor: grabbing;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.35);
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.max-extension-queued-item--placeholder {
+    border: 1px dashed rgba(255, 255, 255, 0.4);
+    background-color: rgba(255, 255, 255, 0.08);
+    opacity: 0.5;
+    pointer-events: none;
 }
 
 #max-extension-queue-progress-container {
