@@ -24,7 +24,7 @@
 * **Grok.com**
 
 
-Tired of retyping the same prompts in your AI chats?  **OneClickPrompts** lets you create custom buttons for your go-to prompts, or choose from pre-defined options.  These buttons appear directly in the input field of your favorite AI chat platforms, dramatically saving you time and making your conversations smoother and more efficient, no matter where you're chatting!
+Tired of retyping the same prompts in your AI chats?  **OneClickPrompts** lets you create custom buttons for your go-to prompts, or choose from pre-defined options. These buttons appear directly in the input field of your favorite AI chat platforms, dramatically saving you time and making your conversations smoother and more efficient, no matter where you're chatting! In Popup, you can manage and ognaize the prompt library.
 
 **Get set up in seconds!** OneClickPrompts is free, open-source, and respects your privacy – no data tracking. Your prompts are securely stored in your browser's sync storage.
 
