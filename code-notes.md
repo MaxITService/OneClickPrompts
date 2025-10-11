@@ -4,6 +4,18 @@ Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS. Unless as
 
 This document summarizes the non-profile state centralization changes and how to work with them. Profile management remains unchanged and continues to use the existing implementation and keys.
 
+## Project Structure & Module Organization
+
+Project is OneClickPrompts, a JavaScript Chrome extension using Manifest V3 and ES modules, (previously called ChatGPT Quick Buttons for your text)
+
+OneClickPrompts is a Chrome extension that enhances AI chat interfaces through content script injection and modular architecture. The extension operates across multiple AI platforms, providing prompt automation, UI enhancements, and advanced interaction features through a sophisticated button management system (popup.html) by injection buttons to the page itself and alternativelay by toggelable floating panel interface which aslo have queue mode.
+
+- Service worker: `config.js` (messaging, lifecycle, profiles). Central state: `modules/service-worker-auxiliary-state-store.js` (theme, selectors, floating panel, cross‑chat, token approximator).
+- UI: `popup.html`, `popup-page-scripts/`, `popup-page-styles/`, and shared styles in `common-ui-elements/`. Welcome page: `welcome.html`.
+- Content/UI logic: `init.js`, `buttons*.js`, `utils.js`, `event-handlers.js`, and site hooks in `per-website-button-clicking-mechanics/`.
+- Modules: `modules/` (e.g., inline profile selector, token models under `modules/token-models/`).
+- Assets & tooling: icons (`icon*.png`)
+
 ## Overview of profile handling:
 
 - Centralized non-profile state is handled by a new service-worker module: modules/service-worker-auxiliary-state-store.js.
@@ -182,21 +194,6 @@ The Inline Profile Selector module adds a dropdown menu directly in the button r
 - ui.popup.firstOpen/collapsibles/lastOpenedSection are available for a future pass to persist popup section states.
 - A thin client SDK (modules/state-store-client.js) can be added later to simplify callers and consume broadcasts.
 - A versioning policy and quotas/backoff strategy can be layered into StateStore without affecting existing endpoints.
-
-## Testing Notes
-
-Recommended checks:
-- Theme toggle, cross-chat, floating panel, custom selectors, and profiles behave as documented.
-- UI theming:
-  - .dialog and variants render correctly in light/dark.
-  - Toasts show base + correct type classes; dark fallback applies when no type.
-- Inline Profile Selector:
-  - Verify dropdown appears in correct position (before/after buttons)
-  - Test profile switching works correctly
-  - Confirm dark/light theme styling is applied properly
-  - Check event propagation blocking prevents dropdown from closing immediately
-- Token Approximator:
-  - Popup toggles/radios persist and clamp calibration; chips render in ChatGPT button row; click-to-refresh works; visibility pause resumes once.
 
 ## File References
 
