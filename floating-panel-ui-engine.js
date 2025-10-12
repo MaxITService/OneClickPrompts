@@ -567,24 +567,101 @@ window.MaxExtensionFloatingPanel.playQueueCompletionBeep = async function () {
             await ctx.resume().catch(() => {});
         }
 
-        const scheduleBurst = (startTime, frequency) => {
+        const scheduleTone = (startTime, frequency, options = {}) => {
+            const {
+                type = 'sine',
+                attack = 0.02,
+                peak = 0.28,
+                sustainDuration = 0.25,
+                sustainLevel = 0.35,
+                release = 0.45,
+                detune = 0
+            } = options;
+
             const oscillator = ctx.createOscillator();
             const gain = ctx.createGain();
 
-            oscillator.type = 'sine';
+            oscillator.type = type;
             oscillator.frequency.setValueAtTime(frequency, startTime);
+            if (detune !== 0 && oscillator.detune && typeof oscillator.detune.setValueAtTime === 'function') {
+                oscillator.detune.setValueAtTime(detune, startTime);
+            }
+
+            const attackEnd = startTime + attack;
+            const sustainEnd = attackEnd + sustainDuration;
+            const releaseEnd = sustainEnd + release;
+
             gain.gain.setValueAtTime(0.0001, startTime);
-            gain.gain.linearRampToValueAtTime(0.32, startTime + 0.01);
-            gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.22);
+            gain.gain.exponentialRampToValueAtTime(peak, attackEnd);
+            gain.gain.linearRampToValueAtTime(peak * sustainLevel, sustainEnd);
+            gain.gain.exponentialRampToValueAtTime(0.0001, releaseEnd);
 
             oscillator.connect(gain).connect(ctx.destination);
             oscillator.start(startTime);
-            oscillator.stop(startTime + 0.3);
+            oscillator.stop(releaseEnd + 0.05);
         };
 
         const now = ctx.currentTime;
-        scheduleBurst(now, 784);
-        scheduleBurst(now + 0.28, 1175);
+        const motifs = [
+            {
+                time: now,
+                freqs: [523.25, 659.25, 783.99],
+                type: 'triangle',
+                peak: 0.32,
+                sustainDuration: 0.3,
+                sustainLevel: 0.4,
+                release: 0.5
+            },
+            {
+                time: now + 0.32,
+                freqs: [587.33, 739.99, 880],
+                type: 'sine',
+                peak: 0.26,
+                sustainDuration: 0.28,
+                sustainLevel: 0.35,
+                release: 0.55
+            },
+            {
+                time: now + 0.64,
+                freqs: [659.25, 830.61, 987.77],
+                type: 'sine',
+                peak: 0.22,
+                sustainDuration: 0.35,
+                sustainLevel: 0.3,
+                release: 0.65
+            }
+        ];
+
+        motifs.forEach((motif) => {
+            motif.freqs.forEach((freq, index) => {
+                scheduleTone(motif.time, freq, {
+                    type: index === 0 ? motif.type : 'sine',
+                    peak: motif.peak * (index === 0 ? 1 : 0.7),
+                    sustainDuration: motif.sustainDuration,
+                    sustainLevel: motif.sustainLevel,
+                    release: motif.release,
+                    detune: index === 2 ? 6 : (index === 1 ? -6 : 0)
+                });
+            });
+        });
+
+        scheduleTone(now + 0.96, 1174.66, {
+            type: 'sine',
+            peak: 0.2,
+            sustainDuration: 0.18,
+            sustainLevel: 0.25,
+            release: 0.7
+        });
+
+        scheduleTone(now + 1.05, 1567.98, {
+            type: 'sine',
+            peak: 0.14,
+            sustainDuration: 0.18,
+            sustainLevel: 0.2,
+            release: 0.8,
+            detune: 8
+        });
+
         logConCgp('[queue-engine] Queue completion chime played.');
     } catch (err) {
         logConCgp('[queue-engine] Failed to play queue completion chime:', err?.message || err);
