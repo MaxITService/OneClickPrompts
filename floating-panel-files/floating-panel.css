@@ -86,7 +86,8 @@
 }
 
 /* Popover container for transparency slider */
-#max-extension-transparency-popover {
+#max-extension-transparency-popover,
+#max-extension-random-percent-popover {
     position: absolute;  /* Positioned relative to header-controls overlay */
     top: 26px;           /* Below the header controls row */
     right: 0;
@@ -110,6 +111,9 @@
 }
 
 #max-extension-transparency-slider {
+    width: 100%;
+}
+#max-extension-random-percent-slider {
     width: 100%;
 }
 
@@ -233,6 +237,14 @@
     display: flex;
     align-items: center;
     gap: 4px;
+}
+
+#max-extension-queue-section .random-delay-container {
+    position: relative;
+}
+
+#max-extension-random-percent-popover.random-percent-popover {
+    z-index: 2147483647;
 }
 
 #max-extension-queue-section .delay-container label {

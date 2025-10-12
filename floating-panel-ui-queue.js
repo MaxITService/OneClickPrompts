@@ -92,6 +92,45 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
     this.queueSpeakEnabled = Boolean(window.globalMaxExtensionConfig.queueSpeakBeforeSend);
     this.queueFinishBeepEnabled = Boolean(window.globalMaxExtensionConfig.queueBeepOnFinish);
 
+    const delayContainer = this.randomDelayBadge?.closest('.delay-container');
+    if (delayContainer) {
+        delayContainer.classList.add('random-delay-container');
+    }
+
+    let randomPercentPopover = document.getElementById('max-extension-random-percent-popover');
+    if (!randomPercentPopover && delayContainer) {
+        randomPercentPopover = document.createElement('div');
+        randomPercentPopover.id = 'max-extension-random-percent-popover';
+        randomPercentPopover.className = 'max-extension-popover random-percent-popover';
+        randomPercentPopover.style.display = 'none';
+
+        const inner = document.createElement('div');
+        inner.className = 'max-extension-popover-inner';
+
+        const label = document.createElement('label');
+        label.className = 'max-extension-popover-label';
+        label.setAttribute('for', 'max-extension-random-percent-slider');
+        label.innerHTML = 'Random offset: <span id="max-extension-random-percent-value">5%</span>';
+
+        const slider = document.createElement('input');
+        slider.id = 'max-extension-random-percent-slider';
+        slider.type = 'range';
+        slider.min = '0';
+        slider.max = '100';
+        slider.step = '1';
+
+        inner.appendChild(label);
+        inner.appendChild(slider);
+        randomPercentPopover.appendChild(inner);
+        delayContainer.appendChild(randomPercentPopover);
+    } else if (randomPercentPopover && delayContainer && !delayContainer.contains(randomPercentPopover)) {
+        delayContainer.appendChild(randomPercentPopover);
+    }
+
+    this.randomPercentPopover = document.getElementById('max-extension-random-percent-popover');
+    this.randomPercentSlider = document.getElementById('max-extension-random-percent-slider');
+    this.randomPercentValueElement = document.getElementById('max-extension-random-percent-value');
+
     // Prevent dragging when interacting with the queue section
     this.queueSectionElement.addEventListener('mousedown', (event) => {
         event.stopPropagation();
@@ -146,9 +185,48 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         this.recalculateRunningTimer(); // Recalculate timer if it's running
     });
 
-    if (this.randomDelayBadge) {
+    if (this.randomPercentSlider && !this.randomPercentSlider.dataset.randomSliderBound) {
+        this.randomPercentSlider.dataset.randomSliderBound = 'true';
+        this.randomPercentSlider.addEventListener('input', (event) => {
+            const rawValue = Number(event.target.value);
+            const clampedValue = Math.min(100, Math.max(0, Math.round(rawValue)));
+            event.target.value = String(clampedValue);
+
+            if (!window.globalMaxExtensionConfig) {
+                window.globalMaxExtensionConfig = {};
+            }
+            window.globalMaxExtensionConfig.queueRandomizePercent = clampedValue;
+            if (this.lastQueueDelaySample) {
+                this.lastQueueDelaySample.percent = clampedValue;
+            }
+            if (typeof this.syncRandomPercentSlider === 'function') {
+                this.syncRandomPercentSlider();
+            }
+            this.updateRandomDelayBadge();
+            if (typeof this.saveCurrentProfileConfig === 'function') {
+                this.saveCurrentProfileConfig();
+            }
+            if (typeof this.recalculateRunningTimer === 'function') {
+                this.recalculateRunningTimer();
+            }
+            logConCgp(`[floating-panel-queue] Random delay offset slider set to ${clampedValue}%.`);
+        });
+    }
+
+    if (typeof this.syncRandomPercentSlider === 'function') {
+        this.syncRandomPercentSlider();
+    }
+
+    if (this.randomDelayBadge && !this.randomDelayBadge.dataset.randomPopoverBound) {
+        this.randomDelayBadge.dataset.randomPopoverBound = 'true';
         this.randomDelayBadge.addEventListener('click', (event) => {
             event.preventDefault();
+            if (event.shiftKey) {
+                if (typeof this.toggleRandomPercentPopover === 'function') {
+                    this.toggleRandomPercentPopover();
+                }
+                return;
+            }
             this.toggleRandomDelayFromBadge();
         });
     }
@@ -587,6 +665,9 @@ window.MaxExtensionFloatingPanel.updateQueueControlsState = function () {
  * Toggles random delay when the badge is clicked.
  */
 window.MaxExtensionFloatingPanel.toggleRandomDelayFromBadge = function () {
+    if (typeof this.closeRandomPercentPopover === 'function') {
+        this.closeRandomPercentPopover();
+    }
     if (!window.globalMaxExtensionConfig) return;
     const newState = !window.globalMaxExtensionConfig.queueRandomizeEnabled;
     window.globalMaxExtensionConfig.queueRandomizeEnabled = newState;
@@ -614,6 +695,76 @@ window.MaxExtensionFloatingPanel.toggleRandomDelayFromBadge = function () {
     logConCgp(`[floating-panel-queue] Random delay offset ${newState ? 'enabled' : 'disabled'} via floating panel.`);
 };
 
+window.MaxExtensionFloatingPanel.toggleRandomPercentPopover = function () {
+    if (!this.randomPercentPopover) return;
+    const isVisible = this.randomPercentPopover.style.display !== 'none';
+    if (isVisible) {
+        this.closeRandomPercentPopover();
+    } else {
+        this.openRandomPercentPopover();
+    }
+};
+
+window.MaxExtensionFloatingPanel.openRandomPercentPopover = function () {
+    if (!this.randomPercentPopover) return;
+    if (typeof this.syncRandomPercentSlider === 'function') {
+        this.syncRandomPercentSlider();
+    }
+    if (this.randomPercentPopover.style.display === 'block') {
+        return;
+    }
+    this.randomPercentPopover.style.display = 'block';
+    this.randomPercentPopover.setAttribute('data-visible', 'true');
+    if (typeof this.positionFloatingPopover === 'function' && this.randomDelayBadge) {
+        this.positionFloatingPopover(this.randomPercentPopover, this.randomDelayBadge, {
+            offsetY: 6,
+            align: 'center'
+        });
+    }
+    if (!this.handleRandomPercentOutsideClick) {
+        this.handleRandomPercentOutsideClick = (event) => {
+            if (!this.randomPercentPopover) {
+                return;
+            }
+            if (this.randomPercentPopover.contains(event.target)) {
+                return;
+            }
+            if (this.randomDelayBadge && this.randomDelayBadge.contains(event.target)) {
+                return;
+            }
+            this.closeRandomPercentPopover();
+        };
+    }
+    document.addEventListener('mousedown', this.handleRandomPercentOutsideClick, true);
+};
+
+window.MaxExtensionFloatingPanel.closeRandomPercentPopover = function () {
+    if (!this.randomPercentPopover) return;
+    if (this.randomPercentPopover.style.display === 'none') {
+        return;
+    }
+    this.randomPercentPopover.style.display = 'none';
+    this.randomPercentPopover.removeAttribute('data-visible');
+    if (typeof this.restorePopoverToOriginalParent === 'function') {
+        this.restorePopoverToOriginalParent(this.randomPercentPopover);
+    }
+    if (this.handleRandomPercentOutsideClick) {
+        document.removeEventListener('mousedown', this.handleRandomPercentOutsideClick, true);
+        this.handleRandomPercentOutsideClick = null;
+    }
+};
+
+window.MaxExtensionFloatingPanel.syncRandomPercentSlider = function () {
+    if (!this.randomPercentSlider || !this.randomPercentValueElement) {
+        return;
+    }
+    const config = window.globalMaxExtensionConfig || {};
+    const percentValue = Number(config.queueRandomizePercent);
+    const clamped = Number.isFinite(percentValue) ? Math.min(100, Math.max(0, Math.round(percentValue))) : 5;
+    this.randomPercentSlider.value = String(clamped);
+    this.randomPercentValueElement.textContent = `${clamped}%`;
+};
+
 /**
  * Updates the random delay badge icon and tooltip.
  */
@@ -623,7 +774,7 @@ window.MaxExtensionFloatingPanel.updateRandomDelayBadge = function () {
     const config = window.globalMaxExtensionConfig;
     const randomEnabled = Boolean(config.queueRandomizeEnabled);
     const percent = Number.isFinite(config.queueRandomizePercent)
-        ? config.queueRandomizePercent
+        ? Math.min(100, Math.max(0, Math.round(config.queueRandomizePercent)))
         : 5;
     const unit = (config.queueDelayUnit === 'sec') ? 'sec' : 'min';
     const formatDelay = (ms) => {
@@ -641,7 +792,7 @@ window.MaxExtensionFloatingPanel.updateRandomDelayBadge = function () {
 
     let tooltip;
     if (randomEnabled) {
-        tooltip = `Random delay offset enabled (up to ${percent}% of base delay). Click to disable.`;
+        tooltip = `Random delay offset enabled (up to ${percent}% of base delay). Shift-click to adjust percentage. Click to disable.`;
         if (this.lastQueueDelaySample) {
             const offsetMs = this.lastQueueDelaySample.offsetMs || 0;
             const totalMs = this.lastQueueDelaySample.totalMs || this.lastQueueDelaySample.baseMs;
@@ -650,11 +801,15 @@ window.MaxExtensionFloatingPanel.updateRandomDelayBadge = function () {
             tooltip += ` Last sample: ${totalStr} (${offsetStr} offset).`;
         }
     } else {
-        tooltip = `Random delay offset disabled. Click to enable (uses up to ${percent}% of base delay).`;
+        tooltip = `Random delay offset disabled. Click to enable (uses up to ${percent}% of base delay). Shift-click to adjust percentage.`;
     }
 
     this.randomDelayBadge.textContent = randomEnabled ? '🎲' : '🚫🎲';
     this.randomDelayBadge.title = tooltip;
     this.randomDelayBadge.classList.toggle('random-enabled', randomEnabled);
     this.randomDelayBadge.classList.toggle('random-disabled', !randomEnabled);
+
+    if (typeof this.syncRandomPercentSlider === 'function') {
+        this.syncRandomPercentSlider();
+    }
 };

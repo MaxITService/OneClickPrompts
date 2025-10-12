@@ -95,6 +95,99 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
         const updateTransparencyLabel = (p) => {
             if (transparencyValue) transparencyValue.textContent = `${p}%`;
         };
+
+        this._rememberPopoverOrigin = (popover) => {
+            if (!popover) return;
+            const parent = popover.parentElement;
+            if (!parent || parent === document.body) {
+                return;
+            }
+            if (!popover.__ocpOriginalParent || popover.__ocpOriginalParent.parent !== parent) {
+                popover.__ocpOriginalParent = {
+                    parent,
+                    nextSibling: popover.nextSibling
+                };
+            }
+        };
+
+        this.restorePopoverToOriginalParent = (popover) => {
+            if (!popover) return;
+            popover.style.position = '';
+            popover.style.top = '';
+            popover.style.left = '';
+            popover.style.right = '';
+            popover.style.bottom = '';
+            popover.style.zIndex = '';
+
+            if (!popover.__ocpOriginalParent) {
+                return;
+            }
+            const { parent, nextSibling } = popover.__ocpOriginalParent;
+            if (!parent || !document.contains(parent)) {
+                delete popover.__ocpOriginalParent;
+                return;
+            }
+            if (nextSibling && nextSibling.parentNode === parent) {
+                parent.insertBefore(popover, nextSibling);
+            } else {
+                parent.appendChild(popover);
+            }
+        };
+
+        this.positionFloatingPopover = (popover, anchor, options = {}) => {
+            if (!popover || !anchor) return;
+
+            const {
+                offsetY = 6,
+                offsetX = 0,
+                align = 'right',
+                viewportMargin = 8
+            } = options;
+
+            this._rememberPopoverOrigin(popover);
+            if (popover.parentElement !== document.body) {
+                document.body.appendChild(popover);
+            }
+
+            popover.style.position = 'fixed';
+            popover.style.right = 'auto';
+            popover.style.bottom = 'auto';
+            popover.style.zIndex = '2147483647';
+
+            // Force reflow so measurements are accurate after moving to body.
+            void popover.offsetWidth;
+
+            const anchorRect = anchor.getBoundingClientRect();
+            const popRect = popover.getBoundingClientRect();
+
+            const clampNumber = (value, min, max) => Math.max(min, Math.min(max, value));
+            const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+            const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+
+            let left;
+            if (align === 'left') {
+                left = anchorRect.left + offsetX;
+            } else if (align === 'center') {
+                left = anchorRect.left + (anchorRect.width / 2) - (popRect.width / 2) + offsetX;
+            } else {
+                left = anchorRect.right - popRect.width + offsetX;
+            }
+
+            let top = anchorRect.bottom + offsetY;
+
+            const maxLeft = viewportWidth - popRect.width - viewportMargin;
+            left = clampNumber(left, viewportMargin, Math.max(viewportMargin, maxLeft));
+
+            if (top + popRect.height + viewportMargin > viewportHeight) {
+                top = anchorRect.top - popRect.height - offsetY;
+            }
+            const maxTop = viewportHeight - popRect.height - viewportMargin;
+            top = clampNumber(top, viewportMargin, Math.max(viewportMargin, maxTop));
+
+            popover.style.left = `${Math.round(left)}px`;
+            popover.style.top = `${Math.round(top)}px`;
+        };
+
         const applyTransparencyPercent = (percent) => {
             const clampedPercent = clampPercent(percent);
             if (transparencySlider && String(transparencySlider.value) !== String(clampedPercent)) {
@@ -124,16 +217,32 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
             transparencySlider.value = initialPercent;
             updateTransparencyLabel(initialPercent);
 
+            const openTransparencyPopover = () => {
+                const currentPercent = getCurrentTransparencyPercent();
+                transparencySlider.value = currentPercent;
+                updateTransparencyLabel(currentPercent);
+                transparencyPopover.style.display = 'block';
+                if (typeof this.positionFloatingPopover === 'function') {
+                    this.positionFloatingPopover(transparencyPopover, transparencyButton, { offsetY: 6, align: 'right' });
+                }
+            };
+
+            const closeTransparencyPopover = () => {
+                transparencyPopover.style.display = 'none';
+                if (typeof this.restorePopoverToOriginalParent === 'function') {
+                    this.restorePopoverToOriginalParent(transparencyPopover);
+                }
+            };
+            this.closeTransparencyPopover = closeTransparencyPopover;
+
             // Toggle popover
             transparencyButton.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const isVisible = transparencyPopover.style.display === 'block';
-                transparencyPopover.style.display = isVisible ? 'none' : 'block';
-                if (!isVisible) {
-                    // Sync slider each time it opens
-                    const p = getCurrentTransparencyPercent();
-                    transparencySlider.value = p;
-                    updateTransparencyLabel(p);
+                if (isVisible) {
+                    closeTransparencyPopover();
+                } else {
+                    openTransparencyPopover();
                 }
             });
 
@@ -143,7 +252,7 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
                 const withinPopover = transparencyPopover.contains(e.target);
                 const onButton = transparencyButton.contains(e.target);
                 if (!withinPopover && !onButton) {
-                    transparencyPopover.style.display = 'none';
+                    closeTransparencyPopover();
                 }
             };
             document.addEventListener('mousedown', outsideClickHandler, true);
@@ -151,7 +260,7 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
             // Close on ESC
             const escHandler = (e) => {
                 if (e.key === 'Escape' && transparencyPopover.style.display === 'block') {
-                    transparencyPopover.style.display = 'none';
+                    closeTransparencyPopover();
                 }
             };
             document.addEventListener('keydown', escHandler, true);
