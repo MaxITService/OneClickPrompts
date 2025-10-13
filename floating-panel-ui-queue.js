@@ -281,6 +281,24 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
             disabledNotice.textContent = 'Queue disabled in settings';
             togglePlaceholder.appendChild(disabledNotice);
         }
+        const queueToggleFooter = document.getElementById('max-extension-queue-toggle-footer');
+        if (queueToggleFooter) {
+            queueToggleFooter.style.display = 'none';
+        }
+        if (expandableSection) {
+            expandableSection.style.display = 'none';
+        }
+        if (this.queueDisplayArea) {
+            this.queueDisplayArea.style.display = 'none';
+        }
+        if (this.queueSectionElement) {
+            this.queueSectionElement.style.display = 'none';
+        }
+        this.queueToggleForcedToFooter = false;
+        if (typeof this.updateQueueControlsState === 'function') {
+            this.updateQueueControlsState();
+        }
+        return;
     } else {
         const toggleCallback = (state) => {
             // Check global TOS setting first

@@ -584,6 +584,18 @@ window.MaxExtensionFloatingPanel.initializeResponsiveQueueToggle = function () {
         if (!queueToggleOriginal || !queueToggleFooter || !profileSwitcher || !queueSection || !controlsContainer) return;
 
         const panelWidth = this.panelElement.offsetWidth;
+        const hideQueueToggle = Boolean(window.globalMaxExtensionConfig?.queueHideActivationToggle);
+
+        if (hideQueueToggle) {
+            queueToggleOriginal.style.display = 'none';
+            queueToggleFooter.style.display = 'none';
+            queueSection.style.display = 'none';
+            if (expandableSection) expandableSection.style.display = 'none';
+            if (this.queueDisplayArea) this.queueDisplayArea.style.display = 'none';
+            this.queueToggleForcedToFooter = false;
+            return;
+        }
+
         const minWidthForFooterPlacement = 350;
         const toggle = this.queueModeToggle;
         const isToggleInOriginal = toggle && toggle.parentElement === queueToggleOriginal;
@@ -683,6 +695,11 @@ window.MaxExtensionFloatingPanel.updateQueueSectionVisibility = function (isTogg
     const queueSection = document.getElementById('max-extension-queue-section');
     const tosWarning = document.getElementById('max-extension-queue-tos-warning');
     if (!queueSection) return;
+
+    if (Boolean(window.globalMaxExtensionConfig?.queueHideActivationToggle)) {
+        queueSection.style.display = 'none';
+        return;
+    }
 
     const tosVisible = !!tosWarning && window.getComputedStyle(tosWarning).display !== 'none';
 

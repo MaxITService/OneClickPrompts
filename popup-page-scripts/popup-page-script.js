@@ -107,6 +107,11 @@ function updateQueueSettingsUIFromProfile() {
     if (queueHideActivationToggleEl) {
         queueHideActivationToggleEl.checked = hideToggle;
     }
+    const queueDisabledByHide = enforceQueueDisabledWhenHidden();
+    if (queueDisabledByHide) {
+        debouncedSaveCurrentProfile();
+        logToGUIConsole('Queue disabled because activation toggle is hidden.');
+    }
     if (queueRandomizeEnabledEl) {
         queueRandomizeEnabledEl.checked = randomizeEnabled;
     }
@@ -139,6 +144,23 @@ function sanitizeQueueRandomizePercent(value) {
 }
 
 /**
+ * Disables queue mode whenever the activation toggle is hidden.
+ * @returns {boolean} True when the queue state changed.
+ */
+function enforceQueueDisabledWhenHidden() {
+    if (!currentProfile) {
+        return false;
+    }
+    const hideToggleActive = Boolean(currentProfile.queueHideActivationToggle);
+    const queueCurrentlyEnabled = Boolean(currentProfile.enableQueueMode);
+    if (!hideToggleActive || !queueCurrentlyEnabled) {
+        return false;
+    }
+    currentProfile.enableQueueMode = false;
+    return true;
+}
+
+/**
  * Handles the hide queue activation toggle.
  */
 function handleQueueHideActivationChange(event) {
@@ -146,13 +168,19 @@ function handleQueueHideActivationChange(event) {
     const shouldHide = event.target.checked;
     currentProfile.queueHideActivationToggle = shouldHide;
 
-    if (shouldHide) {
-        currentProfile.enableQueueMode = false;
-    }
+    const queueDisabled = shouldHide ? enforceQueueDisabledWhenHidden() : false;
 
     debouncedSaveCurrentProfile();
-    logToGUIConsole(`Queue activation toggle ${shouldHide ? 'hidden and disabled' : 'visible'}.`);
-    showToast(shouldHide ? 'Queue activation toggle will be hidden.' : 'Queue activation toggle restored.', 'info');
+    const consoleMessage = shouldHide
+        ? queueDisabled
+            ? 'Queue activation toggle hidden; queue disabled for new tabs.'
+            : 'Queue activation toggle hidden.'
+        : 'Queue activation toggle visible.';
+    logToGUIConsole(consoleMessage);
+    const toastMessage = shouldHide
+        ? 'Queue activation toggle hidden; queue disabled for new tabs.'
+        : 'Queue activation toggle restored.';
+    showToast(toastMessage, 'info');
 }
 
 /**
