@@ -255,9 +255,19 @@ window.MaxExtensionButtonsInit = {
             if (window.MaxExtensionFloatingPanel && window.MaxExtensionFloatingPanel.panelElement) {
                 const panelContent = document.getElementById('max-extension-floating-panel-content');
                 if (panelContent) {
-                    panelContent.innerHTML = '';
-                    this.generateAndAppendAllButtons(panelContent, true);
-                    logConCgp('[init] Updated buttons in floating panel for profile change (panel origin).');
+                    const containerId = window?.InjectionTargetsOnWebsite?.selectors?.buttonsContainerId || null;
+                    const selector = containerId ? `#${CSS.escape(containerId)}` : null;
+                    let panelButtonsContainer = selector ? panelContent.querySelector(selector) : null;
+
+                    if (panelButtonsContainer) {
+                        panelButtonsContainer.innerHTML = '';
+                        this.generateAndAppendAllButtons(panelButtonsContainer, true);
+                        logConCgp('[init] Updated buttons in floating panel for profile change (panel origin).');
+                    } else {
+                        panelContent.innerHTML = '';
+                        this.createAndInsertCustomElements(panelContent);
+                        logConCgp('[init] Recreated floating panel button container after profile change (panel origin).');
+                    }
                 }
             }
             return;
