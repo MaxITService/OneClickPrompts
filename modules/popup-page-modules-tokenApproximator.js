@@ -69,7 +69,7 @@
   // Website enablement checkboxes
   const elWebsitesList = document.getElementById('tokenApproxWebsitesList');
   // List of supported sites - must match the site names in InjectionTargetsOnWebsite
-  const SUPPORTED_SITES = ['ChatGPT', 'Claude', 'Copilot', 'DeepSeek', 'AIStudio', 'Grok', 'Gemini'];
+  const SUPPORTED_SITES = ['ChatGPT', 'Claude', 'Copilot', 'DeepSeek', 'AIStudio', 'Grok', 'Gemini', 'Perplexity'];
   
   // Legacy elements (kept for backward compatibility)
   const elSimpleMethodCb = document.getElementById('tokenApproxSimpleMethodToggle');

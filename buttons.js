@@ -302,6 +302,9 @@ function processCustomSendButtonClick(event, customText, autoSend) {
         case 'Gemini': // Added Gemini case
             processGeminiCustomSendButtonClick(event, customText, autoSend);
             break;
+        case 'Perplexity':
+            processPerplexityCustomSendButtonClick(event, customText, autoSend);
+            break;
         default:
             logConCgp('[buttons] Unsupported site:', activeSite);
     }

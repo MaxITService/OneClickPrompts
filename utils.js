@@ -158,6 +158,9 @@ class InjectionTargetsOnWebsite {
         else if (currentHostname.includes('gemini.google.com')) { // Added Gemini detection
             return 'Gemini';
         }
+        else if (currentHostname.includes('perplexity.ai')) {
+            return 'Perplexity';
+        }
         // Add additional website detections here
         else {
             return 'Unknown';
@@ -378,6 +381,26 @@ class InjectionTargetsOnWebsite {
                 ],
                 threadRoot: 'infinite-scroller[data-test-id="chat-history-container"]',
                 buttonsContainerId: 'gemini-custom-buttons-container' // Unique ID
+            },
+            Perplexity: {
+                containers: [
+                    'div.grid.grid-cols-3:has(#ask-input)',
+                    'div:has(#ask-input)[class*="grid"]',
+                    'div:has(#ask-input)[class*="composer"]'
+                ],
+                sendButtons: [
+                    'button[data-testid="submit-button"][aria-label="Submit"]',
+                    'button[data-testid="submit-button"]',
+                    'button[type="button"][aria-label="Submit"]',
+                    'button[aria-label="Submit"]'
+                ],
+                editors: [
+                    'div#ask-input[contenteditable="true"]',
+                    'div[contenteditable="true"][data-lexical-editor="true"]',
+                    'div[contenteditable="true"]'
+                ],
+                threadRoot: 'div.relative.border-subtlest.ring-subtlest.divide-subtlest.bg-base',
+                buttonsContainerId: 'perplexity-custom-buttons-container'
             }
         };
         return selectors[site] || {};

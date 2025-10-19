@@ -152,7 +152,8 @@ async function getValue(path) {
         'DeepSeek': true,
         'AIStudio': true,
         'Grok': true,
-        'Gemini': true
+        'Gemini': true,
+        'Perplexity': true
       };
       
       // Use provided enabledSites if exists, otherwise use defaults
@@ -188,7 +189,8 @@ async function getValue(path) {
         'DeepSeek': true,
         'AIStudio': true,
         'Grok': true,
-        'Gemini': true
+        'Gemini': true,
+        'Perplexity': true
       }
     };
   }
@@ -289,7 +291,8 @@ async function setValue(path, value) {
       'DeepSeek': true,
       'AIStudio': true,
       'Grok': true,
-      'Gemini': true
+      'Gemini': true,
+      'Perplexity': true
     };
     
     // Use provided enabledSites if exists and is an object, otherwise use defaults

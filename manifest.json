@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "OneClickPrompts",
   "description": "One Click Prompts for AI chat interfaces",
-  "version": "0.0.4.2",
+  "version": "0.0.4.3",
 
   "icons": {
     "16": "icon16.png",
@@ -40,7 +40,9 @@
         "https://chat.deepseek.com/*",
         "https://aistudio.google.com/*",
         "https://grok.com/*",
-        "https://gemini.google.com/*"
+        "https://gemini.google.com/*",
+        "https://www.perplexity.ai/*",
+        "https://perplexity.ai/*"
       ],
       "css": ["floating-panel-files/floating-panel.css", "common-ui-elements/ocp_toast.css"],
       "js": [
@@ -63,6 +65,7 @@
         "per-website-button-clicking-mechanics/buttons-clicking-aistudio.js",
         "per-website-button-clicking-mechanics/buttons-clicking-grok.js",
         "per-website-button-clicking-mechanics/buttons-clicking-gemini.js",
+        "per-website-button-clicking-mechanics/buttons-clicking-perplexity.js",
         "buttons.js",
         "buttons-init-and-render.js",
         "interface.js",
