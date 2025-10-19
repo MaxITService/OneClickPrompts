@@ -384,7 +384,7 @@ class InjectionTargetsOnWebsite {
             },
             Perplexity: {
                 containers: [
-                    'div.grid.grid-cols-3:has(#ask-input)',
+                    'div.bg-raised…grid grid-cols-3',
                     'div:has(#ask-input)[class*="grid"]',
                     'div:has(#ask-input)[class*="composer"]'
                 ],
