@@ -289,17 +289,31 @@ window.MaxExtensionButtonsInit = {
 };
 
 /**
- * Builds a Perplexity-friendly inline profile selector using a custom dropdown.
+ * Builds a custom inline profile selector dropdown shared by all supported sites.
+ * Optional overrides allow site-specific tweaks without duplicating logic.
  * @param {HTMLElement} container
  * @param {string[]} profileNames
  * @param {string} currentProfile
  * @param {(selected: string) => void} onSwitch
  * @param {boolean} isDarkTheme
+ * @param {object} [options]
  */
-window.MaxExtensionButtonsInit.createPerplexityProfileSelector = function (container, profileNames, currentProfile, onSwitch, isDarkTheme) {
+window.MaxExtensionButtonsInit.createUnifiedProfileSelector = function (container, profileNames, currentProfile, onSwitch, isDarkTheme, options) {
+    const config = options && typeof options === 'object' ? options : {};
+    const containerStyles = config.containerStyles && typeof config.containerStyles === 'object' ? config.containerStyles : null;
+    const triggerStyleOverrides = config.triggerStyles && typeof config.triggerStyles === 'object' ? config.triggerStyles : null;
+    const menuStyleOverrides = config.menuStyles && typeof config.menuStyles === 'object' ? config.menuStyles : null;
+    const uniqueSuffix = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+    const optionIdPrefix = `ocp-profile-option-${uniqueSuffix}`;
+
+    container.setAttribute('data-ocp-profile-selector', 'true');
     container.style.position = 'relative';
-    container.style.pointerEvents = 'auto';
-    container.style.zIndex = '2147483600';
+    if (!container.style.pointerEvents) {
+        container.style.pointerEvents = 'auto';
+    }
+    if (containerStyles) {
+        Object.assign(container.style, containerStyles);
+    }
 
     let activeProfile = currentProfile && profileNames.includes(currentProfile)
         ? currentProfile
@@ -308,6 +322,7 @@ window.MaxExtensionButtonsInit.createPerplexityProfileSelector = function (conta
     const trigger = document.createElement('button');
     trigger.type = 'button';
     trigger.title = 'Switch active profile';
+    trigger.id = `ocp-profile-trigger-${uniqueSuffix}`;
     trigger.style.cssText = `
         display: inline-flex;
         align-items: center;
@@ -321,6 +336,13 @@ window.MaxExtensionButtonsInit.createPerplexityProfileSelector = function (conta
         cursor: pointer;
         transition: background 120ms ease, border-color 120ms ease;
     `;
+    trigger.setAttribute('aria-haspopup', 'listbox');
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.setAttribute('data-ocp-profile-trigger', 'true');
+
+    if (triggerStyleOverrides) {
+        Object.assign(trigger.style, triggerStyleOverrides);
+    }
 
     trigger.addEventListener('mouseenter', () => {
         trigger.style.background = isDarkTheme ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.1)';
@@ -331,9 +353,11 @@ window.MaxExtensionButtonsInit.createPerplexityProfileSelector = function (conta
 
     const triggerLabel = document.createElement('span');
     triggerLabel.textContent = activeProfile || 'Profiles';
+
     const triggerChevron = document.createElement('span');
-    triggerChevron.textContent = '▾';
+    triggerChevron.textContent = '\u25BE';
     triggerChevron.style.opacity = '0.8';
+    triggerChevron.setAttribute('aria-hidden', 'true');
 
     trigger.appendChild(triggerLabel);
     trigger.appendChild(triggerChevron);
@@ -352,10 +376,23 @@ window.MaxExtensionButtonsInit.createPerplexityProfileSelector = function (conta
         background: ${isDarkTheme ? 'rgba(24, 24, 24, 0.95)' : 'rgba(255, 255, 255, 0.98)'};
         border: 1px solid ${isDarkTheme ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'};
         box-shadow: 0 10px 24px rgba(0,0,0,0.25);
-        z-index: 2147483601;
         max-height: 280px;
         overflow-y: auto;
+        z-index: 2147483601;
     `;
+    menu.setAttribute('role', 'listbox');
+    menu.setAttribute('data-ocp-profile-menu', 'true');
+    menu.setAttribute('aria-labelledby', trigger.id);
+    menu.tabIndex = -1;
+
+    if (menuStyleOverrides) {
+        Object.assign(menu.style, menuStyleOverrides);
+    }
+
+    if (config.menuPlacement === 'right') {
+        menu.style.left = 'auto';
+        menu.style.right = '0';
+    }
 
     const optionMeta = [];
 
@@ -364,10 +401,11 @@ window.MaxExtensionButtonsInit.createPerplexityProfileSelector = function (conta
             ? (isDarkTheme ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)')
             : 'transparent';
         button.style.fontWeight = isActive ? '600' : '400';
+        button.setAttribute('aria-selected', isActive ? 'true' : 'false');
         checkmark.style.opacity = isActive ? '1' : '0';
     };
 
-    profileNames.forEach((name) => {
+    profileNames.forEach((name, index) => {
         const optionButton = document.createElement('button');
         optionButton.type = 'button';
         optionButton.textContent = name;
@@ -387,6 +425,10 @@ window.MaxExtensionButtonsInit.createPerplexityProfileSelector = function (conta
             font-size: 13px;
             transition: background 120ms ease;
         `;
+        optionButton.dataset.profile = name;
+        optionButton.setAttribute('role', 'option');
+        optionButton.setAttribute('id', `${optionIdPrefix}-${index}`);
+        optionButton.tabIndex = -1;
 
         optionButton.addEventListener('mouseenter', () => {
             optionButton.style.background = isDarkTheme ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
@@ -398,17 +440,16 @@ window.MaxExtensionButtonsInit.createPerplexityProfileSelector = function (conta
                 : 'transparent';
         });
 
-        optionButton.dataset.profile = name;
-
         const labelSpan = document.createElement('span');
         labelSpan.textContent = name;
         labelSpan.style.flex = '1';
 
         const checkmark = document.createElement('span');
-        checkmark.textContent = '✓';
+        checkmark.textContent = '\u2713';
         checkmark.style.opacity = '0';
         checkmark.style.marginLeft = '8px';
         checkmark.style.transition = 'opacity 120ms ease';
+        checkmark.setAttribute('aria-hidden', 'true');
 
         optionButton.appendChild(labelSpan);
         optionButton.appendChild(checkmark);
@@ -425,17 +466,52 @@ window.MaxExtensionButtonsInit.createPerplexityProfileSelector = function (conta
             onSwitch?.(name);
         });
 
-        optionMeta.push({ optionButton, checkmark, name });
+        optionButton.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                optionButton.click();
+            }
+        });
+
+        optionMeta.push({ optionButton, checkmark, name, id: optionButton.id });
         menu.appendChild(optionButton);
     });
 
     const setActiveProfile = (name) => {
         activeProfile = name;
         triggerLabel.textContent = name;
-        optionMeta.forEach(({ optionButton, checkmark, name: candidate }) => {
+        trigger.setAttribute('aria-label', `Active profile: ${name}`);
+        let activeOptionId = '';
+        optionMeta.forEach(({ optionButton, checkmark, name: candidate, id }) => {
             const isActive = candidate === activeProfile;
             applyActiveStyles(optionButton, checkmark, isActive);
+            if (isActive) {
+                activeOptionId = id;
+            }
         });
+        if (activeOptionId) {
+            menu.setAttribute('aria-activedescendant', activeOptionId);
+        } else {
+            menu.removeAttribute('aria-activedescendant');
+        }
+    };
+
+    const focusOptionByIndex = (index) => {
+        if (!optionMeta.length) {
+            return;
+        }
+        const normalized = (index + optionMeta.length) % optionMeta.length;
+        const target = optionMeta[normalized];
+        if (target) {
+            target.optionButton.focus({ preventScroll: true });
+        }
+    };
+
+    const focusActiveOption = () => {
+        const activeIndex = optionMeta.findIndex(({ name }) => name === activeProfile);
+        if (activeIndex >= 0) {
+            focusOptionByIndex(activeIndex);
+        }
     };
 
     let isMenuOpen = false;
@@ -446,26 +522,65 @@ window.MaxExtensionButtonsInit.createPerplexityProfileSelector = function (conta
         }
     };
 
-    const onKeyDown = (event) => {
+    const onDocumentKeydown = (event) => {
         if (event.key === 'Escape') {
             toggleMenu(false);
         }
     };
 
+    const onMenuKeyDown = (event) => {
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            const currentIndex = optionMeta.findIndex(({ optionButton }) => optionButton === document.activeElement);
+            const delta = event.key === 'ArrowDown' ? 1 : -1;
+            const fallbackIndex = optionMeta.findIndex(({ name }) => name === activeProfile);
+            const targetIndex = currentIndex >= 0 ? currentIndex + delta : fallbackIndex;
+            focusOptionByIndex(targetIndex);
+        } else if (event.key === 'Home') {
+            event.preventDefault();
+            focusOptionByIndex(0);
+        } else if (event.key === 'End') {
+            event.preventDefault();
+            focusOptionByIndex(optionMeta.length - 1);
+        }
+    };
+
+    menu.addEventListener('keydown', onMenuKeyDown);
+
     const toggleMenu = (forceState) => {
         const nextState = typeof forceState === 'boolean' ? forceState : !isMenuOpen;
-        if (nextState === isMenuOpen) return;
+        if (nextState === isMenuOpen) {
+            return;
+        }
+
         isMenuOpen = nextState;
         menu.style.display = isMenuOpen ? 'flex' : 'none';
         trigger.setAttribute('aria-expanded', isMenuOpen ? 'true' : 'false');
+
         if (isMenuOpen) {
+            focusActiveOption();
             document.addEventListener('click', onDocumentClick, true);
-            document.addEventListener('keydown', onKeyDown, true);
+            document.addEventListener('keydown', onDocumentKeydown, true);
         } else {
             document.removeEventListener('click', onDocumentClick, true);
-            document.removeEventListener('keydown', onKeyDown, true);
+            document.removeEventListener('keydown', onDocumentKeydown, true);
+            trigger.focus({ preventScroll: true });
         }
     };
+
+    const stopPropagationEvents = ['pointerdown', 'mousedown', 'mouseup', 'touchstart', 'touchend'];
+    stopPropagationEvents.forEach((eventName) => {
+        trigger.addEventListener(eventName, (event) => {
+            event.stopPropagation();
+        });
+        menu.addEventListener(eventName, (event) => {
+            event.stopPropagation();
+        });
+    });
+
+    menu.addEventListener('click', (event) => {
+        event.stopPropagation();
+    });
 
     trigger.addEventListener('click', (event) => {
         event.preventDefault();
@@ -479,6 +594,10 @@ window.MaxExtensionButtonsInit.createPerplexityProfileSelector = function (conta
             toggleMenu();
         } else if (event.key === 'Escape') {
             toggleMenu(false);
+        } else if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            toggleMenu(true);
+            focusActiveOption();
         }
     });
 
@@ -528,56 +647,25 @@ window.MaxExtensionButtonsInit.createInlineProfileSelector = async function () {
             });
         };
 
+        const dropdownOptions = {};
         if (activeSite === 'Perplexity') {
-            MaxExtensionButtonsInit.createPerplexityProfileSelector(container, profileNames, currentProfile, handleProfileSwitch, isDarkTheme);
-            return container;
+            dropdownOptions.containerStyles = {
+                pointerEvents: 'auto',
+                zIndex: '2147483600'
+            };
+            dropdownOptions.menuStyles = {
+                zIndex: '2147483601'
+            };
         }
 
-        const label = document.createElement('span');
-        label.textContent = '';
-        label.style.fontSize = '12px';
-        const select = document.createElement('select');
-        select.title = 'Switch active profile';
-        select.style.padding = '2px 16px 2px 4px';
-        select.style.zIndex = '100000';
-        select.style.appearance = 'auto';
-        select.style.backgroundImage = 'url("data:image/svg+xml;utf8,<svg fill=\'%23666\' height=\'24\' viewBox=\'0 0 24 24\' width=\'24\' xmlns=\'http://www.w3.org/2000/svg\'><path d=\'M7 10l5 5 5-5z\'/></svg>")';
-        select.style.backgroundRepeat = 'no-repeat';
-        select.style.backgroundPosition = 'right 2px center';
-        select.style.backgroundSize = '16px';
-        select.tabIndex = 0;
-
-        if (isDarkTheme) {
-            select.style.background = '#333';
-            select.style.color = '#eee';
-            select.style.borderColor = '#555';
-            select.style.backgroundImage = 'url("data:image/svg+xml;utf8,<svg fill=\'%23eee\' height=\'24\' viewBox=\'0 0 24 24\' width=\'24\' xmlns=\'http://www.w3.org/2000/svg\'><path d=\'M7 10l5 5 5-5z\'/></svg>")';
-            select.style.backgroundRepeat = 'no-repeat';
-            select.style.backgroundPosition = 'right 2px center';
-            select.style.backgroundSize = '16px';
-            label.style.color = '#eee';
-        }
-
-        const stop = (e) => { e.stopPropagation(); };
-        ['pointerdown', 'mousedown', 'mouseup', 'click', 'touchstart', 'touchend', 'keydown'].forEach(evt => {
-            select.addEventListener(evt, stop, { capture: true });
-        });
-
-        profileNames.forEach((name) => {
-            const opt = document.createElement('option');
-            opt.value = name;
-            opt.textContent = name;
-            if (name === currentProfile) opt.selected = true;
-            select.appendChild(opt);
-        });
-
-        select.addEventListener('change', (e) => {
-            const selected = e.target.value;
-            handleProfileSwitch(selected);
-        });
-
-        container.appendChild(label);
-        container.appendChild(select);
+        MaxExtensionButtonsInit.createUnifiedProfileSelector(
+            container,
+            profileNames,
+            currentProfile,
+            handleProfileSwitch,
+            isDarkTheme,
+            dropdownOptions
+        );
         return container;
     } catch (err) {
         logConCgp('[init] Error creating inline profile selector:', err?.message || err);
