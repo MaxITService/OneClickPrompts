@@ -288,6 +288,205 @@ window.MaxExtensionButtonsInit = {
     }
 };
 
+/**
+ * Builds a Perplexity-friendly inline profile selector using a custom dropdown.
+ * @param {HTMLElement} container
+ * @param {string[]} profileNames
+ * @param {string} currentProfile
+ * @param {(selected: string) => void} onSwitch
+ * @param {boolean} isDarkTheme
+ */
+window.MaxExtensionButtonsInit.createPerplexityProfileSelector = function (container, profileNames, currentProfile, onSwitch, isDarkTheme) {
+    container.style.position = 'relative';
+    container.style.pointerEvents = 'auto';
+    container.style.zIndex = '2147483600';
+
+    let activeProfile = currentProfile && profileNames.includes(currentProfile)
+        ? currentProfile
+        : profileNames[0];
+
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.title = 'Switch active profile';
+    trigger.style.cssText = `
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border-radius: 6px;
+        border: 1px solid ${isDarkTheme ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)'};
+        background: ${isDarkTheme ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'};
+        color: inherit;
+        font-size: 13px;
+        cursor: pointer;
+        transition: background 120ms ease, border-color 120ms ease;
+    `;
+
+    trigger.addEventListener('mouseenter', () => {
+        trigger.style.background = isDarkTheme ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.1)';
+    });
+    trigger.addEventListener('mouseleave', () => {
+        trigger.style.background = isDarkTheme ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+    });
+
+    const triggerLabel = document.createElement('span');
+    triggerLabel.textContent = activeProfile || 'Profiles';
+    const triggerChevron = document.createElement('span');
+    triggerChevron.textContent = '▾';
+    triggerChevron.style.opacity = '0.8';
+
+    trigger.appendChild(triggerLabel);
+    trigger.appendChild(triggerChevron);
+
+    const menu = document.createElement('div');
+    menu.style.cssText = `
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        min-width: 180px;
+        display: none;
+        flex-direction: column;
+        gap: 4px;
+        padding: 6px;
+        border-radius: 8px;
+        background: ${isDarkTheme ? 'rgba(24, 24, 24, 0.95)' : 'rgba(255, 255, 255, 0.98)'};
+        border: 1px solid ${isDarkTheme ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'};
+        box-shadow: 0 10px 24px rgba(0,0,0,0.25);
+        z-index: 2147483601;
+        max-height: 280px;
+        overflow-y: auto;
+    `;
+
+    const optionMeta = [];
+
+    const applyActiveStyles = (button, checkmark, isActive) => {
+        button.style.background = isActive
+            ? (isDarkTheme ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)')
+            : 'transparent';
+        button.style.fontWeight = isActive ? '600' : '400';
+        checkmark.style.opacity = isActive ? '1' : '0';
+    };
+
+    profileNames.forEach((name) => {
+        const optionButton = document.createElement('button');
+        optionButton.type = 'button';
+        optionButton.textContent = name;
+        optionButton.title = name;
+        optionButton.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            border: none;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+            padding: 6px 10px;
+            border-radius: 6px;
+            text-align: left;
+            font-size: 13px;
+            transition: background 120ms ease;
+        `;
+
+        optionButton.addEventListener('mouseenter', () => {
+            optionButton.style.background = isDarkTheme ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
+        });
+        optionButton.addEventListener('mouseleave', () => {
+            const isActive = optionButton.dataset.profile === activeProfile;
+            optionButton.style.background = isActive
+                ? (isDarkTheme ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)')
+                : 'transparent';
+        });
+
+        optionButton.dataset.profile = name;
+
+        const labelSpan = document.createElement('span');
+        labelSpan.textContent = name;
+        labelSpan.style.flex = '1';
+
+        const checkmark = document.createElement('span');
+        checkmark.textContent = '✓';
+        checkmark.style.opacity = '0';
+        checkmark.style.marginLeft = '8px';
+        checkmark.style.transition = 'opacity 120ms ease';
+
+        optionButton.appendChild(labelSpan);
+        optionButton.appendChild(checkmark);
+
+        optionButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (name === activeProfile) {
+                toggleMenu(false);
+                return;
+            }
+            setActiveProfile(name);
+            toggleMenu(false);
+            onSwitch?.(name);
+        });
+
+        optionMeta.push({ optionButton, checkmark, name });
+        menu.appendChild(optionButton);
+    });
+
+    const setActiveProfile = (name) => {
+        activeProfile = name;
+        triggerLabel.textContent = name;
+        optionMeta.forEach(({ optionButton, checkmark, name: candidate }) => {
+            const isActive = candidate === activeProfile;
+            applyActiveStyles(optionButton, checkmark, isActive);
+        });
+    };
+
+    let isMenuOpen = false;
+
+    const onDocumentClick = (event) => {
+        if (!container.contains(event.target)) {
+            toggleMenu(false);
+        }
+    };
+
+    const onKeyDown = (event) => {
+        if (event.key === 'Escape') {
+            toggleMenu(false);
+        }
+    };
+
+    const toggleMenu = (forceState) => {
+        const nextState = typeof forceState === 'boolean' ? forceState : !isMenuOpen;
+        if (nextState === isMenuOpen) return;
+        isMenuOpen = nextState;
+        menu.style.display = isMenuOpen ? 'flex' : 'none';
+        trigger.setAttribute('aria-expanded', isMenuOpen ? 'true' : 'false');
+        if (isMenuOpen) {
+            document.addEventListener('click', onDocumentClick, true);
+            document.addEventListener('keydown', onKeyDown, true);
+        } else {
+            document.removeEventListener('click', onDocumentClick, true);
+            document.removeEventListener('keydown', onKeyDown, true);
+        }
+    };
+
+    trigger.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        toggleMenu();
+    });
+
+    trigger.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            toggleMenu();
+        } else if (event.key === 'Escape') {
+            toggleMenu(false);
+        }
+    });
+
+    setActiveProfile(activeProfile);
+    container.appendChild(trigger);
+    container.appendChild(menu);
+};
+
 // --- Helper to create Inline Profile Selector element ---
 /**
  * Creates and returns a DOM element for the inline profile selector.
@@ -300,25 +499,53 @@ window.MaxExtensionButtonsInit.createInlineProfileSelector = async function () {
         container.style.alignItems = 'center';
         container.style.gap = '4px';
         container.style.marginRight = '8px';
+        // Load profiles and current profile
+        const profilesResponse = await chrome.runtime.sendMessage({ type: 'listProfiles' });
+        const { currentProfile } = await chrome.storage.local.get('currentProfile');
+        const profileNames = Array.isArray(profilesResponse?.profiles) ? profilesResponse.profiles : [];
+        if (!profileNames.length) {
+            return null;
+        }
+
+        const activeSite = window?.InjectionTargetsOnWebsite?.activeSite || 'Unknown';
+        const isDarkTheme = document.body.classList.contains('dark-theme') ||
+            document.documentElement.classList.contains('dark-theme') ||
+            window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+        const handleProfileSwitch = (selected) => {
+            if (!selected) return;
+            chrome.runtime.sendMessage({ type: 'switchProfile', profileName: selected, origin: 'inline' }, (response) => {
+                if (response && response.config) {
+                    if (typeof window.__OCP_partialRefreshUI === 'function') {
+                        window.__OCP_partialRefreshUI(response.config, 'inline');
+                    } else if (typeof window.__OCP_nukeAndRefresh === 'function') {
+                        window.__OCP_nukeAndRefresh(response.config, 'inline');
+                    } else if (window.MaxExtensionButtonsInit && typeof window.MaxExtensionButtonsInit.updateButtonsForProfileChange === 'function') {
+                        window.globalMaxExtensionConfig = response.config;
+                        window.MaxExtensionButtonsInit.updateButtonsForProfileChange('inline');
+                    }
+                }
+            });
+        };
+
+        if (activeSite === 'Perplexity') {
+            MaxExtensionButtonsInit.createPerplexityProfileSelector(container, profileNames, currentProfile, handleProfileSwitch, isDarkTheme);
+            return container;
+        }
+
         const label = document.createElement('span');
-        label.textContent = ''; // Could be text like "Profile: " - no text for compactness 
+        label.textContent = '';
         label.style.fontSize = '12px';
-        // Don't hardcode color - let it inherit from theme
         const select = document.createElement('select');
         select.title = 'Switch active profile';
-        select.style.padding = '2px 16px 2px 4px'; // Add padding on right for arrow
+        select.style.padding = '2px 16px 2px 4px';
         select.style.zIndex = '100000';
-        select.style.appearance = 'auto'; // Ensure dropdown arrow is visible
+        select.style.appearance = 'auto';
         select.style.backgroundImage = 'url("data:image/svg+xml;utf8,<svg fill=\'%23666\' height=\'24\' viewBox=\'0 0 24 24\' width=\'24\' xmlns=\'http://www.w3.org/2000/svg\'><path d=\'M7 10l5 5 5-5z\'/></svg>")';
         select.style.backgroundRepeat = 'no-repeat';
         select.style.backgroundPosition = 'right 2px center';
         select.style.backgroundSize = '16px';
         select.tabIndex = 0;
-
-        // Check if dark theme is active and apply appropriate styling
-        const isDarkTheme = document.body.classList.contains('dark-theme') ||
-            document.documentElement.classList.contains('dark-theme') ||
-            window.matchMedia('(prefers-color-scheme: dark)').matches;
 
         if (isDarkTheme) {
             select.style.background = '#333';
@@ -331,17 +558,11 @@ window.MaxExtensionButtonsInit.createInlineProfileSelector = async function () {
             label.style.color = '#eee';
         }
 
-        // Prevent hostile site handlers from closing the dropdown immediately on SPA UIs (e.g. ChatGPT)
         const stop = (e) => { e.stopPropagation(); };
         ['pointerdown', 'mousedown', 'mouseup', 'click', 'touchstart', 'touchend', 'keydown'].forEach(evt => {
             select.addEventListener(evt, stop, { capture: true });
         });
 
-        // Load profiles and current profile
-        const profilesResponse = await chrome.runtime.sendMessage({ type: 'listProfiles' });
-        const { currentProfile } = await chrome.storage.local.get('currentProfile');
-
-        const profileNames = Array.isArray(profilesResponse?.profiles) ? profilesResponse.profiles : [];
         profileNames.forEach((name) => {
             const opt = document.createElement('option');
             opt.value = name;
@@ -352,22 +573,7 @@ window.MaxExtensionButtonsInit.createInlineProfileSelector = async function () {
 
         select.addEventListener('change', (e) => {
             const selected = e.target.value;
-            // Request switch and refresh immediately using service worker response for reliability.
-            // Include origin so receiver can limit refresh scope to inline UI only.
-            chrome.runtime.sendMessage({ type: 'switchProfile', profileName: selected, origin: 'inline' }, (response) => {
-                if (response && response.config) {
-                    // Immediate local refresh; SW also broadcasts to other tabs
-                    if (typeof window.__OCP_partialRefreshUI === 'function') {
-                        window.__OCP_partialRefreshUI(response.config, 'inline');
-                    } else if (typeof window.__OCP_nukeAndRefresh === 'function') {
-                        window.__OCP_nukeAndRefresh(response.config, 'inline');
-                    } else if (window.MaxExtensionButtonsInit && typeof window.MaxExtensionButtonsInit.updateButtonsForProfileChange === 'function') {
-                        // Fallback: partial refresh
-                        window.globalMaxExtensionConfig = response.config;
-                        window.MaxExtensionButtonsInit.updateButtonsForProfileChange('inline');
-                    }
-                }
-            });
+            handleProfileSwitch(selected);
         });
 
         container.appendChild(label);

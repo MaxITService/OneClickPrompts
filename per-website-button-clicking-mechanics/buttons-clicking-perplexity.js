@@ -60,28 +60,33 @@ function insertTextIntoPerplexityEditor(editorElement, textToInsert) {
 
         editorElement.focus();
 
-        // Preferred path: simulate a paste so Lexical processes updates through its own handlers.
-        if (window.MaxExtensionUtils && typeof window.MaxExtensionUtils.simulatePaste === 'function') {
-            MaxExtensionUtils.simulatePaste(editorElement, text);
-        } else {
-            // Fallback: position caret at end and use execCommand insertion.
-            const selection = window.getSelection();
+        const selection = window.getSelection();
+        if (selection) {
+            selection.removeAllRanges();
             const range = document.createRange();
             range.selectNodeContents(editorElement);
-            range.collapse(false);
-            if (selection) {
-                selection.removeAllRanges();
-                selection.addRange(range);
-            }
+            range.deleteContents();
+            range.collapse(true);
+            selection.addRange(range);
+        } else {
+            editorElement.textContent = '';
+        }
 
-            const inserted = document.execCommand && document.execCommand('insertText', false, text);
-            if (!inserted) {
-                editorElement.textContent += text;
+        let insertionSucceeded = false;
+        if (typeof document.execCommand === 'function') {
+            try {
+                insertionSucceeded = document.execCommand('insertText', false, text);
+            } catch (execError) {
+                logConCgp('[Perplexity] execCommand insertText failed:', execError);
             }
         }
 
+        if (!insertionSucceeded) {
+            editorElement.textContent = text;
+        }
+
         const inputEvent = typeof InputEvent === 'function'
-            ? new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text })
+            ? new InputEvent('input', { bubbles: true })
             : new Event('input', { bubbles: true });
         editorElement.dispatchEvent(inputEvent);
         editorElement.dispatchEvent(new Event('change', { bubbles: true }));
@@ -90,7 +95,7 @@ function insertTextIntoPerplexityEditor(editorElement, textToInsert) {
             MaxExtensionUtils.moveCursorToEnd(editorElement);
         }
 
-        logConCgp('[Perplexity] Text insertion dispatched to editor.');
+        logConCgp('[Perplexity] Text inserted into editor.');
         return true;
     } catch (error) {
         logConCgp('[Perplexity] Error during text insertion:', error);
