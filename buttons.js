@@ -139,6 +139,7 @@ window.MaxExtensionButtons = {
                     preventDefault() { },
                     stopPropagation() { },
                     __fromDangerBroadcast: true,
+                    __fromQueue: true,
                     shiftKey: false,
                 };
                 processCustomSendButtonClick(localDispatchEvent, '', true);
@@ -147,13 +148,39 @@ window.MaxExtensionButtons = {
                     type: 'triggerDangerCrossChatSend',
                     promptText: trimmed
                 }, (response) => {
+                    const dispatched = response?.dispatched || 0;
+                    const failed = response?.failed || 0;
+                    const skipped = response?.skipped || 0;
                     if (!response?.success) {
-                        logConCgp('[buttons-cross-chat] Danger broadcast request failed or was rejected.', response?.reason || response?.error || '');
+                        logConCgp('[buttons-cross-chat] Danger broadcast request failed or was rejected.', {
+                            reason: response?.reason || response?.error || '',
+                            dispatched,
+                            failed,
+                            skipped,
+                            reasons: response?.reasons || []
+                        });
                         if (typeof window.showToast === 'function') {
-                            window.showToast('Broadcast failed or was rejected by other tabs.', 'error');
+                            let failMessage;
+                            if (failed > 0) {
+                                failMessage = `Broadcast rejected by all ${failed} tab${failed === 1 ? '' : 's'}.`;
+                            } else if ((response?.reason === 'noRecipientsReachable') && skipped > 0) {
+                                failMessage = 'No other tabs are ready to receive this broadcast.';
+                            } else {
+                                failMessage = 'Broadcast failed or was rejected by other tabs.';
+                            }
+                            window.showToast(failMessage, 'error');
                         }
-                    } else if (typeof window.showToast === 'function') {
-                        window.showToast(`Broadcast sent to ${response.dispatched || 0} other tab${response.dispatched === 1 ? '' : 's'}.`, 'success');
+                        return;
+                    }
+
+                    logConCgp('[buttons-cross-chat] Danger broadcast results.', { dispatched, failed, skipped, reasons: response?.reasons || [] });
+                    if (typeof window.showToast === 'function') {
+                        let message = `Broadcast sent to ${dispatched} other tab${dispatched === 1 ? '' : 's'}.`;
+                        if (failed > 0) {
+                            message += ` ${failed} tab${failed === 1 ? '' : 's'} declined.`;
+                        }
+                        const toastType = failed > 0 ? 'warning' : 'success';
+                        window.showToast(message, toastType);
                     }
                 });
             });

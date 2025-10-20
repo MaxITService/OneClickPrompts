@@ -32,6 +32,36 @@
 
 'use strict';
 
+function normalizeCrossChatConfig(settings = {}) {
+    const normalized = {
+        enabled: false,
+        placement: 'after',
+        autosendCopy: false,
+        autosendPaste: false,
+        dangerAutoSendAll: false,
+        hideStandardButtons: false,
+        ...settings
+    };
+    normalized.enabled = !!normalized.enabled;
+    normalized.autosendCopy = !!normalized.autosendCopy;
+    normalized.autosendPaste = !!normalized.autosendPaste;
+    normalized.dangerAutoSendAll = !!normalized.dangerAutoSendAll;
+    normalized.hideStandardButtons = !!normalized.hideStandardButtons;
+    normalized.placement = normalized.placement === 'before' ? 'before' : 'after';
+    return normalized;
+}
+
+function applyCrossChatConfig(settings = {}) {
+    const normalized = normalizeCrossChatConfig(settings);
+    window.globalCrossChatConfig = normalized;
+    if (!normalized.dangerAutoSendAll) {
+        window.__OCP_dangerReceiveBlocked = false;
+    } else if (typeof window.__OCP_dangerReceiveBlocked !== 'boolean') {
+        window.__OCP_dangerReceiveBlocked = false;
+    }
+    return normalized;
+}
+
 // === Global, idempotent message/listener helpers for SPA-safe operation ===
 if (!window.__OCP_messageListenerRegistered_v2) {
     window.__OCP_messageListenerRegistered_v2 = true;
@@ -126,20 +156,8 @@ if (!window.__OCP_messageListenerRegistered_v2) {
         }
         if (message && message.type === 'crossChatChanged') {
             logConCgp('[init] Received crossChatChanged broadcast. Updating configuration.');
-            const defaults = {
-                enabled: false,
-                autosendCopy: false,
-                autosendPaste: false,
-                placement: 'after',
-                dangerAutoSendAll: false,
-                hideStandardButtons: false
-            };
-            window.globalCrossChatConfig = { ...defaults, ...(window.globalCrossChatConfig || {}), ...(message.settings || {}) };
-            if (!window.globalCrossChatConfig.dangerAutoSendAll) {
-                window.__OCP_dangerReceiveBlocked = false;
-            } else if (typeof window.__OCP_dangerReceiveBlocked !== 'boolean') {
-                window.__OCP_dangerReceiveBlocked = false;
-            }
+            const mergedSettings = { ...(window.globalCrossChatConfig || {}), ...(message.settings || {}) };
+            applyCrossChatConfig(mergedSettings);
 
             if (window.MaxExtensionButtonsInit && typeof window.MaxExtensionButtonsInit.updateButtonsForProfileChange === 'function') {
                 try {
@@ -208,31 +226,7 @@ function publicStaticVoidMain() {
         const mainConfig = response.config;
         logConCgp('[init] Main configuration successfully loaded:', mainConfig);
 
-        // After loading the main config, load the cross-chat module settings.
-        chrome.runtime.sendMessage({ type: 'getCrossChatModuleSettings' }, (moduleResponse) => {
-            const crossChatDefaults = {
-                enabled: false,
-                placement: 'after',
-                autosendCopy: false,
-                autosendPaste: false,
-                dangerAutoSendAll: false,
-                hideStandardButtons: false
-            };
-            if (chrome.runtime.lastError || !moduleResponse?.settings) {
-                logConCgp('[init] Could not load Cross-Chat module settings. Assuming disabled.', chrome.runtime.lastError?.message);
-                // Set a default disabled state to prevent errors.
-                window.globalCrossChatConfig = { ...crossChatDefaults };
-            } else {
-                window.globalCrossChatConfig = { ...crossChatDefaults, ...moduleResponse.settings };
-                logConCgp('[init] Cross-Chat module settings loaded:', window.globalCrossChatConfig);
-            }
-            if (!window.globalCrossChatConfig.dangerAutoSendAll) {
-                window.__OCP_dangerReceiveBlocked = false;
-            } else if (typeof window.__OCP_dangerReceiveBlocked !== 'boolean') {
-                window.__OCP_dangerReceiveBlocked = false;
-            }
-
-            // Load Inline Profile Selector global settings next
+        const loadInlineProfileSelectorSettings = () => {
             chrome.runtime.sendMessage({ type: 'getInlineProfileSelectorSettings' }, (selectorResponse) => {
                 if (chrome.runtime.lastError || !selectorResponse?.settings) {
                     logConCgp('[init] Could not load Inline Profile Selector settings.', chrome.runtime.lastError?.message);
@@ -245,6 +239,34 @@ function publicStaticVoidMain() {
                 // Start main initialization only after all global configs are present
                 commenceExtensionInitialization(mainConfig);
             });
+        };
+
+        const applyCrossChatAndContinue = (settings, logLabel) => {
+            const appliedSettings = applyCrossChatConfig(settings);
+            if (logLabel) {
+                logConCgp(logLabel, appliedSettings);
+            }
+            loadInlineProfileSelectorSettings();
+        };
+
+        // After loading the main config, load the cross-chat module settings.
+        chrome.runtime.sendMessage({ type: 'getCrossChatModuleSettings' }, (moduleResponse) => {
+            const settingsError = chrome.runtime.lastError;
+            if (settingsError || !moduleResponse?.settings) {
+                logConCgp('[init] Could not load Cross-Chat module settings. Attempting defaults.', settingsError?.message);
+                chrome.runtime.sendMessage({ type: 'getCrossChatModuleDefaults' }, (defaultsResponse) => {
+                    const defaultsError = chrome.runtime.lastError;
+                    if (defaultsError || !defaultsResponse?.defaults) {
+                        logConCgp('[init] Cross-Chat defaults unavailable. Using fallback disabled state.', defaultsError?.message);
+                        applyCrossChatAndContinue({}, '[init] Cross-Chat module defaults unavailable; using fallback:');
+                    } else {
+                        applyCrossChatAndContinue(defaultsResponse.defaults, '[init] Cross-Chat module defaults applied:');
+                    }
+                });
+                return;
+            }
+
+            applyCrossChatAndContinue(moduleResponse.settings, '[init] Cross-Chat module settings loaded:');
         });
     });
 }

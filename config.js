@@ -647,6 +647,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             })();
             return true;
 
+        case 'getCrossChatModuleDefaults':
+            (async () => {
+                try {
+                    const cc = await StateStore.getCrossChat();
+                    sendResponse({ defaults: cc.settings });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
+            return true;
+
         case 'saveCrossChatModuleSettings':
             (async () => {
                 try {
@@ -721,24 +733,53 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                     const originTabId = sender?.tab?.id || null;
                     const tabs = await chrome.tabs.query({});
-                    let dispatchedCount = 0;
+                    let successCount = 0;
+                    let failureCount = 0;
+                    let skippedCount = 0;
+                    const failureReasons = [];
 
                     await Promise.all(tabs.map(async (tab) => {
                         if (!tab.id || tab.id === originTabId) {
                             return;
                         }
                         try {
-                            await chrome.tabs.sendMessage(tab.id, {
+                            const response = await chrome.tabs.sendMessage(tab.id, {
                                 type: 'crossChatDangerDispatchPrompt',
                                 promptText: trimmed,
                             });
-                            dispatchedCount++;
+                            if (response?.ok) {
+                                successCount++;
+                            } else {
+                                failureCount++;
+                                if (response?.error || response?.reason) {
+                                    failureReasons.push(response.error || response.reason);
+                                }
+                            }
                         } catch (error) {
-                            // Tab may not have the content script; ignore silently.
+                            const message = error?.message || '';
+                            if (message.includes('Could not establish connection') || message.includes('Receiving end does not exist')) {
+                                skippedCount++;
+                            } else {
+                                failureCount++;
+                                if (message) {
+                                    failureReasons.push(message);
+                                }
+                            }
                         }
                     }));
 
-                    sendResponse({ success: true, dispatched: dispatchedCount });
+                    const success = successCount > 0;
+                    const reason = success
+                        ? undefined
+                        : (failureCount > 0 ? 'noRecipientsAccepted' : 'noRecipientsReachable');
+                    sendResponse({
+                        success,
+                        dispatched: successCount,
+                        failed: failureCount,
+                        skipped: skippedCount,
+                        reasons: failureReasons,
+                        reason
+                    });
                 } catch (error) {
                     handleStorageError(error);
                     sendResponse({ success: false, error: error.message });
