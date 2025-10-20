@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Settings Elements
     const autosendCopyToggle = document.getElementById('crossChatAutosendCopy');
     const autosendPasteToggle = document.getElementById('crossChatAutosendPaste');
+    const dangerBroadcastToggle = document.getElementById('crossChatDangerAutoSendAll');
+    const hideStandardButtonsToggle = document.getElementById('crossChatHideStandardButtons');
     const placementRadios = document.getElementsByName('crossChatButtonPlacement');
 
     // Stored Prompt Elements
@@ -18,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Gracefully exit if essential elements for this module are missing.
     // This no longer breaks the parent container's collapsible functionality.
-    if (!crossChatModule || !enableToggle || !settingsContainer || !autosendCopyToggle) {
+    if (!crossChatModule || !enableToggle || !settingsContainer || !autosendCopyToggle || !dangerBroadcastToggle || !hideStandardButtonsToggle) {
         console.warn("Cross-Chat module elements not found, skipping feature initialization.");
         // If the module container exists, we hide it to prevent showing a broken UI.
         if (crossChatModule) {
@@ -32,6 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
         enabled: false,
         autosendCopy: false,
         autosendPaste: false,
+        dangerAutoSendAll: false,
+        hideStandardButtons: false,
         placement: 'after',
     };
 
@@ -42,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Load settings
             const response = await chrome.runtime.sendMessage({ type: 'getCrossChatModuleSettings' });
             if (response && response.settings) {
-                currentSettings = response.settings;
+                currentSettings = { ...defaultSettings, ...response.settings };
             } else {
                 console.warn('Could not load cross-chat module settings, using defaults.');
                 currentSettings = { ...defaultSettings };
@@ -79,6 +83,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Settings
         autosendCopyToggle.checked = currentSettings.autosendCopy;
         autosendPasteToggle.checked = currentSettings.autosendPaste;
+        dangerBroadcastToggle.checked = currentSettings.dangerAutoSendAll;
+        hideStandardButtonsToggle.checked = currentSettings.hideStandardButtons;
 
         for (const radio of placementRadios) {
             if (radio.value === currentSettings.placement) {
@@ -166,6 +172,25 @@ document.addEventListener('DOMContentLoaded', () => {
     autosendPasteToggle.addEventListener('change', () => {
         currentSettings.autosendPaste = autosendPasteToggle.checked;
         saveModuleSettings();
+    });
+
+    dangerBroadcastToggle.addEventListener('change', () => {
+        currentSettings.dangerAutoSendAll = dangerBroadcastToggle.checked;
+        saveModuleSettings();
+    });
+
+    hideStandardButtonsToggle.addEventListener('change', async () => {
+        currentSettings.hideStandardButtons = hideStandardButtonsToggle.checked;
+        await saveModuleSettings();
+
+        if (typeof updatebuttonCardsList === 'function') {
+            try {
+                await updatebuttonCardsList();
+                console.log('Button cards updated after toggling Cross-Chat visibility');
+            } catch (error) {
+                console.error('Error updating button cards after toggling Cross-Chat visibility:', error);
+            }
+        }
     });
 
     for (const radio of placementRadios) {

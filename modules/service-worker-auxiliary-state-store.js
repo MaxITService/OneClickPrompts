@@ -70,6 +70,15 @@ const LEGACY = {
   customSelectors: 'customSelectors',
 };
 
+const CROSS_CHAT_DEFAULT_SETTINGS = {
+  enabled: false,
+  autosendCopy: false,
+  autosendPaste: false,
+  placement: 'before',
+  dangerAutoSendAll: false,
+  hideStandardButtons: false,
+};
+
 // Utilities to get/set nested key paths by flattening as separate storage entries
 // We store each top-level namespace as a whole object where applicable to limit storage ops:
 async function getValue(path) {
@@ -89,22 +98,12 @@ async function getValue(path) {
     const r = await lsGet([KEYS.modules.crossChat, LEGACY.crossChatModuleSettings, LEGACY.crossChatStoredPrompt]);
     let obj = r[KEYS.modules.crossChat];
     if (!obj) {
-      const settings = r[LEGACY.crossChatModuleSettings] || {
-        enabled: false,
-        autosendCopy: false,
-        autosendPaste: false,
-        placement: 'before',
-      };
+      const settings = { ...CROSS_CHAT_DEFAULT_SETTINGS, ...(r[LEGACY.crossChatModuleSettings] || {}) };
       const storedPrompt = r[LEGACY.crossChatStoredPrompt] || '';
       obj = { settings, storedPrompt };
     } else {
       // Ensure shape
-      obj.settings = obj.settings || {
-        enabled: false,
-        autosendCopy: false,
-        autosendPaste: false,
-        placement: 'before',
-      };
+      obj.settings = { ...CROSS_CHAT_DEFAULT_SETTINGS, ...(obj.settings || {}) };
       obj.storedPrompt = typeof obj.storedPrompt === 'string' ? obj.storedPrompt : '';
     }
     return obj;
@@ -241,12 +240,7 @@ async function setValue(path, value) {
   }
   if (path === KEYS.modules.crossChat) {
     // Expect value shape { settings, storedPrompt }
-    const settings = value?.settings || {
-      enabled: false,
-      autosendCopy: false,
-      autosendPaste: false,
-      placement: 'before',
-    };
+    const settings = { ...CROSS_CHAT_DEFAULT_SETTINGS, ...(value?.settings || {}) };
     const storedPrompt = typeof value?.storedPrompt === 'string' ? value.storedPrompt : '';
     await lsSet({
       [KEYS.modules.crossChat]: { settings, storedPrompt },
@@ -375,7 +369,8 @@ export const StateStore = {
   },
   async saveCrossChat(settings) {
     const current = await this.getCrossChat();
-    const next = { settings: { ...current.settings, ...settings }, storedPrompt: current.storedPrompt || '' };
+    const mergedSettings = { ...CROSS_CHAT_DEFAULT_SETTINGS, ...current.settings, ...settings };
+    const next = { settings: mergedSettings, storedPrompt: current.storedPrompt || '' };
     await setValue(KEYS.modules.crossChat, next);
     this.broadcast({ type: 'crossChatChanged', settings: next.settings });
   },

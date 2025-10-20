@@ -488,6 +488,51 @@
                 </div>
                 <div
                   class="row"
+                  title="When enabled, a broadcast button appears on chat pages. Clicking it will immediately paste and send the current text to every other supported tab. Use with extreme caution."
+                >
+                  <div class="switch-container">
+                    <label class="switch">
+                      <input type="checkbox" id="crossChatDangerAutoSendAll" />
+                      <span class="slider"></span>
+                    </label>
+                    <span class="switch-label"
+                      >Danger: Auto sent to all instances of chats</span
+                    >
+                  </div>
+                </div>
+                <div class="text-inside-container">
+                  <p>
+                    <strong>Warning:</strong> With this toggle enabled, the new
+                    broadcast button will immediately paste and send the current
+                    editor text across <em>every</em> compatible chat tab that
+                    accepts broadcasts. Messages can trigger on sites you have
+                    open in the background, spend credits, or interrupt a reply
+                    that is still generating. Double-check the text before you
+                    launch it.
+                  </p>
+                  <p>
+                    Shift-clicking the broadcast button toggles a shield icon.
+                    Tabs showing the shield will keep sending out prompts but
+                    will refuse automatic messages coming from other tabs until
+                    you shift-click again.
+                  </p>
+                </div>
+                <div
+                  class="row"
+                  title="Hide the standard Cross-Chat 📤 Copy and 📥 Paste buttons. Only the broadcast control remains when Danger mode is active."
+                >
+                  <div class="switch-container">
+                    <label class="switch">
+                      <input type="checkbox" id="crossChatHideStandardButtons" />
+                      <span class="slider"></span>
+                    </label>
+                    <span class="switch-label"
+                      >Hide standard Cross-Chat buttons</span
+                    >
+                  </div>
+                </div>
+                <div
+                  class="row"
                   style="flex-direction: column; align-items: flex-start"
                 >
                   <label>Button Placement:</label>

@@ -79,10 +79,29 @@ window.MaxExtensionButtonsInit = {
         const allButtonDefs = [];
         let nonSeparatorCount = 0;
 
+        const crossChatConfig = window.globalCrossChatConfig || {};
+        const crossChatEnabled = !!crossChatConfig.enabled;
+        const hideStandardCrossChatButtons = !!crossChatConfig.hideStandardButtons;
+        const crossChatPlacement = crossChatConfig.placement === 'before' ? 'before' : 'after';
+        const dangerButtonActive = crossChatEnabled && !!crossChatConfig.dangerAutoSendAll;
+
+        const crossChatButtonTypes = [];
+        if (crossChatEnabled) {
+            if (!hideStandardCrossChatButtons) {
+                crossChatButtonTypes.push('copy', 'paste');
+            }
+            if (dangerButtonActive) {
+                crossChatButtonTypes.push('broadcast');
+            }
+        }
+
+        const appendCrossChatButtons = () => {
+            crossChatButtonTypes.forEach(type => allButtonDefs.push({ type }));
+        };
+
         // 1. Add Cross-Chat buttons if they should be placed 'before'
-        if (window.globalCrossChatConfig?.enabled && window.globalCrossChatConfig.placement === 'before') {
-            allButtonDefs.push({ type: 'copy' });
-            allButtonDefs.push({ type: 'paste' });
+        if (crossChatEnabled && crossChatPlacement === 'before') {
+            appendCrossChatButtons();
         }
 
         // 2. Add standard custom buttons
@@ -91,9 +110,8 @@ window.MaxExtensionButtonsInit = {
         });
 
         // 3. Add Cross-Chat buttons if they should be placed 'after'
-        if (window.globalCrossChatConfig?.enabled && window.globalCrossChatConfig.placement === 'after') {
-            allButtonDefs.push({ type: 'copy' });
-            allButtonDefs.push({ type: 'paste' });
+        if (crossChatEnabled && crossChatPlacement === 'after') {
+            appendCrossChatButtons();
         }
 
         // --- Render all buttons from the unified list ---
@@ -133,8 +151,9 @@ window.MaxExtensionButtonsInit = {
             }
 
             let buttonElement;
-            if (def.type === 'copy' || def.type === 'paste') {
-                buttonElement = MaxExtensionButtons.createCrossChatButton(def.type, shortcutKey);
+            if (def.type === 'copy' || def.type === 'paste' || def.type === 'broadcast') {
+                const appliedShortcut = def.type === 'broadcast' ? null : shortcutKey;
+                buttonElement = MaxExtensionButtons.createCrossChatButton(def.type, appliedShortcut);
             } else { // 'custom' button type
                 if (def.config.text === SETTINGS_BUTTON_MAGIC_TEXT) {
                     // Special handling for the settings button.
@@ -151,7 +170,9 @@ window.MaxExtensionButtonsInit = {
             }
 
             container.appendChild(buttonElement);
-            nonSeparatorCount++;
+            if (def.type !== 'broadcast') {
+                nonSeparatorCount++;
+            }
             logConCgp(`[init] Button ${nonSeparatorCount} (${def.type}) has been created and appended.`);
         });
 

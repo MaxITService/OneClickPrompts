@@ -53,12 +53,6 @@ window.MaxExtensionButtons = {
         const buttonElement = document.createElement('button');
         buttonElement.type = 'button';
 
-        const icons = { copy: '📋', paste: '📥' };
-        const baseTooltips = { copy: 'Copy prompt from input area', paste: 'Paste stored prompt' };
-
-        buttonElement.innerHTML = icons[type];
-
-        // Style the button
         buttonElement.style.cssText = `
             background-color: transparent;
             border: none;
@@ -69,8 +63,109 @@ window.MaxExtensionButtons = {
             margin-bottom: 5px;
         `;
 
-        // --- Tooltip & Shortcut ---
-        // Determine auto-send status from global config to add to tooltip
+        if (type === 'broadcast') {
+            const ICON_ACTIVE = '⬆️';
+            const ICON_SHIELD = '😷';
+
+            const isShielded = () => window.__OCP_dangerReceiveBlocked === true;
+            const setShielded = (value) => {
+                window.__OCP_dangerReceiveBlocked = !!value;
+            };
+
+            const buildTooltip = () => {
+                const intro = 'Broadcast stored prompt to every supported tab';
+                const shieldInfo = isShielded()
+                    ? ' • This tab is shielding itself from incoming broadcasts.'
+                    : ' • This tab will receive and auto-send broadcasts.';
+                return `${intro}. Danger toggle must stay enabled.${shieldInfo} Shift+Click to toggle the shield.`;
+            };
+
+            const updateBroadcastVisuals = () => {
+                buttonElement.innerHTML = isShielded() ? ICON_SHIELD : ICON_ACTIVE;
+                buttonElement.setAttribute('title', buildTooltip());
+            };
+
+            updateBroadcastVisuals();
+
+            buttonElement.addEventListener('click', (event) => {
+                event.preventDefault();
+
+                if (event.shiftKey) {
+                    const nextState = !isShielded();
+                    setShielded(nextState);
+                    updateBroadcastVisuals();
+                    if (typeof window.showToast === 'function') {
+                        window.showToast(nextState
+                            ? 'Incoming danger broadcasts are blocked in this tab.'
+                            : 'This tab will accept danger broadcasts again.', 'info');
+                    }
+                    return;
+                }
+
+                if (!window.globalCrossChatConfig?.dangerAutoSendAll) {
+                    if (typeof window.showToast === 'function') {
+                        window.showToast('Enable "Danger: Auto sent to all instances of chats" in the popup first.', 'warning');
+                    }
+                    return;
+                }
+
+                const selectors = window?.InjectionTargetsOnWebsite?.selectors?.editors || [];
+                const editor = selectors
+                    .map(selector => document.querySelector(selector))
+                    .find(el => el);
+
+                if (!editor) {
+                    logConCgp('[buttons-cross-chat] Editor area not found for broadcast.');
+                    if (typeof window.showToast === 'function') {
+                        window.showToast('Could not locate the chat editor for broadcasting.', 'error');
+                    }
+                    return;
+                }
+
+                const rawText = editor.value || editor.innerText || '';
+                const trimmed = typeof rawText === 'string' ? rawText.trim() : '';
+                if (!trimmed) {
+                    if (typeof window.showToast === 'function') {
+                        window.showToast('Nothing to send. Type your prompt first.', 'warning');
+                    }
+                    return;
+                }
+
+                chrome.runtime.sendMessage({ type: 'saveStoredPrompt', promptText: rawText }, () => {
+                    logConCgp('[buttons-cross-chat] Prompt saved for broadcast.');
+                });
+
+                const localDispatchEvent = {
+                    preventDefault() { },
+                    stopPropagation() { },
+                    __fromDangerBroadcast: true,
+                    shiftKey: false,
+                };
+                processCustomSendButtonClick(localDispatchEvent, '', true);
+
+                chrome.runtime.sendMessage({
+                    type: 'triggerDangerCrossChatSend',
+                    promptText: trimmed
+                }, (response) => {
+                    if (!response?.success) {
+                        logConCgp('[buttons-cross-chat] Danger broadcast request failed or was rejected.', response?.reason || response?.error || '');
+                        if (typeof window.showToast === 'function') {
+                            window.showToast('Broadcast failed or was rejected by other tabs.', 'error');
+                        }
+                    } else if (typeof window.showToast === 'function') {
+                        window.showToast(`Broadcast sent to ${response.dispatched || 0} other tab${response.dispatched === 1 ? '' : 's'}.`, 'success');
+                    }
+                });
+            });
+
+            return buttonElement;
+        }
+
+        const icons = { copy: '📋', paste: '📥' };
+        const baseTooltips = { copy: 'Copy prompt from input area', paste: 'Paste stored prompt' };
+
+        buttonElement.innerHTML = icons[type];
+
         const autoSendEnabled = (type === 'copy')
             ? window.globalCrossChatConfig?.autosendCopy
             : window.globalCrossChatConfig?.autosendPaste;
@@ -84,13 +179,11 @@ window.MaxExtensionButtons = {
         }
 
         const updateTooltip = (text) => {
-            // Combine base text, auto-send status, and shortcut info
             buttonElement.setAttribute('title', text + autoSendDescription + shortcutDescription);
         };
 
         updateTooltip(baseTooltips[type]);
 
-        // --- Event Listeners ---
         buttonElement.addEventListener('click', (event) => {
             event.preventDefault();
             if (type === 'copy') {
@@ -106,25 +199,16 @@ window.MaxExtensionButtons = {
 
                 chrome.runtime.sendMessage({ type: 'saveStoredPrompt', promptText: text }, () => {
                     logConCgp('[buttons-cross-chat] Prompt saved.');
-                    // Visually indicate success by briefly changing the tooltip
                     updateTooltip('Copied!');
                     setTimeout(() => updateTooltip(baseTooltips.copy), 1500);
                 });
 
-                // The `autosend` value passed here will be inverted by `processCustomSendButtonClick` if shift is held.
-                // This ensures that shift+click correctly toggles the send behavior.
                 const autoSend = window.globalCrossChatConfig?.autosendCopy;
-                // Calling processCustomSendButtonClick with an empty string for the text
-                // will prevent appending the text again, but will still trigger the auto-send
-                // mechanism with the existing text.
                 processCustomSendButtonClick(event, '', autoSend);
 
             } else if (type === 'paste') {
                 chrome.runtime.sendMessage({ type: 'getStoredPrompt' }, (response) => {
                     if (response?.promptText) {
-                        // The `autosend` value is taken directly from config.
-                        // `processCustomSendButtonClick` will handle shift+click to invert it.
-                        // This fixes a bug where shift+click was double-inverting the behavior.
                         const autoSend = window.globalCrossChatConfig.autosendPaste;
                         processCustomSendButtonClick(event, response.promptText, autoSend);
                     } else {
@@ -150,12 +234,12 @@ window.MaxExtensionButtons = {
                             updateTooltip('*No prompt has been saved*');
                         }
                     });
-                }, 300); // 300ms debounce
+                }, 300);
             });
 
             buttonElement.addEventListener('mouseout', () => {
                 clearTimeout(tooltipFetchTimeout);
-                updateTooltip(baseTooltips.paste); // Reset to default tooltip
+                updateTooltip(baseTooltips.paste);
             });
         }
 
@@ -311,3 +395,5 @@ function processCustomSendButtonClick(event, customText, autoSend) {
 }
 
 // #endregion
+
+

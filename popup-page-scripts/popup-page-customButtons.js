@@ -22,10 +22,12 @@ const SETTINGS_BUTTON_MAGIC_TEXT = '%OCP_APP_SETTINGS_SYSTEM_BUTTON%';
 async function getCrossChatSettings() {
     try {
         const response = await chrome.runtime.sendMessage({ type: 'getCrossChatModuleSettings' });
-        return response && response.settings ? response.settings : { enabled: false, placement: 'after' };
+        return response && response.settings
+            ? response.settings
+            : { enabled: false, placement: 'after', hideStandardButtons: false, dangerAutoSendAll: false };
     } catch (error) {
         console.error('Error fetching Cross-Chat settings:', error);
-        return { enabled: false, placement: 'after' }; // Default fallback
+        return { enabled: false, placement: 'after', hideStandardButtons: false, dangerAutoSendAll: false }; // Default fallback
     }
 }
 
@@ -76,7 +78,10 @@ function createButtonCardElement(button, index, crossChatSettings = null) {
             }
             
             // Apply the shift if CrossChat buttons are placed before
-            const shift = (crossChatSettings && crossChatSettings.enabled && crossChatSettings.placement === 'before') ? 2 : 0;
+            let shift = 0;
+            if (crossChatSettings && crossChatSettings.enabled && crossChatSettings.placement === 'before' && !crossChatSettings.hideStandardButtons) {
+                shift = 2;
+            }
             const hotkeyIndex = nonSeparatorButtonsCount + shift;
             
             // Only show hotkey if it's within the 1-0 range (Alt+1 to Alt+0)

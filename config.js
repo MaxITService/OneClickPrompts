@@ -702,6 +702,49 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 }
             })();
             return true;
+
+        case 'triggerDangerCrossChatSend':
+            (async () => {
+                try {
+                    const promptText = typeof request.promptText === 'string' ? request.promptText : '';
+                    const trimmed = promptText.trim();
+                    if (!trimmed) {
+                        sendResponse({ success: false, reason: 'emptyPrompt' });
+                        return;
+                    }
+
+                    const crossChatState = await StateStore.getCrossChat();
+                    if (!crossChatState?.settings?.dangerAutoSendAll) {
+                        sendResponse({ success: false, reason: 'settingDisabled' });
+                        return;
+                    }
+
+                    const originTabId = sender?.tab?.id || null;
+                    const tabs = await chrome.tabs.query({});
+                    let dispatchedCount = 0;
+
+                    await Promise.all(tabs.map(async (tab) => {
+                        if (!tab.id || tab.id === originTabId) {
+                            return;
+                        }
+                        try {
+                            await chrome.tabs.sendMessage(tab.id, {
+                                type: 'crossChatDangerDispatchPrompt',
+                                promptText: trimmed,
+                            });
+                            dispatchedCount++;
+                        } catch (error) {
+                            // Tab may not have the content script; ignore silently.
+                        }
+                    }));
+
+                    sendResponse({ success: true, dispatched: dispatchedCount });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ success: false, error: error.message });
+                }
+            })();
+            return true;
         // ===== End Cross-Chat Module Cases =====
 
         // ===== Inline Profile Selector Cases =====
