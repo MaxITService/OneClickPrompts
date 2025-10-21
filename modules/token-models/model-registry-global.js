@@ -50,7 +50,7 @@
         id: 'single-regex-pass',
         name: 'Single regex model',
         shortName: 'Single Regex',
-        description: 'Seems to be most accurate. single-regex model. 30% slower than Ultralight state machine. A single Unicode regex matches letter sequences, numbers, individual CJK characters, or any non-whitespace symbol and returns the total matches as the token estimate. It''s extremely fast and simple because it''s one pass with no extra state. The trade-off is coarse granularity-punctuation and symbols count as their own tokens, and there''s no adjustment for code-heavy or CJK-heavy text.',
+        description: "Seems to be most accurate. single-regex model. 30% slower than Ultralight state machine. A single Unicode regex matches letter sequences, numbers, individual CJK characters, or any non-whitespace symbol and returns the total matches as the token estimate. It's extremely fast and simple because it's one pass with no extra state. The trade-off is coarse granularity-punctuation and symbols count as their own tokens, and there's no adjustment for code-heavy or CJK-heavy text.",
         performance: {
           speed: 4,
           accuracy: 5,

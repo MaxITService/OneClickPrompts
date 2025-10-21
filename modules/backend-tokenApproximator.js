@@ -5,8 +5,13 @@
   if (window.__OCP_tokApprox_backend_initDone) return;
   window.__OCP_tokApprox_backend_initDone = true;
 
+  const helpers = window.OCPTokenApproxHelpers || null;
+  const settingsModule = window.OCPTokenApproxSettings || null;
+  const uiModule = window.OCPTokenApproxUI || null;
+  const workerModule = window.OCPTokenApproxWorker || null;
+
   // A standard debounce utility function.
-  function debounce(func, delay) {
+  function fallbackDebounce(func, delay) {
     let timeout;
     return function(...args) {
       clearTimeout(timeout);
@@ -14,12 +19,18 @@
     };
   }
 
+  const debounce = (helpers && typeof helpers.debounce === 'function')
+    ? helpers.debounce
+    : fallbackDebounce;
+
   // ---- Guards & site detection ----
-  const Site = (window.InjectionTargetsOnWebsite && window.InjectionTargetsOnWebsite.activeSite) || 'Unknown';
+  const Site = (helpers && typeof helpers.getActiveSite === 'function')
+    ? helpers.getActiveSite()
+    : (window.InjectionTargetsOnWebsite && window.InjectionTargetsOnWebsite.activeSite) || 'Unknown';
 
   // Logging helper required by project
   // Log only through logConCgp - no fallback to console.*
-  function log(...args) {
+  function fallbackLog(...args) {
     try {
       if (typeof window.logConCgp === 'function') {
         window.logConCgp('[tok-approx]', ...args);
@@ -27,6 +38,9 @@
       // If logConCgp is not available, do nothing (project policy)
     } catch { /* noop */ }
   }
+  const log = (helpers && typeof helpers.log === 'function')
+    ? (...args) => helpers.log(...args)
+    : fallbackLog;
 
   // ---- MODELS & REGISTRY (defined once for both worker and main thread) ----
   class TokenCountingModelBase {
@@ -109,84 +123,87 @@
   }
 
   // ---- Settings load/save bridge ----
-  function loadSettings() {
-    return new Promise((resolve) => {
-      try {
-        chrome.runtime.sendMessage({ type: 'getTokenApproximatorSettings' }, (resp) => {
-          if (chrome.runtime.lastError) {
-            return resolve({
-              enabled: false,
-              calibration: 1.0,
-              threadMode: 'withEditors',
-              showEditorCounter: true,
-              placement: 'before',
-              countingMethod: 'ultralight-state-machine', // Default to ultralight
-              enabledSites: {
-                'ChatGPT': true,
-                'Claude': true,
-                'Copilot': true,
-                'DeepSeek': true,
-                'AIStudio': true,
-                'Grok': true,
-                'Gemini': true,
-                'Perplexity': true
-              }
+  const loadSettings = (settingsModule && typeof settingsModule.loadSettings === 'function')
+    ? () => settingsModule.loadSettings()
+    : function loadSettingsFallback() {
+      return new Promise((resolve) => {
+        try {
+          chrome.runtime.sendMessage({ type: 'getTokenApproximatorSettings' }, (resp) => {
+            if (chrome.runtime.lastError) {
+              return resolve({
+                enabled: false,
+                calibration: 1.0,
+                threadMode: 'withEditors',
+                showEditorCounter: true,
+                placement: 'before',
+                countingMethod: 'ultralight-state-machine', // Default to ultralight
+                enabledSites: {
+                  'ChatGPT': true,
+                  'Claude': true,
+                  'Copilot': true,
+                  'DeepSeek': true,
+                  'AIStudio': true,
+                  'Grok': true,
+                  'Gemini': true,
+                  'Perplexity': true
+                }
+              });
+            }
+            const s = resp && resp.settings ? resp.settings : {};
+
+            // Default enabled sites if not provided
+            const defaultEnabledSites = {
+              'ChatGPT': true,
+              'Claude': true,
+              'Copilot': true,
+              'DeepSeek': true,
+              'AIStudio': true,
+              'Grok': true,
+              'Gemini': true,
+              'Perplexity': true
+            };
+
+            // Use provided enabledSites if exists, otherwise use defaults
+            const enabledSites = s.enabledSites && typeof s.enabledSites === 'object'
+              ? s.enabledSites
+              : defaultEnabledSites;
+
+            resolve({
+              calibration: Number.isFinite(s.calibration) && s.calibration > 0 ? Number(s.calibration) : 1.0,
+              enabled: !!s.enabled,
+              threadMode: (s.threadMode === 'ignoreEditors' || s.threadMode === 'hide') ? s.threadMode : 'withEditors',
+              showEditorCounter: typeof s.showEditorCounter === 'boolean' ? s.showEditorCounter : true,
+              placement: s.placement === 'after' ? 'after' : 'before',
+              countingMethod: s.countingMethod || 'ultralight-state-machine', // Default to ultralight
+              enabledSites
             });
-          }
-          const s = resp && resp.settings ? resp.settings : {};
-
-          // Default enabled sites if not provided
-          const defaultEnabledSites = {
-            'ChatGPT': true,
-            'Claude': true,
-            'Copilot': true,
-            'DeepSeek': true,
-            'AIStudio': true,
-            'Grok': true,
-            'Gemini': true,
-            'Perplexity': true
-          };
-
-          // Use provided enabledSites if exists, otherwise use defaults
-          const enabledSites = s.enabledSites && typeof s.enabledSites === 'object'
-            ? s.enabledSites
-            : defaultEnabledSites;
-
-          resolve({
-            calibration: Number.isFinite(s.calibration) && s.calibration > 0 ? Number(s.calibration) : 1.0,
-            enabled: !!s.enabled,
-            threadMode: (s.threadMode === 'ignoreEditors' || s.threadMode === 'hide') ? s.threadMode : 'withEditors',
-            showEditorCounter: typeof s.showEditorCounter === 'boolean' ? s.showEditorCounter : true,
-            placement: s.placement === 'after' ? 'after' : 'before',
-            countingMethod: s.countingMethod || 'ultralight-state-machine', // Default to ultralight
-            enabledSites
           });
-        });
-      } catch {
-        resolve({
-          enabled: false,
-          calibration: 1.0,
-          threadMode: 'withEditors',
-          showEditorCounter: false,
-          placement: 'after',
-          countingMethod: 'ultralight-state-machine',
-          enabledSites: {
-            'ChatGPT': true,
-            'Claude': true,
-            'Copilot': true,
-            'DeepSeek': true,
-            'AIStudio': true,
-            'Grok': true,
-            'Gemini': true,
-            'Perplexity': true
-          }
-        });
-      }
-    });
-  }
+        } catch {
+          resolve({
+            enabled: false,
+            calibration: 1.0,
+            threadMode: 'withEditors',
+            showEditorCounter: false,
+            placement: 'after',
+            countingMethod: 'ultralight-state-machine',
+            enabledSites: {
+              'ChatGPT': true,
+              'Claude': true,
+              'Copilot': true,
+              'DeepSeek': true,
+              'AIStudio': true,
+              'Grok': true,
+              'Gemini': true,
+              'Perplexity': true
+            }
+          });
+        }
+      });
+    };
 
   // ---- Mini CSS for counters ----
-  const STYLE_ID = 'ocp-token-approx-style';
+  const STYLE_ID = (uiModule && uiModule.STYLE_ID) || 'ocp-token-approx-style';
+  const WRAP_ID = (uiModule && uiModule.WRAP_ID) || 'ocp-token-approx-wrap';
   const CSS = `
   .ocp-tokapprox-wrap{display:flex;gap:8px;align-items:center;flex-wrap:wrap;
     font:600 12px/1.1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif}
@@ -200,17 +217,19 @@
   .ocp-tokapprox-hidden{display:none !important}
   `;
 
-  function ensureStyleOnce() {
+  function fallbackEnsureStyleOnce() {
     if (document.getElementById(STYLE_ID)) return;
     const s = document.createElement('style');
     s.id = STYLE_ID;
     s.textContent = CSS;
     document.documentElement.appendChild(s);
   }
+  const ensureStyleOnce = (uiModule && typeof uiModule.ensureStyleOnce === 'function')
+    ? uiModule.ensureStyleOnce
+    : fallbackEnsureStyleOnce;
 
   // ---- UI creation & placement ----
-  const WRAP_ID = 'ocp-token-approx-wrap';
-  function createUiIfNeeded() {
+  function fallbackCreateUiIfNeeded() {
     ensureStyleOnce();
     let wrap = document.getElementById(WRAP_ID);
     if (!wrap) {
@@ -235,8 +254,11 @@
     }
     return wrap;
   }
+  const createUiIfNeeded = (uiModule && typeof uiModule.createUiIfNeeded === 'function')
+    ? uiModule.createUiIfNeeded
+    : fallbackCreateUiIfNeeded;
 
-  function placeUi(placement, buttonsContainerId) {
+  function fallbackPlaceUi(placement, buttonsContainerId) {
     const wrap = createUiIfNeeded();
     const container = document.getElementById(buttonsContainerId);
     if (!container) return;
@@ -260,7 +282,11 @@
     }
   }
 
-  function showHideBySettings(settings) {
+  const placeUi = (uiModule && typeof uiModule.placeUi === 'function')
+    ? uiModule.placeUi
+    : fallbackPlaceUi;
+
+  function fallbackShowHideBySettings(settings) {
     const wrap = createUiIfNeeded();
     const threadChip = wrap.querySelector('.ocp-tokapprox-chip[data-kind="thread"]');
     const editorChip = wrap.querySelector('.ocp-tokapprox-chip[data-kind="editor"]');
@@ -278,8 +304,12 @@
     }
   }
 
+  const showHideBySettings = (uiModule && typeof uiModule.showHideBySettings === 'function')
+    ? uiModule.showHideBySettings
+    : fallbackShowHideBySettings;
+
   // ---- Formatting ----
-  function formatTokens(est) {
+  function fallbackFormatTokens(est) {
     if (!Number.isFinite(est) || est <= 0) return '-------';
     // For values below 1000, always show "<next 100" (conservative / higher bucket).
     if (est < 1000) {
@@ -291,8 +321,12 @@
     return `${k}k`;
   }
 
+  const formatTokens = (uiModule && typeof uiModule.formatTokens === 'function')
+    ? uiModule.formatTokens
+    : fallbackFormatTokens;
+
   // ---- Tooltip helpers (stable prefix + state postfix; no "T:" in tooltip) ----
-  function buildTooltip(kind, status, settings) {
+  function fallbackBuildTooltip(kind, status, settings) {
     // Descriptive prefix
     const prefix =
       kind === 'thread'
@@ -315,7 +349,7 @@
     return `${prefix} — ${postfix}${cta}`;
   }
 
-  function setTooltip(el, kind, status, settings) {
+  function fallbackSetTooltip(el, kind, status, settings) {
     const next = buildTooltip(kind, status, settings);
     if (el.__tooltipText !== next) {
       el.title = next;
@@ -324,8 +358,16 @@
     }
   }
 
+  const buildTooltip = (uiModule && typeof uiModule.buildTooltip === 'function')
+    ? uiModule.buildTooltip
+    : fallbackBuildTooltip;
+
+  const setTooltip = (uiModule && typeof uiModule.setTooltip === 'function')
+    ? uiModule.setTooltip
+    : fallbackSetTooltip;
+
   // ---- State visuals ----
-  function markFreshThenStale(el, kind, settings) {
+  function fallbackMarkFreshThenStale(el, kind, settings) {
     // cancel previous stale timer so multiple updates don't flicker
     if (el.__staleTimer) {
       clearTimeout(el.__staleTimer);
@@ -342,27 +384,49 @@
     }, STALE_DELAY_MS);
   }
 
-  function markLoading(el, kind, settings) {
+  function fallbackMarkLoading(el, kind, settings) {
     // No class toggling; keep tooltip update
     setTooltip(el, kind, 'loading', settings);
   }
 
-  function markPaused(el, kind, settings) {
+  function fallbackMarkPaused(el, kind, settings) {
     // No class toggling; keep tooltip update
     setTooltip(el, kind, 'paused', settings);
   }
 
+  const markFreshThenStale = (uiModule && typeof uiModule.markFreshThenStale === 'function')
+    ? uiModule.markFreshThenStale
+    : fallbackMarkFreshThenStale;
+  const markLoading = (uiModule && typeof uiModule.markLoading === 'function')
+    ? uiModule.markLoading
+    : fallbackMarkLoading;
+  const markPaused = (uiModule && typeof uiModule.markPaused === 'function')
+    ? uiModule.markPaused
+    : fallbackMarkPaused;
+
   // ---- Create a shared registry instance ----
-  const tokenModelRegistry = new TokenModelRegistry();
-  tokenModelRegistry.register(new SimpleTokenModel());
-  tokenModelRegistry.register(new AdvancedTokenModel());
-  tokenModelRegistry.register(new CptBlendMixTokenModel());
-  tokenModelRegistry.register(new SingleRegexPassTokenModel());
-  tokenModelRegistry.register(new UltralightStateMachineTokenModel());
-  tokenModelRegistry.setDefaultModel('ultralight-state-machine');
+  const tokenModelRegistry = (() => {
+    if (helpers && typeof helpers.getRegistry === 'function') {
+      const reg = helpers.getRegistry();
+      if (reg) {
+        return reg;
+      }
+    }
+    const registry = new TokenModelRegistry();
+    registry.register(new SimpleTokenModel());
+    registry.register(new AdvancedTokenModel());
+    registry.register(new CptBlendMixTokenModel());
+    registry.register(new SingleRegexPassTokenModel());
+    registry.register(new UltralightStateMachineTokenModel());
+    registry.setDefaultModel('ultralight-state-machine');
+    return registry;
+  })();
+  if (helpers && typeof helpers.ensureDefaultModel === 'function') {
+    helpers.ensureDefaultModel(tokenModelRegistry);
+  }
 
   // ---- On-thread estimation logic (for Gemini) ----
-  function runEstimation(data) {
+  function fallbackRunEstimation(data) {
     try {
       const { texts, scale, countingMethod } = data || {};
       const modelId = tokenModelRegistry.resolveModelId(countingMethod);
@@ -376,6 +440,10 @@
       return { ok: false, error: (err && err.message) || String(err) };
     }
   }
+
+  const runEstimation = (workerModule && typeof workerModule.runEstimation === 'function')
+    ? (payload) => workerModule.runEstimation(payload)
+    : fallbackRunEstimation;
 
   // ---- Worker (off-main-thread) with models ----
   /**
@@ -416,7 +484,7 @@
    *      processed in a subsequent event loop tick, just like a real worker.
    *
    */
-  function createEstimatorWorker() {
+  function fallbackCreateEstimatorWorker() {
     // CSP workaround: some sites (Gemini / AI Studio) block blob workers.
     // In that case, return an on-thread mock worker.
     if (Site === 'Gemini' || Site === 'AIStudio') {
@@ -473,6 +541,10 @@
     const blob = new Blob([workerCode], { type: 'application/javascript' });
     return new Worker(URL.createObjectURL(blob));
   }
+
+  const createEstimatorWorker = (workerModule && typeof workerModule.createEstimatorWorker === 'function')
+    ? (site) => workerModule.createEstimatorWorker(site || Site)
+    : fallbackCreateEstimatorWorker;
 
   // ---- Snapshot helpers (keep DOM work light; heavy regex goes to worker) ----
   const EDITOR_SELECTOR = '[contenteditable="true"],textarea,input:not([type="hidden"])';
