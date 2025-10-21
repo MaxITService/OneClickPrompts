@@ -288,24 +288,26 @@ class InjectionTargetsOnWebsite {
                 buttonsContainerId: 'copilot-custom-buttons-container'
             },
             DeepSeek: {
-                containers: [
-                    'div.dd442025', // Primary container
-                    '[class*="editorContainer"]' // Class name fallback
+                "buttonsContainerId": "deepseek-custom-buttons-container",
+                "containers": [
+                    "div._020ab5b",
+                    "div.ec4f5d61",
+                    "[class*=\"button-container\"]",
+                    "[class*=\"editor-footer\"]"
                 ],
-                sendButtons: [
-                    'div.bf38813a [role="button"]', // Main send button
-                    '[aria-label*="Send"]', // ARIA fallback
-                    '[data-testid="send-button"]', // Test ID fallback
-                    'button:has(svg)' // Any button with icon
+                "editors": [
+                    "textarea._27c9245",
+                    "textarea.ds-scroll-area",
+                    "textarea[placeholder*=\"Message\"]",
+                    "[class*=\"chat-input\"]"
                 ],
-                editors: [
-                    'textarea#chat-input', // Textarea editor
-                    'div.b13855df', // Div-based editor
-                    '[contenteditable="true"]' // Generic contenteditable
+                "sendButtons": [
+                    "div.bf38813a .ds-icon-button[aria-disabled=\"true\"]",
+                    "div.bf38813a .ds-icon-button:has(svg)",
+                    "[data-testid*=\"send-button\"]",
+                    "[aria-label*=\"send\" i]"
                 ],
-                // thread 
-                threadRoot: '.scrollable:has(textarea, [contenteditable="true"])',
-                buttonsContainerId: 'deepseek-custom-buttons-container'
+                "threadRoot": ".scrollable:has(textarea, [contenteditable=\"true\"])"
             },
             AIStudio: {
                 containers: [

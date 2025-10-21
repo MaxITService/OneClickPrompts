@@ -89,10 +89,19 @@ function processDeepSeekCustomSendButtonClick(event, customText, autoSend) {
 
     // 3. Send button locator with fallbacks
     function findSendButton() {
+        const selectorsConfig = window.InjectionTargetsOnWebsite?.selectors || {};
+        const extensionContainerId = selectorsConfig.buttonsContainerId;
         // Try primary selectors first
-        const buttons = window.InjectionTargetsOnWebsite.selectors.sendButtons
+        const buttons = (selectorsConfig.sendButtons || [])
             .flatMap(selector => Array.from(document.querySelectorAll(selector)))
             .filter(btn => {
+                if (!btn) {
+                    return false;
+                }
+                if (extensionContainerId && btn.closest(`#${extensionContainerId}`)) {
+                    // Skip buttons rendered by the extension itself so auto-send never re-clicks our UI.
+                    return false;
+                }
                 if (!btn.offsetParent) return false; // Visible check
                 const disabled = btn.disabled ||
                     btn.getAttribute('aria-disabled') === 'true' ||
