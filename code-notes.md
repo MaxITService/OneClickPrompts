@@ -90,16 +90,18 @@ Current architectural reference for the OneClickPrompts Chrome extension (Manife
   - Confirming overwrite calls `saveConfig`, reloads profiles, switches UI to the new profile, and hides the confirmation panel; cancel resets the temp payload and hides the panel.
 
 ### 3.4 Token Approximator
-- **Popup module (`modules/popup-page-modules-tokenApproximator.js`)**: collects settings (enable, calibration, thread mode `withEditors` | `ignoreEditors` | `hide`, show editor counter, placement before/after buttons, counting method, enabled sites). Populates per-site checkbox grid, merges defaults with saved state, and sends updates via `saveTokenApproximatorSettings`.
+- **Popup module (`modules/popup-page-modules-tokenApproximator.js`)**: collects settings (enable, calibration, thread mode `withEditors` | `ignoreEditors` | `hide`, show editor counter, placement before/after buttons, counting method, enabled sites). Populates per-site checkbox grid, merges defaults with saved state (defaults now inline in `DEFAULTS.enabledSites`), and sends updates via `saveTokenApproximatorSettings`.
 - **Service worker state** (`modules/service-worker-auxiliary-state-store.js`):
   - Normalizes settings, ensures all supported sites default to `true` in `enabledSites`, clamps calibration, and persists in namespaced storage. Broadcasts `tokenApproximatorSettingsChanged`.
 - **Runtime backend (`modules/backend-tokenApproximator.js`)**:
-  - Guards against multiple loads, logs through `logConCgp`, and builds the estimator model registry (advanced, simple, ultralight state machine, single regex pass, cpt blend mix) with `ultralight-state-machine` as the default selection.
+  - Guards against multiple loads, logs through `logConCgp`, and defers to helper globals when they exist: `OCPTokenApproxHelpers` (debounce, logging, registry helper, default model enforcement), `OCPTokenApproxSettings` (async loader), `OCPTokenApproxUI` (style/placement/tooltip wrappers), and `OCPTokenApproxWorker` (worker factory with Gemini CSP fallback). Each helper has a local fallback path to keep legacy behaviour intact.
+  - Registry bootstrap now lives in `modules/token-models/model-registry-global.js`, exposing `OCP_TOKEN_MODEL_CATALOG` and a factory used by both the backend script and worker builder. Local constructors remain available so blob workers can serialize the classes when helpers are missing.
   - Retrieves `InjectionTargetsOnWebsite` selectors; if a site lacks a safe `threadRoot` (common on high-CSP pages), it forces `threadMode: 'hide'` while leaving editor estimates available.
   - Builds UI chips inside the inline toolbar (`placeUi` respects placement before/after) and listens for SPA navigation through a debounced handler.
   - Runs independent schedulers: thread estimation (only when thread selector exists and mode is not `hide`) and editor estimation (when `showEditorCounter` true). Schedulers throttle updates, mark chips as loading, and support manual refresh on chip click.
   - Uses `enabledSites` to respect per-site toggles; disabling the token approximator for a site removes the chips entirely.
   - Handles frameworks with restrictive DOM APIs by preferring safe operations (no direct `console.log`, capture-phase listeners to avoid hijacking, normalization for sandboxed editors).
+- **Manifest wiring**: content scripts load the shared model registry plus helper bundle (`modules/token-approximator/backend-helpers.js`, `backend-settings.js`, `backend-ui.js`, `backend-worker.js`) ahead of `modules/backend-tokenApproximator.js` so globals exist before the orchestrator runs.
 
 ### 3.5 Styling & Feedback Utilities
 - Popup CSS split between `popup-page-styles/` (base, layout, button cards, components) and `common-ui-elements/` (global palette, dark theme overrides, toggle styles including `popup-toggle.css`, toast visuals via `ocp_toast.css`).
