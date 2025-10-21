@@ -16,6 +16,16 @@
     showEditorCounter: true,
     placement: 'before',              // 'before' | 'after'
     countingMethod: 'ultralight-state-machine', // Default to the fastest & accurate model
+    enabledSites: Object.freeze({
+      ChatGPT: true,
+      Claude: true,
+      Copilot: true,
+      DeepSeek: true,
+      AIStudio: true,
+      Grok: true,
+      Gemini: true,
+      Perplexity: true
+    })
   });
 
   // Safe toast helper (works with ocp_toast.js or falls back to basic)
