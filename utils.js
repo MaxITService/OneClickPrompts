@@ -357,10 +357,16 @@ class InjectionTargetsOnWebsite {
                 ],
                 // Editor: textarea inside the chat form, with new class structure
                 editors: [
-                    'form.bottom-0.w-full.text-base.flex.flex-col.gap-2.items-center.justify-center.relative.z-10 textarea[aria-label="Ask Grok anything"]',
-                    'textarea[aria-label="Ask Grok anything"]',
-                    'textarea.w-full.px-2', // fallback for px-2 class
-                    'textarea' // fallback: any textarea
+                    // ProseMirror / TipTap
+                    '.ProseMirror[contenteditable="true"]',
+                    '[role="textbox"][contenteditable="true"]',
+                    'div[contenteditable="true"]:not([aria-hidden="true"])',
+
+                    // Popular frameworks (nice to have)
+                    '[data-lexical-editor] [contenteditable="true"]', // Meta/Lexical
+                    '.ql-editor',                                     // Quill
+                    '[data-slate-editor="true"]',                     // Slate.js
+                    '.notranslate.public-DraftEditor-content'         // Draft.js (old)
                 ],
                 // Updated thread root selector based on debugging - most reliable container
                 threadRoot: '.w-full.h-full.overflow-y-auto.overflow-x-hidden.scrollbar-gutter-stable.flex.flex-col.items-center.px-gutter',
