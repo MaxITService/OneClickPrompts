@@ -73,11 +73,11 @@ window.MaxExtensionButtons = {
             };
 
             const buildTooltip = () => {
-                const intro = 'Broadcast stored prompt to every supported tab';
+                const intro = 'Broadcast stored prompt to every supported tab - resulting in the other tabs will autosend messages.';
                 const shieldInfo = isShielded()
                     ? ' • This tab is shielding itself from incoming broadcasts.'
                     : ' • This tab will receive and auto-send broadcasts.';
-                return `${intro}. Danger toggle must stay enabled.${shieldInfo} Shift+Click to toggle the shield.`;
+                return `${intro}. Danger: this .${shieldInfo} Shift+Click to toggle the shield.`;
             };
 
             const updateBroadcastVisuals = () => {
