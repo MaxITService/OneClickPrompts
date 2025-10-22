@@ -234,36 +234,41 @@
         <div class="collapsible" id="floatingWindowSettingsSection">
           <div class="section-header">
             <h2>
-              Floating Window Settings (Floating Panel position is profile independent)
+              Floating Window Settings 
               <span class="expand-text">(click to expand)</span>
             </h2>
             <span class="toggle-icon">▶</span>
           </div>
           <div class="section-content">
-            <div class="text-inside-container">
-              <p>
-                Reset the position, size, and visibility of the floating panel.
-                This can fix issues if the panel becomes stuck or invisible.
-              </p>
-            </div>
-            <div id="floatingWindowSitesList" class="floating-sites-list">
-              <!-- Site-specific reset buttons will be added here dynamically -->
-              <p class="empty-message" style="display: none">
-                No saved settings found for any website.
-              </p>
-            </div>
-            <div class="row" style="margin-top: 16px">
-              <button
-                id="resetAllFloatingWindowSettings"
-                class="danger"
-                title="Reset floating window settings for ALL websites."
-              >
-                Reset settings for all websites
-              </button>
+            <div class="advanced-queue-settings" id="panelPositionSettings">
+              <div class="subsection-header">
+                <h3>Panel Position & Reset (Floating Panel position is profile independent)</h3>
+              </div>
+              <div class="text-inside-container">
+                <p>
+                  Reset the position, size, and visibility of the floating panel.
+                  This can fix issues if the panel becomes stuck or invisible.
+                </p>
+              </div>
+              <div id="floatingWindowSitesList" class="floating-sites-list">
+                <!-- Site-specific reset buttons will be added here dynamically by js-->
+                <p class="empty-message" style="display: none">
+                  No saved settings found for any website.
+                </p>
+              </div>
+              <div class="row" style="margin-top: 16px">
+                <button
+                  id="resetAllFloatingWindowSettings"
+                  class="danger"
+                  title="Reset floating window settings for ALL websites."
+                >
+                  Reset settings for all websites
+                </button>
+              </div>
             </div>
             <div class="advanced-queue-settings" id="advancedQueueSettings">
               <div class="subsection-header">
-                <h3>Advanced Queue Settings</h3>
+                <h3>Advanced Queue Settings (These settings will be individual for each profile.)</h3>
               </div>
               <div class="text-inside-container">
                 <p>
