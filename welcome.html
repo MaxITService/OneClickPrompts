@@ -189,7 +189,7 @@
           </ul>
         </div>
         <h2>Modules:</h2>
-        You can have Some additional settings if you go to the pop-up in the modules section and enable module that you are interested in:
+        You can have some additional settings if you go to the pop-up in the modules section and enable module that you are interested in:
        
           <img
             src="welcome-page-files/modules.png"
@@ -247,14 +247,17 @@
             Work with multiple AI platforms? The new
             <strong>Cross-Chat Prompt Sharing</strong> module makes it easy to
             copy a prompt from one chat (like ChatGPT) and instantly paste it
-            into another (like Claude or Gemini). Does not uses clipboard.
+            into another (like Claude or Gemini) without cluttering the clipboard - using internal storage as clipboard. 
+            OR just broadcast to all opened tabs where OneClickPrompts is loaded. 
           </p>
           <p><strong>How it works:</strong></p>
           <ol>
             <li>
               <strong>Enable the Module:</strong> Go to the extension's popup
               menu, expand the "Modules" section, and toggle on "Enable
-              Cross-Chat Prompt Sharing".
+              Cross-Chat Prompt Sharing".Next, you're going to choose if you want to manually "copy and paste" with assist of new buttons or
+               you want to broadcast to all tabs. 
+               Broadcasting is dangerous as it can broadcast to unintended chats. 
             </li>
             <li>
               <strong>📋 Copy a Prompt:</strong> On any supported AI chat page,
@@ -266,6 +269,11 @@
               platform. Click the "Paste & Send Prompt" button to instantly
               transfer your text.
             </li>
+            <li>
+              <strong> ⬆️ Broadcasting:</strong> If you enabled broadcasting, just
+              click the "Broadcast Prompt" button to send the prompt to all
+              open tabs with OneClickPrompts. Shift-Click to restrict this tab to broadcast. (will still work as sender tab)
+              When you are using broadcasting, you may opt out to disable copy and paste buttons. 
           </ol>
           <p>
             You can customize the button placement and autosend behavior in the
@@ -279,7 +287,7 @@
        how many tokens are in the visible chat thread and/or in the editor.
         It adds compact chips (T = whole thread, E = editor) 
         that auto-refresh and can be clicked to re-estimate;
-         results are rough, especially with code/non latin characters or very long chats.
+         results are rough, especially with code/non-Latin characters or very long chats.
           You can scale counts with Calibration and choose Advanced heuristics or Simple (~1 token ≈ 4 characters).
                   </div>
 
