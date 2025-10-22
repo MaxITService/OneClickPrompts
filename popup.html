@@ -460,32 +460,49 @@
                 </div>
                 <hr style="margin: 16px 0" />
                 <h4>Settings</h4>
-                <div
-                  class="row"
-                  title="If enabled, after you click the '📋 Copy' button on a chat page, the extension will also immediately 'send' the text in that same chat. This is useful for workflows where you want to send a prompt and simultaneously save it for use elsewhere."
+                <fieldset
+                  class="crosschat-setting-group"
+                  id="crossChatAutosendGroup"
+                  aria-disabled="false"
                 >
-                  <div class="switch-container">
-                    <label class="switch">
-                      <input type="checkbox" id="crossChatAutosendCopy" />
-                      <span class="slider"></span>
-                    </label>
-                    <span class="switch-label">Autosend after 📋 Copy</span>
+                  <legend>
+                    <div class="switch-container">
+                      <label class="switch">
+                        <input type="checkbox" id="crossChatHideStandardButtons" />
+                        <span class="slider"></span>
+                      </label>
+                      <span class="switch-label"
+                        >Hide standard Cross-Chat buttons</span
+                      >
+                    </div>
+                  </legend>
+                  <div
+                    class="row"
+                    title="If enabled, after you click the '📋 Copy' button on a chat page, the extension will also immediately 'send' the text in that same chat. This is useful for workflows where you want to send a prompt and simultaneously save it for use elsewhere."
+                  >
+                    <div class="switch-container">
+                      <label class="switch">
+                        <input type="checkbox" id="crossChatAutosendCopy" />
+                        <span class="slider"></span>
+                      </label>
+                      <span class="switch-label">Autosend after 📋 Copy</span>
+                    </div>
                   </div>
-                </div>
-                <div
-                  class="row"
-                  title="If enabled, clicking the '📥 Paste & Send' button will not only paste the stored prompt into the chat input but also automatically trigger the send action, submitting it to the AI."
-                >
-                  <div class="switch-container">
-                    <label class="switch">
-                      <input type="checkbox" id="crossChatAutosendPaste" />
-                      <span class="slider"></span>
-                    </label>
-                    <span class="switch-label"
-                      >Autosend after 📥 Paste & Send</span
-                    >
+                  <div
+                    class="row"
+                    title="If enabled, clicking the '📥 Paste & Send' button will not only paste the stored prompt into the chat input but also automatically trigger the send action, submitting it to the AI."
+                  >
+                    <div class="switch-container">
+                      <label class="switch">
+                        <input type="checkbox" id="crossChatAutosendPaste" />
+                        <span class="slider"></span>
+                      </label>
+                      <span class="switch-label"
+                        >Autosend after 📥 Paste & Send</span
+                      >
+                    </div>
                   </div>
-                </div>
+                </fieldset>
                 <div
                   class="row"
                   title="When enabled, a broadcast button appears on chat pages. Clicking it will immediately paste and send the current text to every other supported tab. Use with extreme caution."
@@ -516,20 +533,6 @@
                     will refuse automatic messages coming from other tabs until
                     you shift-click again.
                   </p>
-                </div>
-                <div
-                  class="row"
-                  title="Hide the standard Cross-Chat 📤 Copy and 📥 Paste buttons. Only the broadcast control remains when Danger mode is active."
-                >
-                  <div class="switch-container">
-                    <label class="switch">
-                      <input type="checkbox" id="crossChatHideStandardButtons" />
-                      <span class="slider"></span>
-                    </label>
-                    <span class="switch-label"
-                      >Hide standard Cross-Chat buttons</span
-                    >
-                  </div>
                 </div>
                 <div
                   class="row"

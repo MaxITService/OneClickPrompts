@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsContainer = document.getElementById('crossChatModuleSettings');
 
     // Settings Elements
+    const autosendGroup = document.getElementById('crossChatAutosendGroup');
     const autosendCopyToggle = document.getElementById('crossChatAutosendCopy');
     const autosendPasteToggle = document.getElementById('crossChatAutosendPaste');
     const dangerBroadcastToggle = document.getElementById('crossChatDangerAutoSendAll');
@@ -94,6 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         // Update visibility based on the new state
         updateSettingsVisibility();
+        updateAutosendAvailability();
     }
 
     // Helper function to manage settings visibility based on both toggle state and collapsible state
@@ -164,6 +166,49 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    function updateAutosendAvailability() {
+        const hideStandard = hideStandardButtonsToggle.checked;
+        const shouldDisableAutosend = hideStandard;
+
+        if (shouldDisableAutosend) {
+            if (autosendGroup) {
+                autosendGroup.classList.add('is-disabled');
+                autosendGroup.setAttribute('aria-disabled', 'true');
+            }
+            autosendCopyToggle.disabled = true;
+            autosendPasteToggle.disabled = true;
+        } else {
+            if (autosendGroup) {
+                autosendGroup.classList.remove('is-disabled');
+                autosendGroup.removeAttribute('aria-disabled');
+            }
+            autosendCopyToggle.disabled = false;
+            autosendCopyToggle.removeAttribute('disabled');
+            autosendPasteToggle.disabled = false;
+            autosendPasteToggle.removeAttribute('disabled');
+        }
+    }
+
+    async function refreshCrossChatButtonsVisibility() {
+        if (typeof updateCrossChatButtonsVisibility === 'function') {
+            try {
+                await updateCrossChatButtonsVisibility();
+                return;
+            } catch (error) {
+                console.error('Error while updating Cross-Chat buttons visibility:', error);
+            }
+        }
+
+        if (typeof updatebuttonCardsList === 'function') {
+            try {
+                await updatebuttonCardsList();
+                console.log('Button cards updated after Cross-Chat visibility change');
+            } catch (error) {
+                console.error('Error updating button cards after Cross-Chat visibility change:', error);
+            }
+        }
+    }
+
     autosendCopyToggle.addEventListener('change', () => {
         currentSettings.autosendCopy = autosendCopyToggle.checked;
         saveModuleSettings();
@@ -174,23 +219,18 @@ document.addEventListener('DOMContentLoaded', () => {
         saveModuleSettings();
     });
 
-    dangerBroadcastToggle.addEventListener('change', () => {
+    dangerBroadcastToggle.addEventListener('change', async () => {
         currentSettings.dangerAutoSendAll = dangerBroadcastToggle.checked;
-        saveModuleSettings();
+        updateAutosendAvailability();
+        await saveModuleSettings();
+        await refreshCrossChatButtonsVisibility();
     });
 
     hideStandardButtonsToggle.addEventListener('change', async () => {
         currentSettings.hideStandardButtons = hideStandardButtonsToggle.checked;
+        updateAutosendAvailability();
         await saveModuleSettings();
-
-        if (typeof updatebuttonCardsList === 'function') {
-            try {
-                await updatebuttonCardsList();
-                console.log('Button cards updated after toggling Cross-Chat visibility');
-            } catch (error) {
-                console.error('Error updating button cards after toggling Cross-Chat visibility:', error);
-            }
-        }
+        await refreshCrossChatButtonsVisibility();
     });
 
     for (const radio of placementRadios) {

@@ -500,6 +500,46 @@ Key areas:
     display: block;
 }
 
+.crosschat-setting-group {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 22px 16px 16px;
+    margin: 16px 0;
+    background: transparent;
+}
+
+.crosschat-setting-group legend {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 16px;
+    margin: 0 0 12px 0;
+    border-radius: 999px;
+    background: var(--manual-bg, #f5f5f5);
+    font-weight: 600;
+    color: var(--text-color);
+    min-height: 44px;
+}
+
+.crosschat-setting-group legend .switch-label {
+    color: inherit;
+}
+
+.crosschat-setting-group.is-disabled {
+    border-color: var(--border-muted, #d4d4d4);
+    background: rgba(128, 128, 128, 0.16);
+}
+
+.crosschat-setting-group.is-disabled > .row {
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+.crosschat-setting-group.is-disabled legend {
+    background: var(--manual-bg, #f5f5f5);
+    pointer-events: auto;
+}
+
 /* ------------------------------------------------------------------------- */
 /* Floating Window Settings List                                             */
 /* ------------------------------------------------------------------------- */
