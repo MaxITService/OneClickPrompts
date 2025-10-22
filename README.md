@@ -1,6 +1,6 @@
 # [OneClickPrompts:  Your Quick Prompt Companion for Multiple AI Chats!](https://chromewebstore.google.com/detail/chatgpt-quick-buttons-for/iiofmimaakhhoiablomgcjpilebnndbf)
 
-[![Hits](https://hits.sh/github.com/MaxITService/ChatGPT-Quick-Buttons-for-your-text.svg?style=flat)](https://hits.sh/github.com/MaxITService/Console2Ai/)
+[![Hits](https://hits.sh/github.com/MaxITService/OneClickPrompts.svg?style=flat)](https://hits.sh/github.com/MaxITService/Console2Ai/)
 
 ---
 **[>>>➡️Install OneClickPrompts from Chrome Web Store<<<](https://chromewebstore.google.com/detail/chatgpt-quick-buttons-for/iiofmimaakhhoiablomgcjpilebnndbf)**
@@ -52,7 +52,7 @@ Tired of retyping the same prompts in your AI chats?  **OneClickPrompts** lets y
 
 ## AI generated codebase overview - DeepWiki
 
-[Link to codebase overview](https://deepwiki.com/MaxITService/ChatGPT-Quick-Buttons-for-your-text/1-oneclickprompts-extension-overview)
+[Link to codebase overview](https://deepwiki.com/MaxITService/OneClickPrompts/1-oneclickprompts-extension-overview)
 {{ ... }}
 May be not 100% accurate but gives idea about what is happening
 
