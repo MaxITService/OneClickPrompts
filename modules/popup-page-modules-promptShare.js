@@ -190,18 +190,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function refreshCrossChatButtonsVisibility() {
-        if (typeof updateCrossChatButtonsVisibility === 'function') {
+        const visibilityUpdater = typeof window.updateCrossChatButtonsVisibility === 'function'
+            ? window.updateCrossChatButtonsVisibility
+            : null;
+        if (visibilityUpdater) {
             try {
-                await updateCrossChatButtonsVisibility();
+                await visibilityUpdater();
                 return;
             } catch (error) {
                 console.error('Error while updating Cross-Chat buttons visibility:', error);
             }
         }
 
-        if (typeof updatebuttonCardsList === 'function') {
+        const cardListUpdater = typeof window.updatebuttonCardsList === 'function'
+            ? window.updatebuttonCardsList
+            : null;
+        if (cardListUpdater) {
             try {
-                await updatebuttonCardsList();
+                await cardListUpdater();
                 console.log('Button cards updated after Cross-Chat visibility change');
             } catch (error) {
                 console.error('Error updating button cards after Cross-Chat visibility change:', error);

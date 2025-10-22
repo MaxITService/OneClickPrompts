@@ -32,7 +32,11 @@ window.OneClickPrompts_isTogglingPanel = false;
  * @returns {boolean} - True if modifications exist, false otherwise.
  */
 function doCustomModificationsExist() {
-    const el = document.getElementById(window.InjectionTargetsOnWebsite.selectors.buttonsContainerId);
+    const containerId = window?.InjectionTargetsOnWebsite?.selectors?.buttonsContainerId;
+    if (!containerId) {
+        return false;
+    }
+    const el = document.getElementById(containerId);
     // The container must exist AND have child elements (buttons/toggles) inside it.
     return !!(el && el.children.length > 0);
 }
@@ -62,7 +66,11 @@ function buttonBoxCheckingAndInjection(enableResiliency = true, activeWebsite) {
     let targetFound = false;
 
     // Get the list of selectors for the containers into which the buttons should be injected.
-    const selectors = window.InjectionTargetsOnWebsite.selectors.containers;
+    const selectors = window?.InjectionTargetsOnWebsite?.selectors?.containers;
+    if (!Array.isArray(selectors) || selectors.length === 0) {
+        logConCgp('[button-injection] No selectors available for injection targets. Skipping.');
+        return;
+    }
 
     /**
      * Unified callback function that is called when a target container is detected in the DOM.

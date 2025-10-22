@@ -171,6 +171,9 @@ class InjectionTargetsOnWebsite {
      * Initialize selectors by trying to load custom ones first, then falling back to defaults
      */
     async initializeSelectors() {
+        // Ensure we have a synchronous default ready before any async work
+        const defaultSelectors = this.getDefaultSelectors(this.activeSite);
+        this.selectors = defaultSelectors;
         try {
             // Try to get custom selectors first
             const customSelectors = await this.getCustomSelectors(this.activeSite);
@@ -178,14 +181,12 @@ class InjectionTargetsOnWebsite {
                 this.selectors = customSelectors;
                 logConCgp(`[utils] Using custom selectors for ${this.activeSite}`);
             } else {
-                // Fall back to defaults
-                this.selectors = this.getDefaultSelectors(this.activeSite);
+                this.selectors = defaultSelectors;
                 logConCgp(`[utils] Using default selectors for ${this.activeSite}`);
             }
         } catch (error) {
-            console.error('Error loading selectors:', error);
-            // Fall back to defaults on error
-            this.selectors = this.getDefaultSelectors(this.activeSite);
+            logConCgp(`[utils] Error loading selectors for ${this.activeSite}: ${error?.message || error}`);
+            this.selectors = defaultSelectors;
         }
     }
 

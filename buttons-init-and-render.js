@@ -79,6 +79,13 @@ window.MaxExtensionButtonsInit = {
         const allButtonDefs = [];
         let nonSeparatorCount = 0;
 
+        if (!Array.isArray(window?.globalMaxExtensionConfig?.customButtons)) {
+            const fallbackOrigin = isPanel ? 'panel' : 'inline';
+            logConCgp(`[init] Button generation halted: globalMaxExtensionConfig.customButtons unavailable (origin: ${fallbackOrigin}).`);
+            this.__scheduleRefreshRetry(fallbackOrigin, 'Config unavailable during generation');
+            return;
+        }
+
         const crossChatConfig = window.globalCrossChatConfig || {};
         const crossChatEnabled = !!crossChatConfig.enabled;
         const hideStandardCrossChatButtons = !!crossChatConfig.hideStandardButtons;
@@ -265,6 +272,49 @@ window.MaxExtensionButtonsInit = {
      *  - 'panel'  => only update the floating panel UI
      *  - 'inline' => only update the inline buttons UI
      */
+    __refreshRetryState: {
+        inline: { count: 0, timer: null },
+        panel: { count: 0, timer: null }
+    },
+
+    __resetRefreshRetry(origin) {
+        const state = this.__refreshRetryState[origin];
+        if (!state) return;
+        if (state.timer) {
+            clearTimeout(state.timer);
+            state.timer = null;
+        }
+        state.count = 0;
+    },
+
+    __scheduleRefreshRetry(origin, reason) {
+        const state = this.__refreshRetryState[origin];
+        if (!state) {
+            logConCgp(`[init] Refresh retry skipped for unknown origin '${origin}'.`);
+            return false;
+        }
+        if (state.timer) {
+            logConCgp(`[init] Refresh retry already scheduled for ${origin}. Reason: ${reason}`);
+            return true;
+        }
+        if (state.count >= 5) {
+            logConCgp(`[init] Refresh retry limit reached for ${origin}. Last reason: ${reason}`);
+            return false;
+        }
+        state.count += 1;
+        const delay = 60 * state.count;
+        state.timer = setTimeout(() => {
+            state.timer = null;
+            try {
+                this.updateButtonsForProfileChange(origin);
+            } catch (err) {
+                logConCgp(`[init] Refresh retry threw for ${origin}:`, err?.message || err);
+            }
+        }, delay);
+        logConCgp(`[init] Scheduled refresh retry #${state.count} for ${origin} (${delay}ms). Reason: ${reason}`);
+        return true;
+    },
+
     updateButtonsForProfileChange: function (origin) {
         if (!origin) {
             logConCgp('[init] Warning: updateButtonsForProfileChange called without origin parameter. No action taken.');
@@ -276,18 +326,34 @@ window.MaxExtensionButtonsInit = {
             if (window.MaxExtensionFloatingPanel && window.MaxExtensionFloatingPanel.panelElement) {
                 const panelContent = document.getElementById('max-extension-floating-panel-content');
                 if (panelContent) {
+                    const panelVisible = !!window.MaxExtensionFloatingPanel.isPanelVisible;
                     const containerId = window?.InjectionTargetsOnWebsite?.selectors?.buttonsContainerId || null;
                     const selector = containerId ? `#${CSS.escape(containerId)}` : null;
                     let panelButtonsContainer = selector ? panelContent.querySelector(selector) : null;
 
+                    if (!panelVisible && !panelButtonsContainer) {
+                        logConCgp('[init] Panel refresh skipped because panel is hidden and contains no buttons.');
+                        return;
+                    }
+
                     if (panelButtonsContainer) {
+                        if (!Array.isArray(window?.globalMaxExtensionConfig?.customButtons)) {
+                            this.__scheduleRefreshRetry('panel', 'Config unavailable');
+                            return;
+                        }
                         panelButtonsContainer.innerHTML = '';
                         this.generateAndAppendAllButtons(panelButtonsContainer, true);
                         logConCgp('[init] Updated buttons in floating panel for profile change (panel origin).');
+                        this.__resetRefreshRetry('panel');
                     } else {
+                        if (!panelVisible) {
+                            logConCgp('[init] Panel container absent while hidden; skipping recreation to preserve inline buttons.');
+                            return;
+                        }
                         panelContent.innerHTML = '';
                         this.createAndInsertCustomElements(panelContent);
                         logConCgp('[init] Recreated floating panel button container after profile change (panel origin).');
+                        this.__resetRefreshRetry('panel');
                     }
                 }
             }
@@ -296,12 +362,76 @@ window.MaxExtensionButtonsInit = {
 
         // If origin is 'inline', only update the inline/original container
         if (origin === 'inline') {
-            const originalContainer = document.getElementById(window.InjectionTargetsOnWebsite.selectors.buttonsContainerId);
+            const selectors = window?.InjectionTargetsOnWebsite?.selectors;
+            const containerId = selectors?.buttonsContainerId;
+
+            if (!containerId) {
+                logConCgp('[init] Inline refresh skipped because buttonsContainerId is unavailable. Attempting selector reinitialization.');
+                const maybeInitializer = window?.InjectionTargetsOnWebsite && window.InjectionTargetsOnWebsite.initializeSelectors;
+                if (typeof maybeInitializer === 'function') {
+                    try {
+                        if (!this.__inlineSelectorRetryScheduled) {
+                            this.__inlineSelectorRetryScheduled = true;
+                            const maybePromise = maybeInitializer.call(window.InjectionTargetsOnWebsite);
+                            if (maybePromise && typeof maybePromise.then === 'function') {
+                                maybePromise.then(() => {
+                                    logConCgp('[init] Retrying inline refresh after selector reinitialization.');
+                                    try {
+                                        window.MaxExtensionButtonsInit.updateButtonsForProfileChange('inline');
+                                    } catch (retryErr) {
+                                        logConCgp('[init] Retry inline refresh failed:', retryErr?.message || retryErr);
+                                    }
+                                }).catch((err) => {
+                                    logConCgp('[init] Selector reinitialization failed:', err?.message || err);
+                                }).finally(() => {
+                                    this.__inlineSelectorRetryScheduled = false;
+                                });
+                            } else {
+                                this.__inlineSelectorRetryScheduled = false;
+                            }
+                        } else {
+                            logConCgp('[init] Inline selector reinitialization already scheduled; skipping duplicate request.');
+                        }
+                    } catch (err) {
+                        this.__inlineSelectorRetryScheduled = false;
+                        logConCgp('[init] Error invoking initializeSelectors during inline refresh:', err?.message || err);
+                    }
+                }
+                return;
+            }
+
+            const originalContainer = document.getElementById(containerId);
             if (originalContainer) {
+                if (!Array.isArray(window?.globalMaxExtensionConfig?.customButtons)) {
+                    this.__scheduleRefreshRetry('inline', 'Config unavailable');
+                    return;
+                }
                 originalContainer.innerHTML = '';
                 this.generateAndAppendAllButtons(originalContainer, false);
                 logConCgp('[init] Updated buttons in original container for profile change (inline origin).');
+                this.__resetRefreshRetry('inline');
+                return;
             }
+
+            const containerSelectors = Array.isArray(selectors?.containers) ? selectors.containers : [];
+            for (const selector of containerSelectors) {
+                if (!selector) {
+                    continue;
+                }
+                const target = document.querySelector(selector);
+                if (target) {
+                    logConCgp(`[init] Inline container missing; reinserting via selector '${selector}'.`);
+                    if (!Array.isArray(window?.globalMaxExtensionConfig?.customButtons)) {
+                        this.__scheduleRefreshRetry('inline', 'Config unavailable before reinsertion');
+                        return;
+                    }
+                    this.createAndInsertCustomElements(target);
+                    this.__resetRefreshRetry('inline');
+                    return;
+                }
+            }
+
+            logConCgp('[init] Inline refresh could not locate a valid target container.');
             return;
         }
 
