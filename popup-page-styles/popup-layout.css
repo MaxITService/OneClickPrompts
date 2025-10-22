@@ -123,22 +123,19 @@ select:focus {
 }
 
 /* ------------------------------------------------------------------------- */
-/* Advanced Queue Settings                                                   */
+/* Section Divider                                                          */
 /* ------------------------------------------------------------------------- */
 
-.advanced-queue-settings {
-    margin-top: 24px;
-    padding-top: 16px;
+.section-divider {
+    border: none;
     border-top: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+    margin: 16px 0;
+    width: 100%;
 }
 
-.advanced-queue-settings .subsection-header h3 {
-    margin: 0;
-    font-size: 16px;
-}
+/* ------------------------------------------------------------------------- */
+/* Queue Settings                                                           */
+/* ------------------------------------------------------------------------- */
 
 .queue-setting-row {
     align-items: center;
