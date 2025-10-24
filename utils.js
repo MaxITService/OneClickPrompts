@@ -218,7 +218,6 @@ class InjectionTargetsOnWebsite {
     getDefaultSelectors(site) {
         const selectors = {
             ChatGPT: {
-                // Updated May 2025 for new ChatGPT UI
                 containers: [
                     'form[data-type="unified-composer"] .\\[grid-area\\:footer\\]',
                     'form[data-type="unified-composer"] > div.rounded-\\[28px\\]',
@@ -237,10 +236,8 @@ class InjectionTargetsOnWebsite {
                     'div.ProseMirror[contenteditable="true"]', // fallback
                     'div[contenteditable="true"].ProseMirror', // fallback
                     'div.ProseMirror', // legacy fallback
-                    'textarea', // ultimate fallback
+                    'textarea',
                 ],
-                // Stable root for visible chat messages (token estimator default hook)
-                // ChatGPT currently renders the conversation inside #thread
                 threadRoot: '#thread',
                 buttonsContainerId: 'chatgpt-custom-buttons-container'
             },
@@ -250,40 +247,36 @@ class InjectionTargetsOnWebsite {
                     'div.flex.flex-col.bg-bg-000.gap-1\\.5'
                 ],
                 sendButtons: [
-                    'button.bg-accent-main-000.text-oncolor-100', // most specific: key classes (language-independent)
-                    'button[type="button"].bg-accent-main-000', // fallback: type and main class
-                    'button[type="button"]', // generic fallback
-                    'button[type="button"][aria-label="Send message"].bg-accent-main-000.text-oncolor-100', // fallback: type, aria-label, and key classes (language-dependent)
-                    'button[type="button"][aria-label="Send message"]', // fallback: type and aria-label (language-dependent)
+                    'button.bg-accent-main-000.text-oncolor-100',
+                    'button[type="button"].bg-accent-main-000',
+                    'button[type="button"]',
+                    'button[type="button"][aria-label="Send message"].bg-accent-main-000.text-oncolor-100',
+                    'button[type="button"][aria-label="Send message"]',
                 ],
                 editors: ['div.ProseMirror[contenteditable="true"]'],
                 threadRoot: 'div.flex-1.max-w-3xl.mx-auto:has([data-testid="user-message"])',
                 buttonsContainerId: 'claude-custom-buttons-container'
             },
             Copilot: {
-                // Updated Copilot selectors (April 2025)
-                // Container: new Copilot chat composer container
                 containers: [
-                    'div.w-expanded-composer.max-w-chat.bg-gradient-to-b', // main composer container
-                    'div.relative.max-h-full.w-expanded-composer', // fallback: outermost
-                    'div.flex.grow.flex-col.overflow-hidden', // fallback: inner flex container
-                    'div.shadow-composer-input' // legacy fallback
+                    'div.w-expanded-composer.max-w-chat.bg-gradient-to-b',
+                    'div.relative.max-h-full.w-expanded-composer',
+                    'div.flex.grow.flex-col.overflow-hidden',
+                    'div.shadow-composer-input'
                 ],
-                // Editor: textarea for user input
                 editors: [
-                    'textarea#userInput.block.min-h-user-input.w-full', // most specific
-                    'textarea#userInput', // fallback by id
-                    'textarea.block.min-h-user-input', // fallback by class
-                    'textarea[placeholder="Message Copilot"]', // fallback by placeholder
-                    'textarea' // generic fallback
+                    'textarea#userInput.block.min-h-user-input.w-full',
+                    'textarea#userInput',
+                    'textarea.block.min-h-user-input',
+                    'textarea[placeholder="Message Copilot"]',
+                    'textarea'
                 ],
-                // Send button: Copilot's submit button (non-ARIA, non-language-dependent)
                 sendButtons: [
-                    'button[type="button"][data-testid="submit-button"]', // primary: matches Copilot's new submit button
-                    'button[type="button"].rounded-submitButton[title="Submit message"]', // matches class and title
-                    'button[type="button"][title="Submit message"]', // fallback by type and title
-                    'button.rounded-submitButton', // fallback by class only
-                    'button[type="submit"]', // legacy fallback
+                    'button[type="button"][data-testid="submit-button"]',
+                    'button[type="button"].rounded-submitButton[title="Submit message"]',
+                    'button[type="button"][title="Submit message"]',
+                    'button.rounded-submitButton',
+                    'button[type="submit"]',
                 ],
                 threadRoot: 'div.max-w-chat[data-content="conversation"]',
                 buttonsContainerId: 'copilot-custom-buttons-container'
@@ -328,68 +321,53 @@ class InjectionTargetsOnWebsite {
                     'footer > div.input-wrapper > div:nth-child(3) > run-button > button'
                 ],
                 editors: [
-                    // 1. Most specific and accurate for the new HTML
                     'textarea[aria-label="Type something or tab to choose an example prompt"]',
-
-                    // 2. More flexible: looks for an aria-label that *contains* "Type something"
                     'textarea[aria-label*="Type something"]',
-
-                    // 3. Relies on the parent component, which is often stable
                     'ms-autosize-textarea textarea',
-
-                    // 4. A combination of structure and the new class name
                     'ms-autosize-textarea textarea.v3-font-body'
                 ],
                 buttonsContainerId: 'aistudio-custom-buttons-container'
             },
             Grok: {
-                // Updated selectors for new Grok UI (April 2025)
-                // Container: the chat form (unique structure)
                 containers: [
                     'form.bottom-0.w-full.text-base.flex.flex-col.gap-2.items-center.justify-center.relative.z-10',
-                    'form.w-full.flex-col.items-center.justify-center', // fallback if classes change
-                    'form[method][class*="gap-2"][class*="flex-col"]' // fallback for structure
+                    'form.w-full.flex-col.items-center.justify-center',
+                    'form[method][class*="gap-2"][class*="flex-col"]'
                 ],
-                // Send button: submit button at the bottom of the chat form
                 sendButtons: [
                     'form.bottom-0.w-full.text-base.flex.flex-col.gap-2.items-center.justify-center.relative.z-10 button[type="submit"]',
-                    'form button[type="submit"].group', // fallback if .group class remains
-                    'form button[type="submit"]' // fallback: any submit button in form
+                    'form button[type="submit"].group', 
+                    'form button[type="submit"]' 
                 ],
-                // Editor: textarea inside the chat form, with new class structure
+                
                 editors: [
-                    // ProseMirror / TipTap
-                    '.ProseMirror[contenteditable="true"]',
-                    '[role="textbox"][contenteditable="true"]',
-                    'div[contenteditable="true"]:not([aria-hidden="true"])',
-
-                    // Popular frameworks (nice to have)
-                    '[data-lexical-editor] [contenteditable="true"]', // Meta/Lexical
-                    '.ql-editor',                                     // Quill
-                    '[data-slate-editor="true"]',                     // Slate.js
-                    '.notranslate.public-DraftEditor-content'         // Draft.js (old)
+                    'textarea[aria-label="Ask Grok anything"]',
+                    'textarea.w-full.text-fg-primary[aria-label="Ask Grok anything"]',
+                    'textarea.w-full.text-fg-primary.px-2.leading-7',   
+                    'textarea[dir="auto"][aria-label="Ask Grok anything"]',                    
+                    'form.chat-form textarea[aria-label="Ask Grok anything"]',                    
+                    'textarea.w-full.text-fg-primary.bg-transparent.focus\\:outline-none',                   
+                    'textarea.w-full.text-fg-primary'
                 ],
-                // Updated thread root selector based on debugging - most reliable container
                 threadRoot: '.w-full.h-full.overflow-y-auto.overflow-x-hidden.scrollbar-gutter-stable.flex.flex-col.items-center.px-gutter',
-
                 buttonsContainerId: 'grok-custom-buttons-container'
             },
             Gemini: {
                 containers: [
-                    'chat-window input-container', // The main container holding input and disclaimer
-                    'input-container', // maybe herre?
-                    'main' // Fallback if input-container structure changes significantly
+                    'chat-window input-container',
+                    'input-container',
+                    'main'
                 ],
                 sendButtons: [
-                    'button.send-button[aria-label="Send message"]', // Primary send button
-                    'button[aria-label="Send message"][aria-disabled="false"]' // Explicitly enabled state
+                    'button.send-button[aria-label="Send message"]',
+                    'button[aria-label="Send message"][aria-disabled="false"]'
                 ],
                 editors: [
-                    'div.ql-editor[contenteditable="true"]', // Quill editor div
-                    'rich-textarea div.ql-editor' // More specific path
+                    'div.ql-editor[contenteditable="true"]',
+                    'rich-textarea div.ql-editor'
                 ],
                 threadRoot: 'infinite-scroller[data-test-id="chat-history-container"]',
-                buttonsContainerId: 'gemini-custom-buttons-container' // Unique ID
+                buttonsContainerId: 'gemini-custom-buttons-container'
             },
             Perplexity: {
                 containers: [
