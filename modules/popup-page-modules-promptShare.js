@@ -229,14 +229,16 @@ document.addEventListener('DOMContentLoaded', () => {
         currentSettings.dangerAutoSendAll = dangerBroadcastToggle.checked;
         updateAutosendAvailability();
         await saveModuleSettings();
-        await refreshCrossChatButtonsVisibility();
+        // Removed refreshCrossChatButtonsVisibility() - visibility settings don't affect popup UI,
+        // only what gets injected into chat pages. Calling it caused unwanted scrolling.
     });
 
     hideStandardButtonsToggle.addEventListener('change', async () => {
         currentSettings.hideStandardButtons = hideStandardButtonsToggle.checked;
         updateAutosendAvailability();
         await saveModuleSettings();
-        await refreshCrossChatButtonsVisibility();
+        // Removed refreshCrossChatButtonsVisibility() - visibility settings don't affect popup UI,
+        // only what gets injected into chat pages. Calling it caused unwanted scrolling.
     });
 
     for (const radio of placementRadios) {
