@@ -112,6 +112,7 @@ function beginPerplexityAutoSend(selectors, expectedText) {
     const MAX_ATTEMPTS = 20;
     const INTERVAL_MS = 250;
     let attempts = 0;
+    let intervalId = null;
 
     function findEnabledButton() {
         for (const selector of sendButtonSelectors) {
@@ -130,6 +131,12 @@ function beginPerplexityAutoSend(selectors, expectedText) {
         if (button) {
             // Guard: ensure editor has content before dispatching click to avoid empty sends.
             if (!perplexityEditorHasContent(expectedText)) {
+                if (attempts >= MAX_ATTEMPTS) {
+                    logConCgp('[Perplexity] Editor content still not ready after retries; aborting auto-send.');
+                    showToast('Editor content not ready; please send manually.', 'error');
+                    return true;
+                }
+
                 logConCgp('[Perplexity] Editor content not ready, deferring auto-send.');
                 return false;
             }
@@ -152,13 +159,20 @@ function beginPerplexityAutoSend(selectors, expectedText) {
         return false;
     }
 
+    function clearRetryInterval() {
+        if (intervalId !== null) {
+            clearInterval(intervalId);
+            intervalId = null;
+        }
+    }
+
     if (tryClick()) {
         return;
     }
 
-    const intervalId = setInterval(() => {
+    intervalId = setInterval(() => {
         if (tryClick()) {
-            clearInterval(intervalId);
+            clearRetryInterval();
         }
     }, INTERVAL_MS);
 }
