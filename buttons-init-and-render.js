@@ -559,7 +559,6 @@ window.MaxExtensionButtonsInit.createUnifiedProfileSelector = function (containe
     profileNames.forEach((name, index) => {
         const optionButton = document.createElement('button');
         optionButton.type = 'button';
-        optionButton.textContent = name;
         optionButton.title = name;
         optionButton.style.cssText = `
             display: flex;
