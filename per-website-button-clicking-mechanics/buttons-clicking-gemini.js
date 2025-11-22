@@ -8,31 +8,18 @@
  * @param {string} customText - The custom text to be sent.
  * @param {boolean} autoSend - Flag indicating whether autosend is enabled.
  */
-function processGeminiCustomSendButtonClick(event, customText, autoSend) {
+async function processGeminiCustomSendButtonClick(event, customText, autoSend) {
     event.preventDefault();
     logConCgp('[Gemini] Custom send button clicked. Processing...');
 
-    const injectionTargets = window.InjectionTargetsOnWebsite;
-    const geminiSelectors = injectionTargets.selectors;
-
-    // Find editor area
-    const editorArea = geminiSelectors.editors.reduce((found, selector) =>
-        found || document.querySelector(selector), null);
+    // Find editor area using SelectorGuard
+    const editorArea = await window.OneClickPromptsSelectorGuard.findEditor();
 
     if (!editorArea) {
         logConCgp('[Gemini] Editor area not found. Unable to proceed.');
-        showToast('Could not find the text input area.', 'error');
+        // Toast handled by SelectorGuard
         return;
     }
-
-    // Find send button
-    const locateSendButton = () => {
-        return geminiSelectors.sendButtons
-            .map(selector => document.querySelector(selector))
-            .find(button => button && button.getAttribute('aria-disabled') !== 'true'); // Only find enabled button
-    };
-
-    let sendButton = locateSendButton();
 
     /**
      * Inserts text into the Gemini editor (Quill).
@@ -70,11 +57,16 @@ function processGeminiCustomSendButtonClick(event, customText, autoSend) {
         logConCgp('[Gemini] Auto-send enabled. Attempting to send.');
 
         // Use a MutationObserver or interval to wait for the button to become enabled
-        const attemptSend = (maxAttempts = 20) => {
+        const attemptSend = (maxAttempts = 50) => { // Increased attempts for safety
             let attempts = 0;
-            const intervalId = setInterval(() => {
-                sendButton = locateSendButton(); // Re-check for the button
-                if (sendButton) {
+            const intervalId = setInterval(async () => {
+                // Use SelectorGuard to find the button
+                const sendButton = await window.OneClickPromptsSelectorGuard.findSendButton();
+
+                // Check if found AND enabled
+                const isEnabled = sendButton && sendButton.getAttribute('aria-disabled') !== 'true';
+
+                if (isEnabled) {
                     clearInterval(intervalId);
                     logConCgp('[Gemini] Send button found and enabled. Clicking.');
                     MaxExtensionUtils.simulateClick(sendButton);

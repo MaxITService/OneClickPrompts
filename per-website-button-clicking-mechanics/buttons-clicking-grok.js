@@ -133,17 +133,14 @@ async function processGrokCustomSendButtonClick(event, customText, autoSend) {
     event.preventDefault();
     logConCgp('[grok] Custom send button clicked.');
 
-    // Select the visible (active) editor by filtering out hidden elements.
-    const editorCandidates = window.InjectionTargetsOnWebsite.selectors.editors
-        .map(selector => document.querySelector(selector))
-        .filter(el => el && el.offsetParent !== null);
-    const editorArea = editorCandidates.length > 0
-        ? editorCandidates[editorCandidates.length - 1]
-        : document.querySelector(window.InjectionTargetsOnWebsite.selectors.editors[0]);
+    // Select the visible (active) editor using the SelectorGuard
+    const editorArea = await window.OneClickPromptsSelectorGuard.findEditor();
 
     if (!editorArea) {
         logConCgp('[grok] Editor area not found. Aborting send process.');
-        showToast('Could not find the text input area.', 'error');
+        // Toast is handled by the Guard/Detector now, but we can keep a local one if needed, 
+        // though the Detector one is more specific about "Analyzing...".
+        // showToast('Could not find the text input area.', 'error'); 
         return;
     }
 
@@ -194,7 +191,7 @@ async function processGrokCustomSendButtonClick(event, customText, autoSend) {
         let attempts = 0;
         const maxAttempts = 50; // 5 seconds of attempts
 
-        const intervalId = setInterval(() => {
+        const intervalId = setInterval(async () => {
             const currentText = isTextArea ? editorArea.value.trim() : editorArea.innerText.trim();
             if (currentText.length === 0) {
                 logConCgp('[grok] Editor became empty during auto-send. Stopping auto-send.');
@@ -202,10 +199,9 @@ async function processGrokCustomSendButtonClick(event, customText, autoSend) {
                 window.autoSendInterval = null;
                 return;
             }
-            // Locate the Grok send button using selectors from InjectionTargetsOnWebsite.
-            const sendButton = document.querySelector(
-                window.InjectionTargetsOnWebsite.selectors.sendButtons.find(selector => document.querySelector(selector))
-            );
+            // Locate the Grok send button using SelectorGuard
+            const sendButton = await window.OneClickPromptsSelectorGuard.findSendButton();
+
             if (sendButton) {
                 logConCgp('[grok] Send button found. Clicking send button.');
                 window.MaxExtensionUtils.simulateClick(sendButton);
@@ -216,7 +212,8 @@ async function processGrokCustomSendButtonClick(event, customText, autoSend) {
                 clearInterval(intervalId);
                 window.autoSendInterval = null;
                 logConCgp('[grok] Send button not found after multiple attempts.');
-                showToast('Send button not found. Auto-send stopped.', 'error');
+                // Toast handled by Detector
+                // showToast('Send button not found. Auto-send stopped.', 'error');
             } else {
                 logConCgp(`[grok] Send button not found. Attempt ${attempts}/${maxAttempts}`);
             }

@@ -12,40 +12,34 @@
  * @param {string} customText - Text to insert
  * @param {boolean} autoSend - Auto-send enabled
  */
-function processDeepSeekCustomSendButtonClick(event, customText, autoSend) {
+async function processDeepSeekCustomSendButtonClick(event, customText, autoSend) {
     event.preventDefault();
     logConCgp('[DeepSeek] Starting processing with text:', customText);
 
-    // 1. Find all potential editors
-    const editors = Array.from(document.querySelectorAll(
-        window.InjectionTargetsOnWebsite.selectors.editors.join(', ')
-    )).filter(el => {
-        // Filter visible editors
-        const style = window.getComputedStyle(el);
-        return style.display !== 'none' && style.visibility === 'visible';
-    });
+    // 1. Find editor using SelectorGuard
+    const editor = await window.OneClickPromptsSelectorGuard.findEditor();
 
-    if (editors.length === 0) {
-        logConCgp('[DeepSeek] No active editors found');
-        showToast('Could not find the text input area.', 'error');
+    if (!editor) {
+        logConCgp('[DeepSeek] No active editor found');
+        // Toast handled by SelectorGuard
         return;
     }
 
     // 2. Input handling system
-    function handleEditorInput(editor, text) {
+    function handleEditorInput(editorElement, text) {
         try {
-            logConCgp('[DeepSeek] Handling editor:', editor.tagName);
+            logConCgp('[DeepSeek] Handling editor:', editorElement.tagName);
 
             // For textareas
-            if (editor.tagName === 'TEXTAREA') {
-                editor.value += text;
-                editor.dispatchEvent(new Event('input', { bubbles: true }));
-                editor.dispatchEvent(new Event('change', { bubbles: true }));
+            if (editorElement.tagName === 'TEXTAREA') {
+                editorElement.value += text;
+                editorElement.dispatchEvent(new Event('input', { bubbles: true }));
+                editorElement.dispatchEvent(new Event('change', { bubbles: true }));
                 return;
             }
 
             // For contenteditable divs
-            if (editor.hasAttribute('contenteditable')) {
+            if (editorElement.hasAttribute('contenteditable')) {
                 // Modern alternative to deprecated document.execCommand:
                 const selection = window.getSelection();
                 let range;
@@ -55,7 +49,7 @@ function processDeepSeekCustomSendButtonClick(event, customText, autoSend) {
                 } else {
                     // Create a new range at the end of the editor if no selection exists
                     range = document.createRange();
-                    range.selectNodeContents(editor);
+                    range.selectNodeContents(editorElement);
                     range.collapse(false);
                     if (selection) {
                         selection.removeAllRanges();
@@ -72,59 +66,28 @@ function processDeepSeekCustomSendButtonClick(event, customText, autoSend) {
                     selection.removeAllRanges();
                     selection.addRange(range);
                 }
-                editor.dispatchEvent(new Event('input', { bubbles: true }));
+                editorElement.dispatchEvent(new Event('input', { bubbles: true }));
                 return;
             }
 
             // Fallback for React-controlled divs
-            editor.textContent += text;
+            editorElement.textContent += text;
             const reactEvent = new Event('input', { bubbles: true });
-            Object.defineProperty(reactEvent, 'target', { value: editor });
-            editor.dispatchEvent(reactEvent);
+            Object.defineProperty(reactEvent, 'target', { value: editorElement });
+            editorElement.dispatchEvent(reactEvent);
         } catch (error) {
             logConCgp('[DeepSeek] Input error:', error);
             showToast('Failed to insert text.', 'error');
         }
     }
 
-    // 3. Send button locator with fallbacks
-    function findSendButton() {
-        const selectorsConfig = window.InjectionTargetsOnWebsite?.selectors || {};
-        const extensionContainerId = selectorsConfig.buttonsContainerId;
-        // Try primary selectors first
-        const buttons = (selectorsConfig.sendButtons || [])
-            .flatMap(selector => Array.from(document.querySelectorAll(selector)))
-            .filter(btn => {
-                if (!btn) {
-                    return false;
-                }
-                if (extensionContainerId && btn.closest(`#${extensionContainerId}`)) {
-                    // Skip buttons rendered by the extension itself so auto-send never re-clicks our UI.
-                    return false;
-                }
-                if (!btn.offsetParent) return false; // Visible check
-                const disabled = btn.disabled ||
-                    btn.getAttribute('aria-disabled') === 'true' ||
-                    btn.classList.contains('disabled');
-                return !disabled;
-            });
-
-        // Priority 1: Button with send icon
-        const iconButton = buttons.find(btn =>
-            btn.querySelector('svg')?.innerHTML.includes('send')
-        );
-
-        // Priority 2: Last button in container
-        return iconButton || buttons[buttons.length - 1];
-    }
-
-    // 4. Robust auto-send system
+    // 3. Robust auto-send system
     function startAutoSend() {
         const MAX_ATTEMPTS = 15; // 4.5 seconds max
         let attempts = 0;
         let interval;
 
-        const attemptSend = () => {
+        const attemptSend = async () => {
             if (attempts++ > MAX_ATTEMPTS) {
                 clearInterval(interval);
                 logConCgp('[DeepSeek] Max attempts reached, send button not found.');
@@ -132,8 +95,16 @@ function processDeepSeekCustomSendButtonClick(event, customText, autoSend) {
                 return;
             }
 
-            const sendButton = findSendButton();
-            if (sendButton) {
+            // Use SelectorGuard to find the button
+            const sendButton = await window.OneClickPromptsSelectorGuard.findSendButton();
+
+            // Check if enabled
+            const isEnabled = sendButton &&
+                !sendButton.disabled &&
+                sendButton.getAttribute('aria-disabled') !== 'true' &&
+                !sendButton.classList.contains('disabled');
+
+            if (isEnabled) {
                 logConCgp('[DeepSeek] Found active send button');
                 sendButton.click();
                 clearInterval(interval);
@@ -144,8 +115,8 @@ function processDeepSeekCustomSendButtonClick(event, customText, autoSend) {
         attemptSend(); // Immediate first attempt
     }
 
-    // Execute input on all relevant editors
-    editors.forEach(editor => handleEditorInput(editor, customText));
+    // Execute input on the found editor
+    handleEditorInput(editor, customText);
 
     // Initiate auto-send if enabled
     if (autoSend && globalMaxExtensionConfig.globalAutoSendEnabled) {

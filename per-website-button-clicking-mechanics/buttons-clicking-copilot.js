@@ -6,18 +6,16 @@
  * @param {string} customText - The custom text to be sent.
  * @param {boolean} autoSend - Flag indicating whether autosend is enabled.
  */
-function processCopilotCustomSendButtonClick(event, customText, autoSend) {
+async function processCopilotCustomSendButtonClick(event, customText, autoSend) {
     event.preventDefault();
     logConCgp('[buttons] Custom send button was clicked.');
 
-    const injectionTargets = window.InjectionTargetsOnWebsite;
-    const editorSelectors = injectionTargets.selectors.editors;
-    const editorArea = editorSelectors.reduce((found, selector) =>
-        found || document.querySelector(selector), null);
+    // Find editor using SelectorGuard
+    const editorArea = await window.OneClickPromptsSelectorGuard.findEditor();
 
     if (!editorArea) {
         logConCgp('[buttons] Editor area not found. Unable to proceed.');
-        showToast('Could not find the text input area.', 'error');
+        // Toast handled by SelectorGuard
         return;
     }
 
@@ -45,22 +43,9 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
         }
     };
 
-    const locateSendButtons = () => {
-        const sendButtonSelectors = injectionTargets.selectors.sendButtons;
-        const sendButtons = sendButtonSelectors
-            .map(selector => document.querySelector(selector))
-            .filter(Boolean);
-
-        logConCgp(sendButtons.length ?
-            '[buttons] Send buttons located.' :
-            '[buttons] Send buttons not found using dynamic selectors.');
-
-        return sendButtons;
-    };
-
-    const handleSendButtons = (sendButtons) => {
-        if (!sendButtons.length) {
-            logConCgp('[buttons] Send buttons are not available to handle.');
+    const handleSendButton = (sendButton) => {
+        if (!sendButton) {
+            logConCgp('[buttons] Send button is not available to handle.');
             if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
                 logConCgp('[buttons] Auto-send failed: Send button not found.');
                 showToast('Could not find the send button.', 'error');
@@ -70,11 +55,11 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
 
         if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
             logConCgp('[buttons] Auto-send is enabled. Starting auto-send process.');
-            startAutoSend([sendButtons[0]], editorArea);
+            startAutoSend(sendButton, editorArea);
         }
     };
 
-    const startAutoSend = (sendButtons, editor) => {
+    const startAutoSend = (initialSendButton, editor) => {
         if (window.autoSendInterval) {
             logConCgp('[auto-send] Auto-send is already running. Skipping initiation.');
             return;
@@ -83,7 +68,7 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
         let attempts = 0;
         const maxAttempts = 50; // 5 seconds
 
-        const intervalId = setInterval(() => {
+        const intervalId = setInterval(async () => {
             const currentText = editor.value?.trim() ?? '';
 
             if (!currentText) {
@@ -93,7 +78,8 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
                 return;
             }
 
-            const sendButton = locateSendButtons()[0];
+            // Use SelectorGuard to find the button
+            const sendButton = await window.OneClickPromptsSelectorGuard.findSendButton();
 
             if (sendButton) {
                 sendButton.click();
@@ -110,7 +96,7 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
         window.autoSendInterval = intervalId;
     };
 
-    const handleMessageInsertion = () => {
+    const handleMessageInsertion = async () => {
         const initialState = isEditorInInitialState(editorArea);
 
         // Step 1: Consolidate text insertion logic to prevent duplication.
@@ -132,38 +118,34 @@ function processCopilotCustomSendButtonClick(event, customText, autoSend) {
         }
 
         // Step 3: Locate send buttons and handle auto-sending.
-        let sendButtons = locateSendButtons();
-        if (sendButtons.length) {
-            handleSendButtons(sendButtons);
+        // Use SelectorGuard to find the button
+        const sendButton = await window.OneClickPromptsSelectorGuard.findSendButton();
+
+        if (sendButton) {
+            handleSendButton(sendButton);
         } else {
-            // If buttons aren't ready, wait for them with an observer.
-            const observer = new MutationObserver((mutations, obs) => {
-                const foundButtons = locateSendButtons();
-                if (foundButtons.length) {
-                    handleSendButtons(foundButtons);
-                    obs.disconnect();
-                    logConCgp('[buttons] Send buttons detected and observer disconnected.');
-                }
-            });
+            // If buttons aren't ready, wait for them with polling
+            logConCgp('[buttons] Send button not found immediately, polling...');
+            let attempts = 0;
+            const maxAttempts = 50;
 
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true
-            });
-
-            // Timeout to prevent the observer from running indefinitely.
-            setTimeout(() => {
-                if (!window.autoSendInterval) {
-                    observer.disconnect();
+            const pollInterval = setInterval(async () => {
+                const btn = await window.OneClickPromptsSelectorGuard.findSendButton();
+                if (btn) {
+                    clearInterval(pollInterval);
+                    handleSendButton(btn);
+                    logConCgp('[buttons] Send button detected via polling.');
+                } else if (++attempts >= maxAttempts) {
+                    clearInterval(pollInterval);
                     if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
                         showToast('Could not find the send button.', 'error');
                     }
-                    logConCgp('[buttons] MutationObserver disconnected after timeout.');
+                    logConCgp('[buttons] Polling timed out.');
                 }
-            }, 5000);
+            }, 100);
         }
     };
 
-    handleMessageInsertion();
+    await handleMessageInsertion();
 }
 

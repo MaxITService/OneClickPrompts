@@ -9,11 +9,11 @@
  * @param {string} customText - The text to insert
  * @param {boolean} autoSend - Whether to auto-send the message
  */
-function processClaudeCustomSendButtonClick(event, customText, autoSend) {
+async function processClaudeCustomSendButtonClick(event, customText, autoSend) {
     logConCgp('[Claude] Starting Claude-specific handling');
 
     // First try to insert the text
-    const insertionSuccessful = ClaudeEditorUtils.insertTextIntoClaudeEditor(customText);
+    const insertionSuccessful = await ClaudeEditorUtils.insertTextIntoClaudeEditor(customText);
 
     if (!insertionSuccessful) {
         logConCgp('[Claude] Text insertion failed');
@@ -30,29 +30,16 @@ function processClaudeCustomSendButtonClick(event, customText, autoSend) {
 /**
  * Handles the send button clicking process for Claude
  */
-function handleClaudeSend() {
+async function handleClaudeSend() {
     // Add timeout and attempt counter for finding send button
     let attempts = 0;
     const MAX_ATTEMPTS = 50;
     const TIMEOUT_DURATION = 5000;
     let timeoutId;
 
-    function findClaudeSendButton() {
-        // Common selectors for Claude send buttons
-        const sendButtonSelectors = window.InjectionTargetsOnWebsite.selectors.sendButtons;
+    // Use SelectorGuard to find send button
+    const sendButton = await window.OneClickPromptsSelectorGuard.findSendButton();
 
-        for (const selector of sendButtonSelectors) {
-            const button = document.querySelector(selector);
-            if (button) {
-                logConCgp('[Claude] Found send button using selector:', selector);
-                return button;
-            }
-        }
-        return null;
-    }
-
-    // First immediate attempt
-    const sendButton = findClaudeSendButton();
     if (sendButton) {
         logConCgp('[Claude] Send button found immediately, delaying click by 200ms');
         setTimeout(() => {
@@ -62,38 +49,38 @@ function handleClaudeSend() {
         return;
     }
 
-    // If not found, set up observer
-    logConCgp('[Claude] Send button not found immediately, setting up observer');
+    // If not found, set up observer (or polling since SelectorGuard handles logic)
+    // Note: SelectorGuard already does some recovery, but for auto-send we might want to poll
+    // if the button appears dynamically after text insertion.
+    // However, SelectorGuard is designed to be the single source of truth.
+    // If SelectorGuard returned null, it means it failed even after recovery attempts.
+    // But for dynamic UI where button appears ONLY after typing, we might need a loop.
 
-    const observer = new MutationObserver((mutations, obs) => {
+    logConCgp('[Claude] Send button not found immediately, polling...');
+
+    const intervalId = setInterval(async () => {
         attempts++;
-        const sendButton = findClaudeSendButton();
+        const btn = await window.OneClickPromptsSelectorGuard.findSendButton();
 
-        if (sendButton) {
+        if (btn) {
+            clearInterval(intervalId);
             clearTimeout(timeoutId);
-            obs.disconnect();
-            logConCgp('[Claude] Send button found after observation, delaying click by 200ms');
+            logConCgp('[Claude] Send button found after polling, delaying click by 200ms');
             setTimeout(() => {
-                MaxExtensionUtils.simulateClick(sendButton);
+                MaxExtensionUtils.simulateClick(btn);
                 logConCgp('[Claude] Send button clicked after 200ms delay');
             }, 200);
         } else if (attempts >= MAX_ATTEMPTS) {
+            clearInterval(intervalId);
             clearTimeout(timeoutId);
-            obs.disconnect();
             logConCgp('[Claude] Maximum attempts reached without finding send button');
-            showToast('Could not find the send button.', 'error');
-        } else {
-            logConCgp(`[Claude] Attempt ${attempts}/${MAX_ATTEMPTS}: Send button not found yet`);
+            // Toast handled by SelectorGuard/Detector if it was a structural failure, 
+            // but here it might just be logic (button didn't appear).
         }
-    });
-
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
+    }, 100);
 
     timeoutId = setTimeout(() => {
-        observer.disconnect();
+        clearInterval(intervalId);
         logConCgp('[Claude] Timeout reached without finding send button');
         showToast('Could not find the send button.', 'error');
     }, TIMEOUT_DURATION);
@@ -110,7 +97,7 @@ const ClaudeEditorUtils = {
      * @param {string} textToInsert - The text to insert into the editor
      * @returns {boolean} - Whether the insertion was successful
      */
-    insertTextIntoClaudeEditor: function (textToInsert) {
+    insertTextIntoClaudeEditor: async function (textToInsert) {
         logConCgp('[ClaudeEditor] Starting text insertion process');
 
         // Only proceed if we're on Claude
@@ -119,11 +106,11 @@ const ClaudeEditorUtils = {
             return false;
         }
 
-        // Find the editor element
-        const editorElement = this.findEditorElement();
+        // Find the editor element using SelectorGuard
+        const editorElement = await this.findEditorElement();
         if (!editorElement) {
             logConCgp('[ClaudeEditor] Editor element not found');
-            showToast('Could not find the text input area.', 'error');
+            // Toast handled by SelectorGuard
             return false;
         }
 
@@ -139,33 +126,9 @@ const ClaudeEditorUtils = {
      * Finds the editor element in the DOM
      * @returns {Element|null} - The found editor element or null
      */
-    findEditorElement: function () {
-        logConCgp('[ClaudeEditor] Searching for editor element');
-
-        // First try to find the ProseMirror editor
-        const proseMirrorEditor = document.querySelector('div.ProseMirror[contenteditable="true"]');
-        if (proseMirrorEditor) {
-            logConCgp('[ClaudeEditor] Found ProseMirror editor');
-            return proseMirrorEditor;
-        }
-
-        // Fallback to other possible editor selectors
-        const fallbackSelectors = [
-            'div[aria-label="Write your prompt to Claude"] div[contenteditable="true"]',
-            'div[aria-label="Chat input"] div[contenteditable="true"]',
-            // Add more selectors if needed
-        ];
-
-        for (const selector of fallbackSelectors) {
-            const element = document.querySelector(selector);
-            if (element) {
-                logConCgp('[ClaudeEditor] Found editor using fallback selector:', selector);
-                return element;
-            }
-        }
-
-        logConCgp('[ClaudeEditor] No editor element found');
-        return null;
+    findEditorElement: async function () {
+        logConCgp('[ClaudeEditor] Searching for editor element using SelectorGuard');
+        return await window.OneClickPromptsSelectorGuard.findEditor();
     },
 
     /**

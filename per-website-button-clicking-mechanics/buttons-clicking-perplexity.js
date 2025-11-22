@@ -9,23 +9,19 @@
  * @param {string} customText - Text to inject.
  * @param {boolean} autoSend - Whether auto-send is requested.
  */
-function processPerplexityCustomSendButtonClick(event, customText, autoSend) {
+async function processPerplexityCustomSendButtonClick(event, customText, autoSend) {
     if (event && typeof event.preventDefault === 'function') {
         event.preventDefault();
     }
 
     logConCgp('[Perplexity] Starting custom button handling.');
 
-    const selectors = window?.InjectionTargetsOnWebsite?.selectors || {};
-    const editorElement = Array.isArray(selectors.editors)
-        ? selectors.editors
-            .map(selector => document.querySelector(selector))
-            .find(Boolean)
-        : null;
+    // Find editor using SelectorGuard
+    const editorElement = await window.OneClickPromptsSelectorGuard.findEditor();
 
     if (!editorElement) {
         logConCgp('[Perplexity] Editor element not found.');
-        showToast('Could not find the text input area.', 'error');
+        // Toast handled by SelectorGuard
         return;
     }
 
@@ -41,7 +37,7 @@ function processPerplexityCustomSendButtonClick(event, customText, autoSend) {
     }
 
     logConCgp('[Perplexity] Auto-send requested; locating submit button.');
-    setTimeout(() => beginPerplexityAutoSend(selectors, customText), 150);
+    setTimeout(() => beginPerplexityAutoSend(customText, editorElement), 150);
 }
 
 /**
@@ -105,32 +101,24 @@ function insertTextIntoPerplexityEditor(editorElement, textToInsert) {
 
 /**
  * Attempts to click the Perplexity submit button with retries.
- * @param {Object} selectors - Selector bundle from InjectionTargetsOnWebsite.
+ * @param {string} expectedText - Text we attempted to insert.
+ * @param {HTMLElement} editorElement - The editor element to check for content.
  */
-function beginPerplexityAutoSend(selectors, expectedText) {
-    const sendButtonSelectors = Array.isArray(selectors.sendButtons) ? selectors.sendButtons : [];
+function beginPerplexityAutoSend(expectedText, editorElement) {
     const MAX_ATTEMPTS = 20;
     const INTERVAL_MS = 250;
     let attempts = 0;
     let intervalId = null;
 
-    function findEnabledButton() {
-        for (const selector of sendButtonSelectors) {
-            const button = document.querySelector(selector);
-            if (button && isPerplexityButtonEnabled(button)) {
-                return button;
-            }
-        }
-        return null;
-    }
-
-    function tryClick() {
+    async function tryClick() {
         attempts += 1;
-        const button = findEnabledButton();
 
-        if (button) {
+        // Use SelectorGuard to find the button
+        const button = await window.OneClickPromptsSelectorGuard.findSendButton();
+
+        if (button && isPerplexityButtonEnabled(button)) {
             // Guard: ensure editor has content before dispatching click to avoid empty sends.
-            if (!perplexityEditorHasContent(expectedText)) {
+            if (!perplexityEditorHasContent(expectedText, editorElement)) {
                 if (attempts >= MAX_ATTEMPTS) {
                     logConCgp('[Perplexity] Editor content still not ready after retries; aborting auto-send.');
                     showToast('Editor content not ready; please send manually.', 'error');
@@ -166,15 +154,17 @@ function beginPerplexityAutoSend(selectors, expectedText) {
         }
     }
 
-    if (tryClick()) {
-        return;
-    }
+    // Initial attempt
+    tryClick().then(done => {
+        if (done) return;
 
-    intervalId = setInterval(() => {
-        if (tryClick()) {
-            clearRetryInterval();
-        }
-    }, INTERVAL_MS);
+        // Start polling
+        intervalId = setInterval(async () => {
+            if (await tryClick()) {
+                clearRetryInterval();
+            }
+        }, INTERVAL_MS);
+    });
 }
 
 /**
@@ -203,18 +193,16 @@ function isPerplexityButtonEnabled(button) {
 /**
  * Checks whether the editor reflects the inserted text to avoid sending prematurely.
  * @param {string} expectedText - Text we attempted to insert.
+ * @param {HTMLElement} editorElement - The editor element to check.
  * @returns {boolean} True if the editor appears to contain content.
  */
-function perplexityEditorHasContent(expectedText) {
+function perplexityEditorHasContent(expectedText, editorElement) {
     try {
-        const selectors = window?.InjectionTargetsOnWebsite?.selectors || {};
-        const editor = Array.isArray(selectors.editors)
-            ? selectors.editors.map(selector => document.querySelector(selector)).find(Boolean)
-            : null;
-        if (!editor) {
+        if (!editorElement) {
+            // Should not happen if passed correctly, but as fallback
             return false;
         }
-        const currentText = editor.innerText || editor.textContent || '';
+        const currentText = editorElement.innerText || editorElement.textContent || '';
         if (expectedText) {
             return currentText.includes(expectedText.trim().slice(0, 20));
         }

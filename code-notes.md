@@ -39,6 +39,13 @@ Current architectural reference for the OneClickPrompts Chrome extension (Manife
 - Manages keyboard shortcuts (Alt+1‒0) with idempotent listener registration and respects the `enableShortcuts` flag.
 - Cleans up resiliency timers and observers before re-running `publicStaticVoidMain()` to prevent duplicates.
 
+### 2.4 Selector Auto-Detection System
+- **Purpose**: Robustly handle DOM structure changes on AI websites by decoupling site scripts from direct DOM queries and implementing self-healing capabilities.
+- **`modules/selector-auto-detector/index.js`** ("The Brain"): Manages detection state, tracks failure counts/cooldowns, orchestrates the recovery workflow (Failure -> Wait -> Heuristics -> Notify), and persists new selectors.
+- **`modules/selector-auto-detector/selector-guard.js`** ("The Guard"): Adapter that replaces direct `document.querySelector` calls. Wraps lookups in a Promise, reporting success/failure to the Brain.
+- **`modules/selector-auto-detector/base-heuristics.js`**: Contains logic to "guess" new selectors when known ones fail (currently a stub).
+- **Integration**: Site-specific scripts (e.g., `buttons-clicking-grok.js`) use `SelectorGuard.findEditor()` and `findSendButton()` instead of direct queries.
+
 ## 3. UI Surfaces
 
 ### 3.1 Inline Toolbar & Buttons

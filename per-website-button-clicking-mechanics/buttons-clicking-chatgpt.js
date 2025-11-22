@@ -9,20 +9,17 @@
  * @param {string} customText - The custom text to be sent.
  * @param {boolean} autoSend - Flag indicating whether autosend is enabled.
  */
-function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
+async function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
     // Prevent default button behavior
     event.preventDefault();
     logConCgp('[buttons] Custom send button was clicked.');
 
-    // Locate the editor area using the provided selectors from the global InjectionTargetsOnWebsite object
-    // Map selectors to elements and pick the first existing match (avoids duplicate queries)
-    const editorArea = window.InjectionTargetsOnWebsite.selectors.editors
-        .map((selector) => document.querySelector(selector))
-        .find(Boolean);
+    // Locate the editor area using SelectorGuard
+    const editorArea = await window.OneClickPromptsSelectorGuard.findEditor();
 
     if (!editorArea) {
         logConCgp('[buttons] Editor area not found. Unable to proceed.');
-        showToast('Could not find the text input area.', 'error');
+        // Toast handled by SelectorGuard/Detector
         return;
     }
 
@@ -133,50 +130,35 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
     };
 
     /**
-     * Locates all send buttons based on the provided selectors.
-     * @returns {HTMLElement[]} Array of found send button elements.
-     */
-    const locateSendButtons = () => {
-        return [...new Set(
-            window.InjectionTargetsOnWebsite.selectors.sendButtons
-                .flatMap(selector => [...document.querySelectorAll(selector)])
-        )];
-    };
-
-    // Initial retrieval of send buttons.
-    let originalSendButtons = locateSendButtons();
-
-    /**
      * Handles the send buttons by initiating auto-send if enabled.
-     * Operates only on the first send button to prevent duplicate sends.
-     * @param {HTMLElement[]} sendButtons - Array of send button elements.
+     * @param {HTMLElement} sendButton - The send button element.
      */
-    const handleSendButtons = (sendButtons) => {
-        logConCgp('[buttons] handleSendButtons called.');
-        if (!sendButtons.length) {
+    const handleSendButton = (sendButton) => {
+        logConCgp('[buttons] handleSendButton called.');
+        if (!sendButton) {
             // If auto-send was intended, notify the user that the button was not found.
             if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
                 logConCgp('[buttons] Auto-send failed: Send button not found.');
                 showToast('Could not find the send button.', 'error');
             }
-            logConCgp('[buttons] Send buttons are not available to handle.');
+            logConCgp('[buttons] Send button is not available to handle.');
             return;
         }
-        logConCgp('[buttons] Send buttons are available. Proceeding with sending message.');
+        logConCgp('[buttons] Send button is available. Proceeding with sending message.');
 
         if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
             logConCgp('[buttons] Auto-send is enabled. Starting auto-send process.');
-            startAutoSend([sendButtons[0]], editorArea);
+            startAutoSend(sendButton, editorArea);
         }
     };
 
     /**
      * Starts the auto-send interval to automatically click send buttons until the editor is empty.
-     * Ensures only one interval runs at a time and clicks only the first send button.
-     * @param {HTMLElement[]} sendButtons - Array of send button elements.
+     * Ensures only one interval runs at a time.
+     * @param {HTMLElement} initialSendButton - The initial send button found.
      * @param {HTMLElement} editor - The editor area element.
      */
-    const startAutoSend = (sendButtons, editor) => {
+    const startAutoSend = (initialSendButton, editor) => {
         logConCgp('[auto-send] startAutoSend called.');
 
         // Prevent multiple auto-send intervals from running simultaneously
@@ -186,7 +168,7 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
         }
 
         logConCgp('[auto-send] Starting auto-send interval to click send button every 100ms.');
-        window.autoSendInterval = setInterval(() => {
+        window.autoSendInterval = setInterval(async () => {
             const currentText = editor.innerText.trim();
             logConCgp('[auto-send] Current text in editor:', currentText);
 
@@ -198,18 +180,9 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
                 return;
             }
 
-            // Attempt to locate send buttons again in case they have changed
-            const updatedSendButtons = locateSendButtons();
-            if (updatedSendButtons.length === 0) {
-                logConCgp('[auto-send] Send button not found during auto-send. Stopping auto-send interval.');
-                clearInterval(window.autoSendInterval);
-                showToast('Send button not found. Auto-send stopped.', 'error');
-                window.autoSendInterval = null;
-                return;
-            }
+            // Attempt to locate send button again using SelectorGuard
+            const sendButton = await window.OneClickPromptsSelectorGuard.findSendButton();
 
-            // Click only the first send button found
-            const sendButton = updatedSendButtons[0];
             if (sendButton) {
                 logConCgp('[auto-send] Clicking send button:', sendButton);
                 MaxExtensionUtils.simulateClick(sendButton);
@@ -219,42 +192,33 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
                 logConCgp('[auto-send] Auto-send interval stopped after successful send.');
             } else {
                 logConCgp('[auto-send] Send button not found during auto-send.');
+                // Note: SelectorGuard might trigger recovery toasts here if it keeps failing
+                // We might want to stop after some attempts, but SelectorGuard handles its own failure thresholds
+                // For now, we rely on the interval to keep trying or user to intervene
             }
         }, 100); // Interval set to 100 milliseconds
     };
 
     /**
-     * Waits for send buttons to appear in the DOM using a promise-based approach.
-     * This modern helper replaces the previous MutationObserver duplication.
+     * Waits for send button to appear in the DOM using SelectorGuard polling.
      * @param {number} timeout - Maximum time in milliseconds to wait for the buttons.
-     * @returns {Promise<HTMLElement[]>} Resolves with the send buttons if found.
+     * @returns {Promise<HTMLElement>} Resolves with the send button if found.
      */
-    const waitForSendButtons = (timeout = 5000) => {
-        return new Promise((resolve, reject) => {
-            const buttons = locateSendButtons();
-            if (buttons.length > 0) {
-                return resolve(buttons);
-            }
-            const observer = new MutationObserver((mutations, obs) => {
-                const buttonsNow = locateSendButtons();
-                if (buttonsNow.length > 0) {
-                    obs.disconnect();
-                    resolve(buttonsNow);
-                }
-            });
-            observer.observe(document.body, { childList: true, subtree: true });
-            setTimeout(() => {
-                observer.disconnect();
-                reject(new Error('Timeout waiting for send buttons'));
-            }, timeout);
-        });
+    const waitForSendButton = async (timeout = 5000) => {
+        const startTime = Date.now();
+        while (Date.now() - startTime < timeout) {
+            const btn = await window.OneClickPromptsSelectorGuard.findSendButton();
+            if (btn) return btn;
+            await new Promise(r => setTimeout(r, 200));
+        }
+        throw new Error('Timeout waiting for send buttons');
     };
 
     /**
      * Handles the entire process of inserting text and sending the message.
      * This includes state detection, text insertion, and send button handling.
      */
-    const handleMessageInsertion = () => {
+    const handleMessageInsertion = async () => {
         logConCgp('[buttons] handleMessageInsertion called.');
         const initialState = isEditorInInitialState(editorArea);
 
@@ -264,30 +228,29 @@ function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
             insertTextIntoChatGPTEditor(editorArea, customText, true);
             logConCgp('[buttons][ChatGPT] Custom text inserted.');
 
-            // Use the promise-based helper to wait for send buttons instead of duplicating MutationObserver logic
-            setTimeout(() => {
-                waitForSendButtons(5000)
-                    .then((buttons) => {
-                        originalSendButtons = buttons;
-                        handleSendButtons(originalSendButtons);
-                    })
-                    .catch((error) => {
-                        logConCgp('[buttons] ' + error.message);
-                        showToast('Could not find the send button.', 'error');
-                    });
+            // Wait for send button
+            setTimeout(async () => {
+                try {
+                    const btn = await waitForSendButton(5000);
+                    handleSendButton(btn);
+                } catch (error) {
+                    logConCgp('[buttons] ' + error.message);
+                    showToast('Could not find the send button.', 'error');
+                }
             }, 500); // Delay to allow the editor to update
         } else {
             logConCgp('[buttons][ChatGPT] Editor has content. Appending text (bulk insert).');
             insertTextIntoChatGPTEditor(editorArea, customText, false);
             // Proceed to handle send buttons immediately
-            handleSendButtons(originalSendButtons);
+            const btn = await window.OneClickPromptsSelectorGuard.findSendButton();
+            handleSendButton(btn);
         }
     };
 
     // ----------------------------
     // Start the message insertion and sending process
     // ----------------------------
-    handleMessageInsertion();
+    await handleMessageInsertion();
 }
 
 // Expose the function globally
