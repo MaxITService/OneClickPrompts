@@ -8,7 +8,7 @@
  * @param {string} customText - The custom text to be sent.
  * @param {boolean} autoSend - Flag indicating whether autosend is enabled.
  */
-function processAIStudioCustomSendButtonClick(event, customText, autoSend) {
+async function processAIStudioCustomSendButtonClick(event, customText, autoSend) {
     // Prevent default button behavior
     event.preventDefault();
     logConCgp('[AIStudio] Starting process with text:', customText);
@@ -16,31 +16,19 @@ function processAIStudioCustomSendButtonClick(event, customText, autoSend) {
     const injectionTargets = window.InjectionTargetsOnWebsite;
     const aiStudioSelectors = injectionTargets.selectors;
 
-    let editorArea = null;
-    // Try each editor selector until we find one that works
-    for (const selector of aiStudioSelectors.editors) {
-        try {
-            const found = document.querySelector(selector);
-            if (found) {
-                editorArea = found;
-                logConCgp('[AIStudio] Found editor using selector:', selector);
-                break;
-            }
-        } catch (e) {
-            logConCgp('[AIStudio] Invalid selector:', selector, e);
-        }
+    // Use SelectorGuard to find the editor (enables heuristics)
+    const editorArea = await window.OneClickPromptsSelectorGuard.findEditor();
+
+    if (editorArea) {
+        logConCgp('[AIStudio] Found editor using SelectorGuard');
     }
 
-    let sendButton = null;
-
-    // Find send button using selectors from configuration
-    for (const selector of aiStudioSelectors.sendButtons) {
-        const foundButton = document.querySelector(selector);
-        if (foundButton) {
-            sendButton = foundButton;
-            logConCgp('[buttons] AI Studio Send button found:', selector);
-            break;
-        }
+    // Use SelectorGuard to find the send button (enables heuristics)
+    // Note: We find it early to check existence, but we'll find it again during auto-send
+    // to ensure we have the latest reference if the DOM updated.
+    const sendButton = await window.OneClickPromptsSelectorGuard.findSendButton();
+    if (sendButton) {
+        logConCgp('[buttons] AI Studio Send button found using SelectorGuard');
     }
 
     if (!editorArea) {
@@ -66,9 +54,12 @@ function processAIStudioCustomSendButtonClick(event, customText, autoSend) {
     if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
         logConCgp('[buttons] AI Studio Auto-send enabled, attempting to send message');
         // Use setTimeout to ensure text is processed before sending
-        setTimeout(() => {
-            if (sendButton) {
-                MaxExtensionUtils.simulateClick(sendButton);
+        // Use setTimeout to ensure text is processed before sending
+        setTimeout(async () => {
+            // Re-fetch send button to be safe (and use heuristics if needed)
+            const btn = await window.OneClickPromptsSelectorGuard.findSendButton();
+            if (btn) {
+                MaxExtensionUtils.simulateClick(btn);
             } else {
                 logConCgp('[buttons] AI Studio Send button not found for auto-send.');
                 showToast('Could not find the send button.', 'error');
