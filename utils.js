@@ -409,17 +409,17 @@ class InjectionTargetsOnWebsite {
                 ],
                 sendButtons: [
                     'form.bottom-0.w-full.text-base.flex.flex-col.gap-2.items-center.justify-center.relative.z-10 button[type="submit"]',
-                    'form button[type="submit"].group', 
-                    'form button[type="submit"]' 
+                    'form button[type="submit"].group',
+                    'form button[type="submit"]'
                 ],
-                
+
                 editors: [
                     'textarea[aria-label="Ask Grok anything"]',
                     'textarea.w-full.text-fg-primary[aria-label="Ask Grok anything"]',
-                    'textarea.w-full.text-fg-primary.px-2.leading-7',   
-                    'textarea[dir="auto"][aria-label="Ask Grok anything"]',                    
-                    'form.chat-form textarea[aria-label="Ask Grok anything"]',                    
-                    'textarea.w-full.text-fg-primary.bg-transparent.focus\\:outline-none',                   
+                    'textarea.w-full.text-fg-primary.px-2.leading-7',
+                    'textarea[dir="auto"][aria-label="Ask Grok anything"]',
+                    'form.chat-form textarea[aria-label="Ask Grok anything"]',
+                    'textarea.w-full.text-fg-primary.bg-transparent.focus\\:outline-none',
                     'textarea.w-full.text-fg-primary'
                 ],
                 threadRoot: '.w-full.h-full.overflow-y-auto.overflow-x-hidden.scrollbar-gutter-stable.flex.flex-col.items-center.px-gutter',
