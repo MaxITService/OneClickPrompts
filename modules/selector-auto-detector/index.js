@@ -206,8 +206,11 @@ window.OneClickPromptsSelectorAutoDetector = {
 
         const typeName = type === 'editor' ? 'text input selector' : 'send button selector';
         logConCgp('[SelectorAutoDetector] Offering to save selector.', { type, selector, site });
+        const tooltip = `Will save selector: ${selector}\nUsed automatically next time (skips auto-detect).\nYou can edit selectors in Settings → Advanced selectors (bottom).`;
         window.showToast(`OneClickPrompts: Found a ${typeName}. Save it to Custom selectors?`, 'success', {
-            duration: 8000,
+            duration: 15000,
+            tooltip,
+            actionTooltip: tooltip,
             actionLabel: 'Save selector',
             onAction: async () => {
                 const result = await saver.saveSelectorFromElement({

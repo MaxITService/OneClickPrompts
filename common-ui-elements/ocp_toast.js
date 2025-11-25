@@ -1,5 +1,5 @@
 // common-ui-elements/ocp_toast.js
-// Version: 1.1
+// Version: 1.2
 // Handles displaying toast notifications.
 
 'use strict';
@@ -9,11 +9,12 @@
  *
  * @param {string} message - The message to display in the toast.
  * @param {string} type - The type of toast ('success', 'error', 'info').
- * @param {number|Object} options - Duration in ms or options object { duration, actionLabel, onAction }.
+ * @param {number|Object} options - Duration in ms or options object { duration, actionLabel, onAction, tooltip, actionTooltip }.
  */
 function showToast(message, type = 'info', options = 3000) {
     const normalized = typeof options === 'number' ? { duration: options } : (options || {});
-    const duration = Number.isFinite(normalized.duration) ? normalized.duration : 3000;
+    const rawDuration = Number.isFinite(normalized.duration) ? normalized.duration : 3000;
+    const duration = Math.min(Math.max(rawDuration, 1500), 30000); // clamp to a reasonable window
 
     // Ensure the toast container exists, creating it if necessary.
     let toastContainer = document.getElementById('toastContainer');
@@ -38,6 +39,10 @@ function showToast(message, type = 'info', options = 3000) {
         toast.classList.add(typeClassMap[type]);
     }
 
+    if (normalized.tooltip) {
+        toast.title = normalized.tooltip;
+    }
+
     const content = document.createElement('span');
     content.className = 'toast-message';
     content.textContent = message;
@@ -48,6 +53,9 @@ function showToast(message, type = 'info', options = 3000) {
         actionButton.type = 'button';
         actionButton.className = 'toast-action';
         actionButton.textContent = normalized.actionLabel;
+        if (normalized.actionTooltip || normalized.tooltip) {
+            actionButton.title = normalized.actionTooltip || normalized.tooltip;
+        }
         actionButton.addEventListener('click', async (event) => {
             event.stopPropagation();
             try {
@@ -61,6 +69,13 @@ function showToast(message, type = 'info', options = 3000) {
         toast.appendChild(actionButton);
     }
 
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'toast-close';
+    closeButton.setAttribute('aria-label', 'Close');
+    closeButton.textContent = '×';
+    toast.appendChild(closeButton);
+
     toastContainer.appendChild(toast);
 
     // Trigger reflow to enable CSS transition
@@ -68,13 +83,21 @@ function showToast(message, type = 'info', options = 3000) {
 
     toast.classList.add('show');
 
+    let hidden = false;
     const hideToast = () => {
+        if (hidden) return;
+        hidden = true;
         toast.classList.remove('show');
         // Remove the toast from DOM after transition
         toast.addEventListener('transitionend', () => {
             toast.remove();
         }, { once: true });
     };
+
+    closeButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        hideToast();
+    });
 
     // Remove toast after specified duration
     setTimeout(hideToast, duration);
