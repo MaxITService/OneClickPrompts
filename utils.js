@@ -315,11 +315,12 @@ class InjectionTargetsOnWebsite {
                     'div.flex.flex-col.bg-bg-000.gap-1\\.5'
                 ],
                 sendButtons: [
-                    'button.bg-accent-main-000.text-oncolor-100',
-                    'button[type="button"].bg-accent-main-000',
-                    'button[type="button"]',
-                    'button[type="button"][aria-label="Send message"].bg-accent-main-000.text-oncolor-100',
-                    'button[type="button"][aria-label="Send message"]',
+                    'button[aria-label="Send message"][class*="Button_claude"]', // new main send button with Claude-specific class
+                    'button[aria-label="Send message"].font-base-bold', // new send button with bold font class
+                    'button[aria-label="Send message"][type="button"]', // new send button generic
+                    'button.bg-accent-main-000.text-oncolor-100', // legacy accent button
+                    'button[type="button"].bg-accent-main-000', // legacy fallback
+                    'button[type="button"][aria-label="Send message"]', // generic fallback
                 ],
                 editors: ['div.ProseMirror[contenteditable="true"]'],
                 threadRoot: 'div.flex-1.max-w-3xl.mx-auto:has([data-testid="user-message"])',
@@ -408,19 +409,26 @@ class InjectionTargetsOnWebsite {
                     'form[method][class*="gap-2"][class*="flex-col"]'
                 ],
                 sendButtons: [
-                    'form.bottom-0.w-full.text-base.flex.flex-col.gap-2.items-center.justify-center.relative.z-10 button[type="submit"]',
-                    'form button[type="submit"].group',
-                    'form button[type="submit"]'
+                    'button[type="submit"][aria-label="Submit"]:not([disabled])', // new button with aria-label, not disabled
+                    'button[type="submit"][aria-label="Submit"]', // new button with aria-label
+                    'form.bottom-0.w-full.text-base.flex.flex-col.gap-2.items-center.justify-center.relative.z-10 button[type="submit"]', // legacy specific
+                    'form button[type="submit"].group', // legacy with group class
+                    'form button[type="submit"]' // generic fallback
                 ],
 
                 editors: [
-                    'textarea[aria-label="Ask Grok anything"]',
-                    'textarea.w-full.text-fg-primary[aria-label="Ask Grok anything"]',
-                    'textarea.w-full.text-fg-primary.px-2.leading-7',
-                    'textarea[dir="auto"][aria-label="Ask Grok anything"]',
-                    'form.chat-form textarea[aria-label="Ask Grok anything"]',
-                    'textarea.w-full.text-fg-primary.bg-transparent.focus\\:outline-none',
-                    'textarea.w-full.text-fg-primary'
+                    'div.tiptap.ProseMirror[contenteditable="true"]', // new TipTap editor (most specific)
+                    'div.ProseMirror[contenteditable="true"]', // ProseMirror generic
+                    'div[contenteditable="true"][translate="no"]', // with translate attribute
+                    'textarea[aria-label="Ask Grok anything"]', // legacy textarea (most specific)
+                    'textarea.w-full.text-fg-primary[aria-label="Ask Grok anything"]', // legacy textarea with classes
+                    'textarea.w-full.text-fg-primary.px-2.leading-7', // legacy textarea
+                    'textarea[dir="auto"][aria-label="Ask Grok anything"]', // legacy textarea with dir
+                    'form.chat-form textarea[aria-label="Ask Grok anything"]', // legacy contextual
+                    'textarea.w-full.text-fg-primary.bg-transparent.focus\\:outline-none', // legacy textarea
+                    'textarea.w-full.text-fg-primary', // legacy textarea generic
+                    'div[contenteditable="true"]', // generic contenteditable fallback
+                    'textarea' // last resort
                 ],
                 threadRoot: '.w-full.h-full.overflow-y-auto.overflow-x-hidden.scrollbar-gutter-stable.flex.flex-col.items-center.px-gutter',
                 buttonsContainerId: 'grok-custom-buttons-container'
