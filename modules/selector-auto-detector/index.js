@@ -93,21 +93,21 @@ window.OneClickPromptsSelectorAutoDetector = {
         // Readable name for the type
         const typeName = type === 'editor' ? 'Text input area' : 'send button';
 
-        // If heuristics are disabled, still notify the user but skip the scan.
-        if (!heuristicsAllowed) {
-            logConCgp(`[SelectorAutoDetector] Heuristics disabled for ${type}; skipping recovery.`);
-            if (window.showToast) {
-                window.showToast(`OneClickPrompts: ${typeName} not found. Auto-detect is off.`, 'error');
-            }
-            s.recovering = false;
-            return null;
+        // Unified message logic
+        const statusSuffix = heuristicsAllowed ? "Trying to find it..." : "Auto-detect is off.";
+        const toastType = heuristicsAllowed ? 'info' : 'error';
+
+        if (window.showToast) {
+            window.showToast(`OneClickPrompts: ${typeName} not found. ${statusSuffix}`, toastType);
+        } else {
+            console.warn(`OneClickPrompts: ${typeName} not found. ${statusSuffix}`);
         }
 
-        // Notify user
-        if (window.showToast) {
-            window.showToast(`OneClickPrompts: ${typeName} not found. Trying to find it...`, 'info');
-        } else {
-            console.warn(`OneClickPrompts: ${typeName} not found. Analyzing page structure...`);
+        // If heuristics are disabled, stop here.
+        if (!heuristicsAllowed) {
+            logConCgp(`[SelectorAutoDetector] Heuristics disabled for ${type}; skipping recovery.`);
+            s.recovering = false;
+            return null;
         }
 
         const site = window.InjectionTargetsOnWebsite?.activeSite || 'Unknown';
