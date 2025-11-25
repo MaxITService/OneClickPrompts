@@ -166,9 +166,9 @@ window.MaxExtensionButtonsInit = {
                     // Special handling for the settings button.
                     const settingsButtonConfig = { ...def.config, text: 'Settings', tooltip: 'Open extension settings in a new tab' };
                     const settingsClickHandler = () => {
-                       // Send a message to the service worker to open the settings page.
-                       // This avoids the popup blocker (ERR_BLOCKED_BY_CLIENT).
-                       chrome.runtime.sendMessage({ type: 'openSettingsPage' });
+                        // Send a message to the service worker to open the settings page.
+                        // This avoids the popup blocker (ERR_BLOCKED_BY_CLIENT).
+                        chrome.runtime.sendMessage({ type: 'openSettingsPage' });
                     };
                     buttonElement = MaxExtensionButtons.createCustomSendButton(settingsButtonConfig, index, settingsClickHandler, shortcutKey);
                 } else {
@@ -214,7 +214,7 @@ window.MaxExtensionButtonsInit = {
             if (dups.length > 1) {
                 const [keep, ...extras] = dups;
                 extras.forEach(el => {
-                    try { el.remove(); } catch (_) {}
+                    try { el.remove(); } catch (_) { }
                 });
                 existingContainer = keep;
                 logConCgp(`[init] Detected and removed ${extras.length} duplicate container(s) with id ${containerId}.`);
@@ -516,7 +516,7 @@ window.MaxExtensionButtonsInit.createUnifiedProfileSelector = function (containe
     const menu = document.createElement('div');
     menu.style.cssText = `
         position: absolute;
-        top: calc(100% + 4px);
+        bottom: calc(100% + 4px);
         left: 0;
         min-width: 180px;
         display: none;
