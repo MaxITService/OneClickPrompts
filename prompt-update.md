@@ -17,13 +17,13 @@ You are updating selectors in the `InjectionTargetsOnWebsite` class in `utils.js
 ### Your Task
 I will provide you with HTML code from a website. You need to:
 
-1. **Identify the website** from the HTML (ChatGPT, Claude, Copilot, DeepSeek, AIStudio, Grok, Gemini, or Perplexity)
+1. **Identify the website and which selectors user wants to update** from the HTML (ChatGPT, Claude, Copilot, DeepSeek, AIStudio, Grok, Gemini, or Perplexity) USUALLY USER WILL TELL LIKE "SEND BUTTON", "EDITOR", "CONTAINER", "THREAD ROOT" - ONLY UPDATE WHAT WAS ASKED.
 
-2. **Analyze the HTML** to find:
+2. **Analyze the HTML** to find (ONLY BY SPECIAL USER REQUEST):
    - The **send button** element
    - The **editor/input** element (textarea or contenteditable)
    - The **container** that wraps the input area
-   - The **thread/conversation** root element (ONLY BY SPECIAL USER REQUEST)
+   - The **thread/conversation** root element 
 
 3. **Create CSS selectors** following these rules:
    - **Prioritize stable attributes**: `aria-label`, `data-testid`, `id`, `role`

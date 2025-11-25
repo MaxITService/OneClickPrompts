@@ -388,11 +388,14 @@ class InjectionTargetsOnWebsite {
                     'body > app-root > div > div > div.layout-wrapper > div > span > ms-prompt-switcher > ms-chunk-editor > section > footer'
                 ],
                 sendButtons: [
-                    'button.run-button[type="submit"]',
-                    'button[aria-label="Run"]',
-                    'run-button button[type="submit"]',
-                    'button.run-button',
-                    'footer > div.input-wrapper > div:nth-child(3) > run-button > button'
+                    'ms-run-button button[type="submit"]', // Most specific - custom element + submit button
+                    'button.run-button[type="submit"]', // Specific class + type
+                    'button[aria-label="Run"][type="submit"]', // Aria-label + type
+                    'ms-run-button button', // Custom element fallback
+                    'button.run-button', // Class-based fallback
+                    'button[aria-label="Run"]', // Aria-label fallback
+                    'button[type="submit"]', // Generic submit button
+                    'footer > div.input-wrapper > div:nth-child(3) > run-button > button' // Legacy specific path
                 ],
                 editors: [
                     'textarea[aria-label="Type something or tab to choose an example prompt"]',
