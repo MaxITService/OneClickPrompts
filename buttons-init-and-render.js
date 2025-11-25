@@ -513,12 +513,10 @@ window.MaxExtensionButtonsInit.createUnifiedProfileSelector = function (containe
     trigger.appendChild(triggerLabel);
     trigger.appendChild(triggerChevron);
 
+    // Menu creation - NOT appended to container initially
     const menu = document.createElement('div');
     menu.style.cssText = `
-        position: absolute;
-        bottom: calc(100% + 4px);
-        left: 0;
-        min-width: 180px;
+        position: fixed;
         display: none;
         flex-direction: column;
         gap: 4px;
@@ -530,6 +528,7 @@ window.MaxExtensionButtonsInit.createUnifiedProfileSelector = function (containe
         max-height: 280px;
         overflow-y: auto;
         z-index: 2147483601;
+        min-width: 180px;
     `;
     menu.setAttribute('role', 'listbox');
     menu.setAttribute('data-ocp-profile-menu', 'true');
@@ -538,11 +537,6 @@ window.MaxExtensionButtonsInit.createUnifiedProfileSelector = function (containe
 
     if (menuStyleOverrides) {
         Object.assign(menu.style, menuStyleOverrides);
-    }
-
-    if (config.menuPlacement === 'right') {
-        menu.style.left = 'auto';
-        menu.style.right = '0';
     }
 
     const optionMeta = [];
@@ -666,14 +660,46 @@ window.MaxExtensionButtonsInit.createUnifiedProfileSelector = function (containe
 
     let isMenuOpen = false;
 
+    const updatePosition = () => {
+        if (!isMenuOpen || !trigger.isConnected) return;
+
+        const rect = trigger.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const spaceBelow = viewportHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        const neededHeight = Math.min(280, optionMeta.length * 36 + 20); // Approx height
+
+        // Reset positioning
+        menu.style.top = 'auto';
+        menu.style.bottom = 'auto';
+        menu.style.left = rect.left + 'px';
+
+        // Smart positioning logic
+        if (spaceBelow >= neededHeight || spaceBelow > spaceAbove) {
+            // Open down
+            menu.style.top = (rect.bottom + 4) + 'px';
+            menu.style.maxHeight = (spaceBelow - 10) + 'px';
+        } else {
+            // Open up
+            menu.style.bottom = (viewportHeight - rect.top + 4) + 'px';
+            menu.style.maxHeight = (spaceAbove - 10) + 'px';
+        }
+    };
+
     const onDocumentClick = (event) => {
-        if (!container.contains(event.target)) {
+        if (!menu.contains(event.target) && !trigger.contains(event.target)) {
             toggleMenu(false);
         }
     };
 
     const onDocumentKeydown = (event) => {
         if (event.key === 'Escape') {
+            toggleMenu(false);
+        }
+    };
+
+    const onWindowResizeOrScroll = () => {
+        if (isMenuOpen) {
             toggleMenu(false);
         }
     };
@@ -704,17 +730,32 @@ window.MaxExtensionButtonsInit.createUnifiedProfileSelector = function (containe
         }
 
         isMenuOpen = nextState;
-        menu.style.display = isMenuOpen ? 'flex' : 'none';
         trigger.setAttribute('aria-expanded', isMenuOpen ? 'true' : 'false');
 
         if (isMenuOpen) {
+            document.body.appendChild(menu);
+            menu.style.display = 'flex';
+            updatePosition();
             focusActiveOption();
+
             document.addEventListener('click', onDocumentClick, true);
             document.addEventListener('keydown', onDocumentKeydown, true);
+            window.addEventListener('resize', onWindowResizeOrScroll, { passive: true });
+            window.addEventListener('scroll', onWindowResizeOrScroll, { capture: true, passive: true });
         } else {
+            menu.style.display = 'none';
+            if (menu.parentNode) {
+                menu.parentNode.removeChild(menu);
+            }
+
             document.removeEventListener('click', onDocumentClick, true);
             document.removeEventListener('keydown', onDocumentKeydown, true);
-            trigger.focus({ preventScroll: true });
+            window.removeEventListener('resize', onWindowResizeOrScroll);
+            window.removeEventListener('scroll', onWindowResizeOrScroll, { capture: true });
+
+            if (trigger.isConnected) {
+                trigger.focus({ preventScroll: true });
+            }
         }
     };
 
@@ -753,7 +794,7 @@ window.MaxExtensionButtonsInit.createUnifiedProfileSelector = function (containe
 
     setActiveProfile(activeProfile);
     container.appendChild(trigger);
-    container.appendChild(menu);
+    // Note: menu is not appended to container, it's appended to body on open.
 };
 
 // --- Helper to create Inline Profile Selector element ---
