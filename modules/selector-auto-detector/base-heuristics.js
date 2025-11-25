@@ -18,11 +18,23 @@ window.OneClickPromptsSelectorAutoDetectorBase = {
     detectEditor: async function () {
         logConCgp('[SelectorAutoDetector] Running editor heuristics...');
 
-        // 1. Find all potential candidates
-        const candidates = [
-            ...document.querySelectorAll('textarea'),
-            ...document.querySelectorAll('div[contenteditable="true"]')
+        // 1. Find all potential candidates, including generic contenteditables and shadow roots.
+        const collectEditables = (root) => [
+            ...root.querySelectorAll('textarea, [contenteditable="true"]')
         ];
+
+        const candidates = collectEditables(document);
+
+        // Traverse shadow roots to catch editors nested in web components (e.g., Lexical hosts)
+        const walkShadowRoots = (root) => {
+            root.querySelectorAll('*').forEach(el => {
+                if (el.shadowRoot) {
+                    candidates.push(...collectEditables(el.shadowRoot));
+                    walkShadowRoots(el.shadowRoot);
+                }
+            });
+        };
+        walkShadowRoots(document);
 
         logConCgp(`[SelectorAutoDetector] Found ${candidates.length} initial candidates.`);
 
@@ -179,5 +191,27 @@ window.OneClickPromptsSelectorAutoDetectorBase = {
 
         logConCgp('[SelectorAutoDetector] No high-scoring send button candidates found.');
         return null;
+    }
+};
+
+// Registry enabling site-aware heuristics modules to plug in their own detectors.
+window.OneClickPromptsSiteHeuristics = window.OneClickPromptsSiteHeuristics || {
+    registry: {},
+    /**
+     * Register heuristics for a specific site name (e.g., "DeepSeek").
+     * @param {string} site
+     * @param {{detectEditor: function, detectSendButton: function}} impl
+     */
+    register(site, impl) {
+        if (!site || !impl) return;
+        this.registry[site] = impl;
+    },
+    /**
+     * Resolve heuristics by site, falling back to the base heuristics.
+     * @param {string} site
+     * @returns {object}
+     */
+    resolve(site) {
+        return this.registry[site] || window.OneClickPromptsSelectorAutoDetectorBase;
     }
 };

@@ -38,7 +38,16 @@ function doCustomModificationsExist() {
     }
     const el = document.getElementById(containerId);
     // The container must exist AND have child elements (buttons/toggles) inside it.
-    return !!(el && el.children.length > 0);
+    if (!el || el.children.length === 0) {
+        return false;
+    }
+    if (window.MaxExtensionUtils && typeof window.MaxExtensionUtils.isElementUsableForInjection === 'function') {
+        if (!window.MaxExtensionUtils.isElementUsableForInjection(el)) {
+            logConCgp('[button-injection] Container exists but is hidden/inert; will reinject.');
+            return false;
+        }
+    }
+    return true;
 }
 
 /**

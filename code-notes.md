@@ -41,10 +41,11 @@ Current architectural reference for the OneClickPrompts Chrome extension (Manife
 
 ### 2.4 Selector Auto-Detection System
 - **Purpose**: Robustly handle DOM structure changes on AI websites by decoupling site scripts from direct DOM queries and implementing self-healing capabilities.
-- **`modules/selector-auto-detector/index.js`** ("The Brain"): Manages detection state, tracks failure counts/cooldowns, orchestrates the recovery workflow (Failure -> Wait -> Heuristics -> Notify), and persists new selectors.
-- **`modules/selector-auto-detector/selector-guard.js`** ("The Guard"): Adapter that replaces direct `document.querySelector` calls. Wraps lookups in a Promise, reporting success/failure to the Brain.
-- **`modules/selector-auto-detector/base-heuristics.js`**: Contains logic to "guess" new selectors when known ones fail (currently a stub).
-- **Integration**: Site-specific scripts (e.g., `buttons-clicking-grok.js`) use `SelectorGuard.findEditor()` and `findSendButton()` instead of direct queries.
+- **`modules/selector-auto-detector/index.js`** ("The Brain"): Manages detection state, tracks failure counts/cooldowns, orchestrates the recovery workflow (Failure -> Wait -> Heuristics -> Notify/Toast), and resets on success.
+- **`modules/selector-auto-detector/selector-guard.js`** ("The Guard"): Adapter that replaces direct `document.querySelector` calls. Tries configured selectors, skips disabled/custom buttons, reports success/failure to the Brain.
+- **`modules/selector-auto-detector/base-heuristics.js`**: Generic heuristics (textarea + any `[contenteditable]`, shadow-root walk; buttons/role=button scoring). Also hosts `OneClickPromptsSiteHeuristics` registry and resolver.
+- **Site heuristics modules**: e.g., `modules/selector-auto-detector/heuristics-deepseek.js` registers DeepSeek-specific editor/button scoring (ignores OCP UI). If present, the Brain picks the site module by `InjectionTargetsOnWebsite.activeSite`; otherwise it falls back to the base heuristics.
+- **Integration**: Site scripts call `SelectorGuard.findEditor()/findSendButton()`; on repeated failures the Brain runs heuristics, shows toasts on success/error, and returns the guessed element to the caller.
 
 ## 3. UI Surfaces
 

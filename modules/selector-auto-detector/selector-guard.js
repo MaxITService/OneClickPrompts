@@ -39,7 +39,7 @@ window.OneClickPromptsSelectorGuard = {
         const selectors = window.InjectionTargetsOnWebsite?.selectors?.sendButtons || [];
 
         // 1. Try standard selectors
-        let element = this._querySelectors(selectors);
+        let element = this._querySelectors(selectors, { requireEnabled: true });
 
         // 2. Handle Result
         if (element) {
@@ -54,9 +54,11 @@ window.OneClickPromptsSelectorGuard = {
     /**
      * Helper to iterate selectors and find the first matching visible element.
      * @param {string[]} selectors 
+     * @param {Object} options
      * @returns {HTMLElement|null}
      */
-    _querySelectors: function (selectors) {
+    _querySelectors: function (selectors, options = {}) {
+        const requireEnabled = options.requireEnabled || false;
         if (!selectors || selectors.length === 0) return null;
 
         // Try to find a visible element first
@@ -66,11 +68,31 @@ window.OneClickPromptsSelectorGuard = {
             .flatMap(nodeList => Array.from(nodeList));
 
         // Filter for existence and basic visibility (offsetParent is a quick check for 'display: none')
-        const visibleCandidate = candidates.find(el => el && el.offsetParent !== null);
+        const visibleCandidate = candidates.find(el => {
+            if (!el || el.offsetParent === null) return false;
+            if (el.getAttribute) {
+                const testId = (el.getAttribute('data-testid') || '').toLowerCase();
+                if (testId.startsWith('custom-send-button')) return false;
+            }
+            if (el.closest && el.closest('[id*="custom-buttons-container"]')) return false;
+            if (!requireEnabled) return true;
+            const ariaDisabled = el.getAttribute && el.getAttribute('aria-disabled');
+            return !el.disabled && ariaDisabled !== 'true';
+        });
 
         if (visibleCandidate) return visibleCandidate;
 
         // Fallback to just existence if no visible candidate found (rare but possible)
-        return candidates.find(el => el) || null;
+        return candidates.find(el => {
+            if (!el) return false;
+            if (el.getAttribute) {
+                const testId = (el.getAttribute('data-testid') || '').toLowerCase();
+                if (testId.startsWith('custom-send-button')) return false;
+            }
+            if (el.closest && el.closest('[id*="custom-buttons-container"]')) return false;
+            if (!requireEnabled) return true;
+            const ariaDisabled = el.getAttribute && el.getAttribute('aria-disabled');
+            return !el.disabled && ariaDisabled !== 'true';
+        }) || null;
     }
 };

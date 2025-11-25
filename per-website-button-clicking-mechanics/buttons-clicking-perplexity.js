@@ -203,10 +203,18 @@ function perplexityEditorHasContent(expectedText, editorElement) {
             return false;
         }
         const currentText = editorElement.innerText || editorElement.textContent || '';
+        const normalizedCurrent = currentText.replace(/\s+/g, '').toLowerCase();
+
         if (expectedText) {
-            return currentText.includes(expectedText.trim().slice(0, 20));
+            const normalizedExpected = expectedText.replace(/\s+/g, '').toLowerCase();
+            const probe = normalizedExpected.slice(0, 30);
+            if (probe && normalizedCurrent.includes(probe)) {
+                return true;
+            }
         }
-        return currentText.trim().length > 0;
+
+        // Fallback: any non-whitespace content counts as ready.
+        return normalizedCurrent.length > 0;
     } catch (error) {
         logConCgp('[Perplexity] Error while verifying editor content:', error);
         return true;

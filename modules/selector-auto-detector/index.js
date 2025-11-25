@@ -91,16 +91,24 @@ window.OneClickPromptsSelectorAutoDetector = {
             console.warn(`OneClickPrompts: ${typeName} not found. Analyzing page structure...`);
         }
 
+        const site = window.InjectionTargetsOnWebsite?.activeSite || 'Unknown';
+        const heuristics = window.OneClickPromptsSiteHeuristics?.resolve
+            ? window.OneClickPromptsSiteHeuristics.resolve(site)
+            : window.OneClickPromptsSelectorAutoDetectorBase;
+
         // Run Heuristics
         let result = null;
         if (type === 'editor') {
-            result = await window.OneClickPromptsSelectorAutoDetectorBase.detectEditor();
+            result = await heuristics.detectEditor({ site });
         } else if (type === 'sendButton') {
-            result = await window.OneClickPromptsSelectorAutoDetectorBase.detectSendButton();
+            result = await heuristics.detectSendButton({ site });
         }
 
         if (result) {
             logConCgp(`[SelectorAutoDetector] Heuristics found new ${type}!`, result);
+            if (window.showToast) {
+                window.showToast(`OneClickPrompts: Found the ${typeName}.`, 'success');
+            }
             // TODO: Save new selector to storage
             // Removed "Found!" toast to avoid false positives if the element turns out to be invalid.
             s.failures = 0;

@@ -11,21 +11,50 @@ window.MaxExtensionUtils = {
             selectors = [selectors]; // Ensure selectors is an array
         }
         let attempts = 0;
-        const observer = new MutationObserver((mutations, obs) => {
-            for (const selector of selectors) {
-                const element = document.querySelector(selector);
-                if (element) {
-                    obs.disconnect();
-                    callback(element);
-                    return;
-                }
+        let intervalId = null;
+        let observer = null;
+
+        const stopWatching = () => {
+            if (observer) {
+                observer.disconnect();
+                observer = null;
             }
-            if (++attempts >= maxAttempts) {
-                obs.disconnect();
-                logConCgp(`[utils] Elements ${selectors.join(', ')} not found after ${maxAttempts} attempts.`);
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
             }
+        };
+
+        const tryFindElement = () => {
+            const element = MaxExtensionUtils.pickUsableContainer(selectors);
+            if (element) {
+                stopWatching();
+                callback(element);
+                return true;
+            }
+            return false;
+        };
+
+        // Immediate attempt before setting up observers
+        if (tryFindElement()) {
+            return;
+        }
+
+        observer = new MutationObserver(() => {
+            tryFindElement();
         });
         observer.observe(document, { childList: true, subtree: true });
+
+        intervalId = setInterval(() => {
+            attempts++;
+            if (tryFindElement()) {
+                return;
+            }
+            if (attempts >= maxAttempts) {
+                stopWatching();
+                logConCgp(`[utils] Elements ${selectors.join(', ')} not found after ${maxAttempts} attempts.`);
+            }
+        }, 150);
     },
     // Function to simulate a comprehensive click event
     simulateClick: function (element) {
@@ -37,6 +66,45 @@ window.MaxExtensionUtils = {
         });
         element.dispatchEvent(event);
         logConCgp('[utils] simulateClick: Click event dispatched.', element);
+    },
+
+    /**
+     * Returns true when the element is not hidden/inert and can accept interaction.
+     * Helps avoid injecting UI into SSR placeholders (e.g., aria-hidden containers).
+     */
+    isElementUsableForInjection: function (element) {
+        if (!element) return false;
+        const hiddenAncestor = element.closest('[aria-hidden="true"], [inert]');
+        if (hiddenAncestor) return false;
+        const style = window.getComputedStyle(element);
+        if (!style) return false;
+        if (style.display === 'none' || style.visibility === 'hidden') return false;
+        if (style.opacity === '0' || style.pointerEvents === 'none') return false;
+        return true;
+    },
+
+    /**
+     * Finds the first usable container from the provided selectors.
+     * Prefers the most recently added node (reverse order) to dodge stale SSR clones.
+     */
+    pickUsableContainer: function (selectors) {
+        if (!Array.isArray(selectors)) {
+            selectors = [selectors];
+        }
+        let firstMatch = null;
+        for (const selector of selectors) {
+            if (!selector) continue;
+            const candidates = Array.from(document.querySelectorAll(selector)).reverse();
+            for (const candidate of candidates) {
+                if (!firstMatch) {
+                    firstMatch = candidate;
+                }
+                if (this.isElementUsableForInjection(candidate)) {
+                    return candidate;
+                }
+            }
+        }
+        return null;
     },
 
     // Function to insert text into the editor by updating innerHTML and dispatching input event
@@ -290,16 +358,21 @@ class InjectionTargetsOnWebsite {
                     "[class*=\"editor-footer\"]"
                 ],
                 "editors": [
-                    "textarea._27c9245",
-                    "textarea.ds-scroll-area",
+                    "textarea[placeholder=\"Message DeepSeek\"]",
+                    "textarea[aria-label*=\"Message\"]",
                     "textarea[placeholder*=\"Message\"]",
-                    "[class*=\"chat-input\"]"
+                    "[class*=\"chat-input\"] textarea",
+                    "[class*=\"chat-input\"] [contenteditable=\"true\"]",
+                    "textarea",
+                    "div[contenteditable=\"true\"]",
+                    "textarea._27c9245",
+                    "textarea.ds-scroll-area"
                 ],
                 "sendButtons": [
-                    "div.bf38813a .ds-icon-button[aria-disabled=\"true\"]",
-                    "div.bf38813a .ds-icon-button:has(svg)",
-                    "[data-testid*=\"send-button\"]",
-                    "[aria-label*=\"send\" i]"
+                    "div.bf38813a .ds-icon-button:has(svg):not([aria-disabled=\"true\"])",
+                    "[data-testid=\"send-button\"]:not([data-testid^=\"custom-send-button\"])",
+                    "[data-testid*=\"send\"]:not([data-testid^=\"custom-send-button\"])",
+                    "[aria-label*=\"send\" i]:not([data-testid^=\"custom-send-button\"])"
                 ],
                 "threadRoot": ".scrollable:has(textarea, [contenteditable=\"true\"])"
             },
