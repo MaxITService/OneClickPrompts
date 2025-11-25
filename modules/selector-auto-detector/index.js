@@ -115,6 +115,9 @@ window.OneClickPromptsSelectorAutoDetector = {
             ? window.OneClickPromptsSiteHeuristics.resolve(site)
             : window.OneClickPromptsSelectorAutoDetectorBase;
 
+        // Wait a moment for the UI to stabilize (e.g. if the button is just about to appear)
+        await new Promise(resolve => setTimeout(resolve, 400));
+
         // Run Heuristics
         let result = null;
         if (type === 'editor') {

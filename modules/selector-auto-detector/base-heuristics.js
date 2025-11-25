@@ -177,6 +177,14 @@ window.OneClickPromptsSelectorAutoDetectorBase = {
                 score += 1;
             }
 
+            // E. Negative Scoring (Penalize known non-send actions)
+            const negativeKeywords = ['stop', 'group', 'cancel', 'attach', 'upload', 'file', 'image', 'voice', 'mic'];
+            const matchesNegative = (str) => negativeKeywords.some(k => str.includes(k));
+
+            if (matchesNegative(ariaLabel) || matchesNegative(title) || matchesNegative(testId)) {
+                score -= 50; // Heavy penalty to ensure it's not picked
+            }
+
             return { el, score };
         });
 
