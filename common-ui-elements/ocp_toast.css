@@ -21,20 +21,44 @@ showing and hiding toasts. It also includes dark theme overrides.
 .toast {
     background: #222;                 /* neutral base; type classes override */
     color: #fff;                      /* readable on dark base */
-    padding: 12px 24px;
+    padding: 12px 16px;
     border-radius: 4px;
     margin-top: 8px;
     opacity: 0;
     transform: translateY(20px);
     transition: opacity 0.5s ease, transform 0.5s ease;
-    min-width: 200px;
-    max-width: 300px;
+    min-width: 240px;
+    max-width: 420px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .toast.show {
     opacity: 1;
     transform: translateY(0);
+}
+
+.toast-message {
+    flex: 1;
+    line-height: 1.4;
+}
+
+.toast-action {
+    background: transparent;
+    border: 1px solid currentColor;
+    color: inherit;
+    border-radius: 3px;
+    padding: 6px 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.toast-action:hover {
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
 }
 
 /* Toast type classes */

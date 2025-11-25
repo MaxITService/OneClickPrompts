@@ -32,6 +32,10 @@ window.OneClickPromptsSelectorAutoDetector = {
         enableSendButtonHeuristics: true,
         loaded: false
     },
+    lastOffers: {
+        editor: { selector: null, site: null, at: 0 },
+        sendButton: { selector: null, site: null, at: 0 }
+    },
 
     /**
      * Reports a failure to find a specific element type.
@@ -128,11 +132,10 @@ window.OneClickPromptsSelectorAutoDetector = {
 
         if (result) {
             logConCgp(`[SelectorAutoDetector] Heuristics found new ${type}!`, result);
-            if (window.showToast) {
+            const offered = await this.offerToSaveSelector(type, result);
+            if (!offered && window.showToast) {
                 window.showToast(`OneClickPrompts: Found the ${typeName}.`, 'success');
             }
-            // TODO: Save new selector to storage
-            // Removed "Found!" toast to avoid false positives if the element turns out to be invalid.
             s.failures = 0;
         } else {
             logConCgp(`[SelectorAutoDetector] Heuristics failed to find ${type}.`);
@@ -159,6 +162,70 @@ window.OneClickPromptsSelectorAutoDetector = {
         } catch (error) {
             logConCgp('[SelectorAutoDetector] Failed to load settings, falling back to defaults.', error);
         }
+    },
+
+    ensureSelectorSaver: async function () {
+        if (window.OCPSelectorPersistence) {
+            return window.OCPSelectorPersistence;
+        }
+        const saverUrl = chrome?.runtime?.getURL ? chrome.runtime.getURL('modules/selector-auto-detector/selector-save.js') : null;
+        if (!saverUrl) return null;
+        try {
+            const module = await import(saverUrl);
+            return module?.OCPSelectorPersistence || window.OCPSelectorPersistence || null;
+        } catch (error) {
+            logConCgp('[SelectorAutoDetector] Failed to load selector saver module.', error);
+            return null;
+        }
+    },
+
+    /**
+     * Offers the user to save a newly found selector via toast action.
+     * @param {'editor'|'sendButton'} type
+     * @param {HTMLElement} element
+     * @returns {Promise<boolean>} whether an actionable toast was shown
+     */
+    offerToSaveSelector: async function (type, element) {
+        const saver = await this.ensureSelectorSaver();
+        if (!saver || typeof saver.deriveSelectorFromElement !== 'function' || typeof saver.saveSelectorFromElement !== 'function') {
+            return false;
+        }
+        const site = window.InjectionTargetsOnWebsite?.activeSite || 'Unknown';
+        const selector = saver.deriveSelectorFromElement(element);
+        if (!selector || !window.showToast) {
+            return false;
+        }
+
+        const now = Date.now();
+        const previous = this.lastOffers[type] || { selector: null, site: null, at: 0 };
+        if (previous.selector === selector && previous.site === site && now - previous.at < 15000) {
+            logConCgp('[SelectorAutoDetector] Skipping duplicate save toast for selector.', { type, selector, site });
+            return false;
+        }
+        this.lastOffers[type] = { selector, site, at: now };
+
+        const typeName = type === 'editor' ? 'text input selector' : 'send button selector';
+        logConCgp('[SelectorAutoDetector] Offering to save selector.', { type, selector, site });
+        window.showToast(`OneClickPrompts: Found a ${typeName}. Save it to Custom selectors?`, 'success', {
+            duration: 8000,
+            actionLabel: 'Save selector',
+            onAction: async () => {
+                const result = await saver.saveSelectorFromElement({
+                    site,
+                    type,
+                    element,
+                    selectorOverride: selector
+                });
+                if (result?.ok) {
+                    logConCgp('[SelectorAutoDetector] Selector saved via toast action.', { type, selector: result.selector, site: result.site });
+                    window.showToast('Selector saved to Custom selectors.', 'success', 2500);
+                } else {
+                    logConCgp('[SelectorAutoDetector] Selector save failed.', { type, selector, site, reason: result?.reason });
+                    window.showToast('Could not save selector. Try Advanced settings.', 'error', 2500);
+                }
+            }
+        });
+        return true;
     }
 };
 

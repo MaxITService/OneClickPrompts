@@ -94,7 +94,8 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "floating-panel-files/floating-panel.html"
+        "floating-panel-files/floating-panel.html",
+        "modules/selector-auto-detector/selector-save.js"
       ],
       "matches": [
         "<all_urls>"

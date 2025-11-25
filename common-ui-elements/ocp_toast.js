@@ -1,5 +1,5 @@
 // common-ui-elements/ocp_toast.js
-// Version: 1.0
+// Version: 1.1
 // Handles displaying toast notifications.
 
 'use strict';
@@ -9,9 +9,12 @@
  *
  * @param {string} message - The message to display in the toast.
  * @param {string} type - The type of toast ('success', 'error', 'info').
- * @param {number} duration - Duration in milliseconds before the toast disappears. Defaults to 3000ms.
+ * @param {number|Object} options - Duration in ms or options object { duration, actionLabel, onAction }.
  */
-function showToast(message, type = 'info', duration = 3000) {
+function showToast(message, type = 'info', options = 3000) {
+    const normalized = typeof options === 'number' ? { duration: options } : (options || {});
+    const duration = Number.isFinite(normalized.duration) ? normalized.duration : 3000;
+
     // Ensure the toast container exists, creating it if necessary.
     let toastContainer = document.getElementById('toastContainer');
     if (!toastContainer) {
@@ -35,7 +38,28 @@ function showToast(message, type = 'info', duration = 3000) {
         toast.classList.add(typeClassMap[type]);
     }
 
-    toast.textContent = message;
+    const content = document.createElement('span');
+    content.className = 'toast-message';
+    content.textContent = message;
+    toast.appendChild(content);
+
+    if (normalized.actionLabel && typeof normalized.onAction === 'function') {
+        const actionButton = document.createElement('button');
+        actionButton.type = 'button';
+        actionButton.className = 'toast-action';
+        actionButton.textContent = normalized.actionLabel;
+        actionButton.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            try {
+                await normalized.onAction();
+            } catch (error) {
+                console.error('[toast] Action handler failed', error);
+            } finally {
+                hideToast();
+            }
+        });
+        toast.appendChild(actionButton);
+    }
 
     toastContainer.appendChild(toast);
 
@@ -44,12 +68,14 @@ function showToast(message, type = 'info', duration = 3000) {
 
     toast.classList.add('show');
 
-    // Remove toast after specified duration
-    setTimeout(() => {
+    const hideToast = () => {
         toast.classList.remove('show');
         // Remove the toast from DOM after transition
         toast.addEventListener('transitionend', () => {
             toast.remove();
-        });
-    }, duration);
+        }, { once: true });
+    };
+
+    // Remove toast after specified duration
+    setTimeout(hideToast, duration);
 }
