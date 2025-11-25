@@ -23,7 +23,7 @@ I will provide you with HTML code from a website. You need to:
    - The **send button** element
    - The **editor/input** element (textarea or contenteditable)
    - The **container** that wraps the input area
-   - The **thread/conversation** root element (if visible)
+   - The **thread/conversation** root element (ONLY BY SPECIAL USER REQUEST)
 
 3. **Create CSS selectors** following these rules:
    - **Prioritize stable attributes**: `aria-label`, `data-testid`, `id`, `role`
