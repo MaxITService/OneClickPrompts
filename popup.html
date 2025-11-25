@@ -1,3 +1,4 @@
+<!-- popup.html -->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -1370,7 +1371,31 @@
               Reset to Defaults
             </button>
           </div>
-
+          <br />
+          <div class="switch-container">
+            <label class="switch">
+              <input
+                type="checkbox"
+                id="editorHeuristicsToggle"
+                aria-label="Enable heuristics when the text editor is not found"
+              />
+              <span class="slider"></span>
+            </label>
+            <span class="switch-label">Use heuristics when editor is not found</span>
+          </div>
+           <br />
+          <div class="switch-container">
+            <label class="switch">
+              <input
+                type="checkbox"
+                id="sendButtonHeuristicsToggle"
+                aria-label="Enable heuristics when the send button is not found"
+              />
+              <span class="slider"></span>
+            </label>
+            <span class="switch-label">Use heuristics when send button is not found</span>
+          </div>
+           <br />
           <!-- Collapsible Help Section -->
           <div class="collapsible" id="advancedHelpSection">
             <div class="section-header subsection-header">
@@ -1413,6 +1438,29 @@
                 <p>
                   Format: JSON array for containers/sendButtons/editors, string
                   for buttonsContainerId
+                </p>
+                <br />
+                <p><strong>Auto-Detection (Heuristics)</strong></p>
+                <p>
+                  If the configured selectors fail (e.g., after a website update),
+                  the extension attempts to "guess" the correct elements using
+                  smart heuristics.
+                </p>
+                <ul>
+                  <li>
+                    <strong>Editor Heuristics:</strong> Scans for visible text
+                    areas and content-editable fields, usually picking the
+                    largest one near the bottom.
+                  </li>
+                  <li>
+                    <strong>Send Button Heuristics:</strong> Looks for buttons
+                    with "Send" icons or text, especially those positioned near
+                    the found editor.
+                  </li>
+                </ul>
+                <p>
+                  Use the toggles above to disable this behavior if it
+                  incorrectly identifies elements.
                 </p>
               </div>
             </div>

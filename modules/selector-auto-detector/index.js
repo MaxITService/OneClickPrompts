@@ -27,6 +27,11 @@ window.OneClickPromptsSelectorAutoDetector = {
         failureThreshold: 1, // Number of failures before triggering recovery (can be >1 to debounce)
         cooldownMs: 2000,    // Time to wait before re-alerting or re-trying
     },
+    settings: {
+        enableEditorHeuristics: true,
+        enableSendButtonHeuristics: true,
+        loaded: false
+    },
 
     /**
      * Reports a failure to find a specific element type.
@@ -81,8 +86,22 @@ window.OneClickPromptsSelectorAutoDetector = {
         const s = this.state[type];
         s.recovering = true;
 
+        const heuristicsAllowed = type === 'editor'
+            ? this.settings.enableEditorHeuristics !== false
+            : this.settings.enableSendButtonHeuristics !== false;
+
         // Readable name for the type
         const typeName = type === 'editor' ? 'Text input area' : 'send button';
+
+        // If heuristics are disabled, still notify the user but skip the scan.
+        if (!heuristicsAllowed) {
+            logConCgp(`[SelectorAutoDetector] Heuristics disabled for ${type}; skipping recovery.`);
+            if (window.showToast) {
+                window.showToast(`OneClickPrompts: ${typeName} not found. Auto-detect is off.`, 'error');
+            }
+            s.recovering = false;
+            return null;
+        }
 
         // Notify user
         if (window.showToast) {
@@ -119,5 +138,38 @@ window.OneClickPromptsSelectorAutoDetector = {
 
         s.recovering = false;
         return result;
+    },
+
+    loadSettings: async function () {
+        if (!chrome?.runtime?.sendMessage) {
+            return;
+        }
+        try {
+            const response = await chrome.runtime.sendMessage({ type: 'getSelectorAutoDetectorSettings' });
+            if (response && response.settings) {
+                this.settings = {
+                    enableEditorHeuristics: response.settings.enableEditorHeuristics !== false,
+                    enableSendButtonHeuristics: response.settings.enableSendButtonHeuristics !== false,
+                    loaded: true
+                };
+            }
+        } catch (error) {
+            logConCgp('[SelectorAutoDetector] Failed to load settings, falling back to defaults.', error);
+        }
     }
 };
+
+// Initial settings sync and live updates
+window.OneClickPromptsSelectorAutoDetector.loadSettings();
+
+if (chrome?.runtime?.onMessage?.addListener) {
+    chrome.runtime.onMessage.addListener((message) => {
+        if (message?.type === 'selectorAutoDetectorSettingsChanged' && message.settings) {
+            window.OneClickPromptsSelectorAutoDetector.settings = {
+                enableEditorHeuristics: message.settings.enableEditorHeuristics !== false,
+                enableSendButtonHeuristics: message.settings.enableSendButtonHeuristics !== false,
+                loaded: true
+            };
+        }
+    });
+}

@@ -50,6 +50,7 @@ const KEYS = {
     crossChat: 'modules.crossChat', // object { settings: {...}, storedPrompt: string }
     inlineProfileSelector: 'modules.inlineProfileSelector', // object { enabled:boolean, placement:'before'|'after' }
     tokenApproximator: 'modules.tokenApproximator', // object { enabled:boolean, calibration:number, threadMode:string, showEditorCounter:boolean, placement:'before'|'after' }
+    selectorAutoDetector: 'modules.selectorAutoDetector', // object { enableEditorHeuristics:boolean, enableSendButtonHeuristics:boolean }
   },
   floatingPanel: 'floatingPanel', // object map { [hostname]: settings }
   global: {
@@ -77,6 +78,11 @@ const CROSS_CHAT_DEFAULT_SETTINGS = {
   placement: 'before',
   dangerAutoSendAll: false,
   hideStandardButtons: false,
+};
+
+const SELECTOR_AUTO_DETECTOR_DEFAULTS = {
+  enableEditorHeuristics: true,
+  enableSendButtonHeuristics: true,
 };
 
 // Utilities to get/set nested key paths by flattening as separate storage entries
@@ -193,6 +199,17 @@ async function getValue(path) {
       }
     };
   }
+  if (path === KEYS.modules.selectorAutoDetector) {
+    const r = await lsGet([KEYS.modules.selectorAutoDetector]);
+    const obj = r[KEYS.modules.selectorAutoDetector];
+    if (obj && typeof obj === 'object') {
+      return {
+        enableEditorHeuristics: !!obj.enableEditorHeuristics,
+        enableSendButtonHeuristics: !!obj.enableSendButtonHeuristics,
+      };
+    }
+    return { ...SELECTOR_AUTO_DETECTOR_DEFAULTS };
+  }
   if (path === KEYS.floatingPanel) {
     // Build map from structured store if exists, else from legacy scattered keys
     const all = await lsGet(null);
@@ -304,6 +321,15 @@ async function setValue(path, value) {
       enabledSites
     };
     await lsSet({ [KEYS.modules.tokenApproximator]: normalized });
+    return;
+  }
+  if (path === KEYS.modules.selectorAutoDetector) {
+    const settings = value && typeof value === 'object' ? value : {};
+    const normalized = {
+      enableEditorHeuristics: settings.enableEditorHeuristics !== false,
+      enableSendButtonHeuristics: settings.enableSendButtonHeuristics !== false,
+    };
+    await lsSet({ [KEYS.modules.selectorAutoDetector]: normalized });
     return;
   }
   if (path.startsWith(KEYS.floatingPanel)) {
@@ -485,6 +511,15 @@ export const StateStore = {
   async saveTokenApproximatorSettings(settings) {
     await setValue(KEYS.modules.tokenApproximator, settings);
     this.broadcast({ type: 'tokenApproximatorSettingsChanged', settings });
+  },
+
+  // ===== Selector Auto-Detector (Global Module) =====
+  async getSelectorAutoDetectorSettings() {
+    return await getValue(KEYS.modules.selectorAutoDetector);
+  },
+  async saveSelectorAutoDetectorSettings(settings) {
+    await setValue(KEYS.modules.selectorAutoDetector, settings);
+    this.broadcast({ type: 'selectorAutoDetectorSettingsChanged', settings });
   },
 
   // Broadcast utility

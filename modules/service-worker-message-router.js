@@ -494,6 +494,34 @@ export function handleMessage(request, sender, sendResponse) {
             return true;
         // ===== End Token Approximator Cases =====
 
+        // ===== Selector Auto-Detector Cases =====
+        case 'getSelectorAutoDetectorSettings':
+            (async () => {
+                try {
+                    const settings = await StateStore.getSelectorAutoDetectorSettings();
+                    logConfigurationRelatedStuff('Retrieved Selector Auto-Detector settings:', settings);
+                    sendResponse({ settings });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
+            return true;
+
+        case 'saveSelectorAutoDetectorSettings':
+            (async () => {
+                try {
+                    await StateStore.saveSelectorAutoDetectorSettings(request.settings);
+                    logConfigurationRelatedStuff('Saved Selector Auto-Detector settings:', request.settings);
+                    sendResponse({ success: true });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
+            return true;
+        // ===== End Selector Auto-Detector Cases =====
+
         case 'openSettingsPage':
             (async () => {
                 try {

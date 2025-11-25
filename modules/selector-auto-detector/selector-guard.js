@@ -37,6 +37,7 @@ window.OneClickPromptsSelectorGuard = {
      */
     findSendButton: async function () {
         const selectors = window.InjectionTargetsOnWebsite?.selectors?.sendButtons || [];
+        const editorSelectors = window.InjectionTargetsOnWebsite?.selectors?.editors || [];
 
         // 1. Try standard selectors
         let element = this._querySelectors(selectors, { requireEnabled: true });
@@ -46,6 +47,11 @@ window.OneClickPromptsSelectorGuard = {
             window.OneClickPromptsSelectorAutoDetector.reportRecovery('sendButton');
             return element;
         } else {
+            // If editor is also missing, surface that failure first to guide the user.
+            const editorElement = this._querySelectors(editorSelectors);
+            if (!editorElement && window.OneClickPromptsSelectorAutoDetector) {
+                await window.OneClickPromptsSelectorAutoDetector.reportFailure('editor', { selectors: editorSelectors });
+            }
             // Try to recover
             return await window.OneClickPromptsSelectorAutoDetector.reportFailure('sendButton', { selectors });
         }

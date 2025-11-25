@@ -42,6 +42,43 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectorConfig = document.getElementById('selectorConfig');
     const saveButton = document.getElementById('saveSelectors');
     const resetButton = document.getElementById('resetSelectors');
+    const editorHeuristicsToggle = document.getElementById('editorHeuristicsToggle');
+    const sendButtonHeuristicsToggle = document.getElementById('sendButtonHeuristicsToggle');
+
+    const heuristicsDefaults = {
+        enableEditorHeuristics: true,
+        enableSendButtonHeuristics: true,
+    };
+    let heuristicsSettings = { ...heuristicsDefaults };
+
+    async function loadHeuristicsSettings() {
+        if (!editorHeuristicsToggle || !sendButtonHeuristicsToggle) return;
+        try {
+            const response = await chrome.runtime.sendMessage({ type: 'getSelectorAutoDetectorSettings' });
+            if (response && response.settings) {
+                heuristicsSettings = {
+                    ...heuristicsDefaults,
+                    ...response.settings,
+                };
+            }
+        } catch (error) {
+            console.error('[advanced selectors] Failed to load heuristics settings:', error);
+            heuristicsSettings = { ...heuristicsDefaults };
+        }
+        editorHeuristicsToggle.checked = !!heuristicsSettings.enableEditorHeuristics;
+        sendButtonHeuristicsToggle.checked = !!heuristicsSettings.enableSendButtonHeuristics;
+    }
+
+    async function saveHeuristicsSettings() {
+        try {
+            await chrome.runtime.sendMessage({
+                type: 'saveSelectorAutoDetectorSettings',
+                settings: heuristicsSettings,
+            });
+        } catch (error) {
+            console.error('[advanced selectors] Failed to save heuristics settings:', error);
+        }
+    }
 
     // Load selectors for the selected website
     async function loadSelectors() {
@@ -163,9 +200,22 @@ document.addEventListener('DOMContentLoaded', () => {
     websiteSelect.addEventListener('change', loadSelectors);
     saveButton.addEventListener('click', saveSelectors);
     resetButton.addEventListener('click', resetSelectors);
+    if (editorHeuristicsToggle) {
+        editorHeuristicsToggle.addEventListener('change', () => {
+            heuristicsSettings.enableEditorHeuristics = editorHeuristicsToggle.checked;
+            saveHeuristicsSettings();
+        });
+    }
+    if (sendButtonHeuristicsToggle) {
+        sendButtonHeuristicsToggle.addEventListener('change', () => {
+            heuristicsSettings.enableSendButtonHeuristics = sendButtonHeuristicsToggle.checked;
+            saveHeuristicsSettings();
+        });
+    }
 
     // Initial load
     loadSelectors();
+    loadHeuristicsSettings();
 
     // Make the selectorConfig textarea auto-resizable by reusing the global function
     if (typeof textareaInputAreaResizerFun === 'function') {
