@@ -23,14 +23,6 @@ async function processAIStudioCustomSendButtonClick(event, customText, autoSend)
         logConCgp('[AIStudio] Found editor using SelectorGuard');
     }
 
-    // Use SelectorGuard to find the send button (enables heuristics)
-    // Note: We find it early to check existence, but we'll find it again during auto-send
-    // to ensure we have the latest reference if the DOM updated.
-    const sendButton = await window.OneClickPromptsSelectorGuard.findSendButton();
-    if (sendButton) {
-        logConCgp('[buttons] AI Studio Send button found using SelectorGuard');
-    }
-
     if (!editorArea) {
         logConCgp('[buttons] AI Studio Editor not found. Unable to proceed.');
         showToast('Could not find the text input area.', 'error');
@@ -53,17 +45,45 @@ async function processAIStudioCustomSendButtonClick(event, customText, autoSend)
     // Auto-send if enabled
     if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
         logConCgp('[buttons] AI Studio Auto-send enabled, attempting to send message');
-        // Use setTimeout to ensure text is processed before sending
-        // Use setTimeout to ensure text is processed before sending
-        setTimeout(async () => {
-            // Re-fetch send button to be safe (and use heuristics if needed)
-            const btn = await window.OneClickPromptsSelectorGuard.findSendButton();
-            if (btn) {
-                MaxExtensionUtils.simulateClick(btn);
+
+        // Robust retry mechanism: poll for send button with multiple attempts
+        const MAX_ATTEMPTS = 10; // 2 seconds max (10 × 200ms)
+        let attempts = 0;
+        let pollInterval;
+
+        const attemptSend = async () => {
+            attempts++;
+            logConCgp(`[buttons] AI Studio auto-send attempt ${attempts}/${MAX_ATTEMPTS}`);
+
+            let btn = null;
+
+            // For all attempts except the last one, use silent selector queries
+            // This avoids triggering auto-detector during normal DOM update delays
+            if (attempts < MAX_ATTEMPTS) {
+                // Silent query without triggering auto-detector
+                const selectors = window.InjectionTargetsOnWebsite?.selectors?.sendButtons || [];
+                btn = window.OneClickPromptsSelectorGuard._querySelectors(selectors, { requireEnabled: true });
             } else {
-                logConCgp('[buttons] AI Studio Send button not found for auto-send.');
-                showToast('Could not find the send button.', 'error');
+                // On final attempt, use full SelectorGuard which enables auto-detector and heuristics
+                btn = await window.OneClickPromptsSelectorGuard.findSendButton();
             }
+
+            if (btn) {
+                logConCgp('[buttons] AI Studio Send button found, clicking now');
+                MaxExtensionUtils.simulateClick(btn);
+                clearInterval(pollInterval);
+            } else if (attempts >= MAX_ATTEMPTS) {
+                // Error already shown by SelectorGuard on final attempt
+                logConCgp('[buttons] AI Studio Send button not found after all retry attempts');
+                clearInterval(pollInterval);
+            }
+            // If not found and attempts remain, keep polling silently
+        };
+
+        // Start polling after initial delay to let text settle
+        setTimeout(() => {
+            pollInterval = setInterval(attemptSend, 200);
+            attemptSend(); // Immediate first attempt
         }, 100);
     }
 }
