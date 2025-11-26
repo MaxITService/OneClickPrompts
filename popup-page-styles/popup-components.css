@@ -22,7 +22,7 @@ Key areas:
     --manual-bg: #f8f8f8;
     --code-bg: #efefef;
     --text-muted: #666;
-    
+
     /* Module tokens */
     --ocp-module-gap: 8px;
     --ocp-module-radius: 4px;
@@ -32,13 +32,15 @@ Key areas:
 }
 
 /* ===== Module container & layout ===== */
-#modulesSection > .section-content {
+#modulesSection>.section-content {
     /* Controls inter-module spacing */
 }
-#modulesSection > .section-content > .ocp-module {
+
+#modulesSection>.section-content>.ocp-module {
     margin-bottom: var(--ocp-module-gap);
 }
-#modulesSection > .section-content > .ocp-module:last-child {
+
+#modulesSection>.section-content>.ocp-module:last-child {
     margin-bottom: 0;
 }
 
@@ -47,7 +49,8 @@ Key areas:
     background: var(--ocp-module-header-bg);
     border-radius: var(--ocp-module-radius);
     padding: var(--ocp-module-pad);
-    margin-bottom: 0; /* keep gaps on the container, not here */
+    margin-bottom: 0;
+    /* keep gaps on the container, not here */
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -68,10 +71,13 @@ Key areas:
 }
 
 /* Optional: arrow rotation */
-.ocp-module.expanded .toggle-icon { transform: rotate(90deg); }
+.ocp-module.expanded .toggle-icon {
+    transform: rotate(90deg);
+}
 
 /* Specific module tweaks (only if necessary) */
-.ocp-module--danger .ocp-module__header { /* example modifier */
+.ocp-module--danger .ocp-module__header {
+    /* example modifier */
     /* different bg, etc. */
 }
 
@@ -305,7 +311,8 @@ Key areas:
     padding: 8px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
-    margin-bottom: 8px; /* keep default for non-modules */
+    margin-bottom: 8px;
+    /* keep default for non-modules */
 }
 
 #advancedSection .row {
@@ -323,7 +330,8 @@ Key areas:
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px; /* default spacing for non-Modules */
+    margin-bottom: 8px;
+    /* default spacing for non-Modules */
     color: var(--text-color);
     /* Add this line to ensure text is visible */
 }
@@ -386,7 +394,7 @@ Key areas:
     transition: opacity 0.3s ease;
 }
 
-.collapsible.expanded > .section-header .expand-text {
+.collapsible.expanded>.section-header .expand-text {
     opacity: 0;
     display: none;
 }
@@ -435,7 +443,7 @@ Key areas:
 }
 
 /* Keep nested module containers default; scoped overrides below handle borders cleanly */
-#modulesSection > .section-content > .collapsible .section-content {
+#modulesSection>.section-content>.collapsible .section-content {
     border: 1px solid var(--border-color);
     border-radius: 0 0 4px 4px;
     padding: 10px;
@@ -454,19 +462,22 @@ Key areas:
 /* ---------- Consistent spacing for Modules area only ---------- */
 
 /* Ensure uniform spacing between modules in all states */
-#modulesSection > .section-content > .collapsible,
-#modulesSection > .section-content > .ocp-module {
-  margin-bottom: var(--ocp-module-gap);  /* consistent gap using variable */
+#modulesSection>.section-content>.collapsible,
+#modulesSection>.section-content>.ocp-module {
+    margin-bottom: var(--ocp-module-gap);
+    /* consistent gap using variable */
 }
-#modulesSection > .section-content > .collapsible:last-child,
-#modulesSection > .section-content > .ocp-module:last-child {
-  margin-bottom: 0;              /* no extra space after the last module */
+
+#modulesSection>.section-content>.collapsible:last-child,
+#modulesSection>.section-content>.ocp-module:last-child {
+    margin-bottom: 0;
+    /* no extra space after the last module */
 }
 
 /* Remove the bottom margin from individual headers in Modules only */
-#modulesSection > .section-content > .collapsible .section-header,
-#modulesSection > .section-content > .ocp-module .ocp-module__header {
-  margin-bottom: 0;
+#modulesSection>.section-content>.collapsible .section-header,
+#modulesSection>.section-content>.ocp-module .ocp-module__header {
+    margin-bottom: 0;
 }
 
 .subsection-header h3 {
@@ -529,7 +540,7 @@ Key areas:
     background: rgba(128, 128, 128, 0.16);
 }
 
-.crosschat-setting-group.is-disabled > .row {
+.crosschat-setting-group.is-disabled>.row {
     opacity: 0.55;
     pointer-events: none;
 }
@@ -568,4 +579,23 @@ Key areas:
 .floating-site-item span {
     font-size: 1.1em;
     /* Responsive, scales with parent font size */
+}
+
+/* ------------------------------------------------------------------------- */
+/* Utility Classes for Display and Visibility                               */
+/* ------------------------------------------------------------------------- */
+
+/* Permanently hidden elements (file inputs, compatibility fields) */
+.visually-hidden {
+    display: none !important;
+}
+
+/* JavaScript-toggleable elements (dialogs, messages, collapsible content) */
+.is-hidden {
+    display: none;
+}
+
+/* Margin utilities */
+.mt-16 {
+    margin-top: 16px;
 }

@@ -253,11 +253,11 @@
               </div>
               <div id="floatingWindowSitesList" class="floating-sites-list">
                 <!-- Site-specific reset buttons will be added here dynamically by js-->
-                <p class="empty-message" style="display: none">
+                <p class="empty-message is-hidden">
                   No saved settings found for any website.
                 </p>
               </div>
-              <div class="row" style="margin-top: 16px">
+              <div class="row mt-16">
                 <button
                   id="resetAllFloatingWindowSettings"
                   class="danger"
@@ -343,17 +343,16 @@
             type="file"
             id="importFileInput"
             accept="application/json"
-            style="display: none"
+            class="visually-hidden"
             title="Import profile file"
             aria-label="Import profile file"
           />
         </div>
         <!-- Confirmation Div -->
-        <div
-          id="confirmationDiv"
-          class="dialog dialog-confirmation"
-          style="display: none"
-        >
+          <div
+            id="confirmationDiv"
+            class="dialog dialog-confirmation is-hidden"
+          >
           <p>
             File loaded successfully, but a profile with the same name already
             exists in the system. Do you want to overwrite the existing profile?
@@ -362,7 +361,7 @@
           <button id="cancelOverwrite">No</button>
         </div>
         <!-- Error Message Div -->
-        <div id="errorDiv" class="dialog dialog-error" style="display: none">
+          <div id="errorDiv" class="dialog dialog-error is-hidden">
           <p>
             Error loading file. Please ensure the file is a valid JSON profile.
           </p>
@@ -918,11 +917,7 @@
                     </div>
                   </div>
                   <!-- Hidden checkbox for compatibility with existing JavaScript -->
-                  <input
-                    type="checkbox"
-                    id="tokenApproxPlacementBeforeCb"
-                    style="display: none"
-                  />
+
                 </div>
 
                 <!-- Enabled Websites Section -->
@@ -1003,26 +998,7 @@
                     </select>
                   </div>
 
-                  <!-- Hidden fields for backward compatibility -->
-                  <input
-                    type="checkbox"
-                    id="tokenApproxSimpleMethodToggle"
-                    style="display: none"
-                  />
-                  <input
-                    type="radio"
-                    name="tokenApproxCountingMethod"
-                    value="advanced"
-                    id="tokenApproxMethodAdvanced"
-                    style="display: none"
-                  />
-                  <input
-                    type="radio"
-                    name="tokenApproxCountingMethod"
-                    value="simple"
-                    id="tokenApproxMethodSimple"
-                    style="display: none"
-                  />
+
 
                   <!-- Model descriptions in collapsible section -->
                   <div

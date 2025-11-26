@@ -1,3 +1,4 @@
+// popup-page-floating-window-handler.js
 // Version: 2.0
 // Handler script for the expandable floating window settings section.
 
@@ -19,7 +20,7 @@ async function populateFloatingWindowSitesList() {
         if (response && response.success) {
             const hostnames = response.hostnames;
             if (hostnames.length > 0) {
-                emptyMessage.style.display = 'none';
+                emptyMessage.classList.add('is-hidden');
                 hostnames.forEach(hostname => {
                     const siteItem = document.createElement('div');
                     siteItem.className = 'floating-site-item';
@@ -30,11 +31,11 @@ async function populateFloatingWindowSitesList() {
                     sitesListDiv.appendChild(siteItem);
                 });
             } else {
-                emptyMessage.style.display = 'block';
+                emptyMessage.classList.remove('is-hidden');
             }
         } else {
             window.showToast('Failed to load website list for floating windows.', 'error');
-            emptyMessage.style.display = 'block';
+            emptyMessage.classList.remove('is-hidden');
         }
     } catch (error) {
         window.logToGUIConsole(`Error populating floating window sites: ${error.message}`);

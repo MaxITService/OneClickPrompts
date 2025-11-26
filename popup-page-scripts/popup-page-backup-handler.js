@@ -81,10 +81,10 @@ async function handleImportProfile(event) {
             if (existingProfiles.includes(parsedProfile.PROFILE_NAME)) {
                 logToGUIConsole(`A profile named "${parsedProfile.PROFILE_NAME}" already exists.`);
                 // Show the confirmation div
-                document.getElementById('confirmationDiv').style.display = 'block';
+                document.getElementById('confirmationDiv').classList.remove('is-hidden');
                 // Scroll to the confirmation div
                 document.getElementById('confirmationDiv').scrollIntoView({ behavior: 'smooth' });
-                document.getElementById('errorDiv').style.display = 'none';
+                document.getElementById('errorDiv').classList.add('is-hidden');
 
                 // Store the parsedProfile temporarily
                 window.tempParsedProfile = parsedProfile;
@@ -96,13 +96,13 @@ async function handleImportProfile(event) {
         } catch (error) {
             console.error('Error parsing profile:', error);
             logToGUIConsole(`Error parsing profile: ${error.message}`);
-            document.getElementById('errorDiv').style.display = 'block';
+            document.getElementById('errorDiv').classList.remove('is-hidden');
         }
     };
     reader.onerror = function (error) {
         console.error('File reading error:', error);
         logToGUIConsole(`File reading error: ${error.message}`);
-        document.getElementById('errorDiv').style.display = 'block';
+        document.getElementById('errorDiv').classList.remove('is-hidden');
     };
     reader.readAsText(file);
 
@@ -153,7 +153,7 @@ async function overwriteCurrentProfile() {
     await saveAndSwitchToImportedProfile(parsedProfile, true);
 
     // Hide the confirmation div
-    document.getElementById('confirmationDiv').style.display = 'none';
+    document.getElementById('confirmationDiv').classList.add('is-hidden');
 
     // Clear the temporary parsed profile
     window.tempParsedProfile = null;
@@ -163,7 +163,7 @@ async function overwriteCurrentProfile() {
 function cancelImport() {
     logToGUIConsole('User canceled the profile overwrite.');
     // Hide the confirmation div
-    document.getElementById('confirmationDiv').style.display = 'none';
+    document.getElementById('confirmationDiv').classList.add('is-hidden');
 
     // Clear the temporary parsed profile
     window.tempParsedProfile = null;
