@@ -597,6 +597,127 @@ Key areas:
 }
 
 /* Margin utilities */
+.mt-8 {
+    margin-top: 8px;
+}
+
 .mt-16 {
     margin-top: 16px;
+}
+
+.mb-8 {
+    margin-bottom: 8px;
+}
+
+.mb-16 {
+    margin-bottom: 16px;
+}
+
+.ml-8 {
+    margin-left: 8px;
+}
+
+.ml-20 {
+    margin-left: 20px;
+}
+
+.my-16 {
+    margin-top: 16px;
+    margin-bottom: 16px;
+}
+
+/* Flex utilities */
+.justify-end {
+    justify-content: flex-end;
+}
+
+.flex-column-start {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+/* Typography utilities */
+.text-sm {
+    font-size: 0.9em;
+}
+
+.text-xs {
+    font-size: 0.85em;
+}
+
+.text-muted {
+    color: #666;
+}
+
+.text-secondary {
+    color: #555;
+}
+
+.emoji-font {
+    font-family: 'Segoe UI Emoji', sans-serif;
+}
+
+/* More Margin/Padding utilities */
+.ml-12 {
+    margin-left: 12px;
+}
+
+.mt-4 {
+    margin-top: 4px;
+}
+
+.mt-10 {
+    margin-top: 10px;
+}
+
+.mb-4 {
+    margin-bottom: 4px;
+}
+
+.mb-6 {
+    margin-bottom: 6px;
+}
+
+.mb-12 {
+    margin-bottom: 12px;
+}
+
+.my-4 {
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+.my-6 {
+    margin-top: 6px;
+    margin-bottom: 6px;
+}
+
+.pt-12 {
+    padding-top: 12px;
+}
+
+.min-w-120 {
+    min-width: 120px;
+}
+
+/* Component classes */
+.settings-box {
+    border: 1px solid #ddd;
+    padding: 12px;
+    margin-bottom: 16px;
+    border-radius: 4px;
+}
+
+.settings-box-header {
+    margin: 0 0 8px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.border-top-light {
+    border-top: 1px solid #f0f0f0;
+}
+
+.border-bottom-dashed {
+    border-bottom: 1px dashed #eee;
 }

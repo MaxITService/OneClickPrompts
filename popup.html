@@ -397,7 +397,7 @@
               <span class="toggle-icon">▶</span>
             </div>
             <div class="section-content">
-              <div class="switch-container" style="margin-bottom: 16px">
+              <div class="switch-container mb-16">
                 <!--This label is hidden by CSS to draw beautiful swithc on top-->
                 <label class="switch">
                   <input
@@ -413,8 +413,8 @@
               </div>
 
               <!-- Cross Chat Module Settings Settings - collapsed by default -->
-              <div id="crossChatModuleSettings" style="display: none">
-                <div class="text-inside-container" style="margin-bottom: 16px">
+              <div id="crossChatModuleSettings" class="is-hidden">
+                <div class="text-inside-container mb-16">
                   <p>
                     This module streamlines your workflow when using multiple AI
                     chat services.
@@ -423,16 +423,16 @@
                     <li>
                       <strong>How it works:</strong> On a supported chat page
                       (like ChatGPT), type a prompt and click the
-                      <strong style="font-family: 'Segoe UI Emoji'">📋</strong>
+                      <strong class="emoji-font">📋</strong>
                       button. Then, navigate to another chat page (like Claude)
                       and click the
-                      <strong style="font-family: 'Segoe UI Emoji'">📥</strong>
+                      <strong class="emoji-font">📥</strong>
                       button to paste the same prompt.
                     </li>
                     <li>
                       The prompt is stored globally, so you can copy it once and
                       paste it on multiple different sites. Hovering over the
-                      <strong style="font-family: 'Segoe UI Emoji'">📥</strong>
+                      <strong class="emoji-font">📥</strong>
                       button on a chat page will show you the stored prompt in a
                       tooltip.
                     </li>
@@ -449,7 +449,7 @@
                     placeholder="No prompt has been saved."
                   ></textarea>
                 </div>
-                <div class="row" style="justify-content: flex-end">
+                <div class="row justify-end">
                   <button
                     id="refreshStoredPrompt"
                     title="Manually fetch and display the currently stored prompt from memory. Useful if you've copied a new prompt in another tab and want to see it here."
@@ -464,7 +464,7 @@
                     Clear Stored Prompt
                   </button>
                 </div>
-                <hr style="margin: 16px 0" />
+                <hr class="my-16" />
                 <h4>Settings</h4>
                 <fieldset
                   class="crosschat-setting-group"
@@ -541,12 +541,11 @@
                   </p>
                 </div>
                 <div
-                  class="row"
-                  style="flex-direction: column; align-items: flex-start"
+                  class="row flex-column-start"
                 >
                   <label>Button Placement:</label>
                   <div
-                    style="margin-top: 8px"
+                    class="mt-8"
                     title="Places the 📋 and 📥 buttons before your other custom buttons. They will be assigned shortcuts Alt+1 and Alt+2."
                   >
                     <label>
@@ -588,7 +587,7 @@
               <span class="toggle-icon">▶</span>
             </div>
             <div class="section-content">
-              <div class="switch-container" style="margin-bottom: 16px">
+              <div class="switch-container mb-16">
                 <label class="switch">
                   <input
                     type="checkbox"
@@ -608,20 +607,19 @@
               <!-- Settings visible when enabled -->
               <div
                 id="inlineProfileSelectorSettingsContainer"
-                style="display: none; margin-left: 20px"
+                class="is-hidden ml-20"
               >
-                <div class="text-inside-container" style="margin-bottom: 8px">
+                <div class="text-inside-container mb-8">
                   <p>
                     Choose where the profile selector appears relative to your
                     custom buttons.
                   </p>
                 </div>
                 <div
-                  class="row"
-                  style="flex-direction: column; align-items: flex-start"
+                  class="row flex-column-start"
                 >
                   <label>Placement:</label>
-                  <div style="margin-top: 8px">
+                  <div class="mt-8">
                     <label>
                       <input
                         type="radio"
@@ -657,7 +655,7 @@
               <span class="toggle-icon">▶</span>
             </div>
             <div class="section-content">
-              <div class="switch-container" style="margin-bottom: 16px">
+              <div class="switch-container mb-16">
                 <label class="switch">
                   <input
                     type="checkbox"
@@ -670,7 +668,7 @@
                 >
               </div>
               <!-- Description -->
-              <div class="text-inside-container" style="margin-bottom: 16px">
+              <div class="text-inside-container mb-16">
                 <p>
                   <strong>⚠️ For high performance computers only</strong> — gets
                   slower with longer conversations!
@@ -732,33 +730,23 @@
               <!-- Settings (shown when enabled) -->
               <div
                 id="tokenApproxSettingsContainer"
-                style="display: none; margin-left: 8px"
+                class="is-hidden ml-8"
               >
                 <!-- Calibration Section -->
                 <div
-                  class="text-inside-container"
-                  style="
-                    border: 1px solid #ddd;
-                    padding: 12px;
-                    margin-bottom: 16px;
-                    border-radius: 4px;
-                  "
+                  class="text-inside-container settings-box"
                 >
                   <h4
-                    style="
-                      margin: 0 0 8px 0;
-                      padding-bottom: 8px;
-                      border-bottom: 1px solid #eee;
-                    "
+                    class="settings-box-header"
                   >
                     📊 Calibration
                   </h4>
-                  <p style="margin: 0 0 8px 0; font-size: 0.9em; color: #666">
+                  <p class="text-sm text-muted mb-8">
                     Scale all token counts up or down if they seem consistently
                     off
                   </p>
                   <div class="row">
-                    <label for="tokenApproxCalibration" style="min-width: 120px"
+                    <label for="tokenApproxCalibration" class="min-w-120"
                       >Multiply counts by:</label
                     >
                     <input
@@ -778,31 +766,21 @@
 
                 <!-- Display Options Section -->
                 <div
-                  class="text-inside-container"
-                  style="
-                    border: 1px solid #ddd;
-                    padding: 12px;
-                    margin-bottom: 16px;
-                    border-radius: 4px;
-                  "
+                  class="text-inside-container settings-box"
                 >
                   <h4
-                    style="
-                      margin: 0 0 8px 0;
-                      padding-bottom: 8px;
-                      border-bottom: 1px solid #eee;
-                    "
+                    class="settings-box-header"
                   >
                     👁️ What to Display
                   </h4>
 
                   <!-- Thread Counter Options -->
-                  <div style="margin-bottom: 12px">
-                    <p style="margin: 0 0 8px 0; font-size: 0.9em; color: #666">
+                  <div class="mb-12">
+                    <p class="text-sm text-muted mb-8">
                       Thread counter (T) shows tokens in entire conversation
                     </p>
-                    <div style="margin-left: 12px">
-                      <div style="margin: 4px 0">
+                    <div class="ml-12">
+                      <div class="my-4">
                         <label
                           title="Shows one counter (T) that includes tokens from the entire conversation thread plus any active text editors. This gives you the total context size that would be sent to the AI, including your current draft."
                         >
@@ -815,7 +793,7 @@
                           Thread + editors combined
                         </label>
                       </div>
-                      <div style="margin: 4px 0">
+                      <div class="my-4">
                         <label
                           title="Shows one counter (T) that counts only the conversation thread, ignoring text in editors. Useful if you want to see just the conversation history without your current draft affecting the count."
                         >
@@ -843,7 +821,7 @@
                   </div>
 
                   <!-- Editor Counter -->
-                  <div style="border-top: 1px solid #f0f0f0; padding-top: 12px">
+                  <div class="border-top-light pt-12">
                     <label
                       class="checkbox-row"
                       for="tokenApproxShowEditorCounter"
@@ -855,11 +833,7 @@
                       <span>Show separate editor counter (E)</span>
                     </label>
                     <p
-                      style="
-                        margin: 4px 0 0 24px;
-                        font-size: 0.85em;
-                        color: #666;
-                      "
+                      class="text-xs text-muted mt-4 ml-20"
                     >
                       Counts tokens only in active text editor
                     </p>
@@ -868,28 +842,18 @@
 
                 <!-- Position Section -->
                 <div
-                  class="text-inside-container"
-                  style="
-                    border: 1px solid #ddd;
-                    padding: 12px;
-                    margin-bottom: 16px;
-                    border-radius: 4px;
-                  "
+                  class="text-inside-container settings-box"
                 >
                   <h4
-                    style="
-                      margin: 0 0 8px 0;
-                      padding-bottom: 8px;
-                      border-bottom: 1px solid #eee;
-                    "
+                    class="settings-box-header"
                   >
                     📍 Position
                   </h4>
-                  <p style="margin: 0 0 8px 0; font-size: 0.9em; color: #666">
+                  <p class="text-sm text-muted mb-8">
                     Where to display token counters relative to buttons
                   </p>
-                  <div style="margin-left: 12px">
-                    <div style="margin: 6px 0">
+                  <div class="ml-12">
+                    <div class="my-6">
                       <label
                         title="Display token counters before your custom buttons"
                       >
@@ -922,20 +886,10 @@
 
                 <!-- Enabled Websites Section -->
                 <div
-                  class="text-inside-container"
-                  style="
-                    border: 1px solid #ddd;
-                    padding: 12px;
-                    margin-bottom: 16px;
-                    border-radius: 4px;
-                  "
+                  class="text-inside-container settings-box"
                 >
                   <h4
-                    style="
-                      margin: 0 0 8px 0;
-                      padding-bottom: 8px;
-                      border-bottom: 1px solid #eee;
-                    "
+                    class="settings-box-header"
                   >
                     🌐 Enabled Websites
                   </h4>
@@ -949,19 +903,10 @@
 
                 <!-- Algorithm Section -->
                 <div
-                  class="text-inside-container"
-                  style="
-                    border: 1px solid #ddd;
-                    padding: 12px;
-                    border-radius: 4px;
-                  "
+                  class="text-inside-container settings-box"
                 >
                   <h4
-                    style="
-                      margin: 0 0 8px 0;
-                      padding-bottom: 8px;
-                      border-bottom: 1px solid #eee;
-                    "
+                    class="settings-box-header"
                   >
                     ⚙️ Counting Algorithm
                   </h4>

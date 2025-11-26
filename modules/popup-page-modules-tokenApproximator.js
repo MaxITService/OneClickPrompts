@@ -128,7 +128,9 @@
   function setUiFromSettings(settings) {
     const s = normalize(settings);
     if (elEnable) elEnable.checked = !!s.enabled;
-    if (elSettings) elSettings.style.display = s.enabled ? '' : 'none';
+    if (elSettings) {
+      elSettings.classList.toggle('is-hidden', !s.enabled);
+    }
 
     if (elCalib) {
       // Guard against invalid values; show fixed 2 decimals by default
@@ -245,7 +247,9 @@
     if (elEnable) {
       elEnable.addEventListener('change', async () => {
         const s = collectSettingsFromUi();
-        if (elSettings) elSettings.style.display = s.enabled ? '' : 'none';
+        if (elSettings) {
+          elSettings.classList.toggle('is-hidden', !s.enabled);
+        }
         await save(s);
       }, { passive: true });
     }

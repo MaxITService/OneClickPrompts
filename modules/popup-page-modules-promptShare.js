@@ -1,3 +1,4 @@
+// popup-page-modules-promptShare.js
 'use strict';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -103,7 +104,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const isModuleExpanded = crossChatModule.classList.contains('expanded');
         // The visibility of settings now ONLY depends on whether the section is expanded.
         // The toggle's state is reflected by the toggle itself, not by hiding the section.
-        settingsContainer.style.display = isModuleExpanded ? 'block' : 'none';
+        if (isModuleExpanded) {
+            settingsContainer.classList.remove('is-hidden');
+        } else {
+            settingsContainer.classList.add('is-hidden');
+        }
     }
 
     // --- Observer for Section Expansion ---
@@ -153,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentSettings.enabled = enableToggle.checked;
         // The toggle now only changes the setting and saves it; it does not control UI visibility.
         await saveModuleSettings();
-        
+
         // Trigger button cards re-render when enable/disable is toggled
         // This is needed because hotkey numbering depends on whether cross-chat is enabled
         if (typeof updatebuttonCardsList === 'function') {
@@ -246,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (radio.checked) {
                 currentSettings.placement = radio.value;
                 await saveModuleSettings();
-                
+
                 // Trigger button cards re-render to update hotkey numbering
                 if (typeof updatebuttonCardsList === 'function') {
                     try {
