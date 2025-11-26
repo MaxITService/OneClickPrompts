@@ -560,6 +560,7 @@ Key areas:
     border-radius: 4px;
     max-height: 200px;
     overflow-y: auto;
+    overflow-x: hidden;
     background-color: #fff;
     /* Light mode background */
 }
