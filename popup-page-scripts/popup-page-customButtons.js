@@ -76,14 +76,14 @@ function createButtonCardElement(button, index, crossChatSettings = null) {
                     nonSeparatorButtonsCount++;
                 }
             }
-            
+
             // Apply the shift if CrossChat buttons are placed before
             let shift = 0;
             if (crossChatSettings && crossChatSettings.enabled && crossChatSettings.placement === 'before' && !crossChatSettings.hideStandardButtons) {
                 shift = 2;
             }
             const hotkeyIndex = nonSeparatorButtonsCount + shift;
-            
+
             // Only show hotkey if it's within the 1-0 range (Alt+1 to Alt+0)
             if (hotkeyIndex < 10) {
                 const displayKey = hotkeyIndex === 9 ? 0 : hotkeyIndex + 1;
@@ -118,7 +118,13 @@ function createButtonCardElement(button, index, crossChatSettings = null) {
 async function updatebuttonCardsList() {
     // Get Cross-Chat module settings
     const crossChatSettings = await getCrossChatSettings();
-    
+
+    // Capture scroll position to prevent jumping
+    const scrollPos = {
+        top: window.pageYOffset || document.documentElement.scrollTop,
+        left: window.pageXOffset || document.documentElement.scrollLeft
+    };
+
     buttonCardsList.innerHTML = ''; // This already removes old listeners
     if (currentProfile.customButtons && currentProfile.customButtons.length > 0) {
         currentProfile.customButtons.forEach((button, index) => {
@@ -136,6 +142,9 @@ async function updatebuttonCardsList() {
     textareaSaverAndResizerFunc();
     attachEmojiInputListeners();
     attachAutoSendToggleListeners();
+
+    // Restore scroll position
+    window.scrollTo(scrollPos.left, scrollPos.top);
 }
 
 // -------------------------
@@ -488,21 +497,23 @@ function textareaInputAreaResizerFun(textareaId) {
  * This prevents the page from scrolling when the textarea is resized.
  * @param {HTMLTextAreaElement} textarea The textarea to resize.
  */
-function resizeVerticalTextarea(textarea) {
+function resizeVerticalTextarea(textarea, preventScrollRestoration = false) {
     if (!textarea) return;
-    
+
     // Save current scroll position
     const scrollPos = {
         top: window.pageYOffset || document.documentElement.scrollTop,
         left: window.pageXOffset || document.documentElement.scrollLeft
     };
-    
+
     // Perform resize
     textarea.style.height = 'auto';
     textarea.style.height = `${textarea.scrollHeight}px`;
-    
+
     // Restore scroll position
-    window.scrollTo(scrollPos.left, scrollPos.top);
+    if (!preventScrollRestoration) {
+        window.scrollTo(scrollPos.left, scrollPos.top);
+    }
 }
 
 /**
@@ -518,7 +529,7 @@ function attachEmojiInputListeners() {
         inputElement.style.overflowX = 'hidden';
         inputElement.style.whiteSpace = 'nowrap';
 
-        const resizeSelf = () => {
+        const resizeSelf = (preventScroll = false) => {
             // Horizontal resize with small buffer and center-align until threshold
             inputElement.style.width = '1px';
             const bufferPx = 6;
@@ -546,7 +557,7 @@ function attachEmojiInputListeners() {
             const buttonItem = inputElement.closest('.button-item');
             if (buttonItem) {
                 const mainTextarea = buttonItem.querySelector('.text-input');
-                resizeVerticalTextarea(mainTextarea);
+                resizeVerticalTextarea(mainTextarea, preventScroll);
             }
         };
 
@@ -610,7 +621,7 @@ function attachEmojiInputListeners() {
         });
 
         // Initial sizing
-        resizeSelf();
+        resizeSelf(true);
     });
 }
 
@@ -640,7 +651,7 @@ function textareaSaverAndResizerFunc() {
     const textareas = buttonCardsList.querySelectorAll('textarea.text-input');
     textareas.forEach(textarea => {
         // Perform an initial resize to fit existing content.
-        resizeVerticalTextarea(textarea);
+        resizeVerticalTextarea(textarea, true);
 
         textarea.addEventListener('input', () => {
             // Resize the textarea vertically as the user types.
