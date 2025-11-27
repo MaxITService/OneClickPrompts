@@ -5,6 +5,31 @@
 'use strict';
 
 window.MaxExtensionContainerMover = {
+    __selectorSaverPromise: null,
+
+    /**
+     * Lazy-loads the selector persistence module so Save works even if it wasn't preloaded.
+     * @returns {Promise<object|null>}
+     */
+    loadSelectorPersistence: async function () {
+        if (window.OCPSelectorPersistence) {
+            return window.OCPSelectorPersistence;
+        }
+        if (this.__selectorSaverPromise) {
+            return this.__selectorSaverPromise;
+        }
+        const saverUrl = chrome?.runtime?.getURL ? chrome.runtime.getURL('modules/selector-auto-detector/selector-save.js') : null;
+        if (!saverUrl) {
+            logConCgp('[ContainerMover] Missing saver URL.');
+            return null;
+        }
+        this.__selectorSaverPromise = import(saverUrl).then(mod => mod?.OCPSelectorPersistence || window.OCPSelectorPersistence || null).catch(err => {
+            logConCgp('[ContainerMover] Failed to load selector saver module.', err);
+            return null;
+        });
+        return this.__selectorSaverPromise;
+    },
+
     /**
      * Initiates the container move/save flow.
      * @param {Event} event - The click event that triggered this.
@@ -170,21 +195,23 @@ window.MaxExtensionContainerMover = {
                 return;
             }
 
-            if (window.OCPSelectorPersistence && typeof window.OCPSelectorPersistence.saveSelectorFromElement === 'function') {
-                const site = window.InjectionTargetsOnWebsite.activeSite;
-                const result = await window.OCPSelectorPersistence.saveSelectorFromElement({
-                    site: site,
-                    type: 'container',
-                    element: parent
-                });
-
-                if (result.ok) {
-                    window.showToast(`Location saved! Selector: ${result.selector}`, 'success', 4000);
-                } else {
-                    window.showToast(`Failed to save: ${result.reason}`, 'error');
-                }
-            } else {
+            const saver = await this.loadSelectorPersistence();
+            if (!saver || typeof saver.saveSelectorFromElement !== 'function') {
                 window.showToast('Selector persistence module not loaded.', 'error');
+                return;
+            }
+
+            const site = window.InjectionTargetsOnWebsite.activeSite;
+            const result = await saver.saveSelectorFromElement({
+                site: site,
+                type: 'container',
+                element: parent
+            });
+
+            if (result.ok) {
+                window.showToast(`Location saved! Selector: ${result.selector}`, 'success', 4000);
+            } else {
+                window.showToast(`Failed to save: ${result.reason}`, 'error');
             }
         };
 
