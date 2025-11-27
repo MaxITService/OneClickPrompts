@@ -165,7 +165,18 @@ window.MaxExtensionButtonsInit = {
                 if (def.config.text === SETTINGS_BUTTON_MAGIC_TEXT) {
                     // Special handling for the settings button.
                     const settingsButtonConfig = { ...def.config, text: 'Settings', tooltip: 'Open extension settings in a new tab' };
-                    const settingsClickHandler = () => {
+                    const settingsClickHandler = (event) => {
+                        // Shift+Click: Move/Save Container Feature
+                        if (event && event.shiftKey) {
+                            if (window.MaxExtensionContainerMover && typeof window.MaxExtensionContainerMover.handleShiftClick === 'function') {
+                                window.MaxExtensionContainerMover.handleShiftClick(event);
+                            } else {
+                                logConCgp('[buttons-init] ContainerMover module not loaded.');
+                            }
+                            return;
+                        }
+
+                        // Normal Click: Open Settings
                         // Send a message to the service worker to open the settings page.
                         // This avoids the popup blocker (ERR_BLOCKED_BY_CLIENT).
                         chrome.runtime.sendMessage({ type: 'openSettingsPage' });

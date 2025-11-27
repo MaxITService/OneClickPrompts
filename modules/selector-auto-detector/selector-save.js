@@ -137,7 +137,9 @@ async function saveSelectorFromElement({ site, type, element, selectorOverride }
         return { ok: false, reason: 'selectorNotDerived' };
     }
 
-    const targetKey = type === 'editor' ? 'editors' : (type === 'sendButton' ? 'sendButtons' : null);
+    const targetKey = type === 'editor' ? 'editors' :
+        (type === 'sendButton' ? 'sendButtons' :
+            (type === 'container' ? 'containers' : null));
     if (!targetKey) {
         return { ok: false, reason: 'unknownType' };
     }

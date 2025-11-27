@@ -14,7 +14,8 @@
 function showToast(message, type = 'info', options = 3000) {
     const normalized = typeof options === 'number' ? { duration: options } : (options || {});
     const rawDuration = Number.isFinite(normalized.duration) ? normalized.duration : 3000;
-    const duration = Math.min(Math.max(rawDuration, 1500), 30000); // clamp to a reasonable window
+    // If duration is 0, it means infinite (no auto-hide). Otherwise clamp between 1.5s and 30s.
+    const duration = rawDuration === 0 ? 0 : Math.min(Math.max(rawDuration, 1500), 30000);
 
     // Ensure the toast container exists, creating it if necessary.
     let toastContainer = document.getElementById('toastContainer');
@@ -48,7 +49,32 @@ function showToast(message, type = 'info', options = 3000) {
     content.textContent = message;
     toast.appendChild(content);
 
-    if (normalized.actionLabel && typeof normalized.onAction === 'function') {
+    if (normalized.customButtons && Array.isArray(normalized.customButtons)) {
+        const buttonGroup = document.createElement('div');
+        buttonGroup.className = 'toast-button-group';
+
+        normalized.customButtons.forEach(btnConfig => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'toast-action ' + (btnConfig.className || '');
+            btn.textContent = btnConfig.text;
+            if (btnConfig.title) btn.title = btnConfig.title;
+
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (typeof btnConfig.onClick === 'function') {
+                    try {
+                        const shouldClose = await btnConfig.onClick(e);
+                        if (shouldClose !== false) hideToast();
+                    } catch (err) {
+                        console.error('[toast] Button action failed', err);
+                    }
+                }
+            });
+            buttonGroup.appendChild(btn);
+        });
+        toast.appendChild(buttonGroup);
+    } else if (normalized.actionLabel && typeof normalized.onAction === 'function') {
         const actionButton = document.createElement('button');
         actionButton.type = 'button';
         actionButton.className = 'toast-action';
@@ -99,6 +125,8 @@ function showToast(message, type = 'info', options = 3000) {
         hideToast();
     });
 
-    // Remove toast after specified duration
-    setTimeout(hideToast, duration);
+    // Remove toast after specified duration, unless it is 0 (persistent)
+    if (duration > 0) {
+        setTimeout(hideToast, duration);
+    }
 }
