@@ -48,6 +48,36 @@ Current architectural reference for the OneClickPrompts Chrome extension (Manife
 - **Integration**: Site scripts call `SelectorGuard.findEditor()/findSendButton()`; on repeated failures the Brain runs heuristics, shows toasts on success/error, and returns the guessed element to the caller. When both editor and send-button selectors are missing, the Guard now surfaces the editor failure toast first to match dependency order.
 - **Auto-detect toggles**: If heuristics are disabled in the popup toggles, the Brain still shows a "not found; auto-detect off" toast so the user sees which element is missing even without running scans.
 
+### 2.5 Container Fallback Heuristics System
+- **Purpose**: Handle scenarios where button container selectors fail on page load (wrong selector saved, site DOM changed). Provides intelligent fallback with user choice instead of immediate floating panel.
+- **Architecture**: Extends the Selector Auto-Detection System (index.js) to handle `container` as a 3rd element type (alongside `editor` and `sendButton`).
+- **Flow**:
+  1. **Detection**: `buttons-injection.js` calls `waitForElements()` with failure callback; when max attempts reached without finding container, calls `reportFailure('container')`.
+  2. **Heuristics**: `container-heuristics.js` searches for alternatives:
+     - First tries default selectors (if custom selector failed)
+     - Then tries structural heuristics (parent/siblings of failed path-based selectors)
+     - Returns first valid alternative or `null`
+  3. **Alternative Found**: Injects buttons into alternative container, triggers `enterMoveMode('auto-recovery')` showing 4-button toast:
+     - ⬅️ Back / Forward ➡️ - Navigate through DOM to find ideal spot
+     - 💾 Save - Save current location as custom selector
+     - 🎈 Floating Panel - Give up and switch to floating panel mode (only in auto-recovery)
+  4. **No Alternative Found**: Automatically creates floating panel via `triggerFloatingPanelFallback()`, positions top-right, saves visibility state.
+- **Integration points**:
+  - `utils.js`: `waitForElements()` accepts optional `onFailure` callback (3rd parameter)
+  - `buttons-injection.js`: Reports container failures to `OneClickPromptsSelectorAutoDetector`
+  - `modules/buttons-container-mover.js`: `enterMoveMode()` accepts mode parameter ('manual' vs 'auto-recovery'), conditionally adds floating panel button
+  - `init.js`: Automatic 2.5s floating panel fallback is disabled when `enableContainerHeuristics` setting is true, letting the heuristics system handle recovery
+- **Settings**: `enableContainerHeuristics` in `OneClickPromptsSelectorAutoDetector.settings` (defaults to true), follows same pattern as editor/sendButton heuristics
+- **State management**: In-memory state (resets on page load), so heuristics re-trigger on every navigation when container missing but panel is closed
+- **Files**:
+  - `modules/selector-auto-detector/index.js`: Main orchestrator, state tracking, `triggerRecovery()`, `offerContainerPlacement()`, `triggerFloatingPanelFallback()`
+  - `modules/selector-auto-detector/container-heuristics.js`: Search algorithms, `findAlternativeContainer()`, `isValidContainer()`
+  - `modules/buttons-container-mover.js`: Enhanced move mode with floating panel escape hatch
+  - `buttons-injection.js`: Failure reporting hook
+  - `utils.js`: Enhanced `waitForElements()` with failure callback
+  - `init.js`: Conditional auto-fallback disabling
+
+
 ## 3. UI Surfaces
 
 ### 3.1 Inline Toolbar & Buttons

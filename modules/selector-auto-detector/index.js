@@ -20,6 +20,11 @@ window.OneClickPromptsSelectorAutoDetector = {
             failures: 0,
             lastFailure: 0,
             recovering: false
+        },
+        container: {
+            failures: 0,
+            lastFailure: 0,
+            recovering: false
         }
     },
 
@@ -30,11 +35,13 @@ window.OneClickPromptsSelectorAutoDetector = {
     settings: {
         enableEditorHeuristics: true,
         enableSendButtonHeuristics: true,
+        enableContainerHeuristics: true,
         loaded: false
     },
     lastOffers: {
         editor: { selector: null, site: null, at: 0 },
-        sendButton: { selector: null, site: null, at: 0 }
+        sendButton: { selector: null, site: null, at: 0 },
+        container: { selector: null, site: null, at: 0 }
     },
 
     /**
@@ -83,7 +90,7 @@ window.OneClickPromptsSelectorAutoDetector = {
 
     /**
      * Initiates the recovery process.
-     * @param {string} type - 'editor' or 'sendButton'
+     * @param {string} type - 'editor', 'sendButton', or 'container'
      * @returns {Promise<HTMLElement|null>}
      */
     triggerRecovery: async function (type) {
@@ -92,10 +99,12 @@ window.OneClickPromptsSelectorAutoDetector = {
 
         const heuristicsAllowed = type === 'editor'
             ? this.settings.enableEditorHeuristics !== false
-            : this.settings.enableSendButtonHeuristics !== false;
+            : type === 'sendButton'
+                ? this.settings.enableSendButtonHeuristics !== false
+                : this.settings.enableContainerHeuristics !== false;
 
         // Readable name for the type
-        const typeName = type === 'editor' ? 'Text input area' : 'send button';
+        const typeName = type === 'editor' ? 'Text input area' : type === 'sendButton' ? 'send button' : 'button container';
 
         // Unified message logic
         const statusSuffix = heuristicsAllowed ? "Trying to find it..." : "Auto-detect is off.";
@@ -115,31 +124,53 @@ window.OneClickPromptsSelectorAutoDetector = {
         }
 
         const site = window.InjectionTargetsOnWebsite?.activeSite || 'Unknown';
-        const heuristics = window.OneClickPromptsSiteHeuristics?.resolve
-            ? window.OneClickPromptsSiteHeuristics.resolve(site)
-            : window.OneClickPromptsSelectorAutoDetectorBase;
 
         // Wait a moment for the UI to stabilize (e.g. if the button is just about to appear)
         await new Promise(resolve => setTimeout(resolve, 400));
 
         // Run Heuristics
         let result = null;
-        if (type === 'editor') {
-            result = await heuristics.detectEditor({ site });
-        } else if (type === 'sendButton') {
-            result = await heuristics.detectSendButton({ site });
-        }
 
-        if (result) {
-            logConCgp(`[SelectorAutoDetector] Heuristics found new ${type}!`, result);
-            const offered = await this.offerToSaveSelector(type, result);
-            if (!offered && window.showToast) {
-                window.showToast(`OneClickPrompts: Found the ${typeName}.`, 'success');
+        if (type === 'container') {
+            // Special handling for container type
+            const failedSelectors = window.InjectionTargetsOnWebsite?.selectors?.containers || [];
+            if (window.OneClickPromptsContainerHeuristics && typeof window.OneClickPromptsContainerHeuristics.findAlternativeContainer === 'function') {
+                result = window.OneClickPromptsContainerHeuristics.findAlternativeContainer(failedSelectors);
             }
-            s.failures = 0;
+
+            if (result) {
+                logConCgp(`[SelectorAutoDetector] Container heuristics found alternative!`, result);
+                // For containers, trigger manual move mode instead of auto-save
+                await this.offerContainerPlacement(result);
+                s.failures = 0;
+            } else {
+                logConCgp(`[SelectorAutoDetector] Container heuristics failed. Triggering floating panel fallback.`);
+                // Trigger floating panel as last resort
+                await this.triggerFloatingPanelFallback();
+            }
         } else {
-            logConCgp(`[SelectorAutoDetector] Heuristics failed to find ${type}.`);
-            if (window.showToast) window.showToast(`OneClickPrompts: Could not find ${typeName}. Please report this issue.`, 'error');
+            // Existing logic for editor and sendButton
+            const heuristics = window.OneClickPromptsSiteHeuristics?.resolve
+                ? window.OneClickPromptsSiteHeuristics.resolve(site)
+                : window.OneClickPromptsSelectorAutoDetectorBase;
+
+            if (type === 'editor') {
+                result = await heuristics.detectEditor({ site });
+            } else if (type === 'sendButton') {
+                result = await heuristics.detectSendButton({ site });
+            }
+
+            if (result) {
+                logConCgp(`[SelectorAutoDetector] Heuristics found new ${type}!`, result);
+                const offered = await this.offerToSaveSelector(type, result);
+                if (!offered && window.showToast) {
+                    window.showToast(`OneClickPrompts: Found the ${typeName}.`, 'success');
+                }
+                s.failures = 0;
+            } else {
+                logConCgp(`[SelectorAutoDetector] Heuristics failed to find ${type}.`);
+                if (window.showToast) window.showToast(`OneClickPrompts: Could not find ${typeName}. Please report this issue.`, 'error');
+            }
         }
 
         s.recovering = false;
@@ -156,6 +187,7 @@ window.OneClickPromptsSelectorAutoDetector = {
                 this.settings = {
                     enableEditorHeuristics: response.settings.enableEditorHeuristics !== false,
                     enableSendButtonHeuristics: response.settings.enableSendButtonHeuristics !== false,
+                    enableContainerHeuristics: response.settings.enableContainerHeuristics !== false,
                     loaded: true
                 };
             }
@@ -176,6 +208,97 @@ window.OneClickPromptsSelectorAutoDetector = {
         } catch (error) {
             logConCgp('[SelectorAutoDetector] Failed to load selector saver module.', error);
             return null;
+        }
+    },
+
+    /**
+     * Triggers the floating panel as a last-resort fallback.
+     * Called when container heuristics fail to find any alternative.
+     * @returns {Promise<void>}
+     */
+    triggerFloatingPanelFallback: async function () {
+        logConCgp('[SelectorAutoDetector] Creating floating panel as fallback.');
+
+        if (!window.MaxExtensionFloatingPanel || typeof window.MaxExtensionFloatingPanel.createFloatingPanel !== 'function') {
+            logConCgp('[SelectorAutoDetector] Floating panel module not available.');
+            if (window.showToast) {
+                window.showToast('OneClickPrompts: Could not find suitable container and floating panel is not available.', 'error', 5000);
+            }
+            return;
+        }
+
+        try {
+            await window.MaxExtensionFloatingPanel.createFloatingPanel();
+            const panelElement = window.MaxExtensionFloatingPanel.panelElement;
+            const panelContent = document.getElementById('max-extension-floating-panel-content');
+
+            if (panelElement && panelContent) {
+                // Clear and populate panel
+                panelContent.innerHTML = '';
+                if (window.MaxExtensionButtonsInit && typeof window.MaxExtensionButtonsInit.createAndInsertCustomElements === 'function') {
+                    window.MaxExtensionButtonsInit.createAndInsertCustomElements(panelContent);
+                }
+
+                // Position panel
+                if (typeof window.MaxExtensionFloatingPanel.positionPanelTopRight === 'function') {
+                    window.MaxExtensionFloatingPanel.positionPanelTopRight();
+                } else if (typeof window.MaxExtensionFloatingPanel.positionPanelBottomRight === 'function') {
+                    window.MaxExtensionFloatingPanel.positionPanelBottomRight();
+                }
+
+                // Make visible
+                panelElement.style.display = 'flex';
+                window.MaxExtensionFloatingPanel.isPanelVisible = true;
+
+                // Save settings
+                if (window.MaxExtensionFloatingPanel.currentPanelSettings) {
+                    window.MaxExtensionFloatingPanel.currentPanelSettings.isVisible = true;
+                    window.MaxExtensionFloatingPanel.debouncedSavePanelSettings?.();
+                }
+
+                if (window.showToast) {
+                    window.showToast('OneClickPrompts: Using floating panel (no container found).', 'info', 4000);
+                }
+
+                logConCgp('[SelectorAutoDetector] Floating panel fallback activated successfully.');
+            } else {
+                logConCgp('[SelectorAutoDetector] Failed to create floating panel elements.');
+            }
+        } catch (err) {
+            logConCgp('[SelectorAutoDetector] Error creating floating panel fallback:', err);
+            if (window.showToast) {
+                window.showToast('OneClickPrompts: Error activating floating panel.', 'error');
+            }
+        }
+    },
+
+    /**
+     * Offers the user to accept alternative container placement with manual move mode.
+     * @param {HTMLElement} alternativeContainer - The alternative container found by heuristics
+     * @returns {Promise<void>}
+     */
+    offerContainerPlacement: async function (alternativeContainer) {
+        if (!alternativeContainer || !window.MaxExtensionButtonsInit) {
+            return;
+        }
+
+        logConCgp('[SelectorAutoDetector] Injecting buttons into alternative container and entering move mode.');
+
+        // Inject buttons into the alternative container
+        try {
+            window.MaxExtensionButtonsInit.createAndInsertCustomElements(alternativeContainer);
+            window.__OCP_inlineHealthy = true; // Mark as healthy since we found a place
+        } catch (err) {
+            logConCgp('[SelectorAutoDetector] Failed to inject into alternative container:', err);
+            return;
+        }
+
+        // Trigger the move mode with floating panel option
+        if (window.MaxExtensionContainerMover && typeof window.MaxExtensionContainerMover.enterMoveMode === 'function') {
+            // Use the enhanced move mode that includes floating panel button
+            window.MaxExtensionContainerMover.enterMoveMode('auto-recovery');
+        } else {
+            logConCgp('[SelectorAutoDetector] ContainerMover not available for manual placement.');
         }
     },
 
@@ -241,6 +364,7 @@ if (chrome?.runtime?.onMessage?.addListener) {
             window.OneClickPromptsSelectorAutoDetector.settings = {
                 enableEditorHeuristics: message.settings.enableEditorHeuristics !== false,
                 enableSendButtonHeuristics: message.settings.enableSendButtonHeuristics !== false,
+                enableContainerHeuristics: message.settings.enableContainerHeuristics !== false,
                 loaded: true
             };
         }

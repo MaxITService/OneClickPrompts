@@ -99,7 +99,7 @@ function buttonBoxCheckingAndInjection(enableResiliency = true, activeWebsite) {
             // we never auto-summon the fallback panel again in this tab.
             try {
                 window.__OCP_inlineHealthy = true;
-            } catch (_) {}
+            } catch (_) { }
 
             // Always start resiliency checks when enableResiliency is true.
             if (enableResiliency) {
@@ -110,7 +110,17 @@ function buttonBoxCheckingAndInjection(enableResiliency = true, activeWebsite) {
     };
 
     // Use a utility function to wait for the target container(s) to appear in the DOM.
-    MaxExtensionUtils.waitForElements(selectors, handleTargetDiv);
+    MaxExtensionUtils.waitForElements(
+        selectors,
+        handleTargetDiv,
+        // onFailure callback - triggered when container not found
+        (failedSelectors) => {
+            logConCgp('[button-injection] Container not found. Reporting failure to auto-detector.');
+            if (window.OneClickPromptsSelectorAutoDetector && typeof window.OneClickPromptsSelectorAutoDetector.reportFailure === 'function') {
+                window.OneClickPromptsSelectorAutoDetector.reportFailure('container', { selectors: failedSelectors });
+            }
+        }
+    );
 }
 
 // Global variable to store the current resiliency check timer

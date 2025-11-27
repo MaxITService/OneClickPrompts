@@ -333,9 +333,20 @@ async function commenceExtensionInitialization(configurationObject) {
          * In this scenario we automatically summon the floating panel after a short delay
          * and position it in the bottom-right corner as a fallback. This ensures that the
          * user always has access to the prompts even when inline injection is not possible.
+         * 
+         * NOTE: If container heuristics are enabled, we skip this automatic fallback and let
+         * the heuristics system handle recovery (which offers manual placement + floating panel option).
          */
         setTimeout(() => {
             try {
+                // Check if container heuristics are enabled - if so, skip auto fallback
+                const containerHeuristicsEnabled = window.OneClickPromptsSelectorAutoDetector?.settings?.enableContainerHeuristics !== false;
+
+                if (containerHeuristicsEnabled) {
+                    logConCgp('[init] Container heuristics enabled. Skipping automatic floating panel fallback.');
+                    return;
+                }
+
                 // Check if inline buttons were injected by looking for the container and its children.
                 let modsExist = (() => {
                     const containerId = window?.InjectionTargetsOnWebsite?.selectors?.buttonsContainerId;
@@ -343,7 +354,7 @@ async function commenceExtensionInitialization(configurationObject) {
                     const el = document.getElementById(containerId);
                     return !!(el && el.children && el.children.length > 0);
                 })();
-                // Only trigger fallback if no mods exist and the panel isn’t already visible.
+                // Only trigger fallback if no mods exist and the panel isn't already visible.
                 const userDisabled = !!window.__OCP_userDisabledFallback;
                 if (!modsExist && !window.__OCP_inlineHealthy && !userDisabled &&
                     window.MaxExtensionFloatingPanel && !window.MaxExtensionFloatingPanel.isPanelVisible) {

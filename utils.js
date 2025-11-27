@@ -6,7 +6,7 @@
 
 window.MaxExtensionUtils = {
     // Utility function to wait for an element to be present in the DOM
-    waitForElements: function (selectors, callback, maxAttempts = 50) {
+    waitForElements: function (selectors, onSuccess, onFailure = null, maxAttempts = 50) {
         if (!Array.isArray(selectors)) {
             selectors = [selectors]; // Ensure selectors is an array
         }
@@ -29,7 +29,7 @@ window.MaxExtensionUtils = {
             const element = MaxExtensionUtils.pickUsableContainer(selectors);
             if (element) {
                 stopWatching();
-                callback(element);
+                onSuccess(element);
                 return true;
             }
             return false;
@@ -53,6 +53,10 @@ window.MaxExtensionUtils = {
             if (attempts >= maxAttempts) {
                 stopWatching();
                 logConCgp(`[utils] Elements ${selectors.join(', ')} not found after ${maxAttempts} attempts.`);
+                // Call onFailure callback if provided
+                if (typeof onFailure === 'function') {
+                    onFailure(selectors);
+                }
             }
         }, 150);
     },

@@ -15,6 +15,14 @@ window.MaxExtensionContainerMover = {
         event.preventDefault();
         event.stopPropagation();
 
+        this.enterMoveMode('manual');
+    },
+
+    /**
+     * Enters move mode (can be triggered manually or automatically).
+     * @param {string} mode - 'manual' (Shift+Click) or 'auto-recovery' (heuristic found alternative)
+     */
+    enterMoveMode: function (mode = 'manual') {
         const containerId = window.InjectionTargetsOnWebsite.selectors.buttonsContainerId;
         const container = document.getElementById(containerId);
 
@@ -180,26 +188,88 @@ window.MaxExtensionContainerMover = {
             }
         };
 
-        window.showToast('Move Buttons Container\n\nUse Forward/Back to find the best spot. If buttons disappear, keep clicking to find them.', 'info', {
-            duration: 0, // 0 = infinite/persistent
-            customButtons: [
-                {
-                    text: '⬅️ Back',
-                    title: 'Move container to previous element',
-                    onClick: () => { moveContainer('back'); return false; } // return false to keep toast open
-                },
-                {
-                    text: '💾 Save',
-                    title: 'Save current location',
-                    className: 'toast-action-primary', // Optional styling hook
-                    onClick: async () => { await saveLocation(); return true; } // Close on save
-                },
-                {
-                    text: 'Forward ➡️',
-                    title: 'Move container to next element',
-                    onClick: () => { moveContainer('forward'); return false; }
+        const useFloatingPanel = async () => {
+            logConCgp('[ContainerMover] User chose floating panel fallback.');
+            // Remove the inline container
+            if (container && container.parentElement) {
+                container.remove();
+            }
+            // Mark inline as not healthy so the auto-fallback triggers
+            window.__OCP_inlineHealthy = false;
+            // Don't block the auto-fallback
+            window.__OCP_userDisabledFallback = false;
+
+            // Trigger floating panel creation
+            if (window.MaxExtensionFloatingPanel && typeof window.MaxExtensionFloatingPanel.createFloatingPanel === 'function') {
+                try {
+                    await window.MaxExtensionFloatingPanel.createFloatingPanel();
+                    const panelElement = window.MaxExtensionFloatingPanel.panelElement;
+                    const panelContent = document.getElementById('max-extension-floating-panel-content');
+
+                    if (panelElement && panelContent) {
+                        panelContent.innerHTML = '';
+                        if (window.MaxExtensionButtonsInit && typeof window.MaxExtensionButtonsInit.createAndInsertCustomElements === 'function') {
+                            window.MaxExtensionButtonsInit.createAndInsertCustomElements(panelContent);
+                        }
+
+                        if (typeof window.MaxExtensionFloatingPanel.positionPanelTopRight === 'function') {
+                            window.MaxExtensionFloatingPanel.positionPanelTopRight();
+                        }
+
+                        panelElement.style.display = 'flex';
+                        window.MaxExtensionFloatingPanel.isPanelVisible = true;
+
+                        if (window.MaxExtensionFloatingPanel.currentPanelSettings) {
+                            window.MaxExtensionFloatingPanel.currentPanelSettings.isVisible = true;
+                            window.MaxExtensionFloatingPanel.debouncedSavePanelSettings?.();
+                        }
+
+                        window.showToast('Switched to floating panel mode.', 'success', 3000);
+                    }
+                } catch (err) {
+                    logConCgp('[ContainerMover] Error creating floating panel:', err);
+                    window.showToast('Error creating floating panel. Please try again.', 'error');
                 }
-            ]
+            }
+        };
+
+        // Build custom buttons array
+        const customButtons = [
+            {
+                text: '⬅️ Back',
+                title: 'Move container to previous element',
+                onClick: () => { moveContainer('back'); return false; }
+            },
+            {
+                text: '💾 Save',
+                title: 'Save current location',
+                className: 'toast-action-primary',
+                onClick: async () => { await saveLocation(); return true; }
+            },
+            {
+                text: 'Forward ➡️',
+                title: 'Move container to next element',
+                onClick: () => { moveContainer('forward'); return false; }
+            }
+        ];
+
+        // Add floating panel button only in auto-recovery mode
+        if (mode === 'auto-recovery') {
+            customButtons.push({
+                text: '🎈 Floating Panel',
+                title: 'Give up and use floating panel instead',
+                className: 'toast-action-secondary',
+                onClick: async () => { await useFloatingPanel(); return true; }
+            });
+        }
+
+        const message = mode === 'auto-recovery'
+            ? 'We found an alternative spot for your buttons.\n\nUse Forward/Back to find the best location, or switch to floating panel.'
+            : 'Move Buttons Container\n\nUse Forward/Back to find the best spot. If buttons disappear, keep clicking to find them.';
+
+        window.showToast(message, 'info', {
+            duration: 0,
+            customButtons: customButtons
         });
     }
 };
