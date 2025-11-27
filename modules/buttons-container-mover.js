@@ -264,8 +264,8 @@ window.MaxExtensionContainerMover = {
         }
 
         const message = mode === 'auto-recovery'
-            ? 'We found an alternative spot for your buttons.\n\nUse Forward/Back to find the best location, or switch to floating panel.'
-            : 'Move Buttons Container\n\nUse Forward/Back to find the best spot. If buttons disappear, keep clicking to find them.';
+            ? 'We found an alternative spot for your buttons. Use Forward/Back to find the best location, or switch to floating panel. If you are satisfied, just press Save.'
+            : 'Move Buttons Container. Use Forward/Back to find the best spot. If buttons disappear, keep clicking to find them. If you are satisfied, just press Save.';
 
         window.showToast(message, 'info', {
             duration: 0,
