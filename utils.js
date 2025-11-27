@@ -98,7 +98,13 @@ window.MaxExtensionUtils = {
         let firstMatch = null;
         for (const selector of selectors) {
             if (!selector) continue;
-            const candidates = Array.from(document.querySelectorAll(selector)).reverse();
+            let candidates;
+            try {
+                candidates = Array.from(document.querySelectorAll(selector)).reverse();
+            } catch (err) {
+                logConCgp('[utils] Skipping invalid selector while picking container:', selector, err?.message || err);
+                continue;
+            }
             for (const candidate of candidates) {
                 if (!firstMatch) {
                     firstMatch = candidate;

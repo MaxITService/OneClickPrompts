@@ -135,7 +135,7 @@ window.OneClickPromptsSelectorAutoDetector = {
             // Special handling for container type
             const failedSelectors = window.InjectionTargetsOnWebsite?.selectors?.containers || [];
             if (window.OneClickPromptsContainerHeuristics && typeof window.OneClickPromptsContainerHeuristics.findAlternativeContainer === 'function') {
-                result = window.OneClickPromptsContainerHeuristics.findAlternativeContainer(failedSelectors);
+                result = await window.OneClickPromptsContainerHeuristics.findAlternativeContainer(failedSelectors);
             }
 
             if (result) {

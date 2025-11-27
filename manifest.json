@@ -51,6 +51,7 @@
         "event-handlers.js",
         "utils.js",
         "modules/selector-auto-detector/base-heuristics.js",
+        "modules/selector-auto-detector/container-heuristics.js",
         "modules/selector-auto-detector/heuristics-deepseek.js",
         "modules/selector-auto-detector/index.js",
         "modules/selector-auto-detector/selector-guard.js",
