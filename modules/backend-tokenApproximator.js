@@ -13,7 +13,7 @@
   // A standard debounce utility function.
   function fallbackDebounce(func, delay) {
     let timeout;
-    return function(...args) {
+    return function (...args) {
       clearTimeout(timeout);
       timeout = setTimeout(() => func.apply(this, args), delay);
     };
@@ -484,6 +484,8 @@
    *      processed in a subsequent event loop tick, just like a real worker.
    *
    */
+  let cachedWorkerBlobUrl = null;
+
   function fallbackCreateEstimatorWorker() {
     // CSP workaround: some sites (Gemini / AI Studio) block blob workers.
     // In that case, return an on-thread mock worker.
@@ -493,11 +495,13 @@
       const mockWorker = {
         onmessage: null,
         postMessage: (data) => {
-          const result = runEstimation(data);
-          // Mimic async behavior of a real worker
-          if (mockWorker.onmessage) {
-            setTimeout(() => mockWorker.onmessage({ data: result }), 0);
-          }
+          // Offload to next tick to avoid blocking the idle callback immediately
+          setTimeout(() => {
+            const result = runEstimation(data);
+            if (mockWorker.onmessage) {
+              mockWorker.onmessage({ data: result });
+            }
+          }, 0);
         },
         terminate: () => { } // no-op
       };
@@ -505,6 +509,10 @@
     }
 
     // For all other sites, create a real worker from a blob.
+    if (cachedWorkerBlobUrl) {
+      return new Worker(cachedWorkerBlobUrl);
+    }
+
     // Build the worker code string from the class definitions to avoid duplication.
     const modelsCode = [TokenCountingModelBase, TokenModelRegistry, SimpleTokenModel, AdvancedTokenModel, CptBlendMixTokenModel, SingleRegexPassTokenModel, UltralightStateMachineTokenModel].map(c => c.toString()).join('\n\n');
 
@@ -539,7 +547,8 @@
       };
     `;
     const blob = new Blob([workerCode], { type: 'application/javascript' });
-    return new Worker(URL.createObjectURL(blob));
+    cachedWorkerBlobUrl = URL.createObjectURL(blob);
+    return new Worker(cachedWorkerBlobUrl);
   }
 
   const createEstimatorWorker = (workerModule && typeof workerModule.createEstimatorWorker === 'function')
@@ -569,6 +578,10 @@
     if (!root) return '';
 
     if (excludeEditors) {
+      // Optimization: if no editors, skip expensive clone
+      if (!root.querySelector(EDITOR_SELECTOR)) {
+        try { return root.innerText || ''; } catch { return root.textContent || ''; }
+      }
       // For "ignoreEditors" mode, create a clone and remove editors
       const clone = root.cloneNode(true);
 
@@ -620,29 +633,29 @@
       }
       if (scheduled) return;
       scheduled = true;
-      const cb = () => {
+      const cb = (deadline) => {
         scheduled = false;
         const since = Date.now() - lastRun;
         if (since < minCooldown) {
           setTimeout(() => schedule(false), minCooldown - since);
           return;
         }
-        if (dirty && !running) tick();
+        if (dirty && !running) tick(deadline);
       };
       if ('requestIdleCallback' in window) {
         requestIdleCallback(cb, { timeout: minCooldown + 200 });
       } else {
-        requestAnimationFrame(cb);
+        requestAnimationFrame(() => cb(null));
       }
     }
 
-    async function tick() {
+    async function tick(deadline) {
       if (running) return;
       running = true;
       dirty = false;
       lastRun = Date.now();
       try {
-        await runFn();
+        await runFn(deadline);
       } finally {
         running = false;
       }
@@ -732,10 +745,17 @@
     // ---- INDEPENDENT COUNTER FUNCTIONS ----
     // Completely separate thread and editor estimation to prevent coupling issues
 
-    function estimateThreadTokens() {
+    let sharedThreadWorker = null;
+    function estimateThreadTokens(deadline) {
       return new Promise((resolve) => {
         // Skip if thread mode is hide or if no thread selector
         if (effectiveSettings.threadMode === 'hide' || !THREAD_SELECTOR) {
+          return resolve();
+        }
+
+        // Check deadline to avoid blocking main thread if time is tight
+        if (deadline && deadline.timeRemaining() < 2 && !deadline.didTimeout) {
+          if (typeof threadScheduler !== 'undefined') threadScheduler.markDirty();
           return resolve();
         }
 
@@ -744,8 +764,9 @@
         const threadChip = wrap.querySelector('.ocp-tokapprox-chip[data-kind="thread"]');
         if (!threadChip) return resolve();
 
-        // Create dedicated worker for thread estimation
-        const threadWorker = createEstimatorWorker();
+        // Reuse dedicated worker for thread estimation
+        if (!sharedThreadWorker) sharedThreadWorker = createEstimatorWorker();
+        const threadWorker = sharedThreadWorker;
 
         threadWorker.onmessage = (ev) => {
           try {
@@ -778,7 +799,7 @@
           } catch (err) {
             log(`Thread estimation error: ${err.message}`);
           } finally {
-            threadWorker.terminate();
+            // Do not terminate shared worker
             resolve();
           }
         };
@@ -786,6 +807,7 @@
         threadWorker.onerror = () => {
           log('Thread worker error');
           threadWorker.terminate();
+          sharedThreadWorker = null;
           resolve();
         };
 
@@ -808,7 +830,7 @@
             log('No thread text found');
             threadChip.querySelector('.val').textContent = '-------';
             setTooltip(threadChip, 'thread', 'error', effectiveSettings);
-            threadWorker.terminate();
+            // Do not terminate shared worker
             return resolve();
           }
 
@@ -822,16 +844,23 @@
           log(`Thread text extraction failed: ${err.message}`);
           threadChip.querySelector('.val').textContent = '-------';
           setTooltip(threadChip, 'thread', 'error', effectiveSettings);
-          threadWorker.terminate();
+          // Do not terminate shared worker
           resolve();
         }
       });
     }
 
-    function estimateEditorTokens() {
+    let sharedEditorWorker = null;
+    function estimateEditorTokens(deadline) {
       return new Promise((resolve) => {
         // Skip if editor counter is disabled
         if (!effectiveSettings.showEditorCounter) {
+          return resolve();
+        }
+
+        // Check deadline
+        if (deadline && deadline.timeRemaining() < 2 && !deadline.didTimeout) {
+          if (typeof editorScheduler !== 'undefined') editorScheduler.markDirty();
           return resolve();
         }
 
@@ -840,8 +869,9 @@
         const editorChip = wrap.querySelector('.ocp-tokapprox-chip[data-kind="editor"]');
         if (!editorChip) return resolve();
 
-        // Create dedicated worker for editor estimation
-        const editorWorker = createEstimatorWorker();
+        // Reuse dedicated worker for editor estimation
+        if (!sharedEditorWorker) sharedEditorWorker = createEstimatorWorker();
+        const editorWorker = sharedEditorWorker;
 
         editorWorker.onmessage = (ev) => {
           try {
@@ -874,7 +904,7 @@
           } catch (err) {
             log(`Editor estimation error: ${err.message}`);
           } finally {
-            editorWorker.terminate();
+            // Do not terminate shared worker
             resolve();
           }
         };
@@ -882,6 +912,7 @@
         editorWorker.onerror = () => {
           log('Editor worker error');
           editorWorker.terminate();
+          sharedEditorWorker = null;
           resolve();
         };
 
@@ -896,7 +927,7 @@
             // Empty editor is valid - show 0 tokens
             editorChip.querySelector('.val').textContent = formatTokens(0);
             markFreshThenStale(editorChip, 'editor', effectiveSettings);
-            editorWorker.terminate();
+            // Do not terminate shared worker
             return resolve();
           }
 
@@ -910,7 +941,7 @@
           log(`Editor text extraction failed: ${err.message}`);
           editorChip.querySelector('.val').textContent = '-------';
           setTooltip(editorChip, 'editor', 'error', effectiveSettings);
-          editorWorker.terminate();
+          // Do not terminate shared worker
           resolve();
         }
       });
@@ -919,12 +950,12 @@
     // INDEPENDENT SCHEDULERS - Thread and Editor are now completely separate
     const threadScheduler = makeScheduler({
       minCooldown: 15000,
-      runFn: () => estimateThreadTokens()
+      runFn: (deadline) => estimateThreadTokens(deadline)
     });
 
     const editorScheduler = makeScheduler({
       minCooldown: 600, // faster editor updates
-      runFn: () => estimateEditorTokens()
+      runFn: (deadline) => estimateEditorTokens(deadline)
     });
 
     // Replace the simple observer with one that can re-create the UI
