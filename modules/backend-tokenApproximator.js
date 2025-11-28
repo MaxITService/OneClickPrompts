@@ -231,6 +231,21 @@
   function fallbackCreateUiIfNeeded() {
     ensureStyleOnce();
     let wrap = document.getElementById(WRAP_ID);
+
+    // Fix for sites (like Gemini) that strip IDs or clone elements, causing duplicate injection of chips.
+    // If ID is missing, try to recover by class name.
+    if (!wrap) {
+      const existing = document.querySelectorAll('.ocp-tokapprox-wrap');
+      if (existing.length > 0) {
+        wrap = existing[0];
+        wrap.id = WRAP_ID; // Restore ID
+        // Remove any accidental duplicates
+        for (let i = 1; i < existing.length; i++) {
+          existing[i].remove();
+        }
+      }
+    }
+
     if (!wrap) {
       wrap = document.createElement('div');
       wrap.id = WRAP_ID;
