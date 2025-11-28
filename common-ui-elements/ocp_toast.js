@@ -102,7 +102,24 @@ function showToast(message, type = 'info', options = 3000) {
     closeButton.textContent = '×';
     toast.appendChild(closeButton);
 
-    toastContainer.appendChild(toast);
+    // Identify if this toast should stick to the bottom (persistent or has complex interactions)
+    const isSticky = duration === 0 || (normalized.customButtons && normalized.customButtons.length > 0);
+    if (isSticky) {
+        toast.classList.add('toast-sticky');
+    }
+
+    // Insert logic: Sticky toasts go to the bottom (end of list).
+    // Transient toasts go before the first sticky toast, or at the bottom if no sticky toasts exist.
+    if (isSticky) {
+        toastContainer.appendChild(toast);
+    } else {
+        const firstSticky = toastContainer.querySelector('.toast-sticky');
+        if (firstSticky) {
+            toastContainer.insertBefore(toast, firstSticky);
+        } else {
+            toastContainer.appendChild(toast);
+        }
+    }
 
     // Trigger reflow to enable CSS transition
     void toast.offsetWidth;
