@@ -16,14 +16,6 @@ async function processPerplexityCustomSendButtonClick(event, customText, autoSen
 
     logConCgp('[Perplexity] Starting custom button handling.');
 
-    const isBusyStopButton = (btn) => {
-        if (!btn) return false;
-        const aria = (btn.getAttribute && btn.getAttribute('aria-label') || '').toLowerCase();
-        const testId = (btn.getAttribute && btn.getAttribute('data-testid') || '').toLowerCase();
-        const text = (btn.innerText || '').toLowerCase();
-        return aria.includes('stop') || testId.includes('stop') || text.includes('stop');
-    };
-
     // Find editor using SelectorGuard
     const editorElement = await window.OneClickPromptsSelectorGuard.findEditor();
 
@@ -179,6 +171,19 @@ function beginPerplexityAutoSend(expectedText, editorElement) {
             }
         }, INTERVAL_MS);
     });
+}
+
+/**
+ * Detects whether a button is currently acting as a stop button.
+ * @param {HTMLElement} btn - Candidate button element.
+ * @returns {boolean} True if the button looks like a stop button.
+ */
+function isBusyStopButton(btn) {
+    if (!btn) return false;
+    const aria = (btn.getAttribute && btn.getAttribute('aria-label') || '').toLowerCase();
+    const testId = (btn.getAttribute && btn.getAttribute('data-testid') || '').toLowerCase();
+    const text = (btn.innerText || '').toLowerCase();
+    return aria.includes('stop') || testId.includes('stop') || text.includes('stop');
 }
 
 /**
