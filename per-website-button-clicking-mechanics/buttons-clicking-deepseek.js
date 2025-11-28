@@ -16,14 +16,6 @@ async function processDeepSeekCustomSendButtonClick(event, customText, autoSend)
     event.preventDefault();
     logConCgp('[DeepSeek] Starting processing with text:', customText);
 
-    const isBusyStopButton = (btn) => {
-        if (!btn) return false;
-        const aria = (btn.getAttribute && btn.getAttribute('aria-label') || '').toLowerCase();
-        const testId = (btn.getAttribute && btn.getAttribute('data-testid') || '').toLowerCase();
-        const text = (btn.innerText || '').toLowerCase();
-        return aria.includes('stop') || testId.includes('stop') || text.includes('stop');
-    };
-
     // 1. Find editor using SelectorGuard
     const editor = await window.OneClickPromptsSelectorGuard.findEditor();
 
@@ -91,42 +83,22 @@ async function processDeepSeekCustomSendButtonClick(event, customText, autoSend)
 
     // 3. Robust auto-send system
     function startAutoSend() {
-        const MAX_ATTEMPTS = 15; // 4.5 seconds max
-        let attempts = 0;
-        let interval;
-
-        const attemptSend = async () => {
-            if (attempts++ > MAX_ATTEMPTS) {
-                clearInterval(interval);
+        ButtonsClickingShared.performAutoSend({
+            maxAttempts: 15,
+            interval: 300,
+            isEnabled: (sendButton) => {
+                if (!sendButton) return false;
+                return !sendButton.disabled &&
+                    sendButton.getAttribute('aria-disabled') !== 'true' &&
+                    !sendButton.classList.contains('disabled');
+            },
+            clickAction: (btn) => btn && btn.click()
+        }).then((result) => {
+            if (!result?.success) {
                 logConCgp('[DeepSeek] Max attempts reached, send button not found.');
                 showToast('Could not find the send button.', 'error');
-                return;
             }
-
-            // Use SelectorGuard to find the button
-            const sendButton = await window.OneClickPromptsSelectorGuard.findSendButton();
-
-            if (sendButton && isBusyStopButton(sendButton)) {
-                logConCgp('[DeepSeek] Send button is Stop; waiting.');
-                attempts--; // do not penalize busy state
-                return;
-            }
-
-            // Check if enabled
-            const isEnabled = sendButton &&
-                !sendButton.disabled &&
-                sendButton.getAttribute('aria-disabled') !== 'true' &&
-                !sendButton.classList.contains('disabled');
-
-            if (isEnabled) {
-                logConCgp('[DeepSeek] Found active send button');
-                sendButton.click();
-                clearInterval(interval);
-            }
-        };
-
-        interval = setInterval(attemptSend, 300);
-        attemptSend(); // Immediate first attempt
+        });
     }
 
     // Execute input on the found editor

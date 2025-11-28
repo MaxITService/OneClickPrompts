@@ -105,85 +105,25 @@ function insertTextIntoPerplexityEditor(editorElement, textToInsert) {
  * @param {HTMLElement} editorElement - The editor element to check for content.
  */
 function beginPerplexityAutoSend(expectedText, editorElement) {
-    const MAX_ATTEMPTS = 20;
-    const INTERVAL_MS = 250;
-    let attempts = 0;
-    let intervalId = null;
-
-    async function tryClick() {
-        attempts += 1;
-
-        // Use SelectorGuard to find the button
-        const button = await window.OneClickPromptsSelectorGuard.findSendButton();
-
-        if (button && isBusyStopButton(button)) {
-            logConCgp('[Perplexity] Send button is Stop; waiting.');
-            attempts--; // don't count busy state
-            return false;
+    ButtonsClickingShared.performAutoSend({
+        interval: 250,
+        maxAttempts: 20,
+        isEnabled: (button) => isPerplexityButtonEnabled(button),
+        preClickValidation: () => perplexityEditorHasContent(expectedText, editorElement)
+    }).then((result) => {
+        if (result?.success) {
+            return;
         }
-
-        if (button && isPerplexityButtonEnabled(button)) {
-            // Guard: ensure editor has content before dispatching click to avoid empty sends.
-            if (!perplexityEditorHasContent(expectedText, editorElement)) {
-                if (attempts >= MAX_ATTEMPTS) {
-                    logConCgp('[Perplexity] Editor content still not ready after retries; aborting auto-send.');
-                    showToast('Editor content not ready; please send manually.', 'error');
-                    return true;
-                }
-
-                logConCgp('[Perplexity] Editor content not ready, deferring auto-send.');
-                return false;
-            }
-
-            logConCgp('[Perplexity] Submit button located; dispatching click.');
-            if (window.MaxExtensionUtils && typeof window.MaxExtensionUtils.simulateClick === 'function') {
-                MaxExtensionUtils.simulateClick(button);
-            } else {
-                button.click();
-            }
-            return true;
+        if (result?.reason === 'validation_failed') {
+            logConCgp('[Perplexity] Editor content still not ready after retries; aborting auto-send.');
+            showToast('Editor content not ready; please send manually.', 'error');
+            return;
         }
-
-        if (attempts >= MAX_ATTEMPTS) {
+        if (result?.reason === 'not_found' || result?.reason === 'disabled') {
             logConCgp('[Perplexity] Failed to find enabled submit button within timeout.');
             showToast('Could not find the send button.', 'error');
-            return true;
         }
-
-        return false;
-    }
-
-    function clearRetryInterval() {
-        if (intervalId !== null) {
-            clearInterval(intervalId);
-            intervalId = null;
-        }
-    }
-
-    // Initial attempt
-    tryClick().then(done => {
-        if (done) return;
-
-        // Start polling
-        intervalId = setInterval(async () => {
-            if (await tryClick()) {
-                clearRetryInterval();
-            }
-        }, INTERVAL_MS);
     });
-}
-
-/**
- * Detects whether a button is currently acting as a stop button.
- * @param {HTMLElement} btn - Candidate button element.
- * @returns {boolean} True if the button looks like a stop button.
- */
-function isBusyStopButton(btn) {
-    if (!btn) return false;
-    const aria = (btn.getAttribute && btn.getAttribute('aria-label') || '').toLowerCase();
-    const testId = (btn.getAttribute && btn.getAttribute('data-testid') || '').toLowerCase();
-    const text = (btn.innerText || '').toLowerCase();
-    return aria.includes('stop') || testId.includes('stop') || text.includes('stop');
 }
 
 /**

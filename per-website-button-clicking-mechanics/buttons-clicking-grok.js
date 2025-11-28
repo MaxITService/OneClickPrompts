@@ -26,14 +26,6 @@
 
 'use strict';
 
-const isGrokBusyStopButton = (btn) => {
-    if (!btn) return false;
-    const aria = (btn.getAttribute && btn.getAttribute('aria-label') || '').toLowerCase();
-    const testId = (btn.getAttribute && btn.getAttribute('data-testid') || '').toLowerCase();
-    const text = (btn.innerText || '').toLowerCase();
-    return aria.includes('stop') || testId.includes('stop') || text.includes('stop');
-};
-
 /**
  * Helper function that simulates the natural typing of a single character.
  * It dispatches keydown, input, and keyup events and appends the character.
@@ -196,43 +188,13 @@ async function processGrokCustomSendButtonClick(event, customText, autoSend) {
         // Added extra delay to ensure the last character is fully processed.
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        let attempts = 0;
-        const maxAttempts = 50; // 5 seconds of attempts
-
-        const intervalId = setInterval(async () => {
-            const currentText = isTextArea ? editorArea.value.trim() : editorArea.innerText.trim();
-            if (currentText.length === 0) {
-                logConCgp('[grok] Editor became empty during auto-send. Stopping auto-send.');
-                clearInterval(intervalId);
-                window.autoSendInterval = null;
-                return;
-            }
-            // Locate the Grok send button using SelectorGuard
-            const sendButton = await window.OneClickPromptsSelectorGuard.findSendButton();
-
-            if (sendButton && isGrokBusyStopButton(sendButton)) {
-                logConCgp('[grok] Send button is Stop; waiting.');
-                attempts--; // don't burn attempts on busy state
-                return;
-            }
-
-            if (sendButton) {
-                logConCgp('[grok] Send button found. Clicking send button.');
-                window.MaxExtensionUtils.simulateClick(sendButton);
-                clearInterval(intervalId);
-                window.autoSendInterval = null;
-                logConCgp('[grok] Auto-send: Send button clicked, auto-send stopped.');
-            } else if (++attempts >= maxAttempts) {
-                clearInterval(intervalId);
-                window.autoSendInterval = null;
-                logConCgp('[grok] Send button not found after multiple attempts.');
-                // Toast handled by Detector
-                // showToast('Send button not found. Auto-send stopped.', 'error');
-            } else {
-                logConCgp(`[grok] Send button not found. Attempt ${attempts}/${maxAttempts}`);
-            }
-        }, 100);
-        window.autoSendInterval = intervalId;
+        ButtonsClickingShared.performAutoSend({
+            preClickValidation: () => {
+                const currentText = isTextArea ? editorArea.value.trim() : editorArea.innerText.trim();
+                return currentText.length > 0;
+            },
+            clickAction: (btn) => window.MaxExtensionUtils.simulateClick(btn)
+        });
     }
 }
 

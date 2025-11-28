@@ -10,14 +10,6 @@ async function processCopilotCustomSendButtonClick(event, customText, autoSend) 
     event.preventDefault();
     logConCgp('[buttons] Custom send button was clicked.');
 
-    const isBusyStopButton = (btn) => {
-        if (!btn) return false;
-        const aria = (btn.getAttribute && btn.getAttribute('aria-label') || '').toLowerCase();
-        const testId = (btn.getAttribute && btn.getAttribute('data-testid') || '').toLowerCase();
-        const text = (btn.innerText || '').toLowerCase();
-        return aria.includes('stop') || testId.includes('stop') || text.includes('stop');
-    };
-
     // Find editor using SelectorGuard
     const editorArea = await window.OneClickPromptsSelectorGuard.findEditor();
 
@@ -51,62 +43,19 @@ async function processCopilotCustomSendButtonClick(event, customText, autoSend) 
         }
     };
 
-    const handleSendButton = (sendButton) => {
-        if (!sendButton) {
-            logConCgp('[buttons] Send button is not available to handle.');
-            if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
-                logConCgp('[buttons] Auto-send failed: Send button not found.');
-                showToast('Could not find the send button.', 'error');
-            }
-            return;
-        }
-
-        if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
-            logConCgp('[buttons] Auto-send is enabled. Starting auto-send process.');
-            startAutoSend(sendButton, editorArea);
-        }
-    };
-
-    const startAutoSend = (initialSendButton, editor) => {
-        if (window.autoSendInterval) {
-            logConCgp('[auto-send] Auto-send is already running. Skipping initiation.');
-            return;
-        }
-
-        let attempts = 0;
-        const maxAttempts = 50; // 5 seconds
-
-        const intervalId = setInterval(async () => {
-            const currentText = editor.value?.trim() ?? '';
-
-            if (!currentText) {
-                clearInterval(intervalId);
-                window.autoSendInterval = null;
-                logConCgp('[auto-send] Editor is empty. Stopping auto-send interval.');
-                return;
-            }
-
-            // Use SelectorGuard to find the button
-            const sendButton = await window.OneClickPromptsSelectorGuard.findSendButton();
-
-            if (sendButton && isBusyStopButton(sendButton)) {
-                logConCgp('[auto-send] Send button is Stop; waiting.');
-                return;
-            }
-
-            if (sendButton) {
-                sendButton.click();
-                clearInterval(intervalId);
-                window.autoSendInterval = null;
-                logConCgp('[auto-send] Message sent and interval stopped.');
-            } else if (++attempts >= maxAttempts) {
-                clearInterval(intervalId);
-                window.autoSendInterval = null;
-                logConCgp('[auto-send] Send button not found after multiple attempts.');
+    const startAutoSend = (_, editor) => {
+        logConCgp('[auto-send] Auto-send is enabled. Starting auto-send process.');
+        ButtonsClickingShared.performAutoSend({
+            preClickValidation: () => {
+                const currentText = editor.value?.trim() ?? '';
+                return currentText.length > 0;
+            },
+            clickAction: (btn) => btn && btn.click()
+        }).then((result) => {
+            if (!result?.success) {
                 showToast('Send button not found. Auto-send stopped.', 'error');
             }
-        }, 100);
-        window.autoSendInterval = intervalId;
+        });
     };
 
     const handleMessageInsertion = async () => {
@@ -130,36 +79,9 @@ async function processCopilotCustomSendButtonClick(event, customText, autoSend) 
             logConCgp('[buttons] Cursor moved to the end of the editor.');
         }
 
-        // Step 3: Locate send buttons and handle auto-sending.
-        // Use SelectorGuard to find the button
-        const sendButton = await window.OneClickPromptsSelectorGuard.findSendButton();
-
-        if (sendButton) {
-            handleSendButton(sendButton);
-        } else {
-            // If buttons aren't ready, wait for them with polling
-            logConCgp('[buttons] Send button not found immediately, polling...');
-            let attempts = 0;
-            const maxAttempts = 50;
-
-            const pollInterval = setInterval(async () => {
-                const btn = await window.OneClickPromptsSelectorGuard.findSendButton();
-                if (btn && isBusyStopButton(btn)) {
-                    logConCgp('[buttons] Send button is Stop during polling; waiting.');
-                    return;
-                }
-                if (btn) {
-                    clearInterval(pollInterval);
-                    handleSendButton(btn);
-                    logConCgp('[buttons] Send button detected via polling.');
-                } else if (++attempts >= maxAttempts) {
-                    clearInterval(pollInterval);
-                    if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
-                        showToast('Could not find the send button.', 'error');
-                    }
-                    logConCgp('[buttons] Polling timed out.');
-                }
-            }, 100);
+        // Step 3: Handle auto-sending.
+        if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
+            startAutoSend(null, editorArea);
         }
     };
 

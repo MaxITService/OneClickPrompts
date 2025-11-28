@@ -12,14 +12,6 @@
 async function processClaudeCustomSendButtonClick(event, customText, autoSend) {
     logConCgp('[Claude] Starting Claude-specific handling');
 
-    const isBusyStopButton = (btn) => {
-        if (!btn) return false;
-        const aria = (btn.getAttribute && btn.getAttribute('aria-label') || '').toLowerCase();
-        const testId = (btn.getAttribute && btn.getAttribute('data-testid') || '').toLowerCase();
-        const text = (btn.innerText || '').toLowerCase();
-        return aria.includes('stop') || testId.includes('stop') || text.includes('stop');
-    };
-
     // First try to insert the text
     const insertionSuccessful = await ClaudeEditorUtils.insertTextIntoClaudeEditor(customText);
 
@@ -39,71 +31,15 @@ async function processClaudeCustomSendButtonClick(event, customText, autoSend) {
  * Handles the send button clicking process for Claude
  */
 async function handleClaudeSend() {
-    // Add timeout and attempt counter for finding send button
-    let attempts = 0;
-    const MAX_ATTEMPTS = 50;
-    const TIMEOUT_DURATION = 5000;
-    let timeoutId;
-
-    // Use SelectorGuard to find send button
-    const sendButton = await window.OneClickPromptsSelectorGuard.findSendButton();
-
-    if (sendButton) {
-        if (isBusyStopButton(sendButton)) {
-            logConCgp('[Claude] Send button is currently a Stop button; waiting.');
-        } else {
-            logConCgp('[Claude] Send button found immediately, delaying click by 200ms');
-            setTimeout(() => {
-                MaxExtensionUtils.simulateClick(sendButton);
-                logConCgp('[Claude] Send button clicked after 200ms delay');
-            }, 200);
-            return;
+    ButtonsClickingShared.performAutoSend({
+        clickAction: (btn) => setTimeout(() => MaxExtensionUtils.simulateClick(btn), 200),
+        isBusy: (btn) => ButtonsClickingShared.isBusyStopButton(btn)
+    }).then((result) => {
+        if (!result?.success) {
+            logConCgp('[Claude] Auto-send exhausted without finding enabled send button.');
+            showToast('Could not find the send button.', 'error');
         }
-    } else {
-        logConCgp('[Claude] Send button not found immediately, polling...');
-    }
-
-    // If not found, set up observer (or polling since SelectorGuard handles logic)
-    // Note: SelectorGuard already does some recovery, but for auto-send we might want to poll
-    // if the button appears dynamically after text insertion.
-    // However, SelectorGuard is designed to be the single source of truth.
-    // If SelectorGuard returned null, it means it failed even after recovery attempts.
-    // But for dynamic UI where button appears ONLY after typing, we might need a loop.
-
-    logConCgp('[Claude] Send button not found immediately, polling...');
-
-    const intervalId = setInterval(async () => {
-        attempts++;
-        const btn = await window.OneClickPromptsSelectorGuard.findSendButton();
-
-        if (btn && isBusyStopButton(btn)) {
-            logConCgp('[Claude] Send button is Stop; continuing to wait.');
-            attempts--; // don't penalize busy state
-            return;
-        }
-
-        if (btn) {
-            clearInterval(intervalId);
-            clearTimeout(timeoutId);
-            logConCgp('[Claude] Send button found after polling, delaying click by 200ms');
-            setTimeout(() => {
-                MaxExtensionUtils.simulateClick(btn);
-                logConCgp('[Claude] Send button clicked after 200ms delay');
-            }, 200);
-        } else if (attempts >= MAX_ATTEMPTS) {
-            clearInterval(intervalId);
-            clearTimeout(timeoutId);
-            logConCgp('[Claude] Maximum attempts reached without finding send button');
-            // Toast handled by SelectorGuard/Detector if it was a structural failure, 
-            // but here it might just be logic (button didn't appear).
-        }
-    }, 100);
-
-    timeoutId = setTimeout(() => {
-        clearInterval(intervalId);
-        logConCgp('[Claude] Timeout reached without finding send button');
-        showToast('Could not find the send button.', 'error');
-    }, TIMEOUT_DURATION);
+    });
 }
 
 

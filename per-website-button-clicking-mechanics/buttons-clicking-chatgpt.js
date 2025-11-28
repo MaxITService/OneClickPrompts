@@ -133,22 +133,12 @@ async function processChatGPTCustomSendButtonClick(event, customText, autoSend) 
      * Handles the send buttons by initiating auto-send if enabled.
      * @param {HTMLElement} sendButton - The send button element.
      */
-    const handleSendButton = (sendButton) => {
+    const handleSendButton = () => {
         logConCgp('[buttons] handleSendButton called.');
-        if (!sendButton) {
-            // If auto-send was intended, notify the user that the button was not found.
-            if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
-                logConCgp('[buttons] Auto-send failed: Send button not found.');
-                showToast('Could not find the send button.', 'error');
-            }
-            logConCgp('[buttons] Send button is not available to handle.');
-            return;
-        }
-        logConCgp('[buttons] Send button is available. Proceeding with sending message.');
 
         if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
             logConCgp('[buttons] Auto-send is enabled. Starting auto-send process.');
-            startAutoSend(sendButton, editorArea);
+            startAutoSend(null, editorArea);
         }
     };
 
@@ -158,60 +148,29 @@ async function processChatGPTCustomSendButtonClick(event, customText, autoSend) 
      * @param {HTMLElement} initialSendButton - The initial send button found.
      * @param {HTMLElement} editor - The editor area element.
      */
-    const startAutoSend = (initialSendButton, editor) => {
+    const startAutoSend = (_, editor) => {
         logConCgp('[auto-send] startAutoSend called.');
-
-        // Prevent multiple auto-send intervals from running simultaneously
-        if (window.autoSendInterval) {
-            logConCgp('[auto-send] Auto-send is already running. Skipping initiation.');
-            return;
-        }
-
-        const isBusyStopButton = (btn) => {
-            if (!btn) return false;
-            const aria = (btn.getAttribute && btn.getAttribute('aria-label') || '').toLowerCase();
-            const testId = (btn.getAttribute && btn.getAttribute('data-testid') || '').toLowerCase();
-            const text = (btn.innerText || '').toLowerCase();
-            return aria.includes('stop') || testId.includes('stop') || text.includes('stop');
-        };
-
-        logConCgp('[auto-send] Starting auto-send interval to click send button every 100ms.');
-        window.autoSendInterval = setInterval(async () => {
-            const currentText = editor.innerText.trim();
-            logConCgp('[auto-send] Current text in editor:', currentText);
-
-            // If editor is empty, stop the auto-send interval
-            if (currentText.length === 0) {
-                logConCgp('[auto-send] Editor is empty. Stopping auto-send interval.');
-                clearInterval(window.autoSendInterval);
-                window.autoSendInterval = null;
-                return;
-            }
-
-            // Attempt to locate send button again using SelectorGuard
-            const sendButton = await window.OneClickPromptsSelectorGuard.findSendButton();
-
-            if (sendButton) {
-                if (isBusyStopButton(sendButton)) {
-                    logConCgp('[auto-send] Send button is currently a Stop button; waiting.');
+        ButtonsClickingShared.performAutoSend({
+            preClickValidation: () => {
+                const currentText = editor.innerText.trim();
+                logConCgp('[auto-send] Current text in editor:', currentText);
+                return currentText.length > 0;
+            },
+            isBusy: (btn) => {
+                const busy = ButtonsClickingShared.isBusyStopButton(btn);
+                if (busy) {
                     const detector = window.OneClickPromptsSelectorAutoDetector;
                     const sendState = detector?.state?.sendButton;
                     if (sendState) sendState.lastSeenAt = Date.now();
-                    return;
                 }
-                logConCgp('[auto-send] Clicking send button:', sendButton);
-                MaxExtensionUtils.simulateClick(sendButton);
-                logConCgp('[auto-send] Send button clicked successfully.');
-                clearInterval(window.autoSendInterval);
-                window.autoSendInterval = null;
-                logConCgp('[auto-send] Auto-send interval stopped after successful send.');
-            } else {
-                logConCgp('[auto-send] Send button not found during auto-send.');
-                // Note: SelectorGuard might trigger recovery toasts here if it keeps failing
-                // We might want to stop after some attempts, but SelectorGuard handles its own failure thresholds
-                // For now, we rely on the interval to keep trying or user to intervene
+                return busy;
+            },
+            clickAction: (btn) => MaxExtensionUtils.simulateClick(btn)
+        }).then((result) => {
+            if (!result?.success && result?.reason !== 'validation_failed') {
+                showToast('Could not find the send button.', 'error');
             }
-        }, 100); // Interval set to 100 milliseconds
+        });
     };
 
     /**

@@ -49,14 +49,6 @@ async function processGeminiCustomSendButtonClick(event, customText, autoSend) {
         MaxExtensionUtils.moveCursorToEnd(editor);
     };
 
-    const isBusyStopButton = (btn) => {
-        if (!btn) return false;
-        const aria = (btn.getAttribute && btn.getAttribute('aria-label') || '').toLowerCase();
-        const testId = (btn.getAttribute && btn.getAttribute('data-testid') || '').toLowerCase();
-        const text = (btn.innerText || '').toLowerCase();
-        return aria.includes('stop') || testId.includes('stop') || text.includes('stop');
-    };
-
     // Insert the custom text
     insertTextIntoGeminiEditor(editorArea, customText);
 
@@ -64,36 +56,15 @@ async function processGeminiCustomSendButtonClick(event, customText, autoSend) {
     if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
         logConCgp('[Gemini] Auto-send enabled. Attempting to send.');
 
-        // Use a MutationObserver or interval to wait for the button to become enabled
-        const attemptSend = (maxAttempts = 50) => { // Increased attempts for safety
-            let attempts = 0;
-            const intervalId = setInterval(async () => {
-                // Use SelectorGuard to find the button
-                const sendButton = await window.OneClickPromptsSelectorGuard.findSendButton();
-
-                // Check if found AND enabled
-                if (sendButton && isBusyStopButton(sendButton)) {
-                    logConCgp('[Gemini] Send button is Stop; waiting.');
-                    attempts--; // don't count busy state
-                    return;
-                }
-
-                const isEnabled = sendButton && sendButton.getAttribute('aria-disabled') !== 'true';
-
-                if (isEnabled) {
-                    clearInterval(intervalId);
-                    logConCgp('[Gemini] Send button found and enabled. Clicking.');
-                    MaxExtensionUtils.simulateClick(sendButton);
-                } else if (++attempts >= maxAttempts) {
-                    clearInterval(intervalId);
-                    logConCgp('[Gemini] Send button did not become enabled after multiple attempts.');
-                    showToast('Send button did not become active.', 'error');
-                } else {
-                    logConCgp(`[Gemini] Send button not enabled yet. Attempt ${attempts}/${maxAttempts}`);
-                }
-            }, 100); // Check every 100ms
-        };
-        attemptSend(); // Start trying to send
+        ButtonsClickingShared.performAutoSend({
+            isEnabled: (sendButton) => sendButton && sendButton.getAttribute('aria-disabled') !== 'true',
+            clickAction: (btn) => MaxExtensionUtils.simulateClick(btn)
+        }).then((result) => {
+            if (!result?.success) {
+                logConCgp('[Gemini] Send button did not become enabled after multiple attempts.');
+                showToast('Send button did not become active.', 'error');
+            }
+        });
     } else {
         logConCgp('[Gemini] Auto-send disabled or not requested for this button.');
         // Optional: Re-focus editor after insertion if not auto-sending

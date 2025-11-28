@@ -42,61 +42,28 @@ async function processAIStudioCustomSendButtonClick(event, customText, autoSend)
     // Move cursor to end
     editorArea.setSelectionRange(editorArea.value.length, editorArea.value.length);
 
-    const isBusyStopButton = (btn) => {
-        if (!btn) return false;
-        const aria = (btn.getAttribute && btn.getAttribute('aria-label') || '').toLowerCase();
-        const testId = (btn.getAttribute && btn.getAttribute('data-testid') || '').toLowerCase();
-        const text = (btn.innerText || '').toLowerCase();
-        return aria.includes('stop') || testId.includes('stop') || text.includes('stop');
-    };
-
     // Auto-send if enabled
     if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
         logConCgp('[buttons] AI Studio Auto-send enabled, attempting to send message');
 
-        // Robust retry mechanism: poll for send button with multiple attempts
-        const MAX_ATTEMPTS = 10; // 2 seconds max (10 × 200ms)
-        let attempts = 0;
-        let pollInterval;
-
-        const attemptSend = async () => {
-            attempts++;
-            logConCgp(`[buttons] AI Studio auto-send attempt ${attempts}/${MAX_ATTEMPTS}`);
-
-            let btn = null;
-
-            // For all attempts except the last one, use silent selector queries
-            // This avoids triggering auto-detector during normal DOM update delays
-            if (attempts < MAX_ATTEMPTS) {
-                // Silent query without triggering auto-detector
-                const selectors = window.InjectionTargetsOnWebsite?.selectors?.sendButtons || [];
-                btn = window.OneClickPromptsSelectorGuard._querySelectors(selectors, { requireEnabled: true });
-            } else {
-                // On final attempt, use full SelectorGuard which enables auto-detector and heuristics
-                btn = await window.OneClickPromptsSelectorGuard.findSendButton();
-            }
-
-            if (btn) {
-                if (isBusyStopButton(btn)) {
-                    logConCgp('[buttons] AI Studio send button is a Stop state; waiting.');
-                    attempts--; // do not punish busy state
-                    return;
-                }
-                logConCgp('[buttons] AI Studio Send button found, clicking now');
-                MaxExtensionUtils.simulateClick(btn);
-                clearInterval(pollInterval);
-            } else if (attempts >= MAX_ATTEMPTS) {
-                // Error already shown by SelectorGuard on final attempt
-                logConCgp('[buttons] AI Studio Send button not found after all retry attempts');
-                clearInterval(pollInterval);
-            }
-            // If not found and attempts remain, keep polling silently
-        };
+        const MAX_ATTEMPTS = 10; // 2 seconds max (10 x 200ms)
+        const selectors = window.InjectionTargetsOnWebsite?.selectors?.sendButtons || [];
+        let findAttempts = 0;
 
         // Start polling after initial delay to let text settle
         setTimeout(() => {
-            pollInterval = setInterval(attemptSend, 200);
-            attemptSend(); // Immediate first attempt
+            ButtonsClickingShared.performAutoSend({
+                interval: 200,
+                maxAttempts: MAX_ATTEMPTS,
+                findButton: async () => {
+                    findAttempts += 1;
+                    if (findAttempts < MAX_ATTEMPTS) {
+                        return window.OneClickPromptsSelectorGuard._querySelectors(selectors, { requireEnabled: true });
+                    }
+                    return window.OneClickPromptsSelectorGuard.findSendButton();
+                },
+                clickAction: (btn) => MaxExtensionUtils.simulateClick(btn)
+            });
         }, 100);
     }
 }
