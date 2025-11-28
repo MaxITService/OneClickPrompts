@@ -1,328 +1,346 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OneClickPrompts Instructions</title>
-    <link rel="icon" type="image/png" href="icon128.png" />
-    <link rel="stylesheet" href="welcome-page-files/styles.css" />
-    <link rel="stylesheet" href="common-ui-elements/common-style.css" />
-    <link rel="stylesheet" href="common-ui-elements/popup-toggle.css" />
-    <link rel="stylesheet" href="common-ui-elements/dark-theme.css" />
-  </head>
-  <body>
-    <div class="container">
-      <!-- Main Header -->
-      <header class="section">
-        <!-- Logo added here -->
-        <img src="icon128.png" alt="OneClickPrompts Logo" class="logo" />
-        <h1 id="main-title">OneClickPrompts Instructions</h1>
-      </header>
 
-      <!-- Instruction Section -->
-      <section class="section">
-        <div class="instruction">
-          <p>
-            This is an instruction page for the Chrome extension
-            <strong>OneClickPrompts</strong> that you have just installed. If
-            you are seeing this page, it means that you have installed the
-            extension for the first time or it may have appeared due to an
-            update – our apologies.
-          </p>
-        </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OneClickPrompts Instructions</title>
+  <link rel="icon" type="image/png" href="icon128.png" />
+  <link rel="stylesheet" href="welcome-page-files/styles.css" />
+  <link rel="stylesheet" href="common-ui-elements/common-style.css" />
+  <link rel="stylesheet" href="common-ui-elements/popup-toggle.css" />
+  <link rel="stylesheet" href="common-ui-elements/dark-theme.css" />
+</head>
 
-        <div class="instruction">
-          <h2>Pinned Extension Button</h2>
-          <p>
-            <strong>Important:</strong> You should pin the extension button, or
-            you won't be able to access menu. To do this, click on your
-            extension menu, which is this button near address bar right here:
-          </p>
-          <ul>
-            <li>
-              <img
-                src="/welcome-page-files/extension-management-button.png"
-                alt="Extension Management Button"
-              />
-            </li>
-          </ul>
+<body>
+  <div class="container">
+    <!-- Main Header -->
+    <header class="section">
+      <!-- Logo added here -->
+      <img src="icon128.png" alt="OneClickPrompts Logo" class="logo" />
+      <h1 id="main-title">OneClickPrompts Instructions</h1>
+    </header>
 
-          <p>
-            (Your button may be a little bit different in different browsers. So
-            I'm attaching next screenshot from other browser) then select
-            <em>'Pin'</em> near the icon of this extension:
-          </p>
-          <ul>
-            <li>
-              <img
-                src="/welcome-page-files/pin-extension.png"
-                alt="Pin Extension"
-              />
-            </li>
-          </ul>
-        </div>
-
-        <div class="instruction">
-          <p>
-            Once pinned, the extension UI button will be available constantly in
-            your browser toolbar: when you click it (green arrow), you will see
-            a menu where you can edit the text for all the buttons that you add:
-          </p>
-          <img
-            src="/welcome-page-files/extension-ui-button-and-popup.png"
-            alt="Extension UI"
-          />
-          <p>
-            In this UI, called "popup" you can fully control the extension and,
-            at the bottom, import/export profiles. Don't forget to scroll (red
-            arrow) down to access features. At the top you will see the profile
-            management, so profile is like a lot of buttons that are saved under
-            this name. Buttons and separators can be dragged to be reordered.
-          </p>
-        </div>
-
-        <div class="instruction">
-          <h2>Site-Specific Activation</h2>
-          <p>
-            If you want the extension to work only on specific websites, please
-            do the following:
-          </p>
-          <ul>
-            <li>
-              Right-click on the extension icon in the browser toolbar:
-              <img
-                src="/welcome-page-files/right-click-on-icon.png"
-                alt="Right Click Extension"
-              />
-            </li>
-            <li>
-              From the menu, select <em>'Manage extensions'</em>.
-              <img
-                src="/welcome-page-files/manage-extension.png"
-                alt="Manage Extensions"
-              />
-            </li>
-            <li>
-              Select the websites where you want the extension to be
-              automatically enabled. Or just select all websites at once.
-              Sometimes after the updates this option will be disabled, so this
-              is a good troubleshooting step if extension is not activated
-            </li>
-          </ul>
-        </div>
-
-        <div class="instruction">
-          <p>
-            <strong>Note:</strong> When updating the extension, Chrome may
-            prompt for permission for the extension to access websites. If you
-            click 'no', the extension may stop working.
-          </p>
-        </div>
-
-        <h2>Tips for using:</h2>
-
-        <div class="instruction">
-          <ul>
-            <li>
-              A few usage tips: Tailored instructions that you enter with this
-              extension can improve answers and enhance your overall experience
-              with chatbots.
-            </li>
-            <li>
-              You don't have to use just emoji for buttons—a custom text may
-              help when you have lots of prompts. Just type in the field where
-              there is emoji input: text will become the button.
-            </li>
-            <li>
-              The first button is the system's button and is meant for buttons
-              to appear on a floating, resizable panel.
-            </li>
-            <li>
-              Example: Grok does not always initiate a search, but for some
-              questions, you might feel that the answer would be better if it
-              tried to search the web for one.
-            </li>
-            <li>
-              If the model sticks to short answers, but if you specify after
-              your question that you want a theoretical explanation, a few
-              examples, and one related concept, you might receive a much more
-              detailed response.
-            </li>
-            <li>
-              How can you force model to think? Easy. You can tell it. Simply
-              asking to think true may work or may not. But if you actually
-              provide model with some advice on how to think and have some sort
-              of chain of doubt, then it will more likely to actually initiate
-              thinking by itself.
-            </li>
-
-            <li>
-              Next thing that you need to think about is well-told answer will
-              be usually longer. So in your prompt, specify the desired length
-              of answer to not generate answers that are too long and will waste
-              your time reading them.
-            </li>
-            <li>
-              When correcting a text, a chatbot may get very creative and
-              replace your slang or informal words with ones it thinks are
-              correct. By providing specific instructions to the chatbot, you
-              can avoid this.
-            </li>
-            <li>
-              Remove all the example buttons that you will not use, this will
-              make navigation across your buttons easier!
-            </li>
-            <li>
-              In Popup, you can reset position of all floating windows if
-              something goes wrong
-            </li>
-            <li>
-              See Google’s
-              <a
-                href="https://www.gptaiflow.com/assets/files/2025-01-18-pdf-1-TechAI-Goolge-whitepaper_Prompt%20Engineering_v4-af36dcc7a49bb7269a58b1c9b89a8ae1.pdf"
-                >Prompt Engineering Whitepaper</a
-              >. For example, repeating important instructions both before and
-              after your specific prompt increases the likelihood that those
-              instructions will be followed correctly.
-            </li>
-            <li>You can open this page later from the popup</li>
-          </ul>
-        </div>
-        <h2>Modules:</h2>
-        You can have some additional settings if you go to the pop-up in the modules section and enable module that you are interested in:
-       
-          <img
-            src="welcome-page-files/modules.png"
-            alt="Modules overview illustration"            
-          />
-          For example, you can spawn profile selector with buttons.
-   
-        <h2>Queue Functionality: Send Prompts Sequentially</h2>
-        <div class="instruction">
-          <p>
-            OneClickPrompts now includes a powerful
-            <strong>Queue</strong> feature, allowing you to send multiple
-            prompts one after another with a set delay between them. This is
-            perfect for example when you want AI to search for news and tell you
-            updates every 2 hours.
-          </p>
-          <p><strong>How to use the Queue:</strong></p>
-          <ol>
-            <li>
-              <strong>Open the Floating Panel:</strong> The queue controls are
-              located in the floating panel. Click the '🔼' button next to the
-              prompt input area to open it.
-            </li>
-            <li>
-              <strong>Enable Queue Mode:</strong> In the floating panel, find
-              the "Queue" section and toggle on "Enable Queue Mode".
-            </li>
-            <li>
-              <strong>Add Prompts to the Queue:</strong> Once enabled, any
-              custom prompt button you click will be added to the queue instead
-              of being sent immediately. You will see icons for queued prompts
-              appear.
-            </li>
-            <li>
-              <strong>Configure the Delay:</strong> Set the time delay (in
-              minutes or seconds) between each prompt being sent.
-            </li>
-            <li>
-              <strong>Control the Queue:</strong> Use the ▶️ (Play), ⏸️ (Pause),
-              and 🔄 (Reset) buttons to manage the queue.
-            </li>
-          </ol>
-          <p>
-            <strong style="color: #c9a722">Important:</strong> Please ensure
-            that using the queue feature to send prompts automatically does not
-            violate the Terms of Service of the website you are using. You will
-            be asked to confirm that you have permission from the website owner
-            before using the feature for the first time.
-          </p>
-        </div>
-
-        <h2>Cross-Chat Prompt Sharing: Reuse Prompts Anywhere</h2>
-        <div class="instruction">
-          <p>
-            Work with multiple AI platforms? The new
-            <strong>Cross-Chat Prompt Sharing</strong> module makes it easy to
-            copy a prompt from one chat (like ChatGPT) and instantly paste it
-            into another (like Claude or Gemini) without cluttering the clipboard - using internal storage as clipboard. 
-            OR just broadcast to all opened tabs where OneClickPrompts is loaded. 
-          </p>
-          <p><strong>How it works:</strong></p>
-          <ol>
-            <li>
-              <strong>Enable the Module:</strong> Go to the extension's popup
-              menu, expand the "Modules" section, and toggle on "Enable
-              Cross-Chat Prompt Sharing".Next, you're going to choose if you want to manually "copy and paste" with assist of new buttons or
-               you want to broadcast to all tabs. 
-               Broadcasting is dangerous as it can broadcast to unintended chats. 
-            </li>
-            <li>
-              <strong>📋 Copy a Prompt:</strong> On any supported AI chat page,
-              new "Copy" and "Paste" buttons will appear. Type your prompt and
-              click the "Copy Prompt" button.
-            </li>
-            <li>
-              <strong>📥Paste & Send:</strong> Switch to a different AI chat
-              platform. Click the "Paste & Send Prompt" button to instantly
-              transfer your text.
-            </li>
-            <li>
-              <strong> ⬆️ Broadcasting:</strong> If you enabled broadcasting, just
-              click the "Broadcast Prompt" button to send the prompt to all
-              open tabs with OneClickPrompts. Shift-Click to restrict this tab to broadcast. (will still work as sender tab)
-              When you are using broadcasting, you may opt out to disable copy and paste buttons. 
-          </ol>
-          <p>
-            You can customize the button placement and autosend behavior in the
-            module's settings within the popup.
-          </p>
-        </div>
-
-        <h2>ChatGPT Token counter (Approximator)</h2>
-        <div class="instruction">
-       ChatGPT Token Approximator estimates, 
-       how many tokens are in the visible chat thread and/or in the editor.
-        It adds compact chips (T = whole thread, E = editor) 
-        that auto-refresh and can be clicked to re-estimate;
-         results are rough, especially with code/non-Latin characters or very long chats.
-          You can scale counts with Calibration and choose Advanced heuristics or Simple (~1 token ≈ 4 characters).
-                  </div>
-
-        <h2>See the code and support author, privacy concerns.</h2>
+    <!-- Instruction Section -->
+    <section class="section">
+      <div class="instruction">
         <p>
-          The extension is open-source and you can see the code on
-          <a
-            href="https://github.com/MaxITService/OneClickPrompts"
-            >GitHub</a
-          >. If you have any questions or suggestions for new features, please
-          contact the author at
-          <a href="mailto:forpphotos@gmail.com">forpphotos@gmail.com</a>. The
-          extension does not collect any data
+          This is an instruction page for the Chrome extension
+          <strong>OneClickPrompts</strong> that you have just installed. If
+          you are seeing this page, it means that you have installed the
+          extension for the first time or it may have appeared due to an
+          update – our apologies.
         </p>
-      </section>
+      </div>
 
-      <!-- =====  Theme Section (Dark Theme Toggle) ===== -->
-      <section class="section" id="themeSection">
-        <h2>Theme</h2>
-        <!-- iPhone-style toggle switch -->
-        <div class="switch-container">
-          <label class="switch">
-            <input
-              type="checkbox"
-              id="darkThemeToggle"
-              aria-label="Enable Dark Theme"
-            />
-            <span class="slider"></span>
-          </label>
-          <span class="switch-label">Enable Dark Theme</span>
-        </div>
-      </section>
-      <!-- ===== End Theme Section ===== -->
-    </div>
+      <div class="instruction">
+        <h2>Pinned Extension Button</h2>
+        <p>
+          <strong>Important:</strong> You should pin the extension button, or
+          you won't be able to access menu. To do this, click on your
+          extension menu, which is this button near address bar right here:
+        </p>
+        <ul>
+          <li>
+            <img src="/welcome-page-files/extension-management-button.png" alt="Extension Management Button" />
+          </li>
+        </ul>
 
-    <script src="welcome-page-files/theme.js"></script>
-  </body>
+        <p>
+          (Your button may be a little bit different in different browsers. So
+          I'm attaching next screenshot from other browser) then select
+          <em>'Pin'</em> near the icon of this extension:
+        </p>
+        <ul>
+          <li>
+            <img src="/welcome-page-files/pin-extension.png" alt="Pin Extension" />
+          </li>
+        </ul>
+      </div>
+
+      <div class="instruction">
+        <p>
+          Once pinned, the extension UI button will be available constantly in
+          your browser toolbar: when you click it (green arrow), you will see
+          a menu where you can edit the text for all the buttons that you add:
+        </p>
+        <img src="/welcome-page-files/extension-ui-button-and-popup.png" alt="Extension UI" />
+        <p>
+          In this UI, called "popup" you can fully control the extension and,
+          at the bottom, import/export profiles. Don't forget to scroll (red
+          arrow) down to access features. At the top you will see the profile
+          management, so profile is like a lot of buttons that are saved under
+          this name. Buttons and separators can be dragged to be reordered.
+        </p>
+      </div>
+
+      <div class="instruction">
+        <h2>Site-Specific Activation</h2>
+        <p>
+          If you want the extension to work only on specific websites, please
+          do the following:
+        </p>
+        <ul>
+          <li>
+            Right-click on the extension icon in the browser toolbar:
+            <img src="/welcome-page-files/right-click-on-icon.png" alt="Right Click Extension" />
+          </li>
+          <li>
+            From the menu, select <em>'Manage extensions'</em>.
+            <img src="/welcome-page-files/manage-extension.png" alt="Manage Extensions" />
+          </li>
+          <li>
+            Select the websites where you want the extension to be
+            automatically enabled. Or just select all websites at once.
+            Sometimes after the updates this option will be disabled, so this
+            is a good troubleshooting step if extension is not activated
+          </li>
+        </ul>
+      </div>
+
+      <div class="instruction">
+        <p>
+          <strong>Note:</strong> When updating the extension, Chrome may
+          prompt for permission for the extension to access websites. If you
+          click 'no', the extension may stop working.
+        </p>
+      </div>
+
+      <h2>Tips for using:</h2>
+
+      <div class="instruction">
+        <ul>
+          <li>
+            A few usage tips: Tailored instructions that you enter with this
+            extension can improve answers and enhance your overall experience
+            with chatbots.
+          </li>
+          <li>
+            You don't have to use just emoji for buttons—a custom text may
+            help when you have lots of prompts. Just type in the field where
+            there is emoji input: text will become the button.
+          </li>
+          <li>
+            The first button is the system's button and is meant for buttons
+            to appear on a floating, resizable panel.
+          </li>
+          <li>
+            Example: Grok does not always initiate a search, but for some
+            questions, you might feel that the answer would be better if it
+            tried to search the web for one.
+          </li>
+          <li>
+            If the model sticks to short answers, but if you specify after
+            your question that you want a theoretical explanation, a few
+            examples, and one related concept, you might receive a much more
+            detailed response.
+          </li>
+          <li>
+            How can you force model to think? Easy. You can tell it. Simply
+            asking to think true may work or may not. But if you actually
+            provide model with some advice on how to think and have some sort
+            of chain of doubt, then it will more likely to actually initiate
+            thinking by itself.
+          </li>
+
+          <li>
+            Next thing that you need to think about is well-told answer will
+            be usually longer. So in your prompt, specify the desired length
+            of answer to not generate answers that are too long and will waste
+            your time reading them.
+          </li>
+          <li>
+            When correcting a text, a chatbot may get very creative and
+            replace your slang or informal words with ones it thinks are
+            correct. By providing specific instructions to the chatbot, you
+            can avoid this.
+          </li>
+          <li>
+            Remove all the example buttons that you will not use, this will
+            make navigation across your buttons easier!
+          </li>
+          <li>
+            In Popup, you can reset position of all floating windows if
+            something goes wrong
+          </li>
+          <li>
+            See Google’s
+            <a
+              href="https://www.gptaiflow.com/assets/files/2025-01-18-pdf-1-TechAI-Goolge-whitepaper_Prompt%20Engineering_v4-af36dcc7a49bb7269a58b1c9b89a8ae1.pdf">Prompt
+              Engineering Whitepaper</a>. For example, repeating important instructions both before and
+            after your specific prompt increases the likelihood that those
+            instructions will be followed correctly.
+          </li>
+          <li>You can open this page later from the popup</li>
+        </ul>
+      </div>
+      <h2>Modules:</h2>
+      You can have some additional settings if you go to the pop-up in the modules section and enable module that you
+      are interested in:
+
+      <img src="welcome-page-files/modules.png" alt="Modules overview illustration" />
+      For example, you can spawn profile selector with buttons.
+
+      <h2>Queue Functionality: Send Prompts Sequentially</h2>
+      <div class="instruction">
+        <p>
+          OneClickPrompts now includes a powerful
+          <strong>Queue</strong> feature, allowing you to send multiple
+          prompts one after another with a set delay between them. This is
+          perfect for example when you want AI to search for news and tell you
+          updates every 2 hours.
+        </p>
+        <p><strong>How to use the Queue:</strong></p>
+        <ol>
+          <li>
+            <strong>Open the Floating Panel:</strong> The queue controls are
+            located in the floating panel. Click the '🔼' button next to the
+            prompt input area to open it.
+          </li>
+          <li>
+            <strong>Enable Queue Mode:</strong> In the floating panel, find
+            the "Queue" section and toggle on "Enable Queue Mode".
+          </li>
+          <li>
+            <strong>Add Prompts to the Queue:</strong> Once enabled, any
+            custom prompt button you click will be added to the queue instead
+            of being sent immediately. You will see icons for queued prompts
+            appear.
+          </li>
+          <li>
+            <strong>Configure the Delay:</strong> Set the time delay (in
+            minutes or seconds) between each prompt being sent.
+          </li>
+          <li>
+            <strong>Control the Queue:</strong> Use the ▶️ (Play), ⏸️ (Pause),
+            and 🔄 (Reset) buttons to manage the queue.
+          </li>
+        </ol>
+        <p>
+          <strong style="color: #c9a722">Important:</strong> Please ensure
+          that using the queue feature to send prompts automatically does not
+          violate the Terms of Service of the website you are using. You will
+          be asked to confirm that you have permission from the website owner
+          before using the feature for the first time.
+        </p>
+      </div>
+
+      <h2>Cross-Chat Prompt Sharing: Reuse Prompts Anywhere</h2>
+      <div class="instruction">
+        <p>
+          Work with multiple AI platforms? The new
+          <strong>Cross-Chat Prompt Sharing</strong> module makes it easy to
+          copy a prompt from one chat (like ChatGPT) and instantly paste it
+          into another (like Claude or Gemini) without cluttering the clipboard - using internal storage as clipboard.
+          OR just broadcast to all opened tabs where OneClickPrompts is loaded.
+        </p>
+        <p><strong>How it works:</strong></p>
+        <ol>
+          <li>
+            <strong>Enable the Module:</strong> Go to the extension's popup
+            menu, expand the "Modules" section, and toggle on "Enable
+            Cross-Chat Prompt Sharing".Next, you're going to choose if you want to manually "copy and paste" with assist
+            of new buttons or
+            you want to broadcast to all tabs.
+            Broadcasting is dangerous as it can broadcast to unintended chats.
+          </li>
+          <li>
+            <strong>📋 Copy a Prompt:</strong> On any supported AI chat page,
+            new "Copy" and "Paste" buttons will appear. Type your prompt and
+            click the "Copy Prompt" button.
+          </li>
+          <li>
+            <strong>📥Paste & Send:</strong> Switch to a different AI chat
+            platform. Click the "Paste & Send Prompt" button to instantly
+            transfer your text.
+          </li>
+          <li>
+            <strong> ⬆️ Broadcasting:</strong> If you enabled broadcasting, just
+            click the "Broadcast Prompt" button to send the prompt to all
+            open tabs with OneClickPrompts. Shift-Click to restrict this tab to broadcast. (will still work as sender
+            tab)
+            When you are using broadcasting, you may opt out to disable copy and paste buttons.
+        </ol>
+        <p>
+          You can customize the button placement and autosend behavior in the
+          module's settings within the popup.
+        </p>
+      </div>
+
+      <h2>ChatGPT Token counter (Approximator)</h2>
+      <div class="instruction">
+        ChatGPT Token Approximator estimates,
+        how many tokens are in the visible chat thread and/or in the editor.
+        It adds compact chips (T = whole thread, E = editor)
+        that auto-refresh and can be clicked to re-estimate;
+        results are rough, especially with code/non-Latin characters or very long chats.
+        You can scale counts with Calibration and choose Advanced heuristics or Simple (~1 token ≈ 4 characters).
+      </div>
+
+      <h2>Automatic Recovery & Manual Adjustments</h2>
+      <div class="instruction">
+        <p>
+          Websites change often, and sometimes your buttons might disappear. OneClickPrompts has built-in self-healing
+          features to handle this.
+        </p>
+        <p><strong>How it works:</strong></p>
+        <ul>
+          <li>
+            <strong>Auto-Detection:</strong> If the extension can't find the usual spot for buttons, it will
+            automatically
+            search for a new location.
+          </li>
+          <li>
+            <strong>Manual Move (Shift+Click):</strong> You can manually move the button container if it's in the wrong
+            place.
+            <strong>Hold Shift and click the Settings button (⚙️)</strong> to enter "Move Mode".
+            Use the "Back" and "Forward" buttons in the toast notification to find a better spot, then click "Save".
+          </li>
+          <li>
+            <strong>Floating Panel Fallback:</strong> If no suitable place is found, the extension will automatically
+            switch
+            to the Floating Panel mode so you can keep working without interruption.
+          </li>
+          <li>
+            <strong>What can break?:</strong> There are 3 things that can break when websites make changes:
+            1. The container where buttons are injected. The recovery mechanism will be triggered a few seconds after
+            page load.
+            2. The editor name.
+            3. The send button. The editor and send buttons are accessed first,
+            and if the extension is unable to find them, recovery for them specifically will be triggered
+            Warning: Trying to autosend when AI has not finished answering may trigger recovery of the send button!
+          </li>
+
+        </ul>
+      </div>
+
+      <h2>See the code and support author, privacy concerns.</h2>
+      <p>
+        The extension is open-source and you can see the code on
+        <a href="https://github.com/MaxITService/OneClickPrompts">GitHub</a>. If you have any questions or suggestions
+        for new features, please
+        contact the author at
+        <a href="mailto:forpphotos@gmail.com">forpphotos@gmail.com</a>. The
+        extension does not collect any data
+      </p>
+    </section>
+
+    <!-- =====  Theme Section (Dark Theme Toggle) ===== -->
+    <section class="section" id="themeSection">
+      <h2>Theme</h2>
+      <!-- iPhone-style toggle switch -->
+      <div class="switch-container">
+        <label class="switch">
+          <input type="checkbox" id="darkThemeToggle" aria-label="Enable Dark Theme" />
+          <span class="slider"></span>
+        </label>
+        <span class="switch-label">Enable Dark Theme</span>
+      </div>
+    </section>
+    <!-- ===== End Theme Section ===== -->
+  </div>
+
+  <script src="welcome-page-files/theme.js"></script>
+</body>
+
 </html>
