@@ -1,5 +1,4 @@
 // modules/backend-tokenApproximator.js
-/* Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS. */
 (() => {
   'use strict';
   if (window.__OCP_tokApprox_backend_initDone) return;
