@@ -19,7 +19,9 @@ window.OneClickPromptsSelectorAutoDetector = {
         sendButton: {
             failures: 0,
             lastFailure: 0,
-            recovering: false
+            recovering: false,
+            everFound: false,
+            lastSeenAt: 0
         },
         container: {
             failures: 0,
@@ -30,7 +32,7 @@ window.OneClickPromptsSelectorAutoDetector = {
 
     config: {
         failureThreshold: 1, // Number of failures before triggering recovery (can be >1 to debounce)
-        cooldownMs: 2000,    // Time to wait before re-alerting or re-trying
+        cooldownMs: 2000     // Time to wait before re-alerting or re-trying
     },
     settings: {
         enableEditorHeuristics: true,
@@ -85,6 +87,10 @@ window.OneClickPromptsSelectorAutoDetector = {
             logConCgp(`[SelectorAutoDetector] ${type} recovered. Resetting state.`);
             s.failures = 0;
             s.recovering = false;
+        }
+        if (type === 'sendButton' && s) {
+            s.everFound = true;
+            s.lastSeenAt = Date.now();
         }
     },
 
@@ -171,6 +177,10 @@ window.OneClickPromptsSelectorAutoDetector = {
                     window.showToast(`OneClickPrompts: Found the ${typeName}.`, 'success');
                 }
                 s.failures = 0;
+                if (type === 'sendButton') {
+                    s.everFound = true;
+                    s.lastSeenAt = Date.now();
+                }
             } else {
                 logConCgp(`[SelectorAutoDetector] Heuristics failed to find ${type}.`);
                 if (window.showToast) window.showToast(`OneClickPrompts: Could not find ${typeName}. Please report this issue.`, 'error');

@@ -167,6 +167,14 @@ async function processChatGPTCustomSendButtonClick(event, customText, autoSend) 
             return;
         }
 
+        const isBusyStopButton = (btn) => {
+            if (!btn) return false;
+            const aria = (btn.getAttribute && btn.getAttribute('aria-label') || '').toLowerCase();
+            const testId = (btn.getAttribute && btn.getAttribute('data-testid') || '').toLowerCase();
+            const text = (btn.innerText || '').toLowerCase();
+            return aria.includes('stop') || testId.includes('stop') || text.includes('stop');
+        };
+
         logConCgp('[auto-send] Starting auto-send interval to click send button every 100ms.');
         window.autoSendInterval = setInterval(async () => {
             const currentText = editor.innerText.trim();
@@ -184,6 +192,13 @@ async function processChatGPTCustomSendButtonClick(event, customText, autoSend) 
             const sendButton = await window.OneClickPromptsSelectorGuard.findSendButton();
 
             if (sendButton) {
+                if (isBusyStopButton(sendButton)) {
+                    logConCgp('[auto-send] Send button is currently a Stop button; waiting.');
+                    const detector = window.OneClickPromptsSelectorAutoDetector;
+                    const sendState = detector?.state?.sendButton;
+                    if (sendState) sendState.lastSeenAt = Date.now();
+                    return;
+                }
                 logConCgp('[auto-send] Clicking send button:', sendButton);
                 MaxExtensionUtils.simulateClick(sendButton);
                 logConCgp('[auto-send] Send button clicked successfully.');

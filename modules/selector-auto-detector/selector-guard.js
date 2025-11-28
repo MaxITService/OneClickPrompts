@@ -52,6 +52,19 @@ window.OneClickPromptsSelectorGuard = {
             if (!editorElement && window.OneClickPromptsSelectorAutoDetector) {
                 await window.OneClickPromptsSelectorAutoDetector.reportFailure('editor', { selectors: editorSelectors });
             }
+
+            // If we've already seen the send button this session, treat misses as temporary (e.g., Stop button shown) and keep quiet.
+            const detector = window.OneClickPromptsSelectorAutoDetector;
+            const sendState = detector?.state?.sendButton;
+            const seenBefore = !!sendState?.everFound;
+            if (seenBefore) {
+                // Detect disabled/busy variants to refresh lastSeenAt and prolong the grace period.
+                const disabledCandidate = this._querySelectors(selectors, { requireEnabled: false });
+                if (disabledCandidate && sendState) {
+                    sendState.lastSeenAt = Date.now();
+                }
+                return null;
+            }
             // Try to recover
             return await window.OneClickPromptsSelectorAutoDetector.reportFailure('sendButton', { selectors });
         }
