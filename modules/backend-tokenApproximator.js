@@ -588,6 +588,11 @@
   }
 
   function getThreadText(excludeEditors = false) {
+    // Special handling for DeepSeek using custom heuristics
+    if (Site === 'DeepSeek' && window.OCPDeepSeekHeuristics && typeof window.OCPDeepSeekHeuristics.getThreadText === 'function') {
+      return window.OCPDeepSeekHeuristics.getThreadText();
+    }
+
     const root = getThreadRoot();
     if (!root) return '';
 

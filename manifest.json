@@ -67,6 +67,7 @@
         "/modules/token-approximator/backend-settings.js",
         "/modules/token-approximator/backend-ui.js",
         "/modules/token-approximator/backend-worker.js",
+        "/modules/deepseek-heuristics.js",
         "/modules/backend-tokenApproximator.js",
         "common-ui-elements/ocp_toast.js",
         "per-website-button-clicking-mechanics/buttons-clicking-chatgpt.js",

@@ -385,7 +385,8 @@ class InjectionTargetsOnWebsite {
                     "[data-testid*=\"send\"]:not([data-testid^=\"custom-send-button\"])",
                     "[aria-label*=\"send\" i]:not([data-testid^=\"custom-send-button\"])"
                 ],
-                "threadRoot": ".scrollable:has(textarea, [contenteditable=\"true\"])"
+                // Heuristic fallback: try to find the scroll area containing messages
+                "threadRoot": ".ds-scroll-area:has(.ds-message), .scrollable:has(textarea, [contenteditable=\"true\"])"
             },
             AIStudio: {
                 containers: [
