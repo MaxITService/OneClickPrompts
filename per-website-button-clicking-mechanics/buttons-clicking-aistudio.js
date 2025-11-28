@@ -42,6 +42,14 @@ async function processAIStudioCustomSendButtonClick(event, customText, autoSend)
     // Move cursor to end
     editorArea.setSelectionRange(editorArea.value.length, editorArea.value.length);
 
+    const isBusyStopButton = (btn) => {
+        if (!btn) return false;
+        const aria = (btn.getAttribute && btn.getAttribute('aria-label') || '').toLowerCase();
+        const testId = (btn.getAttribute && btn.getAttribute('data-testid') || '').toLowerCase();
+        const text = (btn.innerText || '').toLowerCase();
+        return aria.includes('stop') || testId.includes('stop') || text.includes('stop');
+    };
+
     // Auto-send if enabled
     if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
         logConCgp('[buttons] AI Studio Auto-send enabled, attempting to send message');
@@ -69,6 +77,11 @@ async function processAIStudioCustomSendButtonClick(event, customText, autoSend)
             }
 
             if (btn) {
+                if (isBusyStopButton(btn)) {
+                    logConCgp('[buttons] AI Studio send button is a Stop state; waiting.');
+                    attempts--; // do not punish busy state
+                    return;
+                }
                 logConCgp('[buttons] AI Studio Send button found, clicking now');
                 MaxExtensionUtils.simulateClick(btn);
                 clearInterval(pollInterval);

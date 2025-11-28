@@ -26,6 +26,14 @@
 
 'use strict';
 
+const isGrokBusyStopButton = (btn) => {
+    if (!btn) return false;
+    const aria = (btn.getAttribute && btn.getAttribute('aria-label') || '').toLowerCase();
+    const testId = (btn.getAttribute && btn.getAttribute('data-testid') || '').toLowerCase();
+    const text = (btn.innerText || '').toLowerCase();
+    return aria.includes('stop') || testId.includes('stop') || text.includes('stop');
+};
+
 /**
  * Helper function that simulates the natural typing of a single character.
  * It dispatches keydown, input, and keyup events and appends the character.
@@ -201,6 +209,12 @@ async function processGrokCustomSendButtonClick(event, customText, autoSend) {
             }
             // Locate the Grok send button using SelectorGuard
             const sendButton = await window.OneClickPromptsSelectorGuard.findSendButton();
+
+            if (sendButton && isGrokBusyStopButton(sendButton)) {
+                logConCgp('[grok] Send button is Stop; waiting.');
+                attempts--; // don't burn attempts on busy state
+                return;
+            }
 
             if (sendButton) {
                 logConCgp('[grok] Send button found. Clicking send button.');

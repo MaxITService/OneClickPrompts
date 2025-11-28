@@ -12,6 +12,14 @@
 async function processClaudeCustomSendButtonClick(event, customText, autoSend) {
     logConCgp('[Claude] Starting Claude-specific handling');
 
+    const isBusyStopButton = (btn) => {
+        if (!btn) return false;
+        const aria = (btn.getAttribute && btn.getAttribute('aria-label') || '').toLowerCase();
+        const testId = (btn.getAttribute && btn.getAttribute('data-testid') || '').toLowerCase();
+        const text = (btn.innerText || '').toLowerCase();
+        return aria.includes('stop') || testId.includes('stop') || text.includes('stop');
+    };
+
     // First try to insert the text
     const insertionSuccessful = await ClaudeEditorUtils.insertTextIntoClaudeEditor(customText);
 
@@ -41,12 +49,18 @@ async function handleClaudeSend() {
     const sendButton = await window.OneClickPromptsSelectorGuard.findSendButton();
 
     if (sendButton) {
-        logConCgp('[Claude] Send button found immediately, delaying click by 200ms');
-        setTimeout(() => {
-            MaxExtensionUtils.simulateClick(sendButton);
-            logConCgp('[Claude] Send button clicked after 200ms delay');
-        }, 200);
-        return;
+        if (isBusyStopButton(sendButton)) {
+            logConCgp('[Claude] Send button is currently a Stop button; waiting.');
+        } else {
+            logConCgp('[Claude] Send button found immediately, delaying click by 200ms');
+            setTimeout(() => {
+                MaxExtensionUtils.simulateClick(sendButton);
+                logConCgp('[Claude] Send button clicked after 200ms delay');
+            }, 200);
+            return;
+        }
+    } else {
+        logConCgp('[Claude] Send button not found immediately, polling...');
     }
 
     // If not found, set up observer (or polling since SelectorGuard handles logic)
@@ -61,6 +75,12 @@ async function handleClaudeSend() {
     const intervalId = setInterval(async () => {
         attempts++;
         const btn = await window.OneClickPromptsSelectorGuard.findSendButton();
+
+        if (btn && isBusyStopButton(btn)) {
+            logConCgp('[Claude] Send button is Stop; continuing to wait.');
+            attempts--; // don't penalize busy state
+            return;
+        }
 
         if (btn) {
             clearInterval(intervalId);

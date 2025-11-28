@@ -16,6 +16,14 @@ async function processDeepSeekCustomSendButtonClick(event, customText, autoSend)
     event.preventDefault();
     logConCgp('[DeepSeek] Starting processing with text:', customText);
 
+    const isBusyStopButton = (btn) => {
+        if (!btn) return false;
+        const aria = (btn.getAttribute && btn.getAttribute('aria-label') || '').toLowerCase();
+        const testId = (btn.getAttribute && btn.getAttribute('data-testid') || '').toLowerCase();
+        const text = (btn.innerText || '').toLowerCase();
+        return aria.includes('stop') || testId.includes('stop') || text.includes('stop');
+    };
+
     // 1. Find editor using SelectorGuard
     const editor = await window.OneClickPromptsSelectorGuard.findEditor();
 
@@ -97,6 +105,12 @@ async function processDeepSeekCustomSendButtonClick(event, customText, autoSend)
 
             // Use SelectorGuard to find the button
             const sendButton = await window.OneClickPromptsSelectorGuard.findSendButton();
+
+            if (sendButton && isBusyStopButton(sendButton)) {
+                logConCgp('[DeepSeek] Send button is Stop; waiting.');
+                attempts--; // do not penalize busy state
+                return;
+            }
 
             // Check if enabled
             const isEnabled = sendButton &&

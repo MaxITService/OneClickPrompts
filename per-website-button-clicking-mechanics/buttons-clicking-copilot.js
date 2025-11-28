@@ -10,6 +10,14 @@ async function processCopilotCustomSendButtonClick(event, customText, autoSend) 
     event.preventDefault();
     logConCgp('[buttons] Custom send button was clicked.');
 
+    const isBusyStopButton = (btn) => {
+        if (!btn) return false;
+        const aria = (btn.getAttribute && btn.getAttribute('aria-label') || '').toLowerCase();
+        const testId = (btn.getAttribute && btn.getAttribute('data-testid') || '').toLowerCase();
+        const text = (btn.innerText || '').toLowerCase();
+        return aria.includes('stop') || testId.includes('stop') || text.includes('stop');
+    };
+
     // Find editor using SelectorGuard
     const editorArea = await window.OneClickPromptsSelectorGuard.findEditor();
 
@@ -81,6 +89,11 @@ async function processCopilotCustomSendButtonClick(event, customText, autoSend) 
             // Use SelectorGuard to find the button
             const sendButton = await window.OneClickPromptsSelectorGuard.findSendButton();
 
+            if (sendButton && isBusyStopButton(sendButton)) {
+                logConCgp('[auto-send] Send button is Stop; waiting.');
+                return;
+            }
+
             if (sendButton) {
                 sendButton.click();
                 clearInterval(intervalId);
@@ -131,6 +144,10 @@ async function processCopilotCustomSendButtonClick(event, customText, autoSend) 
 
             const pollInterval = setInterval(async () => {
                 const btn = await window.OneClickPromptsSelectorGuard.findSendButton();
+                if (btn && isBusyStopButton(btn)) {
+                    logConCgp('[buttons] Send button is Stop during polling; waiting.');
+                    return;
+                }
                 if (btn) {
                     clearInterval(pollInterval);
                     handleSendButton(btn);
@@ -148,4 +165,3 @@ async function processCopilotCustomSendButtonClick(event, customText, autoSend) 
 
     await handleMessageInsertion();
 }
-

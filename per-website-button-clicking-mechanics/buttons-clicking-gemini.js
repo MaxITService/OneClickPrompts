@@ -49,6 +49,14 @@ async function processGeminiCustomSendButtonClick(event, customText, autoSend) {
         MaxExtensionUtils.moveCursorToEnd(editor);
     };
 
+    const isBusyStopButton = (btn) => {
+        if (!btn) return false;
+        const aria = (btn.getAttribute && btn.getAttribute('aria-label') || '').toLowerCase();
+        const testId = (btn.getAttribute && btn.getAttribute('data-testid') || '').toLowerCase();
+        const text = (btn.innerText || '').toLowerCase();
+        return aria.includes('stop') || testId.includes('stop') || text.includes('stop');
+    };
+
     // Insert the custom text
     insertTextIntoGeminiEditor(editorArea, customText);
 
@@ -64,6 +72,12 @@ async function processGeminiCustomSendButtonClick(event, customText, autoSend) {
                 const sendButton = await window.OneClickPromptsSelectorGuard.findSendButton();
 
                 // Check if found AND enabled
+                if (sendButton && isBusyStopButton(sendButton)) {
+                    logConCgp('[Gemini] Send button is Stop; waiting.');
+                    attempts--; // don't count busy state
+                    return;
+                }
+
                 const isEnabled = sendButton && sendButton.getAttribute('aria-disabled') !== 'true';
 
                 if (isEnabled) {

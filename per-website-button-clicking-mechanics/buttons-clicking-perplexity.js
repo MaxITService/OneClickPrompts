@@ -16,6 +16,14 @@ async function processPerplexityCustomSendButtonClick(event, customText, autoSen
 
     logConCgp('[Perplexity] Starting custom button handling.');
 
+    const isBusyStopButton = (btn) => {
+        if (!btn) return false;
+        const aria = (btn.getAttribute && btn.getAttribute('aria-label') || '').toLowerCase();
+        const testId = (btn.getAttribute && btn.getAttribute('data-testid') || '').toLowerCase();
+        const text = (btn.innerText || '').toLowerCase();
+        return aria.includes('stop') || testId.includes('stop') || text.includes('stop');
+    };
+
     // Find editor using SelectorGuard
     const editorElement = await window.OneClickPromptsSelectorGuard.findEditor();
 
@@ -115,6 +123,12 @@ function beginPerplexityAutoSend(expectedText, editorElement) {
 
         // Use SelectorGuard to find the button
         const button = await window.OneClickPromptsSelectorGuard.findSendButton();
+
+        if (button && isBusyStopButton(button)) {
+            logConCgp('[Perplexity] Send button is Stop; waiting.');
+            attempts--; // don't count busy state
+            return false;
+        }
 
         if (button && isPerplexityButtonEnabled(button)) {
             // Guard: ensure editor has content before dispatching click to avoid empty sends.
