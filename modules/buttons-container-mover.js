@@ -209,7 +209,7 @@ window.MaxExtensionContainerMover = {
             });
 
             if (result.ok) {
-                window.showToast(`Location saved! Selector: ${result.selector}`, 'success', 4000);
+                window.showToast(`Location saved! Selector: ${result.selector}`, 'success', 8000);
             } else {
                 window.showToast(`Failed to save: ${result.reason}`, 'error');
             }

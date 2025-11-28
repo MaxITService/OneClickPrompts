@@ -111,7 +111,11 @@ window.OneClickPromptsSelectorAutoDetector = {
         const toastType = heuristicsAllowed ? 'info' : 'error';
 
         if (window.showToast) {
-            window.showToast(`OneClickPrompts: ${typeName} not found. ${statusSuffix}`, toastType);
+            if (type === 'container' && heuristicsAllowed) {
+                window.showToast('OneClickPrompts: Container where I can insert buttons is not found. Trying to find it automatically, results may disappoint you…', toastType, 10000);
+            } else {
+                window.showToast(`OneClickPrompts: ${typeName} not found. ${statusSuffix}`, toastType);
+            }
         } else {
             console.warn(`OneClickPrompts: ${typeName} not found. ${statusSuffix}`);
         }
