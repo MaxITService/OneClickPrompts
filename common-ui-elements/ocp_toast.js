@@ -9,7 +9,7 @@
  *
  * @param {string} message - The message to display in the toast.
  * @param {string} type - The type of toast ('success', 'error', 'info').
- * @param {number|Object} options - Duration in ms or options object { duration, actionLabel, onAction, tooltip, actionTooltip }.
+ * @param {number|Object} options - Duration in ms or options object { duration, actionLabel, onAction, tooltip, actionTooltip, customButtons, onDismiss }.
  */
 function showToast(message, type = 'info', options = 3000) {
     const normalized = typeof options === 'number' ? { duration: options } : (options || {});
@@ -131,6 +131,16 @@ function showToast(message, type = 'info', options = 3000) {
         if (hidden) return;
         hidden = true;
         toast.classList.remove('show');
+
+        // Call onDismiss callback if provided
+        if (typeof normalized.onDismiss === 'function') {
+            try {
+                normalized.onDismiss();
+            } catch (err) {
+                console.error('[toast] onDismiss callback failed', err);
+            }
+        }
+
         // Remove the toast from DOM after transition
         toast.addEventListener('transitionend', () => {
             toast.remove();

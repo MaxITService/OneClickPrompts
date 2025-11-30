@@ -6,6 +6,8 @@
 
 window.MaxExtensionContainerMover = {
     __selectorSaverPromise: null,
+    __autoRecoveryToastShown: false,     // Track if auto-recovery toast has been shown this session
+    __autoRecoveryToastDismissed: false, // Track if user explicitly closed the toast
 
     /**
      * Lazy-loads the selector persistence module so Save works even if it wasn't preloaded.
@@ -48,6 +50,16 @@ window.MaxExtensionContainerMover = {
      * @param {string} mode - 'manual' (Shift+Click) or 'auto-recovery' (heuristic found alternative)
      */
     enterMoveMode: function (mode = 'manual') {
+        // For auto-recovery mode, check if we should show the toast at all
+        if (mode === 'auto-recovery') {
+            if (this.__autoRecoveryToastShown || this.__autoRecoveryToastDismissed) {
+                logConCgp('[ContainerMover] Auto-recovery toast already shown or dismissed this session. Skipping.');
+                return;
+            }
+            // Mark as shown
+            this.__autoRecoveryToastShown = true;
+        }
+
         const containerId = window.InjectionTargetsOnWebsite.selectors.buttonsContainerId;
         const container = document.getElementById(containerId);
 
@@ -296,7 +308,12 @@ window.MaxExtensionContainerMover = {
 
         window.showToast(message, 'info', {
             duration: 0,
-            customButtons: customButtons
+            customButtons: customButtons,
+            onDismiss: mode === 'auto-recovery' ? () => {
+                // Mark as dismissed when user manually closes it
+                this.__autoRecoveryToastDismissed = true;
+                logConCgp('[ContainerMover] Auto-recovery toast dismissed by user.');
+            } : undefined
         });
     }
 };
