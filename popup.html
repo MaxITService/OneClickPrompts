@@ -1251,9 +1251,13 @@
         </div>
         <div class="section-content">
           <div class="text-inside-container">
-            Select, which website you are going to edit selectors for. Selectors
-            are pointing to a webpage location where buttons, text, and sending
-            button should be.
+            Selectors are pointers to locations on the page where buttons will be injected, where the text editor is located, and where the send button is for autosending behavior.
+            Select which website you want to edit selectors for.
+            When you edit values here, they will become the only source of selectors for the extension.
+            If an element is not found on the page, fallback mechanics will kick in.
+            Both the fallback mechanics and the "Move buttons" function save values here. 
+            If something is off, reset selectors for the specific site - but be careful: 
+            the extension does not update defaults as fast as websites change, so default selectors may fail.
           </div>
           <br />
           <div class="row">
