@@ -438,6 +438,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const addSettingsBtnEl = document.getElementById('addSettingsButton');
     if (addSettingsBtnEl) {
         addSettingsBtnEl.addEventListener('click', (e) => addSettingsButton(e));
+
+        const addSettingsHelpLink = document.getElementById('jumpToAddSettingsButton');
+        if (addSettingsHelpLink) {
+            addSettingsHelpLink.addEventListener('click', () => {
+                addSettingsBtnEl.classList.remove('add-settings-flash'); // restart animation
+                void addSettingsBtnEl.offsetWidth;
+                addSettingsBtnEl.classList.add('add-settings-flash');
+                setTimeout(() => addSettingsBtnEl.classList.remove('add-settings-flash'), 1100);
+            });
+        }
     }
 
     // Settings
