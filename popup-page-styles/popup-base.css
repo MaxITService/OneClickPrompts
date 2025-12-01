@@ -53,6 +53,38 @@ body:has(#copyProfileContainer:not([style*="display: none"])) #versionContainer 
     /* Reduces space below the paragraph, above the button */
 }
 
+.settings-move-rainbow {
+    display: inline-block;
+    background: linear-gradient(120deg, #ff6b6b, #f7d046, #5bd18a, #49a8ff, #a26bff, #ff6bf2, #ff6b6b);
+    background-size: 320% 320%;
+    background-position: 0% 50%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    font-weight: 700;
+    animation: settingsRainbowFlow 7s linear infinite;
+}
+
+@keyframes settingsRainbowFlow {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .settings-move-rainbow {
+        animation: none;
+        background-position: 50% 50%;
+    }
+}
+
 /* Notification text styling */
 #UserNotification {
     text-align: center;
