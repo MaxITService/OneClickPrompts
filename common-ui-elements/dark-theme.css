@@ -148,7 +148,7 @@ body.dark-theme #importProfile {
 /* ------------------------------------------------------------------------- */
 /* Dark Theme Overrides for Dynamic Button Items                             */
 /* ------------------------------------------------------------------------- */
-body.dark-theme .button-item {
+body.dark-theme .button-item:not(.dragging) {
     background: #333 !important;
     /* Dark background for button items */
     border-color: #555 !important;
@@ -178,20 +178,35 @@ body.dark-theme .button-item .shortcut-indicator {
 /* Dark Theme Overrides for Dragged Button Items                             */
 /* ------------------------------------------------------------------------- */
 /* Dragged item to have a green highlight in dark mode */
+/* Dragged item to have a green highlight in dark mode */
 body.dark-theme .button-item.dragging {
-    background:
-        radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.18), transparent 42%),
-        linear-gradient(145deg, var(--button-lift-glass-bg), rgba(12, 16, 24, 0.42)),
-        linear-gradient(120deg, var(--button-lift-glass-tint), transparent 60%);
-    border-color: var(--button-lift-glass-outline);
-    box-shadow: var(--button-lift-glass-shadow), 0 0 0 1px var(--button-lift-glass-outline);
+    /* Remove background from parent */
+    background: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    box-shadow: 0 8px 26px rgba(0, 0, 0, 0.35);
+
+    /* Ensure text is dark for contrast on the light glass */
+    color: #020617 !important;
+}
+
+/* Apply glass effect to pseudo-element in dark mode too */
+body.dark-theme .button-item.dragging::before {
+    background: rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(4px);
 }
 
 body.dark-theme .button-item.dragging textarea,
 body.dark-theme .button-item.dragging .text-input,
 body.dark-theme .button-item.dragging .emoji-input {
-    background-color: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.24);
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    color: #020617 !important;
+}
+
+body.dark-theme .button-item.dragging .drag-handle,
+body.dark-theme .button-item.dragging label,
+body.dark-theme .button-item.dragging .shortcut-indicator {
+    color: #020617 !important;
 }
 
 /* ------------------------------------------------------------------------- */
