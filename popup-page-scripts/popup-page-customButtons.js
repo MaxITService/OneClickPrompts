@@ -374,7 +374,7 @@ function handleDragOver(e) {
                     child.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
                     child.offsetWidth; // Force reflow
 
-                    child.style.transition = 'transform 200ms ease-in-out'; // Play
+                    child.style.transition = 'transform 420ms ease-in-out'; // Play (slower for visibility)
                     child.style.transform = '';
 
                     child.addEventListener('transitionend', () => {
@@ -410,7 +410,7 @@ function handleDragOver(e) {
 
                 // Play: Enable transition ONLY for the transform property,
                 // and set the target transform state.
-                draggedItem.style.transition = 'transform 150ms ease-out';
+                draggedItem.style.transition = 'transform 380ms ease-out';
                 draggedItem.style.transform = playTransform;
 
                 // Cleanup will implicitly happen on the next dragover or dragend.

@@ -28,6 +28,11 @@ body.dark-theme {
     --manual-bg: #1e1e1e;
     --code-bg: #252525;
     --text-muted: #888;
+    --button-lift-glass-bg: rgba(40, 54, 70, 0.82);
+    --button-lift-glass-tint: rgba(91, 209, 138, 0.32);
+    --button-lift-glass-highlight: rgba(255, 255, 255, 0.18);
+    --button-lift-glass-shadow: 0 16px 34px rgba(0, 0, 0, 0.45);
+    --button-lift-glass-outline: rgba(91, 209, 138, 0.58);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -174,8 +179,19 @@ body.dark-theme .button-item .shortcut-indicator {
 /* ------------------------------------------------------------------------- */
 /* Dragged item to have a green highlight in dark mode */
 body.dark-theme .button-item.dragging {
-    background-color: #2ecc71 !important;
-    /* Green highlight for dragged items */
+    background:
+        radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.18), transparent 42%),
+        linear-gradient(145deg, var(--button-lift-glass-bg), rgba(12, 16, 24, 0.42)),
+        linear-gradient(120deg, var(--button-lift-glass-tint), transparent 60%);
+    border-color: var(--button-lift-glass-outline);
+    box-shadow: var(--button-lift-glass-shadow), 0 0 0 1px var(--button-lift-glass-outline);
+}
+
+body.dark-theme .button-item.dragging textarea,
+body.dark-theme .button-item.dragging .text-input,
+body.dark-theme .button-item.dragging .emoji-input {
+    background-color: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.24);
 }
 
 /* ------------------------------------------------------------------------- */

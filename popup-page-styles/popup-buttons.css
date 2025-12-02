@@ -16,6 +16,14 @@ This file is responsible for:
     resize: none;
 }
 
+:root {
+    --button-lift-glass-bg: rgba(255, 255, 255, 0.42);
+    --button-lift-glass-tint: rgba(91, 209, 138, 0.36);
+    --button-lift-glass-highlight: rgba(255, 255, 255, 0.72);
+    --button-lift-glass-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+    --button-lift-glass-outline: rgba(91, 209, 138, 0.5);
+}
+
 
 /* ------------------------------------------------------------------------- */
 /* 1. Base Button Styling for All Buttons                                   */
@@ -137,10 +145,11 @@ button.danger:hover {
     position: relative;
     /* Set initial scale to 1 and enable a smooth transition */
     transform: scale(1);
-    transition: transform 0.9s ease, background-color 0.9s ease;
+    transition: transform 0.9s ease, background-color 0.9s ease, box-shadow 0.4s ease;
     will-change: transform, opacity;
     backface-visibility: hidden;
     perspective: 1000px;
+    isolation: isolate;
 }
 
 /*
@@ -162,13 +171,19 @@ button.danger:hover {
 
 /* Styling when a button item is being dragged */
 .button-item.dragging {
-    /* Existing styles */
     transform: scale(0.8);
-    background-color: #d4f8d4 !important;
-    opacity: 0.8;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    background:
+        radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.35), transparent 42%),
+        linear-gradient(145deg, var(--button-lift-glass-bg), rgba(255, 255, 255, 0.05)),
+        linear-gradient(120deg, var(--button-lift-glass-tint), transparent 58%);
+    background-color: transparent;
+    border-color: var(--button-lift-glass-outline);
+    opacity: 0.9;
+    box-shadow: var(--button-lift-glass-shadow), 0 0 0 1px var(--button-lift-glass-outline);
     cursor: grabbing;
-    z-index: 2;
+    z-index: 3;
+    overflow: hidden;
+    backdrop-filter: blur(14px) saturate(170%);
 
     /* Ensure transform transitions don't conflict horribly */
     /* The scale is applied instantly, the FLIP transform handles position */
@@ -176,6 +191,34 @@ button.danger:hover {
     /* Let's adjust the FLIP logic slightly */
     will-change: transform, opacity;
     /* Keep will-change */
+}
+
+.button-item.dragging::before {
+    content: "";
+    position: absolute;
+    inset: -4px;
+    border-radius: inherit;
+    background:
+        linear-gradient(160deg, var(--button-lift-glass-highlight), transparent 62%),
+        linear-gradient(25deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05));
+    backdrop-filter: blur(16px) saturate(180%);
+    filter: url(#ocp-liquid-glass);
+    opacity: 0.7;
+    pointer-events: none;
+    z-index: 0;
+    transition: opacity 0.3s ease;
+}
+
+.button-item.dragging textarea,
+.button-item.dragging .text-input,
+.button-item.dragging .emoji-input {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.button-item.dragging > * {
+    position: relative;
+    z-index: 1;
 }
 
 /* Special styling for the Settings button card */
