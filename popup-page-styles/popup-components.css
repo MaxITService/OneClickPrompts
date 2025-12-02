@@ -351,6 +351,7 @@ Key areas:
     border-radius: 0 0 4px 4px;
     position: relative;
     --unwrap-duration: 910ms;
+    --unwrap-feather: 12%;
     transform-origin: top;
     transform: translateY(-8px) scaleY(0.94);
     filter: blur(8px) saturate(0.85);
@@ -515,12 +516,6 @@ Key areas:
 #advancedHelpSection .section-content {
     border: none;
     padding: 0 10px 10px 10px;
-    display: none;
-    /* Ensure content is hidden by default */
-}
-
-#advancedHelpSection.expanded .section-content {
-    display: block;
 }
 
 .crosschat-setting-group {
