@@ -198,3 +198,19 @@ body.dark-theme a:hover {
 body.dark-theme .floating-sites-list {
     background-color: #333;
 }
+
+/* ------------------------------------------------------------------------- */
+/* Dark Theme Overrides for Collapsible Unwrap Effect                        */
+/* ------------------------------------------------------------------------- */
+body.dark-theme .collapsible>.section-content {
+    background: linear-gradient(180deg, rgba(32, 32, 32, 0.98) 0%, rgba(24, 24, 24, 0.96) 100%);
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
+    border-color: var(--border-color);
+}
+
+body.dark-theme .collapsible>.section-content::before {
+    background: linear-gradient(135deg,
+            rgba(154, 121, 211, 0.12),
+            rgba(154, 121, 211, 0.04),
+            transparent 55%);
+}
