@@ -393,7 +393,7 @@
               </h3>
               <span class="toggle-icon">▶</span>
             </div>
-            <div class="section-content">
+            <div class="section-content" id="crossChatModuleContent">
               <div class="switch-container mb-16">
                 <!--This label is hidden by CSS to draw beautiful swithc on top-->
                 <label class="switch">
@@ -583,7 +583,7 @@
               </h3>
               <span class="toggle-icon">▶</span>
             </div>
-            <div class="section-content">
+            <div class="section-content" id="inlineProfileSelectorContent">
               <div class="switch-container mb-16">
                 <label class="switch">
                   <input
@@ -651,7 +651,7 @@
               </h3>
               <span class="toggle-icon">▶</span>
             </div>
-            <div class="section-content">
+            <div class="section-content" id="tokenApproximatorContent">
               <div class="switch-container mb-16">
                 <label class="switch">
                   <input
@@ -973,23 +973,12 @@
                       <!-- Ultralight State Machine -->
                       <div
                         class="model-description"
-                        style="
-                          margin-bottom: 12px;
-                          padding-bottom: 8px;
-                          border-bottom: 1px dashed #eee;
-                        "
                       >
                         <p>
                           <strong>Ultralight State Machine</strong> ⭐
                           <span style="color: #090">⚡ Fastest, good accuracy </span>
                         </p>
-                        <p
-                          style="
-                            font-size: 0.85em;
-                            color: #555;
-                            margin: 4px 0 6px 0;
-                          "
-                        >
+                        <p class="model-description-text">
                           This scanner walks the string character by character,
                           toggling an inWord flag to start a new token when
                           word-like characters begin. Each CJK character and
@@ -1003,23 +992,12 @@
                       <!-- Single Regex Pass -->
                       <div
                         class="model-description"
-                        style="
-                          margin-bottom: 12px;
-                          padding-bottom: 8px;
-                          border-bottom: 1px dashed #eee;
-                        "
                       >
                         <p>
                           <strong>Single Regex Pass</strong>
                           <span style="color: #090">✓ Accurate</span>
                         </p>
-                        <p
-                          style="
-                            font-size: 0.85em;
-                            color: #555;
-                            margin: 4px 0 6px 0;
-                          "
-                        >
+                        <p class="model-description-text">
                           A single Unicode regex matches letter sequences,
                           numbers, individual CJK characters, or any
                           non-whitespace symbol and returns the total matches as
@@ -1034,23 +1012,12 @@
                       <!-- Simple 1:4 -->
                       <div
                         class="model-description"
-                        style="
-                          margin-bottom: 12px;
-                          padding-bottom: 8px;
-                          border-bottom: 1px dashed #eee;
-                        "
                       >
                         <p>
                           <strong>Simple 1:4 Ratio</strong>
                           <span style="color: #f90">⚠️ Less accurate</span>
                         </p>
-                        <p
-                          style="
-                            font-size: 0.85em;
-                            color: #555;
-                            margin: 4px 0 6px 0;
-                          "
-                        >
+                        <p class="model-description-text">
                           Simple approximation: 1 token ≈ 4 characters. Very
                           fast and uses minimal CPU, but less accurate
                           especially with code or non-English text. Good for
@@ -1062,23 +1029,12 @@
                       <!-- Advanced Heuristics -->
                       <div
                         class="model-description"
-                        style="
-                          margin-bottom: 12px;
-                          padding-bottom: 8px;
-                          border-bottom: 1px dashed #eee;
-                        "
                       >
                         <p>
                           <strong>Advanced Heuristics</strong>
                           <span style="color: #e60">🐢 Slower, lowest accuracy, underestimates a lot.</span>
                         </p>
-                        <p
-                          style="
-                            font-size: 0.85em;
-                            color: #555;
-                            margin: 4px 0 6px 0;
-                          "
-                        >
+                        <p class="model-description-text">
                           Uses intelligent heuristics that adapt to different
                           content types (code, CJK text, etc.) for better
                           accuracy. Can use significant CPU on very long
@@ -1090,23 +1046,12 @@
                       <!-- CPT Blend/Mix -->
                       <div
                         class="model-description"
-                        style="
-                          margin-bottom: 12px;
-                          padding-bottom: 8px;
-                          border-bottom: 1px dashed #eee;
-                        "
                       >
                         <p>
                           <strong>CPT Blend/Mix</strong>
                           <span style="color: rgb(131, 129, 0)">🐌 Slow, but sometimes good accuracy.</span>
                         </p>
-                        <p
-                          style="
-                            font-size: 0.85em;
-                            color: #555;
-                            margin: 4px 0 6px 0;
-                          "
-                        >
+                        <p class="model-description-text">
                           Sometimes best accuracy, sometimes off. 70% slower
                           than Ultralight state machine. It first normalizes the
                           text and gets a word-based count, then computes a

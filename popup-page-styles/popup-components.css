@@ -320,7 +320,7 @@ Key areas:
 }
 
 /* ------------------------------------------------------------------------- */
-/* Collapsible Sections                                                     */
+/* Collapsible Sections - Smooth Animation                                  */
 /* ------------------------------------------------------------------------- */
 .collapsible .section-header {
     cursor: pointer;
@@ -330,54 +330,94 @@ Key areas:
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
-    /* default spacing for non-Modules */
+    margin-bottom: 0;
     color: var(--text-color);
-    /* Add this line to ensure text is visible */
+    transition: margin-bottom 600ms cubic-bezier(0.4, 0, 0.2, 1), border-radius 600ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Collapsible content default border (uses global --border-color) */
-.collapsible .section-content {
-    display: none;
-    padding: 10px;
-    border: 1px solid var(--border-color);
+/* Add margin and adjust border radius when expanded */
+.collapsible.expanded .section-header {
+    margin-bottom: 0;
+    border-radius: 4px 4px 0 0;
+}
+
+/* Collapsible content with smooth animation */
+.collapsible>.section-content {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    padding: 0 10px;
+    border: 0 solid var(--border-color);
     border-radius: 0 0 4px 4px;
+    position: relative;
+    --unwrap-duration: 910ms;
+    transform-origin: top;
+    transform: translateY(-8px) scaleY(0.94);
+    filter: blur(8px) saturate(0.85);
+    clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.92) 100%);
+    box-shadow: 0 16px 30px rgba(0, 0, 0, 0.04);
+    transition: max-height 600ms cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 400ms cubic-bezier(0.4, 0, 0.2, 1) 100ms,
+        padding 600ms cubic-bezier(0.4, 0, 0.2, 1),
+        border-width 600ms cubic-bezier(0.4, 0, 0.2, 1),
+        transform var(--unwrap-duration) cubic-bezier(0.23, 1, 0.32, 1),
+        filter var(--unwrap-duration) cubic-bezier(0.23, 1, 0.32, 1),
+        clip-path var(--unwrap-duration) cubic-bezier(0.23, 1, 0.32, 1),
+        box-shadow 500ms ease;
 }
 
-/* Ensure crossChatModule content is removed from layout when collapsed */
-#crossChatModule:not(.expanded) .section-content,
-#crossChatModule:not(.expanded) .ocp-module__content {
-    display: none !important;
-    padding: 0 !important;
-    border: 0 !important;
-    margin: 0 !important;
+.collapsible>.section-content::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(135deg,
+            rgba(122, 92, 200, 0.08),
+            rgba(122, 92, 200, 0.02),
+            transparent 55%);
+    opacity: 0;
+    transform: translateY(-12px) scaleY(0.92);
+    transition: opacity 480ms ease, transform 520ms ease;
 }
 
-.collapsible.expanded .section-content {
-    display: block;
+/* When expanded, allow content to show with smooth animation */
+.collapsible.expanded>.section-content {
+    max-height: 5000px;
+    /* Large enough for any content */
+    opacity: 1;
+    padding: 10px;
+    border-width: 1px;
+    transform: translateY(0) scaleY(1);
+    filter: blur(0) saturate(1);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.08);
+    transition: max-height 600ms cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 500ms cubic-bezier(0.4, 0, 0.2, 1) 150ms,
+        padding 600ms cubic-bezier(0.4, 0, 0.2, 1),
+        border-width 600ms cubic-bezier(0.4, 0, 0.2, 1),
+        transform var(--unwrap-duration) cubic-bezier(0.23, 1, 0.32, 1),
+        filter var(--unwrap-duration) cubic-bezier(0.23, 1, 0.32, 1),
+        clip-path var(--unwrap-duration) cubic-bezier(0.23, 1, 0.32, 1),
+        box-shadow 500ms ease;
 }
 
-/* Strong collapse: when a collapsible is not expanded, fully remove the content from layout.
-   This eliminates any visual borders/padding/margins that might otherwise linger. */
-.collapsible:not(.expanded) .section-content,
-.ocp-module:not(.expanded) .ocp-module__content {
-    display: none !important;
-    padding: 0 !important;
-    border: 0 !important;
-    margin: 0 !important;
+.collapsible.expanded>.section-content::before {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
 }
 
-.collapsible.expanded .toggle-icon {
-    transform: rotate(90deg);
-}
-
+/* Toggle icon rotation with smooth transition */
 .toggle-icon {
     font-size: 20px;
     line-height: 1;
     margin-right: 10px;
-    transition: transform 0.3s ease;
+    transition: transform 600ms cubic-bezier(0.4, 0, 0.2, 1);
     color: var(--text-color);
-    /* Add this line to make the arrow follow the text color */
+}
+
+.collapsible.expanded .toggle-icon {
+    transform: rotate(90deg);
 }
 
 .section-header {
@@ -442,22 +482,7 @@ Key areas:
     /* Add this line to ensure text is visible */
 }
 
-/* Keep nested module containers default; scoped overrides below handle borders cleanly */
-#modulesSection>.section-content>.collapsible .section-content {
-    border: 1px solid var(--border-color);
-    border-radius: 0 0 4px 4px;
-    padding: 10px;
-}
 
-/* Optional: if you want zero border in collapsed state header, comment this out.
-   Keeping header border matches Cross-Chat look. */
-/* #modulesSection > .section-content > .collapsible .subsection-header { border: 0; } */
-
-/* No reset of outer .section chrome here to avoid side effects */
-#modulesSection .collapsible .section-content {
-    border: 1px solid var(--border-color);
-    border-radius: 0 0 4px 4px;
-}
 
 /* ---------- Consistent spacing for Modules area only ---------- */
 
@@ -720,4 +745,19 @@ Key areas:
 
 .border-bottom-dashed {
     border-bottom: 1px dashed #eee;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Model Details Styling                                                     */
+/* ------------------------------------------------------------------------- */
+.model-description {
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed #eee;
+}
+
+.model-description-text {
+    font-size: 0.85em;
+    color: #555;
+    margin: 4px 0 6px 0;
 }
