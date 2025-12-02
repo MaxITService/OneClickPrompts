@@ -127,7 +127,7 @@ function updateQueueSettingsUIFromProfile() {
  */
 function toggleQueueRandomizePercentRow(isVisible) {
     if (!queueRandomizePercentRow) return;
-    queueRandomizePercentRow.style.display = isVisible ? 'flex' : 'none';
+    queueRandomizePercentRow.classList.toggle('is-hidden', !isVisible);
 }
 
 /**
@@ -283,10 +283,10 @@ async function updateInterface() {
         }
         return;
     }
-    
+
     // Update buttons, settings, etc. based on currentProfile
     await updatebuttonCardsList(); // Now awaiting this async function
-    
+
     document.getElementById('autoSendToggle').checked = currentProfile.globalAutoSendEnabled;
     document.getElementById('shortcutsToggle').checked = currentProfile.enableShortcuts;
 
@@ -309,21 +309,21 @@ function resetProfileActionsUI() {
     addProfileInput.value = '';
     addProfileInput.style.borderColor = '';
     addProfileInput.classList.remove('input-error');
-    addProfileContainer.style.display = 'none';
+    addProfileContainer.classList.add('is-hidden');
 
     copyProfileInput.value = '';
     copyProfileInput.style.borderColor = '';
     copyProfileInput.classList.remove('input-error');
-    copyProfileContainer.style.display = 'none';
+    copyProfileContainer.classList.add('is-hidden');
 
     // Show the main action buttons
-    addProfileButton.style.display = 'inline-block';
-    copyProfileButton.style.display = 'inline-block';
-    deleteProfileButton.style.display = 'inline-block';
+    addProfileButton.classList.remove('is-hidden');
+    copyProfileButton.classList.remove('is-hidden');
+    deleteProfileButton.classList.remove('is-hidden');
 
     // Unlock the profile selector
     profileSelect.disabled = false;
-    currentProfileLabel.style.display = 'none';
+    currentProfileLabel.classList.add('is-hidden');
 }
 // -------------------------
 // 9. Event Listeners
@@ -337,10 +337,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (isTab) {
         // When in a tab, hide the 'open in tab' button and show the 'toggle width' button
         if (openInTabButton) {
-            openInTabButton.style.display = 'none';
+            openInTabButton.classList.add('is-hidden');
         }
         if (toggleWidthButton) {
-            toggleWidthButton.style.display = 'inline-block';
+            toggleWidthButton.classList.remove('is-hidden');
         }
         document.body.classList.add('tab-mode');
     }
@@ -352,24 +352,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add Profile Button Click
     addProfileButton.addEventListener('click', () => {
-        addProfileContainer.style.display = 'flex';
-        addProfileButton.style.display = 'none';
-        copyProfileButton.style.display = 'none';
-        copyProfileContainer.style.display = 'none';
-        deleteProfileButton.style.display = 'none'; // Hide delete button during add
+        addProfileContainer.classList.remove('is-hidden');
+        addProfileButton.classList.add('is-hidden');
+        copyProfileButton.classList.add('is-hidden');
+        copyProfileContainer.classList.add('is-hidden');
+        deleteProfileButton.classList.add('is-hidden'); // Hide delete button during add
         profileSelect.disabled = true; // Lock profile selector
-        currentProfileLabel.style.display = 'inline-block';
+        currentProfileLabel.classList.remove('is-hidden');
     });
 
     // Copy Profile Button Click
     copyProfileButton.addEventListener('click', () => {
-        copyProfileContainer.style.display = 'flex';
-        copyProfileButton.style.display = 'none';
-        addProfileButton.style.display = 'none';
-        addProfileContainer.style.display = 'none';
-        deleteProfileButton.style.display = 'none'; // Hide delete button during copy
+        copyProfileContainer.classList.remove('is-hidden');
+        copyProfileButton.classList.add('is-hidden');
+        addProfileButton.classList.add('is-hidden');
+        addProfileContainer.classList.add('is-hidden');
+        deleteProfileButton.classList.add('is-hidden'); // Hide delete button during copy
         profileSelect.disabled = true; // Lock profile selector
-        currentProfileLabel.style.display = 'inline-block';
+        currentProfileLabel.classList.remove('is-hidden');
     });
 
     // Save Add Profile Button Click

@@ -25,8 +25,8 @@ body {
 }
 
 /* Hide version container when the user is adding or copying a profile, as this space is used for that functionality at that sequence */
-body:has(#addProfileContainer:not([style*="display: none"])) #versionContainer,
-body:has(#copyProfileContainer:not([style*="display: none"])) #versionContainer {
+body:has(#addProfileContainer:not(.is-hidden)) #versionContainer,
+body:has(#copyProfileContainer:not(.is-hidden)) #versionContainer {
     opacity: 0;
     transition: opacity 0.4s ease;
 }
@@ -70,9 +70,11 @@ body:has(#copyProfileContainer:not([style*="display: none"])) #versionContainer 
     0% {
         background-position: 0% 50%;
     }
+
     50% {
         background-position: 100% 50%;
     }
+
     100% {
         background-position: 0% 50%;
     }
