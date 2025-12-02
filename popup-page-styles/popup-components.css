@@ -519,19 +519,6 @@ Key areas:
     /* Ensure content is hidden by default */
 }
 
-/* Inline Profile Selector: in collapsed state, content is fully removed (redundant with global rule but explicit).
-   In expanded state, normal styles apply. */
-#inlineProfileSelectorModule:not(.expanded) .section-content,
-#inlineProfileSelectorModule:not(.expanded) .ocp-module__content {
-    display: none !important;
-    padding: 0 !important;
-    border: 0 !important;
-    margin: 0 !important;
-}
-
-/* If you also see a faint outline from the header, you can optionally remove its border: */
-/* #inlineProfileSelectorModule .subsection-header { border-color: transparent; } */
-
 #advancedHelpSection.expanded .section-content {
     display: block;
 }
