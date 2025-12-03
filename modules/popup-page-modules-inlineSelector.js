@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const settingsContainer = document.getElementById('inlineProfileSelectorSettingsContainer');
   const placementRadios = document.getElementsByName('inlineProfileSelectorPlacement');
   // Also control the top switch row visibility with the collapsible
-  const switchRow = moduleContainer.querySelector('.section-content .switch-container');
+  const switchRow = moduleContainer.querySelector('.section-content .toggle-container');
 
   if (!moduleContainer || !enableToggle || !settingsContainer) {
     // Popup might be opened on a version without the module block yet

@@ -394,16 +394,19 @@
               <span class="toggle-icon">▶</span>
             </div>
             <div class="section-content" id="crossChatModuleContent">
-              <div class="switch-container mb-16">
-                <!--This label is hidden by CSS to draw beautiful swithc on top-->
-                <label class="switch">
+              <div class="toggle-container mb-16">
+                <div class="toggle">
                   <input
                     type="checkbox"
                     id="crossChatModuleEnableToggle"
+                    class="toggle__input"
                     aria-label="Enable Cross-Chat Prompt Sharing"
                   />
-                  <span class="slider"></span>
-                </label>
+                  <label for="crossChatModuleEnableToggle" class="toggle__label">
+                    <span class="toggle__emoji"></span>
+                    <span class="toggle__emoji"></span>
+                  </label>
+                </div>
                 <span class="switch-label"
                   >Enable Cross-Chat Prompt Sharing</span
                 >
@@ -469,11 +472,14 @@
                   aria-disabled="false"
                 >
                   <legend>
-                    <div class="switch-container">
-                      <label class="switch">
-                        <input type="checkbox" id="crossChatHideStandardButtons" />
-                        <span class="slider"></span>
-                      </label>
+                    <div class="toggle-container">
+                      <div class="toggle">
+                        <input type="checkbox" id="crossChatHideStandardButtons" class="toggle__input" />
+                        <label for="crossChatHideStandardButtons" class="toggle__label">
+                          <span class="toggle__emoji"></span>
+                          <span class="toggle__emoji"></span>
+                        </label>
+                      </div>
                       <span class="switch-label"
                         >Hide standard Cross-Chat buttons</span
                       >
@@ -483,11 +489,14 @@
                     class="row"
                     title="If enabled, after you click the '📋 Copy' button on a chat page, the extension will also immediately 'send' the text in that same chat. This is useful for workflows where you want to send a prompt and simultaneously save it for use elsewhere."
                   >
-                    <div class="switch-container">
-                      <label class="switch">
-                        <input type="checkbox" id="crossChatAutosendCopy" />
-                        <span class="slider"></span>
-                      </label>
+                    <div class="toggle-container">
+                      <div class="toggle">
+                        <input type="checkbox" id="crossChatAutosendCopy" class="toggle__input" />
+                        <label for="crossChatAutosendCopy" class="toggle__label">
+                          <span class="toggle__emoji"></span>
+                          <span class="toggle__emoji"></span>
+                        </label>
+                      </div>
                       <span class="switch-label">Autosend after 📋 Copy</span>
                     </div>
                   </div>
@@ -495,11 +504,14 @@
                     class="row"
                     title="If enabled, clicking the '📥 Paste & Send' button will not only paste the stored prompt into the chat input but also automatically trigger the send action, submitting it to the AI."
                   >
-                    <div class="switch-container">
-                      <label class="switch">
-                        <input type="checkbox" id="crossChatAutosendPaste" />
-                        <span class="slider"></span>
-                      </label>
+                    <div class="toggle-container">
+                      <div class="toggle">
+                        <input type="checkbox" id="crossChatAutosendPaste" class="toggle__input" />
+                        <label for="crossChatAutosendPaste" class="toggle__label">
+                          <span class="toggle__emoji"></span>
+                          <span class="toggle__emoji"></span>
+                        </label>
+                      </div>
                       <span class="switch-label"
                         >Autosend after 📥 Paste & Send</span
                       >
@@ -510,11 +522,14 @@
                   class="row"
                   title="When enabled, a broadcast button appears on chat pages. Clicking it will immediately paste and send the current text to every other supported tab. Use with extreme caution."
                 >
-                  <div class="switch-container">
-                    <label class="switch">
-                      <input type="checkbox" id="crossChatDangerAutoSendAll" />
-                      <span class="slider"></span>
-                    </label>
+                  <div class="toggle-container">
+                    <div class="toggle">
+                      <input type="checkbox" id="crossChatDangerAutoSendAll" class="toggle__input" />
+                      <label for="crossChatDangerAutoSendAll" class="toggle__label">
+                        <span class="toggle__emoji"></span>
+                        <span class="toggle__emoji"></span>
+                      </label>
+                    </div>
                     <span class="switch-label"
                       >Add dangerous button ⬆️: Auto sent text you have in editor to all instances of chats</span
                     >
@@ -584,14 +599,18 @@
               <span class="toggle-icon">▶</span>
             </div>
             <div class="section-content" id="inlineProfileSelectorContent">
-              <div class="switch-container mb-16">
-                <label class="switch">
+              <div class="toggle-container mb-16">
+                <div class="toggle">
                   <input
                     type="checkbox"
                     id="inlineProfileSelectorEnableToggle"
+                    class="toggle__input"
                   />
-                  <span class="slider"></span>
-                </label>
+                  <label for="inlineProfileSelectorEnableToggle" class="toggle__label">
+                    <span class="toggle__emoji"></span>
+                    <span class="toggle__emoji"></span>
+                  </label>
+                </div>
                 <span class="switch-label"
                   >Show profile selector in button row</span
                 >
@@ -652,14 +671,18 @@
               <span class="toggle-icon">▶</span>
             </div>
             <div class="section-content" id="tokenApproximatorContent">
-              <div class="switch-container mb-16">
-                <label class="switch">
+              <div class="toggle-container mb-16">
+                <div class="toggle">
                   <input
                     type="checkbox"
                     id="chatgptTokenApproximatorEnableToggle"
+                    class="toggle__input"
                   />
-                  <span class="slider"></span>
-                </label>
+                  <label for="chatgptTokenApproximatorEnableToggle" class="toggle__label">
+                    <span class="toggle__emoji"></span>
+                    <span class="toggle__emoji"></span>
+                  </label>
+                </div>
                 <span class="switch-label"
                   >Enable ChatGPT Token Approximator</span
                 >
@@ -1252,27 +1275,35 @@
             </button>
           </div>
           <br />
-          <div class="switch-container">
-            <label class="switch">
+          <div class="toggle-container">
+            <div class="toggle">
               <input
                 type="checkbox"
                 id="editorHeuristicsToggle"
+                class="toggle__input"
                 aria-label="Enable heuristics when the text editor is not found"
               />
-              <span class="slider"></span>
-            </label>
+              <label for="editorHeuristicsToggle" class="toggle__label">
+                <span class="toggle__emoji"></span>
+                <span class="toggle__emoji"></span>
+              </label>
+            </div>
             <span class="switch-label">Use heuristics when editor is not found</span>
           </div>
            <br />
-          <div class="switch-container">
-            <label class="switch">
+          <div class="toggle-container">
+            <div class="toggle">
               <input
                 type="checkbox"
                 id="sendButtonHeuristicsToggle"
+                class="toggle__input"
                 aria-label="Enable heuristics when the send button is not found"
               />
-              <span class="slider"></span>
-            </label>
+              <label for="sendButtonHeuristicsToggle" class="toggle__label">
+                <span class="toggle__emoji"></span>
+                <span class="toggle__emoji"></span>
+              </label>
+            </div>
             <span class="switch-label">Use heuristics when send button is not found</span>
           </div>
            <br />
@@ -1352,15 +1383,19 @@
       <section class="section" id="themeSection">
         <h2>Theme</h2>
         <!-- iPhone-style toggle switch -->
-        <div class="switch-container">
-          <label class="switch">
+        <div class="toggle-container">
+          <div class="toggle">
             <input
               type="checkbox"
               id="darkThemeToggle"
+              class="toggle__input"
               aria-label="Enable Dark Theme"
             />
-            <span class="slider"></span>
-          </label>
+            <label for="darkThemeToggle" class="toggle__label">
+              <span class="toggle__emoji">☀️</span>
+              <span class="toggle__emoji">🌙</span>
+            </label>
+          </div>
           <span class="switch-label">Enable Dark Theme</span>
         </div>
       </section>

@@ -329,11 +329,14 @@
     <section class="section" id="themeSection">
       <h2>Theme</h2>
       <!-- iPhone-style toggle switch -->
-      <div class="switch-container">
-        <label class="switch">
-          <input type="checkbox" id="darkThemeToggle" aria-label="Enable Dark Theme" />
-          <span class="slider"></span>
-        </label>
+      <div class="toggle-container">
+        <div class="toggle">
+          <input type="checkbox" id="darkThemeToggle" class="toggle__input" aria-label="Enable Dark Theme" />
+          <label for="darkThemeToggle" class="toggle__label">
+            <span class="toggle__emoji">☀️</span>
+            <span class="toggle__emoji">🌙</span>
+          </label>
+        </div>
         <span class="switch-label">Enable Dark Theme</span>
       </div>
     </section>
