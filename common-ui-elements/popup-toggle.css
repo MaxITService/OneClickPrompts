@@ -155,7 +155,7 @@ It replaces the old iPhone-style switches.
 }
 
 .toggle__label:hover .toggle__emoji {
-    transform: scale(1.15);
+    transform: translateY(-2px) scale(1.15);
 }
 
 /* All toggles use #9a79d3 when checked */
