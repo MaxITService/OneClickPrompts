@@ -179,3 +179,48 @@ It replaces the old iPhone-style switches.
     font-size: 16px;
     color: var(--text-color);
 }
+
+/* ------------------------------------------------------------------------- */
+/* Large Toggle Variant (+40%)                                               */
+/* ------------------------------------------------------------------------- */
+.toggle.toggle--large {
+    width: 101px;
+    height: 56px;
+    padding: 6.5px;
+}
+
+.toggle.toggle--large::after {
+    width: 43px;
+    height: 43px;
+    left: 6.5px;
+    top: 6.5px;
+}
+
+.toggle.toggle--large:has(input:checked)::after {
+    translate: 45px 0;
+}
+
+/* Emoji styling for large toggle */
+.toggle.toggle--large .toggle__emoji {
+    font-size: 25px;
+    transform-origin: center center;
+}
+
+/* Separate styling for Sun (left) and Moon (right) to ensure perfect centering */
+/* Sun Emoji */
+.toggle.toggle--large .toggle__emoji:first-child {
+    transform: translateY(-1.5px);
+}
+
+.toggle.toggle--large .toggle__label .toggle__emoji:first-child:hover {
+    transform: translateY(-1.5px) scale(1.15);
+}
+
+/* Moon Emoji */
+.toggle.toggle--large .toggle__emoji:last-child {
+    transform: translateY(-1.5px);
+}
+
+.toggle.toggle--large .toggle__label .toggle__emoji:last-child:hover {
+    transform: translateY(-1.5px) scale(1.15);
+}
