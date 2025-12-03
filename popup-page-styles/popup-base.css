@@ -39,10 +39,23 @@ body:has(#copyProfileContainer:not(.is-hidden)) #versionContainer {
     transition: opacity 0.5s ease;
 }
 
-/* Centered version text styling */
+/* Version badge styling */
 #version {
-    color: #666666;
-    width: 100%;
+    position: absolute;
+    right: 16px;
+    bottom: 12px;
+    padding: 4px 10px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    color: var(--text-muted, #666666);
+    width: auto;
+    text-align: right;
+    font-weight: 600;
+}
+
+.profile-version {
+    margin: 0;
 }
 
 /* Explanation text styling */
@@ -127,8 +140,8 @@ body:has(#copyProfileContainer:not(.is-hidden)) #versionContainer {
 }
 
 .section.profile-section {
-    margin-bottom: 0;
-    padding-bottom: 0;
+    position: relative;
+    margin-bottom: 24px;
 }
 
 .section:last-child {

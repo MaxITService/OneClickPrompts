@@ -19,7 +19,6 @@ const profileSelect = document.getElementById('profileSelect');
 const currentProfileLabel = document.getElementById('currentProfileLabel');
 const buttonCardsList = document.getElementById('buttonCardsList');
 const consoleOutput = document.getElementById('console');
-const saveStatus = document.getElementById('saveStatus');
 
 // New DOM Elements for Profile Actions
 const addProfileButton = document.getElementById('addProfile');
@@ -66,7 +65,6 @@ function debouncedSaveCurrentProfile() {
     saveTimeoutId = setTimeout(async () => {
         try {
             await saveCurrentProfile(); // Calls the existing save function
-            updateSaveStatus();
         } catch (error) {
             logToGUIConsole(`Error saving profile: ${error.message}`);
         }
@@ -247,20 +245,11 @@ async function saveCurrentProfile() {
             profileName: currentProfile.PROFILE_NAME,
             config: currentProfile
         });
-        updateSaveStatus();
         return true;
     } catch (error) {
         logToGUIConsole(`Error saving profile: ${error.message}`);
         return false;
     }
-}
-
-/**
- * Updates the save status display with the current timestamp.
- */
-function updateSaveStatus() {
-    const timestamp = new Date().toLocaleTimeString();
-    saveStatus.textContent = `Last saved: ${timestamp}`;
 }
 
 /**
