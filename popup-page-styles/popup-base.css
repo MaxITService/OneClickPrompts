@@ -43,8 +43,8 @@ body:has(#copyProfileContainer:not(.is-hidden)) #versionContainer {
 #version {
     position: absolute;
     right: 16px;
-    bottom: 12px;
-    padding: 4px 10px;
+    bottom: 6px;
+    padding: 2px 8px;
     background: transparent;
     border: none;
     border-radius: 0;
@@ -142,6 +142,7 @@ body:has(#copyProfileContainer:not(.is-hidden)) #versionContainer {
 .section.profile-section {
     position: relative;
     margin-bottom: 24px;
+    padding-bottom: 10px;
 }
 
 .section:last-child {
