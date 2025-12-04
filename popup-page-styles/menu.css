@@ -81,6 +81,10 @@ Ultra-premium menu buttons featuring:
 /* ------------------------------------------------------------------------- */
 /* Menu Container                                                            */
 /* ------------------------------------------------------------------------- */
+#menuSection {
+    position: relative;
+}
+
 .menu-nav {
     display: flex;
     flex-wrap: wrap;

@@ -138,33 +138,19 @@ Key areas:
 }
 
 /* ------------------------------------------------------------------------- */
-/* Save Status Styling                                                       */
+/* Small Text, like version*/
 /* ------------------------------------------------------------------------- */
 .small-hoovering-text {
     text-align: right;
     color: #666666;
     font-size: 12px;
-    margin-top: 16px;
-    animation: saveStatusFade 2s ease-out forwards;
+    margin-top: 16px;    
 }
 
-.profile-version {
+.menu-version {
     margin-top: 0;
 }
 
-@keyframes saveStatusFade {
-    0% {
-        opacity: 1;
-    }
-
-    90% {
-        opacity: 1;
-    }
-
-    100% {
-        opacity: 0.6;
-    }
-}
 
 /* ------------------------------------------------------------------------- */
 /* Profile Selection Dropdown Styling                                        */

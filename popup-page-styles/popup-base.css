@@ -54,7 +54,7 @@ body:has(#copyProfileContainer:not(.is-hidden)) #versionContainer {
     font-weight: 600;
 }
 
-.profile-version {
+.menu-version {
     margin: 0;
 }
 
