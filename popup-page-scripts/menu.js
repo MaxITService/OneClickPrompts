@@ -259,14 +259,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const distY = e.clientY - btnCenterY;
                 const distance = Math.sqrt(distX * distX + distY * distY);
 
-                const magneticRange = 180;
+                const magneticRange = 360;
                 if (distance >= magneticRange) {
                     setMagnetTarget(btn, 0, 0);
                     return;
                 }
 
                 // Soft attraction with eased falloff
-                const maxOffsetPx = 5;
+                const maxOffsetPx = 7;
                 const influence = Math.max(0, (magneticRange - distance) / magneticRange);
                 if (influence < 0.01) {
                     setMagnetTarget(btn, 0, 0);
