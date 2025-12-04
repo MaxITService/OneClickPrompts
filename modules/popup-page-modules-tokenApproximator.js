@@ -48,7 +48,7 @@
     el.textContent = message;
     container.appendChild(el);
     setTimeout(() => {
-      try { el.remove(); } catch (_) {}
+      try { el.remove(); } catch (_) { }
     }, 2400);
   }
 
@@ -72,27 +72,27 @@
   const elPlacementBeforeCb = document.getElementById('tokenApproxPlacementBeforeCb'); // Hidden checkbox for compatibility
   const elPlacementRadioBefore = document.getElementById('tokenApproxPlacementBefore');
   const elPlacementRadioAfter = document.getElementById('tokenApproxPlacementAfter');
-  
+
   // New dropdown for counting method
   const elCountingMethodSelect = document.getElementById('tokenApproxCountingMethod');
-  
+
   // Website enablement checkboxes
   const elWebsitesList = document.getElementById('tokenApproxWebsitesList');
   // List of supported sites - must match the site names in InjectionTargetsOnWebsite
   const SUPPORTED_SITES = ['ChatGPT', 'Claude', 'Copilot', 'DeepSeek', 'AIStudio', 'Grok', 'Gemini', 'Perplexity'];
-  
+
   // Legacy elements (kept for backward compatibility)
   const elSimpleMethodCb = document.getElementById('tokenApproxSimpleMethodToggle');
   const elMethodRadioAdvanced = document.getElementById('tokenApproxMethodAdvanced');
   const elMethodRadioSimple = document.getElementById('tokenApproxMethodSimple');
-  
+
   // Model details toggle elements
   const elShowModelDetails = document.getElementById('tokenApproxShowModelDetails');
   const elModelDetails = document.getElementById('tokenApproxModelDetails');
 
   function normalize(settings) {
     const s = settings && typeof settings === 'object' ? settings : {};
-    
+
     // Validate counting method
     let countingMethod = DEFAULTS.countingMethod;
     if (s.countingMethod) {
@@ -106,14 +106,14 @@
         countingMethod = 'advanced';
       }
     }
-    
+
     // Handle enabled sites
     let enabledSites = { ...DEFAULTS.enabledSites };
     if (s.enabledSites && typeof s.enabledSites === 'object') {
       // Merge with defaults to ensure all sites are represented
       enabledSites = { ...enabledSites, ...s.enabledSites };
     }
-    
+
     return {
       enabled: !!s.enabled,
       calibration: Number.isFinite(s.calibration) && s.calibration > 0 ? Number(s.calibration) : DEFAULTS.calibration,
@@ -145,24 +145,24 @@
       }
     }
     if (elEditorCb) elEditorCb.checked = !!s.showEditorCounter;
-    
+
     // Update both the hidden checkbox and the visible radio buttons for placement
     const isBefore = (s.placement === 'before');
     if (elPlacementBeforeCb) elPlacementBeforeCb.checked = isBefore;
     if (elPlacementRadioBefore) elPlacementRadioBefore.checked = isBefore;
     if (elPlacementRadioAfter) elPlacementRadioAfter.checked = !isBefore;
-    
+
     // Update the counting method dropdown
     if (elCountingMethodSelect) {
       elCountingMethodSelect.value = s.countingMethod;
     }
-    
+
     // Update the hidden elements for backward compatibility
     const isSimple = (s.countingMethod === 'simple');
     if (elSimpleMethodCb) elSimpleMethodCb.checked = isSimple;
     if (elMethodRadioSimple) elMethodRadioSimple.checked = isSimple;
     if (elMethodRadioAdvanced) elMethodRadioAdvanced.checked = !isSimple;
-    
+
     // Update website checkboxes
     if (elWebsitesList) {
       populateWebsiteCheckboxes(s.enabledSites || {});
@@ -173,13 +173,13 @@
     const selected = (elModeRadios().find(r => r.checked) || {}).value || DEFAULTS.threadMode;
     const calibParsed = Number(elCalib && elCalib.value ? elCalib.value : DEFAULTS.calibration);
     const calibration = Number.isFinite(calibParsed) && calibParsed > 0 ? Math.max(0.01, Math.min(10, calibParsed)) : DEFAULTS.calibration;
-    
+
     // Get selected counting method from dropdown
     const countingMethod = elCountingMethodSelect ? elCountingMethodSelect.value : DEFAULTS.countingMethod;
-    
+
     // Collect enabled sites from checkboxes
     const enabledSites = collectEnabledSitesFromUi();
-    
+
     return normalize({
       enabled: !!(elEnable && elEnable.checked),
       calibration,
@@ -289,7 +289,7 @@
         await save(s);
       }, { passive: true });
     }
-    
+
     if (elPlacementRadioAfter) {
       elPlacementRadioAfter.addEventListener('change', async () => {
         // Update the hidden checkbox to maintain compatibility
@@ -298,7 +298,7 @@
         await save(s);
       }, { passive: true });
     }
-    
+
     // Counting method dropdown
     if (elCountingMethodSelect) {
       elCountingMethodSelect.addEventListener('change', async () => {
@@ -312,45 +312,43 @@
         if (elMethodRadioAdvanced) {
           elMethodRadioAdvanced.checked = elCountingMethodSelect.value === 'advanced';
         }
-        
+
         const s = collectSettingsFromUi();
         await save(s);
       }, { passive: true });
     }
-    
+
     // Model details toggle
     if (elShowModelDetails) {
       elShowModelDetails.addEventListener('click', () => {
-        const isHidden = elModelDetails.style.display === 'none';
-        elModelDetails.style.display = isHidden ? 'block' : 'none';
-        
-        // Update toggle icon
-        const toggleIcon = elShowModelDetails.querySelector('.toggle-icon');
-        if (toggleIcon) {
-          toggleIcon.textContent = isHidden ? '▼' : '▶';
-        }
-        
+        // Toggle visibility class on content
+        elModelDetails.classList.toggle('is-visible');
+        const isVisible = elModelDetails.classList.contains('is-visible');
+
+        // Toggle expanded class on the trigger for icon rotation
+        elShowModelDetails.classList.toggle('expanded', isVisible);
+
         // Update text content while preserving the icon
         // The HTML structure has the text as a text node after the span
         // We need to find and update only that text node
         const childNodes = Array.from(elShowModelDetails.childNodes);
-        
+
         // Find the last text node (should be after the toggle icon span)
         let textNodeFound = false;
         for (let i = childNodes.length - 1; i >= 0; i--) {
           const node = childNodes[i];
           if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
             // Update the text node
-            node.textContent = isHidden ? 'Hide model details' : 'Show model details';
+            node.textContent = isVisible ? 'Hide model details' : 'Show model details';
             textNodeFound = true;
             break;
           }
         }
-        
+
         // If no text node was found (shouldn't happen with the HTML structure),
         // create one to avoid breaking the functionality
-        if (!textNodeFound && toggleIcon) {
-          const textNode = document.createTextNode(isHidden ? 'Hide model details' : 'Show model details');
+        if (!textNodeFound) {
+          const textNode = document.createTextNode(isVisible ? 'Hide model details' : 'Show model details');
           elShowModelDetails.appendChild(textNode);
         }
       });
@@ -374,56 +372,56 @@
   // Helper function to populate website checkboxes
   function populateWebsiteCheckboxes(enabledSites) {
     if (!elWebsitesList) return;
-    
+
     // Clear existing content
     elWebsitesList.innerHTML = '';
-    
+
     // Create a grid layout for the checkboxes
     const container = document.createElement('div');
     container.style.display = 'grid';
     container.style.gridTemplateColumns = 'repeat(2, 1fr)';
     container.style.gap = '8px';
-    
+
     // Create a checkbox for each supported site
     SUPPORTED_SITES.forEach(site => {
       const isEnabled = enabledSites && enabledSites[site] !== false;
-      
+
       const label = document.createElement('label');
       label.className = 'checkbox-row';
       label.style.margin = '4px 0';
-      
+
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.checked = isEnabled;
       checkbox.dataset.site = site;
       checkbox.className = 'tokenApproxSiteCheckbox';
       checkbox.id = `tokenApproxSite_${site}`;
-      
+
       const text = document.createTextNode(site);
-      
+
       label.appendChild(checkbox);
       label.appendChild(text);
       container.appendChild(label);
-      
+
       // Add change event listener
       checkbox.addEventListener('change', async () => {
         const s = collectSettingsFromUi();
         await save(s);
       }, { passive: true });
     });
-    
+
     elWebsitesList.appendChild(container);
   }
-  
+
   // Helper function to collect enabled sites from UI
   function collectEnabledSitesFromUi() {
     const enabledSites = {};
-    
+
     // Default all sites to enabled
     SUPPORTED_SITES.forEach(site => {
       enabledSites[site] = true;
     });
-    
+
     // Update with checkbox values
     if (elWebsitesList) {
       const checkboxes = elWebsitesList.querySelectorAll('input[type="checkbox"].tokenApproxSiteCheckbox');
@@ -433,7 +431,7 @@
         }
       });
     }
-    
+
     return enabledSites;
   }
 

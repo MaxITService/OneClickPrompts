@@ -987,24 +987,13 @@
 
 
                   <!-- Model descriptions in collapsible section -->
-                  <div
-                    style="
-                      border-top: 1px solid #f0f0f0;
-                      padding-top: 10px;
-                      margin-top: 10px;
-                    "
-                  >
+                  <div class="model-details-container">
                     <p
-                      style="
-                        margin-bottom: 8px;
-                        font-size: 0.9em;
-                        cursor: pointer;
-                      "
+                      class="model-details-toggle"
                       id="tokenApproxShowModelDetails"
                     >
                       <span
-                        class="toggle-icon"
-                        style="font-size: 10px; margin-right: 4px"
+                        class="toggle-icon toggle-icon-symbol-replaced-with-graphic"
                         >▶</span
                       >
                       Show model details
@@ -1012,7 +1001,7 @@
 
                     <div
                       id="tokenApproxModelDetails"
-                      style="display: none; margin-left: 10px; margin-top: 10px"
+                      class="model-details-content"
                     >
                       <!-- Ultralight State Machine -->
                       <div

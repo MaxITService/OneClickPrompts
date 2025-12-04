@@ -971,3 +971,58 @@ Key areas:
     color: #555;
     margin: 4px 0 6px 0;
 }
+
+/* ------------------------------------------------------------------------- */
+/* Token Approximator Model Details Toggle                                   */
+/* ------------------------------------------------------------------------- */
+.model-details-container {
+    border-top: 1px solid #f0f0f0;
+    padding-top: 10px;
+    margin-top: 10px;
+}
+
+/* JS-manipulated: This element's text content changes and the 'expanded' class is toggled */
+.model-details-toggle {
+    margin-bottom: 8px;
+    font-size: 0.9em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+/* 
+   Fix for nested toggle icon:
+   The parent .collapsible.expanded rule forces all .toggle-icon descendants to rotate 90deg.
+   We must reset this for the model details toggle since it starts collapsed even when parent is expanded.
+*/
+.collapsible.expanded .model-details-toggle .toggle-icon-symbol-replaced-with-graphic {
+    transform: rotate(0deg);
+}
+
+/* JS-manipulated: The 'expanded' class is added to .model-details-toggle when details are shown */
+.collapsible.expanded .model-details-toggle.expanded .toggle-icon-symbol-replaced-with-graphic {
+    transform: rotate(90deg);
+    animation: collapsible-icon-bounce 400ms ease;
+}
+
+/* JS-manipulated: The 'is-visible' class is toggled via JS */
+.model-details-content {
+    display: none;
+    margin-left: 10px;
+    margin-top: 10px;
+}
+
+.model-details-content.is-visible {
+    display: block;
+}
+
+/* 
+   Class for the icon span. 
+   The name indicates that the text symbol (▶) is hidden and replaced by a CSS graphic.
+   Inherits base behavior from .toggle-icon but adds specific spacing.
+*/
+.toggle-icon-symbol-replaced-with-graphic {
+    font-size: 10px;
+    /* Kept from original inline style, though .toggle-icon might override or use 0 */
+    margin-right: 4px;
+}
