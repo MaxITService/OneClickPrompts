@@ -433,7 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // drags from starting on interactive child elements.
     buttonCardsList.addEventListener('pointerdown', handlePointerDown, true); // Phase 1: Capture the initial target.
     buttonCardsList.addEventListener('dragstart', handleDragStart, true);     // Phase 2: Decide whether to start the drag.
-    buttonCardsList.addEventListener('dragover', handleDragOver);
+    document.addEventListener('dragover', handleDragOver);                    // Track even when cursor leaves the list.
     buttonCardsList.addEventListener('drop', handleDrop);
     document.addEventListener('dragend', handleDragEnd); // dragend doesn't bubble, must be on document/window.
 

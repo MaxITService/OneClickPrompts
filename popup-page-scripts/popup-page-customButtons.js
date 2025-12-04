@@ -300,7 +300,7 @@ function calculateAutoScrollVelocity() {
     const scrollThreshold = 220;
     const maxScrollSpeed = 2000; // px per second
     const slowdownZone = 320; // px distance over which we ease into a stop near list boundaries
-    const viewportPadding = 32; // keep a small cushion so the dragged card is fully visible
+    const viewportPadding = 172; // keep a small cushion so the dragged card is fully visible
     const { innerWidth, innerHeight } = window;
     const { x, y } = lastDragPosition;
 
@@ -396,9 +396,27 @@ function handleDragOver(e) {
     e.dataTransfer.dropEffect = 'move';
     autoScroll(e);
 
-    const target = e.target.closest('.button-item');
+    const listRect = buttonCardsList ? buttonCardsList.getBoundingClientRect() : null;
+    let target = e.target.closest('.button-item');
+    let bounding = target ? target.getBoundingClientRect() : null;
+    let forcePosition = null; // 'before' | 'after' to override midpoint logic when outside list
+
+    if ((!target || target === draggedItem) && listRect) {
+        const firstChild = buttonCardsList.firstElementChild;
+        const lastChild = buttonCardsList.lastElementChild;
+        if (e.clientY < listRect.top && firstChild) {
+            target = firstChild;
+            bounding = firstChild.getBoundingClientRect();
+            forcePosition = 'before';
+        } else if (e.clientY > listRect.bottom && lastChild) {
+            target = lastChild;
+            bounding = lastChild.getBoundingClientRect();
+            forcePosition = 'after';
+        }
+    }
+
     // --- Important: Do nothing if the target is the dragged item itself OR if there is no target ---
-    if (!target || target === draggedItem) return;
+    if (!target || target === draggedItem || !bounding) return;
 
     const parent = target.parentNode;
     // --- Get ALL child elements BEFORE the DOM change ---
@@ -418,9 +436,10 @@ function handleDragOver(e) {
     });
 
     // --- Perform the DOM change (your existing code) ---
-    const bounding = target.getBoundingClientRect();
     const offsetY = e.clientY - bounding.top;
-    const isBefore = offsetY < bounding.height / 2;
+    const isBefore = forcePosition
+        ? forcePosition === 'before'
+        : offsetY < bounding.height / 2;
 
     const currentNextSibling = draggedItem.nextSibling;
     const currentPreviousSibling = draggedItem.previousSibling;
