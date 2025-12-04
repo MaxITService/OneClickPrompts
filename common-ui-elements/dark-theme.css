@@ -231,17 +231,121 @@ body.dark-theme .floating-sites-list {
 }
 
 /* ------------------------------------------------------------------------- */
-/* Dark Theme Overrides for Collapsible Unwrap Effect                        */
+/* Dark Theme Overrides for Collapsible Premium Animation                    */
 /* ------------------------------------------------------------------------- */
-body.dark-theme .collapsible>.section-content {
-    background: linear-gradient(180deg, rgba(32, 32, 32, 0.98) 0%, rgba(24, 24, 24, 0.96) 100%);
-    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
-    border-color: var(--border-color);
+
+/* Section header - dark glass effect */
+body.dark-theme .collapsible .section-header {
+    background: linear-gradient(135deg,
+            rgba(42, 42, 48, 0.95) 0%,
+            rgba(38, 38, 44, 0.9) 50%,
+            rgba(34, 34, 40, 0.95) 100%);
+    border-color: rgba(154, 121, 211, 0.1);
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.2),
+        0 1px 2px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
+/* Header hover state in dark mode */
+body.dark-theme .collapsible .section-header:hover {
+    background: linear-gradient(135deg,
+            rgba(52, 50, 62, 0.98) 0%,
+            rgba(48, 46, 58, 0.95) 50%,
+            rgba(44, 42, 54, 0.98) 100%);
+    border-color: rgba(154, 121, 211, 0.25);
+    box-shadow:
+        0 4px 20px rgba(154, 121, 211, 0.15),
+        0 2px 8px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Expanded header in dark mode */
+body.dark-theme .collapsible.expanded .section-header {
+    background: linear-gradient(135deg,
+            rgba(154, 121, 211, 0.12) 0%,
+            rgba(154, 121, 211, 0.06) 50%,
+            rgba(154, 121, 211, 0.08) 100%);
+    border-color: rgba(154, 121, 211, 0.2);
+}
+
+/* Toggle icon in dark mode */
+body.dark-theme .toggle-icon {
+    background: linear-gradient(135deg,
+            rgba(154, 121, 211, 0.15) 0%,
+            rgba(154, 121, 211, 0.08) 100%);
+}
+
+body.dark-theme .toggle-icon::before,
+body.dark-theme .toggle-icon::after {
+    background: linear-gradient(90deg,
+            var(--primary-color, #9a79d3) 0%,
+            rgba(154, 121, 211, 0.8) 100%);
+}
+
+body.dark-theme .collapsible .section-header:hover .toggle-icon {
+    background: linear-gradient(135deg,
+            rgba(154, 121, 211, 0.25) 0%,
+            rgba(154, 121, 211, 0.15) 100%);
+    box-shadow: 0 0 12px rgba(154, 121, 211, 0.3);
+}
+
+body.dark-theme .collapsible.expanded .toggle-icon {
+    background: linear-gradient(135deg,
+            rgba(154, 121, 211, 0.3) 0%,
+            rgba(154, 121, 211, 0.2) 100%);
+    box-shadow:
+        0 0 15px rgba(154, 121, 211, 0.35),
+        inset 0 0 4px rgba(154, 121, 211, 0.15);
+}
+
+/* Section content in dark mode */
+body.dark-theme .collapsible>.section-content {
+    background: linear-gradient(180deg,
+            rgba(32, 32, 38, 0.98) 0%,
+            rgba(28, 28, 34, 0.96) 50%,
+            rgba(26, 26, 32, 0.98) 100%);
+    border-color: rgba(154, 121, 211, 0.12);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.25),
+        0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+body.dark-theme .collapsible.expanded>.section-content {
+    box-shadow:
+        0 16px 48px rgba(154, 121, 211, 0.12),
+        0 4px 16px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+/* Gradient overlay in dark mode */
 body.dark-theme .collapsible>.section-content::before {
     background: linear-gradient(135deg,
-            rgba(154, 121, 211, 0.12),
-            rgba(154, 121, 211, 0.04),
-            transparent 55%);
+            rgba(154, 121, 211, 0.1) 0%,
+            rgba(154, 121, 211, 0.03) 30%,
+            transparent 60%);
+}
+
+/* Shimmer effects in dark mode */
+body.dark-theme .collapsible .section-header::before {
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.08) 50%,
+            transparent 100%);
+}
+
+body.dark-theme .collapsible>.section-content::after {
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.12) 50%,
+            transparent 100%);
+}
+
+/* Expand text in dark mode */
+body.dark-theme .expand-text {
+    color: var(--text-muted, #888);
+}
+
+body.dark-theme .collapsible .section-header:hover .expand-text {
+    color: var(--primary-color, #9a79d3);
 }

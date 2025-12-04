@@ -144,7 +144,7 @@ Key areas:
     text-align: right;
     color: #666666;
     font-size: 12px;
-    margin-top: 16px;    
+    margin-top: 16px;
 }
 
 .menu-version {
@@ -306,87 +306,323 @@ Key areas:
 }
 
 /* ------------------------------------------------------------------------- */
-/* Collapsible Sections - Smooth Animation                                  */
+/* Collapsible Sections - SUPER MODERN Premium Animation                    */
 /* ------------------------------------------------------------------------- */
+
+/* Define animation keyframes */
+@keyframes collapsible-shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+@keyframes collapsible-glow-pulse {
+
+    0%,
+    100% {
+        box-shadow:
+            0 0 0 0 rgba(122, 92, 200, 0),
+            0 4px 15px rgba(0, 0, 0, 0.05);
+    }
+
+    50% {
+        box-shadow:
+            0 0 20px 2px rgba(122, 92, 200, 0.15),
+            0 4px 20px rgba(0, 0, 0, 0.08);
+    }
+}
+
+@keyframes collapsible-icon-bounce {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.15);
+    }
+}
+
+@keyframes collapsible-reveal-shine {
+    0% {
+        opacity: 0;
+        transform: translateX(-100%) skewX(-15deg);
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateX(200%) skewX(-15deg);
+    }
+}
+
+/* Section header - premium glass effect with hover states */
 .collapsible .section-header {
     cursor: pointer;
-    padding: 10px;
-    background-color: var(--section-header-bg, #f5f5f5);
-    border-radius: 4px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg,
+            rgba(245, 245, 250, 0.95) 0%,
+            rgba(240, 240, 248, 0.9) 50%,
+            rgba(235, 235, 245, 0.95) 100%);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 10px;
+    border: 1px solid rgba(122, 92, 200, 0.08);
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 0;
     color: var(--text-color);
-    transition: margin-bottom 600ms cubic-bezier(0.4, 0, 0.2, 1), border-radius 600ms cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.04),
+        0 1px 2px rgba(0, 0, 0, 0.02),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    transition:
+        margin-bottom 500ms cubic-bezier(0.4, 0, 0.2, 1),
+        border-radius 500ms cubic-bezier(0.4, 0, 0.2, 1),
+        background 300ms ease,
+        border-color 300ms ease,
+        box-shadow 300ms ease,
+        transform 200ms ease;
 }
 
-/* Add margin and adjust border radius when expanded */
+/* Shimmer overlay on header */
+.collapsible .section-header::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.4) 50%,
+            transparent 100%);
+    background-size: 200% 100%;
+    opacity: 0;
+    transition: opacity 300ms ease;
+    pointer-events: none;
+}
+
+/* Hover state - glow and lift */
+.collapsible .section-header:hover {
+    background: linear-gradient(135deg,
+            rgba(248, 246, 255, 0.98) 0%,
+            rgba(245, 242, 255, 0.95) 50%,
+            rgba(240, 238, 252, 0.98) 100%);
+    border-color: rgba(122, 92, 200, 0.2);
+    box-shadow:
+        0 4px 20px rgba(122, 92, 200, 0.12),
+        0 2px 8px rgba(0, 0, 0, 0.04),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    transform: translateY(-1px);
+}
+
+.collapsible .section-header:hover::before {
+    opacity: 1;
+    animation: collapsible-shimmer 1.5s ease-in-out;
+}
+
+/* Active/pressed state */
+.collapsible .section-header:active {
+    transform: translateY(0) scale(0.995);
+    box-shadow:
+        0 2px 10px rgba(122, 92, 200, 0.1),
+        0 1px 4px rgba(0, 0, 0, 0.03),
+        inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+/* Expanded header styling */
 .collapsible.expanded .section-header {
     margin-bottom: 0;
-    border-radius: 4px 4px 0 0;
+    border-radius: 10px 10px 0 0;
+    background: linear-gradient(135deg,
+            rgba(122, 92, 200, 0.08) 0%,
+            rgba(122, 92, 200, 0.04) 50%,
+            rgba(122, 92, 200, 0.06) 100%);
+    border-color: rgba(122, 92, 200, 0.15);
+    animation: collapsible-glow-pulse 2s ease-in-out 1;
 }
 
-/* Collapsible content with smooth animation */
+/* Modern Toggle Icon - CSS chevron instead of text character */
+.toggle-icon {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 8px;
+    position: relative;
+    border-radius: 50%;
+    background: linear-gradient(135deg,
+            rgba(122, 92, 200, 0.1) 0%,
+            rgba(122, 92, 200, 0.05) 100%);
+    transition:
+        transform 500ms cubic-bezier(0.34, 1.56, 0.64, 1),
+        background 300ms ease,
+        box-shadow 300ms ease;
+    font-size: 0;
+    /* Hide the ▶ text */
+    color: transparent;
+}
+
+/* Create chevron arrow with CSS */
+.toggle-icon::before,
+.toggle-icon::after {
+    content: "";
+    position: absolute;
+    width: 8px;
+    height: 2px;
+    background: linear-gradient(90deg,
+            var(--primary-color, #7a5cc8) 0%,
+            rgba(122, 92, 200, 0.8) 100%);
+    border-radius: 2px;
+    transition:
+        transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1),
+        background 300ms ease,
+        width 300ms ease;
+}
+
+.toggle-icon::before {
+    transform: translateX(1px) translateY(-2px) rotate(45deg);
+}
+
+.toggle-icon::after {
+    transform: translateX(1px) translateY(2px) rotate(-45deg);
+}
+
+/* Icon hover effects */
+.collapsible .section-header:hover .toggle-icon {
+    background: linear-gradient(135deg,
+            rgba(122, 92, 200, 0.2) 0%,
+            rgba(122, 92, 200, 0.1) 100%);
+    box-shadow: 0 0 12px rgba(122, 92, 200, 0.25);
+}
+
+.collapsible .section-header:hover .toggle-icon::before,
+.collapsible .section-header:hover .toggle-icon::after {
+    background: linear-gradient(90deg,
+            var(--primary-color, #7a5cc8) 0%,
+            rgba(160, 130, 230, 1) 100%);
+}
+
+/* Expanded state - rotate and morph to minus/down arrow */
+.collapsible.expanded .toggle-icon {
+    transform: rotate(90deg);
+    background: linear-gradient(135deg,
+            rgba(122, 92, 200, 0.25) 0%,
+            rgba(122, 92, 200, 0.15) 100%);
+    box-shadow:
+        0 0 15px rgba(122, 92, 200, 0.3),
+        inset 0 0 4px rgba(122, 92, 200, 0.1);
+    animation: collapsible-icon-bounce 400ms ease;
+}
+
+.collapsible.expanded .toggle-icon::before,
+.collapsible.expanded .toggle-icon::after {
+    background: linear-gradient(90deg,
+            var(--primary-color, #7a5cc8) 0%,
+            rgba(140, 110, 220, 1) 100%);
+}
+
+/* Section Content - Premium reveal animation */
 .collapsible>.section-content {
     max-height: 0;
     overflow: hidden;
     opacity: 0;
-    padding: 0 10px;
-    border: 0 solid var(--border-color);
-    border-radius: 0 0 4px 4px;
+    padding: 0 16px;
+    border: 0 solid rgba(122, 92, 200, 0.1);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
     position: relative;
-    --unwrap-duration: 910ms;
-    --unwrap-feather: 12%;
-    transform-origin: top;
-    transform: translateY(-8px) scaleY(0.94);
-    filter: blur(8px) saturate(0.85);
+    --unwrap-duration: 700ms;
+    transform-origin: top center;
+    transform: translateY(-12px) scaleY(0.9) perspective(1000px) rotateX(-5deg);
+    filter: blur(6px) saturate(0.9);
     clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.92) 100%);
-    box-shadow: 0 16px 30px rgba(0, 0, 0, 0.04);
-    transition: max-height 600ms cubic-bezier(0.4, 0, 0.2, 1),
-        opacity 400ms cubic-bezier(0.4, 0, 0.2, 1) 100ms,
-        padding 600ms cubic-bezier(0.4, 0, 0.2, 1),
-        border-width 600ms cubic-bezier(0.4, 0, 0.2, 1),
-        transform var(--unwrap-duration) cubic-bezier(0.23, 1, 0.32, 1),
-        filter var(--unwrap-duration) cubic-bezier(0.23, 1, 0.32, 1),
-        clip-path var(--unwrap-duration) cubic-bezier(0.23, 1, 0.32, 1),
+    background: linear-gradient(180deg,
+            rgba(255, 255, 255, 0.98) 0%,
+            rgba(252, 251, 255, 0.95) 50%,
+            rgba(250, 248, 255, 0.98) 100%);
+    box-shadow:
+        0 8px 32px rgba(122, 92, 200, 0.06),
+        0 2px 8px rgba(0, 0, 0, 0.02);
+    transition:
+        max-height var(--unwrap-duration) cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 400ms cubic-bezier(0.4, 0, 0.2, 1) 80ms,
+        padding var(--unwrap-duration) cubic-bezier(0.4, 0, 0.2, 1),
+        border-width 400ms ease 50ms,
+        transform var(--unwrap-duration) cubic-bezier(0.34, 1.56, 0.64, 1),
+        filter 500ms cubic-bezier(0.4, 0, 0.2, 1),
+        clip-path var(--unwrap-duration) cubic-bezier(0.4, 0, 0.2, 1),
         box-shadow 500ms ease;
 }
 
+/* Gradient overlay for depth */
 .collapsible>.section-content::before {
     content: "";
     position: absolute;
     inset: 0;
     pointer-events: none;
     background: linear-gradient(135deg,
-            rgba(122, 92, 200, 0.08),
-            rgba(122, 92, 200, 0.02),
-            transparent 55%);
+            rgba(122, 92, 200, 0.06) 0%,
+            rgba(122, 92, 200, 0.02) 30%,
+            transparent 60%);
     opacity: 0;
-    transform: translateY(-12px) scaleY(0.92);
-    transition: opacity 480ms ease, transform 520ms ease;
+    transform: translateY(-15px) scaleY(0.9);
+    transition: opacity 500ms ease, transform 600ms ease;
 }
 
-/* When expanded, allow content to show with smooth animation */
+/* Reveal shine effect */
+.collapsible>.section-content::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -50%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.5) 50%,
+            transparent 100%);
+    opacity: 0;
+    pointer-events: none;
+    transform: skewX(-15deg);
+}
+
+/* Expanded content - smooth reveal */
 .collapsible.expanded>.section-content {
     max-height: 5000px;
-    /* Large enough for any content */
     opacity: 1;
-    padding: 10px;
+    padding: 16px;
     border-width: 1px;
-    transform: translateY(0) scaleY(1);
+    transform: translateY(0) scaleY(1) perspective(1000px) rotateX(0deg);
     filter: blur(0) saturate(1);
     clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
-    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.08);
-    transition: max-height 600ms cubic-bezier(0.4, 0, 0.2, 1),
-        opacity 500ms cubic-bezier(0.4, 0, 0.2, 1) 150ms,
-        padding 600ms cubic-bezier(0.4, 0, 0.2, 1),
-        border-width 600ms cubic-bezier(0.4, 0, 0.2, 1),
-        transform var(--unwrap-duration) cubic-bezier(0.23, 1, 0.32, 1),
-        filter var(--unwrap-duration) cubic-bezier(0.23, 1, 0.32, 1),
-        clip-path var(--unwrap-duration) cubic-bezier(0.23, 1, 0.32, 1),
-        box-shadow 500ms ease;
+    box-shadow:
+        0 16px 48px rgba(122, 92, 200, 0.1),
+        0 4px 16px rgba(0, 0, 0, 0.04),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    transition:
+        max-height var(--unwrap-duration) cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 500ms cubic-bezier(0.4, 0, 0.2, 1) 100ms,
+        padding var(--unwrap-duration) cubic-bezier(0.4, 0, 0.2, 1),
+        border-width 300ms ease,
+        transform var(--unwrap-duration) cubic-bezier(0.34, 1.56, 0.64, 1),
+        filter 500ms cubic-bezier(0.4, 0, 0.2, 1) 50ms,
+        clip-path var(--unwrap-duration) cubic-bezier(0.4, 0, 0.2, 1),
+        box-shadow 600ms ease;
 }
 
 .collapsible.expanded>.section-content::before {
@@ -394,36 +630,42 @@ Key areas:
     transform: translateY(0) scaleY(1);
 }
 
-/* Toggle icon rotation with smooth transition */
-.toggle-icon {
-    font-size: 20px;
-    line-height: 1;
-    margin-right: 10px;
-    transition: transform 600ms cubic-bezier(0.4, 0, 0.2, 1);
-    color: var(--text-color);
+.collapsible.expanded>.section-content::after {
+    animation: collapsible-reveal-shine 800ms ease-out 100ms;
 }
 
-.collapsible.expanded .toggle-icon {
-    transform: rotate(90deg);
-}
-
+/* Section header base styles */
 .section-header {
     display: flex;
     align-items: center;
     position: relative;
+    z-index: 1;
 }
 
+/* Expand hint text - premium fade */
 .expand-text {
-    font-size: inherit;
-    color: inherit;
+    font-size: 0.85em;
+    color: var(--text-muted, #888);
     font-style: italic;
-    font-weight: normal;
-    transition: opacity 0.3s ease;
+    font-weight: 400;
+    margin-left: 8px;
+    opacity: 0.7;
+    transition:
+        opacity 400ms ease,
+        transform 400ms ease;
+}
+
+.collapsible .section-header:hover .expand-text {
+    opacity: 1;
+    color: var(--primary-color, #7a5cc8);
 }
 
 .collapsible.expanded>.section-header .expand-text {
     opacity: 0;
-    display: none;
+    transform: translateX(-10px);
+    pointer-events: none;
+    position: absolute;
+    visibility: hidden;
 }
 
 .text-inside-container {

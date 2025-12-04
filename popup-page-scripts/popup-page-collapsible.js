@@ -33,12 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (header) {
         header.addEventListener('click', () => {
           // Toggle the 'expanded' class on the main section container.
-          const isExpanded = section.classList.toggle('expanded');
-
-          // Rotate the toggle icon if it exists.
-          if (toggleIcon) {
-            toggleIcon.style.transform = isExpanded ? 'rotate(90deg)' : 'rotate(0deg)';
-          }
+          // CSS handles all animations (icon rotation, content reveal, glow effects)
+          section.classList.toggle('expanded');
         });
       }
     });
