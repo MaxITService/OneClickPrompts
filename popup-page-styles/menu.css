@@ -117,10 +117,6 @@ Ultra-modern menu buttons featuring:
         transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
         box-shadow 0.3s ease;
 
-    /* Floating animation */
-    animation: floatIdle 4s ease-in-out infinite;
-    animation-delay: calc(var(--btn-index, 0) * 0.15s);
-
     /* Complex layered shadow for depth */
     box-shadow:
         0 2px 10px rgba(122, 92, 200, 0.15),

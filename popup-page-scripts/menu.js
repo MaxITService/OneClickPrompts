@@ -21,12 +21,71 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.style.setProperty('--tilt-translate-z', '0px');
     };
 
-    const resetMagnet = (btn) => {
-        btn.style.setProperty('--magnet-translate-x', '0px');
-        btn.style.setProperty('--magnet-translate-y', '0px');
+    // Smooth magnetic offsets to avoid jerky jumps
+    const magnetState = new WeakMap();
+    let magnetRAF = null;
+
+    const ensureMagnetState = (btn) => {
+        if (!magnetState.has(btn)) {
+            magnetState.set(btn, { currentX: 0, currentY: 0, targetX: 0, targetY: 0 });
+        }
+        return magnetState.get(btn);
+    };
+
+    const startMagnetLoop = () => {
+        if (magnetRAF) return;
+        const step = () => {
+            let moving = false;
+
+            menuButtons.forEach(btn => {
+                const state = magnetState.get(btn);
+                if (!state) return;
+
+                state.currentX += (state.targetX - state.currentX) * 0.18;
+                state.currentY += (state.targetY - state.currentY) * 0.18;
+
+                const deltaX = Math.abs(state.currentX - state.targetX);
+                const deltaY = Math.abs(state.currentY - state.targetY);
+                if (deltaX > 0.02 || deltaY > 0.02) {
+                    moving = true;
+                } else {
+                    state.currentX = state.targetX;
+                    state.currentY = state.targetY;
+                }
+
+                btn.style.setProperty('--magnet-translate-x', `${state.currentX}px`);
+                btn.style.setProperty('--magnet-translate-y', `${state.currentY}px`);
+            });
+
+            if (moving) {
+                magnetRAF = requestAnimationFrame(step);
+            } else {
+                magnetRAF = null;
+            }
+        };
+
+        magnetRAF = requestAnimationFrame(step);
+    };
+
+    const setMagnetTarget = (btn, x, y, { immediate = false } = {}) => {
+        const state = ensureMagnetState(btn);
+        state.targetX = x;
+        state.targetY = y;
+
+        if (immediate) {
+            state.currentX = x;
+            state.currentY = y;
+            btn.style.setProperty('--magnet-translate-x', `${x}px`);
+            btn.style.setProperty('--magnet-translate-y', `${y}px`);
+            return;
+        }
+
+        startMagnetLoop();
     };
 
     menuButtons.forEach((btn) => {
+        ensureMagnetState(btn);
+
         // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
         // Mouse Move: 3D Tilt + Holographic Shimmer + Magnetic Effect
         // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
@@ -47,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.style.setProperty('--tilt-rotate-y', `${rotateY}deg`);
             btn.style.setProperty('--tilt-scale', '1.05');
             btn.style.setProperty('--tilt-translate-z', '10px');
-            resetMagnet(btn);
+            setMagnetTarget(btn, 0, 0, { immediate: true });
 
             // Update shimmer position (CSS custom properties)
             const shimmerX = (x / rect.width) * 100;
@@ -65,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
         btn.addEventListener('mouseenter', () => {
             btn.style.animationPlayState = 'paused';
-            resetMagnet(btn);
+            setMagnetTarget(btn, 0, 0, { immediate: true });
         });
 
         // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
@@ -73,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
         btn.addEventListener('mouseleave', () => {
             resetTilt(btn);
-            resetMagnet(btn);
+            setMagnetTarget(btn, 0, 0, { immediate: true });
             btn.style.animationPlayState = 'running';
 
             // Smooth transition back (2 seconds for graceful return)
@@ -179,19 +238,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 const distY = e.clientY - btnCenterY;
                 const distance = Math.sqrt(distX * distX + distY * distY);
 
-                // Only apply magnetic effect when within range but not hovering
-                const magneticRange = 150;
-                if (distance < 50 || distance >= magneticRange) {
-                    resetMagnet(btn);
+                const magneticRange = 200;
+                if (distance >= magneticRange) {
+                    setMagnetTarget(btn, 0, 0);
                     return;
                 }
 
-                const strength = (1 - distance / magneticRange) * 0.15;
-                const moveX = distX * strength;
-                const moveY = distY * strength;
+                // Soft attraction with eased falloff and clamp to avoid overlap
+                const maxOffsetPx = 6;
+                const influence = Math.max(0, (magneticRange - distance) / magneticRange);
+                if (influence < 0.01) {
+                    setMagnetTarget(btn, 0, 0);
+                    return;
+                }
 
-                btn.style.setProperty('--magnet-translate-x', `${moveX}px`);
-                btn.style.setProperty('--magnet-translate-y', `${moveY}px`);
+                const eased = influence * influence * influence; // softer near edges
+                if (distance === 0) {
+                    setMagnetTarget(btn, 0, 0);
+                    return;
+                }
+
+                const dirX = distX / distance;
+                const dirY = distY / distance;
+                const offsetMag = eased * maxOffsetPx;
+                const moveX = dirX * offsetMag;
+                const moveY = dirY * offsetMag;
+
+                setMagnetTarget(btn, moveX, moveY);
             });
         }, { passive: true });
     }
