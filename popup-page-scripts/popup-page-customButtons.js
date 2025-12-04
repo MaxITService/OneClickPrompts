@@ -245,7 +245,7 @@ async function addSettingsButton(event) {
 let dragOrigin = null; // Stores the initial target of a mousedown/pointerdown event.
 let isDragging = false;
 let draggedItem = null;
-let lastDragPosition = { x: 0, y: 0 };
+let lastDragPosition = null;
 let autoScrollVelocity = { x: 0, y: 0 };
 let autoScrollRAF = null;
 let autoScrollLastTs = 0;
@@ -292,8 +292,68 @@ function stopAutoScrollLoop() {
     autoScrollLastTs = 0;
 }
 
+function calculateAutoScrollVelocity() {
+    if (!isDragging || !draggedItem || !lastDragPosition) {
+        return { x: 0, y: 0 };
+    }
+
+    const scrollThreshold = 220;
+    const maxScrollSpeed = 2000; // px per second
+    const slowdownZone = 320; // px distance over which we ease into a stop near list boundaries
+    const viewportPadding = 32; // keep a small cushion so the dragged card is fully visible
+    const { innerWidth, innerHeight } = window;
+    const { x, y } = lastDragPosition;
+
+    const calcSpeed = (distanceToEdge, threshold, sign) => {
+        if (distanceToEdge >= threshold) return 0;
+        const normalized = (threshold - distanceToEdge) / threshold; // 0..1
+        const eased = Math.pow(normalized, 0.35);
+        return sign * maxScrollSpeed * eased;
+    };
+
+    let scrollY = calcSpeed(y, scrollThreshold, -1);
+    const distanceFromBottom = innerHeight - y;
+    scrollY = distanceFromBottom < scrollThreshold ? calcSpeed(distanceFromBottom, scrollThreshold, 1) : scrollY;
+
+    let scrollX = calcSpeed(x, scrollThreshold, -1);
+    const distanceFromRight = innerWidth - x;
+    scrollX = distanceFromRight < scrollThreshold ? calcSpeed(distanceFromRight, scrollThreshold, 1) : scrollX;
+
+    const listRect = buttonCardsList ? buttonCardsList.getBoundingClientRect() : null;
+    if (listRect) {
+        const hiddenBelowRaw = listRect.bottom - innerHeight;
+        const hiddenAboveRaw = -listRect.top;
+        const hiddenBelow = hiddenBelowRaw + viewportPadding;
+        const hiddenAbove = hiddenAboveRaw + viewportPadding;
+
+        if (scrollY > 0) {
+            if (hiddenBelow <= 0) {
+                scrollY = 0;
+            } else if (hiddenBelow < slowdownZone) {
+                const factor = Math.pow(Math.min(hiddenBelow / slowdownZone, 1), 1.25);
+                scrollY *= factor;
+            }
+        } else if (scrollY < 0) {
+            if (hiddenAbove <= 0) {
+                scrollY = 0;
+            } else if (hiddenAbove < slowdownZone) {
+                const factor = Math.pow(Math.min(hiddenAbove / slowdownZone, 1), 1.25);
+                scrollY *= factor;
+            }
+        }
+    }
+
+    return { x: scrollX, y: scrollY };
+}
+
 function autoScrollStep(timestamp) {
     if (!isDragging) {
+        stopAutoScrollLoop();
+        return;
+    }
+
+    autoScrollVelocity = calculateAutoScrollVelocity();
+    if (autoScrollVelocity.x === 0 && autoScrollVelocity.y === 0) {
         stopAutoScrollLoop();
         return;
     }
@@ -316,31 +376,10 @@ function autoScrollStep(timestamp) {
 }
 
 function autoScroll(e) {
-    const scrollThreshold = 220;
-    const maxScrollSpeed = 2000; // px per second
-    const { innerWidth, innerHeight } = window;
-    let scrollX = 0;
-    let scrollY = 0;
+    lastDragPosition = { x: e.clientX, y: e.clientY };
 
-    const calcSpeed = (distanceToEdge, threshold, sign) => {
-        if (distanceToEdge >= threshold) return 0;
-        const normalized = (threshold - distanceToEdge) / threshold; // 0..1
-        // Concave easing: ramps up even earlier so fast scroll kicks in before the extreme edge.
-        const eased = Math.pow(normalized, 0.35);
-        return sign * maxScrollSpeed * eased;
-    };
-
-    scrollY = calcSpeed(e.clientY, scrollThreshold, -1);
-    const distanceFromBottom = innerHeight - e.clientY;
-    scrollY = distanceFromBottom < scrollThreshold ? calcSpeed(distanceFromBottom, scrollThreshold, 1) : scrollY;
-
-    scrollX = calcSpeed(e.clientX, scrollThreshold, -1);
-    const distanceFromRight = innerWidth - e.clientX;
-    scrollX = distanceFromRight < scrollThreshold ? calcSpeed(distanceFromRight, scrollThreshold, 1) : scrollX;
-
-    autoScrollVelocity = { x: scrollX, y: scrollY };
-
-    if (scrollX === 0 && scrollY === 0) {
+    autoScrollVelocity = calculateAutoScrollVelocity();
+    if (autoScrollVelocity.x === 0 && autoScrollVelocity.y === 0) {
         stopAutoScrollLoop();
         return;
     }
@@ -356,7 +395,6 @@ function handleDragOver(e) {
 
     e.dataTransfer.dropEffect = 'move';
     autoScroll(e);
-    lastDragPosition = { x: e.clientX, y: e.clientY };
 
     const target = e.target.closest('.button-item');
     // --- Important: Do nothing if the target is the dragged item itself OR if there is no target ---
