@@ -1,0 +1,395 @@
+/*
+menu.css
+Version: 2.2 - Premium Edition
+
+Ultra-modern menu buttons featuring:
+- Holographic purple shimmer effect
+- Animated rainbow gradient borders (purple accent)
+- Magnetic cursor attraction
+- Particle burst on click
+- Floating idle animation
+- Glass morphism with dynamic refraction
+*/
+
+/* ------------------------------------------------------------------------- */
+/* Menu Container                                                            */
+/* ------------------------------------------------------------------------- */
+.menu-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    padding: 12px 0;
+    perspective: 1000px;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Base Button - Holographic Glass                                           */
+/* ------------------------------------------------------------------------- */
+.menu-btn {
+    --btn-glow: rgba(122, 92, 200, 0.5);
+    --gradient-angle: 135deg;
+    --shimmer-x: 50%;
+    --shimmer-y: 50%;
+
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: #333;
+    background: linear-gradient(135deg,
+            rgba(255, 255, 255, 0.9) 0%,
+            rgba(255, 255, 255, 0.7) 50%,
+            rgba(255, 255, 255, 0.9) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    overflow: hidden;
+    text-decoration: none;
+    isolation: isolate;
+
+    /* 3D transform setup */
+    transform-style: preserve-3d;
+    transition:
+        transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+        box-shadow 0.3s ease;
+
+    /* Floating animation */
+    animation: floatIdle 4s ease-in-out infinite;
+    animation-delay: calc(var(--btn-index, 0) * 0.15s);
+
+    /* Complex layered shadow for depth */
+    box-shadow:
+        0 2px 10px rgba(122, 92, 200, 0.15),
+        0 8px 30px rgba(122, 92, 200, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* Index for staggered animations (7 buttons now) */
+.menu-btn:nth-child(1) {
+    --btn-index: 0;
+}
+
+.menu-btn:nth-child(2) {
+    --btn-index: 1;
+}
+
+.menu-btn:nth-child(3) {
+    --btn-index: 2;
+}
+
+.menu-btn:nth-child(4) {
+    --btn-index: 3;
+}
+
+.menu-btn:nth-child(5) {
+    --btn-index: 4;
+}
+
+.menu-btn:nth-child(6) {
+    --btn-index: 5;
+}
+
+.menu-btn:nth-child(7) {
+    --btn-index: 6;
+}
+
+/* Subtle floating animation */
+@keyframes floatIdle {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-3px);
+    }
+}
+
+/* ------------------------------------------------------------------------- */
+/* Animated Gradient Border - Rainbow with Purple Accent                     */
+/* ------------------------------------------------------------------------- */
+.menu-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 2px;
+    border-radius: 16px;
+    background: linear-gradient(var(--gradient-angle),
+            #9b7ed9,
+            #7a5cc8,
+            #6366f1,
+            #06b6d4,
+            #7a5cc8,
+            #c084fc,
+            #f472b6,
+            #7a5cc8,
+            #fb923c,
+            #a78bfa,
+            #9b7ed9);
+    background-size: 300% 300%;
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    animation: borderRotate 4s linear infinite;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+@keyframes borderRotate {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* ------------------------------------------------------------------------- */
+/* Holographic Shimmer Layer - Purple tint (no white wash)                   */
+/* ------------------------------------------------------------------------- */
+.menu-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    background: radial-gradient(circle at var(--shimmer-x) var(--shimmer-y),
+            rgba(122, 92, 200, 0.25) 0%,
+            rgba(122, 92, 200, 0.15) 25%,
+            rgba(155, 126, 217, 0.1) 50%,
+            rgba(106, 74, 189, 0.05) 75%,
+            transparent 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Hover State - Full Effect Activation                                      */
+/* ------------------------------------------------------------------------- */
+.menu-btn:hover {
+    animation-play-state: paused;
+    box-shadow:
+        0 4px 20px rgba(122, 92, 200, 0.3),
+        0 12px 40px rgba(122, 92, 200, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+}
+
+.menu-btn:hover::before {
+    opacity: 1;
+}
+
+.menu-btn:hover::after {
+    opacity: 1;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Active/Click State                                                        */
+/* ------------------------------------------------------------------------- */
+.menu-btn:active {
+    transform: scale(0.96) !important;
+    box-shadow:
+        0 2px 15px rgba(122, 92, 200, 0.4),
+        0 0 30px rgba(122, 92, 200, 0.3),
+        inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Ripple Effect                                                             */
+/* ------------------------------------------------------------------------- */
+.menu-btn .ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle,
+            rgba(122, 92, 200, 0.6) 0%,
+            rgba(155, 126, 217, 0.4) 40%,
+            transparent 70%);
+    transform: scale(0);
+    animation: rippleExpand 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    pointer-events: none;
+}
+
+@keyframes rippleExpand {
+    0% {
+        transform: scale(0);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+/* ------------------------------------------------------------------------- */
+/* Particle Effect Container                                                 */
+/* ------------------------------------------------------------------------- */
+.menu-btn .particle {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: particleBurst 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes particleBurst {
+    0% {
+        transform: translate(0, 0) scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(var(--tx), var(--ty)) scale(0);
+        opacity: 0;
+    }
+}
+
+/* Particle color variations - purple accent colors */
+.menu-btn .particle:nth-child(odd) {
+    background: linear-gradient(135deg, #9b7ed9, #7a5cc8);
+}
+
+.menu-btn .particle:nth-child(even) {
+    background: linear-gradient(135deg, #a48ad4, #6a4abd);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Click Glow Pulse                                                          */
+/* ------------------------------------------------------------------------- */
+.menu-btn.clicked::before {
+    animation: glowPulse 0.5s ease-out, borderRotate 4s linear infinite;
+}
+
+@keyframes glowPulse {
+    0% {
+        opacity: 1;
+        filter: brightness(1.5);
+    }
+
+    100% {
+        opacity: 1;
+        filter: brightness(1);
+    }
+}
+
+/* ------------------------------------------------------------------------- */
+/* Focus State - Accessibility                                               */
+/* ------------------------------------------------------------------------- */
+.menu-btn:focus {
+    outline: none;
+}
+
+.menu-btn:focus-visible {
+    outline: 2px solid var(--primary-color, #7a5cc8);
+    outline-offset: 3px;
+}
+
+.menu-btn:focus-visible::before {
+    opacity: 1;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Button Icon                                                               */
+/* ------------------------------------------------------------------------- */
+.menu-btn-icon {
+    margin-right: 8px;
+    font-size: 15px;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.1));
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.menu-btn:hover .menu-btn-icon {
+    transform: scale(1.15) rotate(-5deg);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Dark Theme                                                                */
+/* ------------------------------------------------------------------------- */
+body.dark-theme .menu-btn {
+    background: linear-gradient(135deg,
+            rgba(40, 40, 60, 0.9) 0%,
+            rgba(50, 50, 75, 0.8) 50%,
+            rgba(40, 40, 60, 0.9) 100%);
+    color: #e8e8f0;
+    box-shadow:
+        0 2px 10px rgba(0, 0, 0, 0.3),
+        0 8px 30px rgba(122, 92, 200, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+}
+
+body.dark-theme .menu-btn::after {
+    background: radial-gradient(circle at var(--shimmer-x) var(--shimmer-y),
+            rgba(255, 255, 255, 0.2) 0%,
+            rgba(122, 92, 200, 0.2) 25%,
+            rgba(155, 126, 217, 0.15) 50%,
+            rgba(122, 92, 200, 0.1) 75%,
+            transparent 100%);
+}
+
+body.dark-theme .menu-btn:hover {
+    box-shadow:
+        0 4px 25px rgba(122, 92, 200, 0.4),
+        0 12px 45px rgba(122, 92, 200, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .menu-btn:active {
+    box-shadow:
+        0 2px 20px rgba(122, 92, 200, 0.5),
+        0 0 40px rgba(122, 92, 200, 0.3),
+        inset 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Reduced Motion Preference                                                 */
+/* ------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+    .menu-btn {
+        animation: none;
+        transition:
+            transform 0.15s ease,
+            box-shadow 0.2s ease;
+    }
+
+    .menu-btn::before {
+        animation: none;
+        background: linear-gradient(135deg, #7a5cc8, #9b7ed9);
+    }
+
+    .menu-btn .ripple,
+    .menu-btn .particle {
+        animation: none;
+        display: none;
+    }
+
+    @keyframes floatIdle {
+
+        0%,
+        100% {
+            transform: none;
+        }
+    }
+}

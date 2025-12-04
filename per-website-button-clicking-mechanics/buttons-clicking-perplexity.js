@@ -54,44 +54,26 @@ function insertTextIntoPerplexityEditor(editorElement, textToInsert) {
             return true;
         }
 
-        editorElement.focus();
+        // Store the text to insert in a data attribute so the injector script can read it
+        editorElement.setAttribute('data-ocp-target', 'true');
+        editorElement.setAttribute('data-ocp-text', text);
 
-        const selection = window.getSelection();
-        if (selection) {
-            selection.removeAllRanges();
-            const range = document.createRange();
-            range.selectNodeContents(editorElement);
-            range.deleteContents();
-            range.collapse(true);
-            selection.addRange(range);
-        } else {
-            editorElement.textContent = '';
-        }
+        // Inject external script to run in Main World (bypasses CSP)
+        const script = document.createElement('script');
+        script.src = chrome.runtime.getURL('per-website-button-clicking-mechanics/perplexity-injector.js');
+        script.onload = () => script.remove();
+        script.onerror = () => {
+            logConCgp('[Perplexity] Failed to load injector script.');
+            script.remove();
+        };
+        (document.head || document.documentElement).appendChild(script);
 
-        let insertionSucceeded = false;
-        if (typeof document.execCommand === 'function') {
-            try {
-                insertionSucceeded = document.execCommand('insertText', false, text);
-            } catch (execError) {
-                logConCgp('[Perplexity] execCommand insertText failed:', execError);
-            }
-        }
-
-        if (!insertionSucceeded) {
-            editorElement.textContent = text;
-        }
-
-        const inputEvent = typeof InputEvent === 'function'
-            ? new InputEvent('input', { bubbles: true })
-            : new Event('input', { bubbles: true });
-        editorElement.dispatchEvent(inputEvent);
-        editorElement.dispatchEvent(new Event('change', { bubbles: true }));
-
+        // Visual feedback: Move cursor to end in isolated world too (just in case)
         if (window.MaxExtensionUtils && typeof window.MaxExtensionUtils.moveCursorToEnd === 'function') {
-            MaxExtensionUtils.moveCursorToEnd(editorElement);
+            setTimeout(() => MaxExtensionUtils.moveCursorToEnd(editorElement), 50);
         }
 
-        logConCgp('[Perplexity] Text inserted into editor.');
+        logConCgp('[Perplexity] Text insertion script injected into main world.');
         return true;
     } catch (error) {
         logConCgp('[Perplexity] Error during text insertion:', error);

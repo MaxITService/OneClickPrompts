@@ -113,6 +113,20 @@ Current architectural reference for the OneClickPrompts Chrome extension (Manife
   - **AI Studio**: appends text to Angular-backed textarea, dispatches `input`/`change`, resets caret, and triggers send with a slight delay.
   - **Grok**: mixes bulk insertion with simulated keystrokes to trigger auto-resize, includes delays for short prompts, and autosend loops for up to 5 seconds.
   - **Gemini**: targets Quill editor, rewrites content into `<p>` blocks, dispatches composed `input` events for Angular/Quill recognition, and polls until the `aria-disabled` attribute clears before clicking.
+  - **Perplexity** (`buttons-clicking-perplexity.js` + `perplexity-injector.js`): Uses **Main World Injection** pattern due to Lexical (React-based rich text editor) rejecting DOM changes from extension's isolated world. Details below.
+
+#### Perplexity Main World Injection Pattern
+- **Problem**: Perplexity uses Lexical editor framework. Extensions run in an "isolated world" – they share DOM but not JavaScript context with the page. When the extension modifies the editor DOM, Lexical's internal state doesn't know about it and often reverts the change on next render cycle.
+- **Solution**: Inject a script that runs in the **Main World** (page context), mimicking what happens when users type in the browser console.
+- **Implementation**:
+  1. `buttons-clicking-perplexity.js` stores text in `data-ocp-text` attribute on the editor element
+  2. Creates `<script src="chrome-extension://...perplexity-injector.js">` tag
+  3. Browser loads and executes the external script in Main World
+  4. Script finds element by `data-ocp-target`, reads text from `data-ocp-text`, performs insertion, cleans up attributes
+- **How the unnamed function is called**: The injector uses an **IIFE (Immediately Invoked Function Expression)**: `(function() { ... })();`. The trailing `()` calls the function immediately when the script loads. No external caller needed.
+- **No naming conflicts**: The IIFE creates a private scope – all variables are local, nothing leaks to `window`. After execution, the function and its variables are garbage collected.
+- **Only injected on Perplexity**: Yes. The injection is triggered from `buttons-clicking-perplexity.js` which only runs on Perplexity pages (see `manifest.json` content_scripts matches). Other sites use their own handlers without injection.
+- **manifest.json requirement**: `perplexity-injector.js` must be listed in `web_accessible_resources` to allow the page to load it via `chrome.runtime.getURL()`.
 
 ### 3.2 Floating Panel
 - **`floating-panel.js`**: establishes namespace with panel references, visibility flags, default settings, queue storage, and global flags (`acceptedQueueTOS`).
@@ -162,10 +176,11 @@ Current architectural reference for the OneClickPrompts Chrome extension (Manife
 - **Manifest wiring**: content scripts load the shared model registry plus helper bundle (`modules/token-approximator/backend-helpers.js`, `backend-settings.js`, `backend-ui.js`, `backend-worker.js`) ahead of `modules/backend-tokenApproximator.js` so globals exist before the orchestrator runs.
 
 ### 3.5 Styling & Feedback Utilities
-- Popup CSS split between `popup-page-styles/` (base, layout, button cards, components) and `common-ui-elements/` (global palette, dark theme overrides, toggle styles including `popup-toggle.css`, toast visuals via `ocp_toast.css`).
+- Popup CSS split between `popup-page-styles/` (base, layout, button cards, components) and `common-ui-elements/` (global palette, dark theme overrides, toggle styles including `toggle.css`, toast visuals via `ocp_toast.css`).
 - Floating panel uses `floating-panel-files/floating-panel.css`, inline styles from `floating-panel-ui-creation.js`, and shared color variables.
 - `common-ui-elements/ocp_toast.js` exposes `OCPToast.show`; `popup-page-script.js` wraps it as `window.showToast` so modules share the same notification channel.
 - `popup-page-visuals.js` provides ripple feedback for popup interactions.
+- **Smooth Scroll & Highlight** (`common-ui-elements/onclick-smooth-scroll-highlight.js`, `onclick-smooth-scroll-highlight.css`): Universal system for anchor links starting with `#`. Implements custom easeInOutCubic scrolling that centers the target element in viewport, followed by 3-pulse purple highlight animation matching the primary color scheme. Supports scroll-only mode via `data-scroll-only` attribute to skip highlighting. Automatically handles all internal navigation links without requiring per-link JavaScript.
 
 ## 4. Additional Modules & Assets
 - `manifest.json`: declares permissions (`storage`, `contextMenus`), popup page (`popup.html`), options alias, background service worker module (`config.js`), content script load order (includes `modules/buttons-container-mover.js` before `buttons-init-and-render.js`), and web accessible resources.

@@ -1,0 +1,32 @@
+/* 
+onclick-smooth-scroll-highlight.css
+Styles for smooth scrolling and highlighting target elements.
+*/
+
+.highlight-target {
+    position: relative;
+    animation: highlightPulse 2s ease-out;
+}
+
+@keyframes highlightPulse {
+
+    0%,
+    100% {
+        background-color: rgba(122, 92, 200, 0);
+        box-shadow: 0 0 0 0 rgba(122, 92, 200, 0);
+    }
+
+    16%,
+    50%,
+    83% {
+        background-color: rgba(122, 92, 200, 0.15);
+        box-shadow: 0 0 0 8px rgba(122, 92, 200, 0.2),
+            0 0 20px rgba(122, 92, 200, 0.3);
+    }
+
+    33%,
+    66% {
+        background-color: rgba(122, 92, 200, 0);
+        box-shadow: 0 0 0 0 rgba(122, 92, 200, 0);
+    }
+}

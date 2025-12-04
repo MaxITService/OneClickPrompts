@@ -99,7 +99,8 @@
     {
       "resources": [
         "floating-panel-files/floating-panel.html",
-        "modules/selector-auto-detector/selector-save.js"
+        "modules/selector-auto-detector/selector-save.js",
+        "per-website-button-clicking-mechanics/perplexity-injector.js"
       ],
       "matches": [
         "<all_urls>"

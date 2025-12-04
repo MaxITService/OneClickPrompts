@@ -66,34 +66,7 @@ button.danger:hover {
     background: #f8d7da;
 }
 
-.add-settings-flash {
-    background-image: linear-gradient(120deg, #ff6b6b, #f7d046, #5bd18a, #49a8ff, #a26bff, #ff6bf2, #ff6b6b);
-    background-size: 280% 280%;
-    background-position: 0% 50%;
-    color: #0f1115;
-    box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.35), 0 0 0 6px rgba(74, 190, 255, 0.18);
-    animation: addSettingsRainbowPulse 1s ease-out;
-}
 
-@keyframes addSettingsRainbowPulse {
-    0% {
-        background-position: 0% 50%;
-        box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.35), 0 0 0 6px rgba(74, 190, 255, 0.18);
-        transform: translateY(0);
-    }
-
-    50% {
-        background-position: 100% 50%;
-        box-shadow: 0 0 0 6px rgba(255, 107, 107, 0.2), 0 0 0 12px rgba(162, 107, 255, 0.18);
-        transform: translateY(-1px);
-    }
-
-    100% {
-        background-position: 0% 50%;
-        box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.12), 0 0 0 0 rgba(162, 107, 255, 0.1);
-        transform: translateY(0);
-    }
-}
 
 
 /* ------------------------------------------------------------------------- */
