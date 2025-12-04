@@ -38,9 +38,7 @@ const copyProfileInput = document.getElementById('copyProfileInput');
 const cancelAddProfileButton = document.getElementById('cancelAddProfile');
 const cancelCopyProfileButton = document.getElementById('cancelCopyProfile');
 
-// Open in Tab Button
-const openInTabButton = document.getElementById('open-in-tab-button');
-const toggleWidthButton = document.getElementById('toggle-width-button');
+
 
 // Advanced queue settings elements
 const queueHideActivationToggleEl = document.getElementById('queueHideActivationToggle');
@@ -319,21 +317,6 @@ function resetProfileActionsUI() {
 // -------------------------
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Check if the page is opened in a tab and apply appropriate styling
-    const urlParams = new URLSearchParams(window.location.search);
-    const isTab = urlParams.get('isTab') === 'true';
-
-    if (isTab) {
-        // When in a tab, hide the 'open in tab' button and show the 'toggle width' button
-        if (openInTabButton) {
-            openInTabButton.classList.add('is-hidden');
-        }
-        if (toggleWidthButton) {
-            toggleWidthButton.classList.remove('is-hidden');
-        }
-        document.body.classList.add('tab-mode');
-    }
-
     loadProfiles();
 
     // Profile management
@@ -478,35 +461,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Open in New Tab Button Click
-    if (openInTabButton) {
-        openInTabButton.addEventListener('click', () => {
-            // Open popup.html in a new tab with isTab parameter
-            chrome.tabs.create({
-                url: chrome.runtime.getURL('popup.html?isTab=true')
-            });
-            // Close the popup window
-            window.close();
-        });
-    }
 
-    // Toggle Width Button Click (for tab view)
-    if (toggleWidthButton) {
-        toggleWidthButton.addEventListener('click', () => {
-            const container = document.querySelector('.container');
-            if (!container) return;
-
-            const isExpanded = container.classList.toggle('expanded');
-
-            if (isExpanded) {
-                toggleWidthButton.innerHTML = '🤏 Make page narrower';
-                toggleWidthButton.title = 'Revert to default width.';
-            } else {
-                toggleWidthButton.innerHTML = '↔️ Make page wider';
-                toggleWidthButton.title = 'Expand page width to 90% of the viewport.';
-            }
-        });
-    }
 
     // Initialize event listeners for dynamic elements
     textareaSaverAndResizerFunc();

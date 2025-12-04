@@ -289,4 +289,53 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }, { passive: true });
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Menu Utility Buttons: Open in Tab & Toggle Width
+    // ─────────────────────────────────────────────────────────────────────────
+    const openInTabButton = document.getElementById('open-in-tab-button');
+    const toggleWidthButton = document.getElementById('toggle-width-button');
+
+    // Check if the page is opened in a tab
+    const urlParams = new URLSearchParams(window.location.search);
+    const isTab = urlParams.get('isTab') === 'true';
+
+    if (isTab) {
+        // When in a tab, hide the 'open in tab' button and show the 'toggle width' button
+        if (openInTabButton) {
+            openInTabButton.classList.add('is-hidden');
+        }
+        if (toggleWidthButton) {
+            toggleWidthButton.classList.remove('is-hidden');
+        }
+        document.body.classList.add('tab-mode');
+    }
+
+    // Open in New Tab Button Click
+    if (openInTabButton) {
+        openInTabButton.addEventListener('click', () => {
+            // Open popup.html in a new tab with isTab parameter
+            chrome.tabs.create({
+                url: chrome.runtime.getURL('popup.html?isTab=true')
+            });
+            // Close the popup window
+            window.close();
+        });
+    }
+
+    // Toggle Width Button Click (for tab view)
+    if (toggleWidthButton) {
+        toggleWidthButton.addEventListener('click', () => {
+            const container = document.querySelector('.container');
+            if (!container) return;
+
+            const isExpanded = container.classList.toggle('expanded');
+
+            if (isExpanded) {
+                toggleWidthButton.innerHTML = '<span class="menu-btn-icon">🤏</span>Narrower';
+            } else {
+                toggleWidthButton.innerHTML = '<span class="menu-btn-icon">↔️</span>Wider';
+            }
+        });
+    }
 });
