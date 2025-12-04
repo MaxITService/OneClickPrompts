@@ -22,6 +22,8 @@
     <link rel="stylesheet" href="/common-ui-elements/common-style.css" />
     <!-- Toast notifications -->
     <link rel="stylesheet" href="/common-ui-elements/ocp_toast.css" />
+    <!-- Custom Tooltips -->
+    <link rel="stylesheet" href="/common-ui-elements/tooltips.css" />
   </head>
 
   <body>
@@ -29,25 +31,25 @@
       <!--Menu Section - Navigation with frosted glass buttons-->
       <section class="section" id="menuSection">
         <nav class="menu-nav" aria-label="Page navigation">
-          <a href="#profileSection" class="menu-btn" title="Manage profiles" data-scroll-only>
+          <a href="#profileSection" class="menu-btn" data-scroll-only>
             <span class="menu-btn-icon">👤</span>Profile
           </a>
-          <a href="#settingsSection" class="menu-btn" title="Extension settings" data-scroll-only>
+          <a href="#settingsSection" class="menu-btn" data-scroll-only>
             <span class="menu-btn-icon">⚙️</span>Settings
           </a>
-          <a href="#backupSection" class="menu-btn" title="Backup and restore profiles" data-scroll-only>
+          <a href="#backupSection" class="menu-btn" data-scroll-only>
             <span class="menu-btn-icon">💾</span>Backup
           </a>
-          <a href="#modulesSection" class="menu-btn" title="Modules and extra features" data-scroll-only>
+          <a href="#modulesSection" class="menu-btn" data-scroll-only>
             <span class="menu-btn-icon">🧩</span>Modules
           </a>
-          <a href="#helpSection" class="menu-btn" title="Help and documentation" data-scroll-only>
+          <a href="#helpSection" class="menu-btn" data-scroll-only>
             <span class="menu-btn-icon">❓</span>Help
           </a>
-          <a href="#advancedSection" class="menu-btn" title="Advanced selector configuration" data-scroll-only>
+          <a href="#advancedSection" class="menu-btn" data-scroll-only>
             <span class="menu-btn-icon">🔧</span>Advanced
           </a>
-          <a href="#themeSection" class="menu-btn" title="Theme settings" data-scroll-only>
+          <a href="#themeSection" class="menu-btn" data-scroll-only>
             <span class="menu-btn-icon">🎨</span>Theme
           </a>
           <button id="open-in-tab-button" class="menu-btn">
@@ -1419,6 +1421,7 @@
     <script src="log.js"></script>
     <script src="utils.js"></script>
     <script src="/common-ui-elements/ocp_toast.js"></script>
+    <script src="/common-ui-elements/tooltips.js"></script>
     <script src="/popup-page-scripts/popup-page-visuals.js"></script>
     <script src="/common-ui-elements/onclick-smooth-scroll-highlight.js"></script>
     <!-- Menu navigation script for 3D tilt and ripple effects -->

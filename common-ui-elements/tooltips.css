@@ -1,0 +1,112 @@
+/* ==========================================================
+   FROSTED GLASS TOOLTIPS
+   Premium glass-tile design with visual transparency effect
+   ========================================================== */
+
+/* Tooltip container - Frosted Glass Effect */
+.ocp-tooltip {
+    position: fixed;
+    z-index: 10000;
+    padding: 10px 14px;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #1a1a2e;
+
+    /* Semi-transparent frosted glass background */
+    /* Uses a translucent overlay that simulates glass */
+    background:
+        /* Glass tint layer */
+        linear-gradient(135deg,
+            rgba(255, 255, 255, 0.7) 0%,
+            rgba(245, 245, 250, 0.6) 50%,
+            rgba(255, 255, 255, 0.7) 100%);
+
+    /* Blur effect for when there IS something behind */
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+
+    /* Glass edge border */
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 10px;
+
+    /* Layered shadows for floating glass depth */
+    box-shadow:
+        /* Outer diffuse shadow */
+        0 8px 32px rgba(0, 0, 0, 0.08),
+        0 4px 12px rgba(0, 0, 0, 0.06),
+        /* Inner top highlight - glass edge shine */
+        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+        /* Inner bottom shadow - glass depth */
+        inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(6px) scale(0.92);
+    transition:
+        opacity 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+        transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    max-width: 300px;
+    white-space: pre-wrap;
+    text-align: center;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+}
+
+/* Gradient shine overlay - creates glass reflection effect */
+.ocp-tooltip::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    background: linear-gradient(135deg,
+            rgba(255, 255, 255, 0.4) 0%,
+            rgba(255, 255, 255, 0.1) 40%,
+            transparent 60%);
+    pointer-events: none;
+}
+
+/* Visible state */
+.ocp-tooltip.is-visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+/* ==========================================================
+   DARK THEME - Smoky Glass Effect
+   ========================================================== */
+[data-theme="dark"] .ocp-tooltip {
+    color: #f0f0f5;
+
+    /* Dark smoky glass - semi-transparent dark overlay */
+    background:
+        linear-gradient(135deg,
+            rgba(35, 35, 50, 0.75) 0%,
+            rgba(25, 25, 40, 0.7) 50%,
+            rgba(35, 35, 50, 0.75) 100%);
+
+    /* Enhanced blur for dark mode */
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+
+    /* Dark glass border - subtle light edge */
+    border-color: rgba(255, 255, 255, 0.12);
+
+    /* Dark glass shadows with subtle glow */
+    box-shadow:
+        /* Outer shadow */
+        0 8px 32px rgba(0, 0, 0, 0.3),
+        0 4px 12px rgba(0, 0, 0, 0.2),
+        /* Subtle purple ambient glow */
+        0 0 20px rgba(100, 80, 180, 0.08),
+        /* Inner highlights */
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* Dark theme shine overlay - more subtle */
+[data-theme="dark"] .ocp-tooltip::before {
+    background: linear-gradient(135deg,
+            rgba(255, 255, 255, 0.12) 0%,
+            rgba(255, 255, 255, 0.03) 40%,
+            transparent 60%);
+}
