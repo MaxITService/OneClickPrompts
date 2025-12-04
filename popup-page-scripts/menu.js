@@ -14,22 +14,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!menuNav) return;
 
     const menuButtons = menuNav.querySelectorAll('.menu-btn');
+    const resetTilt = (btn) => {
+        btn.style.setProperty('--tilt-rotate-x', '0deg');
+        btn.style.setProperty('--tilt-rotate-y', '0deg');
+        btn.style.setProperty('--tilt-scale', '1');
+        btn.style.setProperty('--tilt-translate-z', '0px');
+    };
 
-    menuButtons.forEach((btn, index) => {
-        // Store original position for magnetic effect
-        let btnRect = btn.getBoundingClientRect();
-        let isHovering = false;
+    const resetMagnet = (btn) => {
+        btn.style.setProperty('--magnet-translate-x', '0px');
+        btn.style.setProperty('--magnet-translate-y', '0px');
+    };
 
-        // Update rect on scroll/resize
-        const updateRect = () => {
-            btnRect = btn.getBoundingClientRect();
-        };
-        window.addEventListener('scroll', updateRect, { passive: true });
-        window.addEventListener('resize', updateRect, { passive: true });
-
-        // ─────────────────────────────────────────────────────────────────
+    menuButtons.forEach((btn) => {
+        // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
         // Mouse Move: 3D Tilt + Holographic Shimmer + Magnetic Effect
-        // ─────────────────────────────────────────────────────────────────
+        // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
         btn.addEventListener('mousemove', (e) => {
             const rect = btn.getBoundingClientRect();
             const x = e.clientX - rect.left;
@@ -43,13 +43,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const rotateX = ((centerY - y) / centerY) * maxRotation;
 
             // Apply 3D transform with slight scale
-            btn.style.transform = `
-                perspective(800px) 
-                rotateX(${rotateX}deg) 
-                rotateY(${rotateY}deg) 
-                scale(1.05)
-                translateZ(10px)
-            `;
+            btn.style.setProperty('--tilt-rotate-x', `${rotateX}deg`);
+            btn.style.setProperty('--tilt-rotate-y', `${rotateY}deg`);
+            btn.style.setProperty('--tilt-scale', '1.05');
+            btn.style.setProperty('--tilt-translate-z', '10px');
+            resetMagnet(btn);
 
             // Update shimmer position (CSS custom properties)
             const shimmerX = (x / rect.width) * 100;
@@ -62,20 +60,20 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.style.setProperty('--gradient-angle', `${angle}deg`);
         });
 
-        // ─────────────────────────────────────────────────────────────────
+        // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
         // Mouse Enter
-        // ─────────────────────────────────────────────────────────────────
+        // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
         btn.addEventListener('mouseenter', () => {
-            isHovering = true;
             btn.style.animationPlayState = 'paused';
+            resetMagnet(btn);
         });
 
-        // ─────────────────────────────────────────────────────────────────
+        // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
         // Mouse Leave: Reset transforms
-        // ─────────────────────────────────────────────────────────────────
+        // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
         btn.addEventListener('mouseleave', () => {
-            isHovering = false;
-            btn.style.transform = '';
+            resetTilt(btn);
+            resetMagnet(btn);
             btn.style.animationPlayState = 'running';
 
             // Smooth transition back (2 seconds for graceful return)
@@ -85,9 +83,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 2000);
         });
 
-        // ─────────────────────────────────────────────────────────────────
+        // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
         // Click: Ripple + Particle Burst
-        // ─────────────────────────────────────────────────────────────────
+        // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
         btn.addEventListener('click', (e) => {
             const rect = btn.getBoundingClientRect();
             const clickX = e.clientX - rect.left;
@@ -105,9 +103,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // ─────────────────────────────────────────────────────────────────────
+    // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
     // Ripple Effect
-    // ─────────────────────────────────────────────────────────────────────
+    // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
     function createRipple(btn, x, y, rect) {
         const ripple = document.createElement('span');
         ripple.className = 'ripple';
@@ -122,9 +120,9 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => ripple.remove(), 800);
     }
 
-    // ─────────────────────────────────────────────────────────────────────
+    // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
     // Particle Burst Effect
-    // ─────────────────────────────────────────────────────────────────────
+    // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
     function createParticleBurst(btn, x, y) {
         const particleCount = 12;
         const colors = [
@@ -163,12 +161,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────
+    // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
     // Optional: Magnetic effect for nearby cursor (subtle attraction)
-    // ─────────────────────────────────────────────────────────────────────
+    // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
     if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         document.addEventListener('mousemove', (e) => {
             menuButtons.forEach(btn => {
+                if (btn.matches(':hover')) {
+                    return;
+                }
+
                 const rect = btn.getBoundingClientRect();
                 const btnCenterX = rect.left + rect.width / 2;
                 const btnCenterY = rect.top + rect.height / 2;
@@ -177,19 +179,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const distY = e.clientY - btnCenterY;
                 const distance = Math.sqrt(distX * distX + distY * distY);
 
-                // Only apply magnetic effect when within 150px but not hovering
+                // Only apply magnetic effect when within range but not hovering
                 const magneticRange = 150;
-                if (distance < magneticRange && distance > 50) {
-                    const strength = (1 - distance / magneticRange) * 0.15;
-                    const moveX = distX * strength;
-                    const moveY = distY * strength;
-
-                    if (!btn.matches(':hover')) {
-                        btn.style.transform = `translate(${moveX}px, ${moveY}px)`;
-                    }
-                } else if (!btn.matches(':hover') && distance >= magneticRange) {
-                    btn.style.transform = '';
+                if (distance < 50 || distance >= magneticRange) {
+                    resetMagnet(btn);
+                    return;
                 }
+
+                const strength = (1 - distance / magneticRange) * 0.15;
+                const moveX = distX * strength;
+                const moveY = distY * strength;
+
+                btn.style.setProperty('--magnet-translate-x', `${moveX}px`);
+                btn.style.setProperty('--magnet-translate-y', `${moveY}px`);
             });
         }, { passive: true });
     }
