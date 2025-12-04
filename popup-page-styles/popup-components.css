@@ -991,9 +991,7 @@ Key areas:
 }
 
 /* 
-   Fix for nested toggle icon:
-   The parent .collapsible.expanded rule forces all .toggle-icon descendants to rotate 90deg.
-   We must reset this for the model details toggle since it starts collapsed even when parent is expanded.
+This is wrap /unwrap logic for small texts
 */
 .collapsible.expanded .model-details-toggle .toggle-icon-symbol-replaced-with-graphic {
     transform: rotate(0deg);
@@ -1007,13 +1005,27 @@ Key areas:
 
 /* JS-manipulated: The 'is-visible' class is toggled via JS */
 .model-details-content {
-    display: none;
+    /* Hidden state defaults */
+    display: block;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
     margin-left: 10px;
-    margin-top: 10px;
+    margin-top: 0;
+
+    /* Smooth transition for unroll/rollin effect */
+    transition:
+        max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.4s ease-in-out,
+        margin-top 0.4s ease-in-out;
 }
 
 .model-details-content.is-visible {
-    display: block;
+    /* Visible state */
+    max-height: 1000px;
+    /* Large enough to fit content */
+    opacity: 1;
+    margin-top: 10px;
 }
 
 /* 
@@ -1023,6 +1035,5 @@ Key areas:
 */
 .toggle-icon-symbol-replaced-with-graphic {
     font-size: 10px;
-    /* Kept from original inline style, though .toggle-icon might override or use 0 */
     margin-right: 4px;
 }
