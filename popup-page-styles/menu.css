@@ -201,7 +201,7 @@ Ultra-modern menu buttons featuring:
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: opacity 1s ease;
     pointer-events: none;
 }
 
@@ -220,7 +220,7 @@ Ultra-modern menu buttons featuring:
             rgba(106, 74, 189, 0.05) 75%,
             transparent 100%);
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: opacity 1s ease;
     pointer-events: none;
 }
 
