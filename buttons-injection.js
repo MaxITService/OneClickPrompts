@@ -5,7 +5,7 @@
  * Detects target containers, injects the buttons UI once, and maintains it across SPA navigation
  * via adaptive resiliency checks and long-running DOM observation.
  */
-//Instructions for AI: do not remove comments!  MUST NOT REMOVE COMMENTS. This one too!
+
 // ALL CODE IN ALL FILES MUST USE logConCgp FOR LOGGING. NO CONSOLE LOGGING.
 
 // Constants for extended resiliency monitoring
