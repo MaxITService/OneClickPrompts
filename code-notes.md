@@ -156,6 +156,7 @@ Current architectural reference for the OneClickPrompts Chrome extension (Manife
   - `popup-page-theme.js`: toggles light/dark theme via service worker persistence and OS preference detection.
   - `popup-page-visuals.js`: supplies ripple effect utility for interactive feedback.
   - `popup-page-collapsible.js`: centralizes `.collapsible` behavior so feature modules only observe `expanded` class changes.
+  - Menu system: `popup-page-styles/menu.css` (Aurora-style frosted nav with tilt/magnet/glow/particle effects; `.menu-nav` flex wraps buttons, `#menuSection` positioned `relative` for anchored badge) and `popup-page-scripts/menu.js` (adds glow ring, dust, ripple/particle interactions, tilt/magnet smoothing per button).
   - `popup-page-floating-window-handler.js`: lists hostnames with floating panel settings, resets per-site/all hosts via service worker, and updates the UI when the collapsible expands.
 - **Backup & restore** (`popup-page-backup-handler.js`):
   - Exports the active `currentProfile` as pretty-printed JSON via blob download; imports parse JSON, validate required keys, and either save directly or show an overwrite confirmation (`window.tempParsedProfile` stores the payload while the user decides).
