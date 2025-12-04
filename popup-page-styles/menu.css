@@ -1,14 +1,15 @@
 /*
 menu.css
-Version: 2.2 - Premium Edition
+Version: 3.0 - AURORA EDITION ✨
 
-Ultra-modern menu buttons featuring:
-- Holographic purple shimmer effect
-- Animated rainbow gradient borders (purple accent)
+Ultra-premium menu buttons featuring:
+- Aurora Borealis glow effect (animated gradient halo)
+- Cursor-following spotlight
+- Liquid glass morphism
 - Magnetic cursor attraction
 - Particle burst on click
-- Floating idle animation
-- Glass morphism with dynamic refraction
+- 3D depth with reflections
+- Cosmic dust particles
 */
 
 @property --idle-translate-y {
@@ -53,22 +54,28 @@ Ultra-modern menu buttons featuring:
     initial-value: 0px;
 }
 
-@property --gradient-x {
+@property --shimmer-x {
     syntax: '<percentage>';
     inherits: false;
     initial-value: 50%;
 }
 
-@property --gradient-y {
+@property --shimmer-y {
     syntax: '<percentage>';
     inherits: false;
     initial-value: 50%;
 }
 
-@property --gradient-anim-x {
-    syntax: '<percentage>';
+@property --aurora-angle {
+    syntax: '<angle>';
     inherits: false;
-    initial-value: 0%;
+    initial-value: 0deg;
+}
+
+@property --glow-intensity {
+    syntax: '<number>';
+    inherits: false;
+    initial-value: 0;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -80,19 +87,16 @@ Ultra-modern menu buttons featuring:
     gap: 12px;
     justify-content: center;
     padding: 12px 0;
-    perspective: 1000px;
+    perspective: 1200px;
 }
 
 /* ------------------------------------------------------------------------- */
-/* Base Button - Holographic Glass                                           */
+/* Base Button - Liquid Glass                                                */
 /* ------------------------------------------------------------------------- */
 .menu-btn {
-    --btn-glow: rgba(122, 92, 200, 0.5);
-    --gradient-angle: 135deg;
+    --btn-glow: rgba(122, 92, 200, 0.6);
     --shimmer-x: 50%;
     --shimmer-y: 50%;
-    --gradient-x: 50%;
-    --gradient-y: 50%;
     --tilt-rotate-x: 0deg;
     --tilt-rotate-y: 0deg;
     --tilt-scale: 1;
@@ -100,6 +104,8 @@ Ultra-modern menu buttons featuring:
     --magnet-translate-x: 0px;
     --magnet-translate-y: 0px;
     --idle-translate-y: 0px;
+    --aurora-angle: 0deg;
+    --glow-intensity: 0;
 
     position: relative;
     display: inline-flex;
@@ -111,61 +117,71 @@ Ultra-modern menu buttons featuring:
     letter-spacing: 0.3px;
     color: #333;
     background: linear-gradient(135deg,
-            rgba(255, 255, 255, 0.9) 0%,
-            rgba(255, 255, 255, 0.7) 50%,
-            rgba(255, 255, 255, 0.9) 100%);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: none;
+            rgba(255, 255, 255, 0.95) 0%,
+            rgba(255, 255, 255, 0.85) 50%,
+            rgba(255, 255, 255, 0.95) 100%);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 16px;
     cursor: pointer;
-    overflow: hidden;
+    overflow: visible;
+    /* Allow glow to extend outside */
     text-decoration: none;
     isolation: isolate;
+    z-index: 1;
 
     /* 3D transform setup */
     transform-style: preserve-3d;
     transform:
         perspective(800px) translate(var(--magnet-translate-x), var(--magnet-translate-y)) translateY(var(--idle-translate-y)) rotateX(var(--tilt-rotate-x)) rotateY(var(--tilt-rotate-y)) scale(var(--tilt-scale)) translateZ(var(--tilt-translate-z));
     transition:
-        transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
-        box-shadow 0.3s ease;
+        transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+        box-shadow 0.4s ease,
+        border-color 0.3s ease;
 
-    /* Complex layered shadow for depth */
+    /* Subtle base shadow */
     box-shadow:
-        0 2px 10px rgba(122, 92, 200, 0.15),
-        0 8px 30px rgba(122, 92, 200, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.8),
-        inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+        0 2px 8px rgba(122, 92, 200, 0.08),
+        0 4px 20px rgba(122, 92, 200, 0.05),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.03);
 }
 
-/* Index for staggered animations (7 buttons now) */
+/* Index for staggered animations */
 .menu-btn:nth-child(1) {
     --btn-index: 0;
+    --aurora-hue: 270;
 }
 
 .menu-btn:nth-child(2) {
     --btn-index: 1;
+    --aurora-hue: 280;
 }
 
 .menu-btn:nth-child(3) {
     --btn-index: 2;
+    --aurora-hue: 260;
 }
 
 .menu-btn:nth-child(4) {
     --btn-index: 3;
+    --aurora-hue: 290;
 }
 
 .menu-btn:nth-child(5) {
     --btn-index: 4;
+    --aurora-hue: 250;
 }
 
 .menu-btn:nth-child(6) {
     --btn-index: 5;
+    --aurora-hue: 300;
 }
 
 .menu-btn:nth-child(7) {
     --btn-index: 6;
+    --aurora-hue: 240;
 }
 
 /* Subtle floating animation */
@@ -182,16 +198,76 @@ Ultra-modern menu buttons featuring:
 }
 
 /* ------------------------------------------------------------------------- */
-/* Simple Purple Border on Hover                                              */
+/* Aurora Glow Layer - The Magic ✨                                          */
 /* ------------------------------------------------------------------------- */
 .menu-btn::before {
     content: '';
     position: absolute;
+    inset: -3px;
+    border-radius: 19px;
+    background:
+        conic-gradient(from var(--aurora-angle),
+            hsl(var(--aurora-hue, 270) 70% 65%) 0deg,
+            hsl(calc(var(--aurora-hue, 270) + 30) 80% 70%) 60deg,
+            hsl(calc(var(--aurora-hue, 270) + 60) 75% 65%) 120deg,
+            hsl(calc(var(--aurora-hue, 270) + 90) 70% 60%) 180deg,
+            hsl(calc(var(--aurora-hue, 270) + 60) 75% 65%) 240deg,
+            hsl(calc(var(--aurora-hue, 270) + 30) 80% 70%) 300deg,
+            hsl(var(--aurora-hue, 270) 70% 65%) 360deg);
+    opacity: 0;
+    filter: blur(8px);
+    animation: auroraRotate 4s linear infinite;
+    transition: opacity 2s ease, filter 2s ease;
+    /* Slow fade-out on mouse leave */
+    pointer-events: none;
+    z-index: -2;
+}
+
+@keyframes auroraRotate {
+    0% {
+        --aurora-angle: 0deg;
+    }
+
+    100% {
+        --aurora-angle: 360deg;
+    }
+}
+
+/* ------------------------------------------------------------------------- */
+/* Cursor Spotlight Layer                                                    */
+/* ------------------------------------------------------------------------- */
+.menu-btn::after {
+    content: '';
+    position: absolute;
     inset: 0;
-    padding: 2px;
     border-radius: 16px;
-    background: rgba(122, 92, 200, 0.5);
-    /* #7a5cc8 with 50% opacity */
+    background: radial-gradient(circle 80px at var(--shimmer-x) var(--shimmer-y),
+            rgba(255, 255, 255, 0.8) 0%,
+            rgba(255, 255, 255, 0.4) 30%,
+            rgba(122, 92, 200, 0.15) 60%,
+            transparent 100%);
+    opacity: 0;
+    mix-blend-mode: overlay;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Inner Glow Ring                                                           */
+/* ------------------------------------------------------------------------- */
+.menu-btn .glow-ring {
+    position: absolute;
+    inset: -1px;
+    border-radius: 17px;
+    background: linear-gradient(135deg,
+            rgba(122, 92, 200, 0.4) 0%,
+            rgba(155, 126, 217, 0.2) 50%,
+            rgba(122, 92, 200, 0.4) 100%);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+    z-index: -1;
     -webkit-mask:
         linear-gradient(#fff 0 0) content-box,
         linear-gradient(#fff 0 0);
@@ -200,59 +276,52 @@ Ultra-modern menu buttons featuring:
         linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
-    opacity: 0;
-    transition: opacity 1s ease;
-    pointer-events: none;
+    padding: 2px;
 }
 
 /* ------------------------------------------------------------------------- */
-/* Holographic Shimmer Layer - Purple tint (no white wash)                   */
-/* ------------------------------------------------------------------------- */
-.menu-btn::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 16px;
-    background: radial-gradient(circle at var(--shimmer-x) var(--shimmer-y),
-            rgba(122, 92, 200, 0.25) 0%,
-            rgba(122, 92, 200, 0.15) 25%,
-            rgba(155, 126, 217, 0.1) 50%,
-            rgba(106, 74, 189, 0.05) 75%,
-            transparent 100%);
-    opacity: 0;
-    transition: opacity 1s ease;
-    pointer-events: none;
-}
-
-/* ------------------------------------------------------------------------- */
-/* Hover State - Full Effect Activation                                      */
+/* Hover State - FULL AURORA ACTIVATION                                      */
 /* ------------------------------------------------------------------------- */
 .menu-btn:hover {
     animation-play-state: paused;
+    border-color: rgba(122, 92, 200, 0.3);
     box-shadow:
-        0 4px 20px rgba(122, 92, 200, 0.3),
-        0 12px 40px rgba(122, 92, 200, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.9),
-        inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+        0 4px 25px rgba(122, 92, 200, 0.25),
+        0 8px 40px rgba(122, 92, 200, 0.15),
+        0 0 60px rgba(122, 92, 200, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.95),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.03);
 }
 
 .menu-btn:hover::before {
-    opacity: 1;
+    opacity: 0.7;
+    filter: blur(12px);
+    transition: opacity 1s ease, filter 1s ease;
+    /* Faster fade-in on hover */
 }
 
 .menu-btn:hover::after {
     opacity: 1;
 }
 
+.menu-btn:hover .glow-ring {
+    opacity: 1;
+}
+
 /* ------------------------------------------------------------------------- */
-/* Active/Click State                                                        */
+/* Active/Click State - BURST                                                */
 /* ------------------------------------------------------------------------- */
 .menu-btn:active {
-    --tilt-scale: 0.96;
+    --tilt-scale: 0.97;
     box-shadow:
         0 2px 15px rgba(122, 92, 200, 0.4),
-        0 0 30px rgba(122, 92, 200, 0.3),
-        inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        0 0 40px rgba(122, 92, 200, 0.3),
+        inset 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.menu-btn:active::before {
+    opacity: 1;
+    filter: blur(15px);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -262,12 +331,13 @@ Ultra-modern menu buttons featuring:
     position: absolute;
     border-radius: 50%;
     background: radial-gradient(circle,
-            rgba(122, 92, 200, 0.6) 0%,
-            rgba(155, 126, 217, 0.4) 40%,
+            rgba(122, 92, 200, 0.5) 0%,
+            rgba(155, 126, 217, 0.3) 40%,
             transparent 70%);
     transform: scale(0);
     animation: rippleExpand 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
     pointer-events: none;
+    z-index: 2;
 }
 
 @keyframes rippleExpand {
@@ -283,7 +353,7 @@ Ultra-modern menu buttons featuring:
 }
 
 /* ------------------------------------------------------------------------- */
-/* Particle Effect Container                                                 */
+/* Particle Effect                                                           */
 /* ------------------------------------------------------------------------- */
 .menu-btn .particle {
     position: absolute;
@@ -291,7 +361,8 @@ Ultra-modern menu buttons featuring:
     height: 6px;
     border-radius: 50%;
     pointer-events: none;
-    animation: particleBurst 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    animation: particleBurst 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    z-index: 10;
 }
 
 @keyframes particleBurst {
@@ -306,31 +377,33 @@ Ultra-modern menu buttons featuring:
     }
 }
 
-/* Particle color variations - purple accent colors */
+/* Particle color variations */
 .menu-btn .particle:nth-child(odd) {
     background: linear-gradient(135deg, #9b7ed9, #7a5cc8);
+    box-shadow: 0 0 8px rgba(122, 92, 200, 0.8);
 }
 
 .menu-btn .particle:nth-child(even) {
-    background: linear-gradient(135deg, #a48ad4, #6a4abd);
+    background: linear-gradient(135deg, #c084fc, #a855f7);
+    box-shadow: 0 0 8px rgba(192, 132, 252, 0.8);
 }
 
 /* ------------------------------------------------------------------------- */
 /* Click Glow Pulse                                                          */
 /* ------------------------------------------------------------------------- */
 .menu-btn.clicked::before {
-    animation: glowPulse 0.5s ease-out, borderRotate 4s linear infinite;
+    animation: glowPulse 0.5s ease-out, auroraRotate 4s linear infinite;
 }
 
 @keyframes glowPulse {
     0% {
         opacity: 1;
-        filter: brightness(1.5);
+        filter: blur(20px) brightness(1.5);
     }
 
     100% {
-        opacity: 1;
-        filter: brightness(1);
+        opacity: 0.7;
+        filter: blur(12px) brightness(1);
     }
 }
 
@@ -342,12 +415,12 @@ Ultra-modern menu buttons featuring:
 }
 
 .menu-btn:focus-visible {
-    outline: 2px solid var(--primary-color, #7a5cc8);
-    outline-offset: 3px;
+    outline: 2px solid rgba(122, 92, 200, 0.8);
+    outline-offset: 4px;
 }
 
 .menu-btn:focus-visible::before {
-    opacity: 1;
+    opacity: 0.5;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -356,12 +429,46 @@ Ultra-modern menu buttons featuring:
 .menu-btn-icon {
     margin-right: 8px;
     font-size: 15px;
-    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.1));
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    filter: drop-shadow(0 1px 2px rgba(122, 92, 200, 0.2));
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.3s ease;
 }
 
 .menu-btn:hover .menu-btn-icon {
-    transform: scale(1.15) rotate(-5deg);
+    transform: scale(1.2) rotate(-8deg);
+    filter: drop-shadow(0 2px 4px rgba(122, 92, 200, 0.4));
+}
+
+/* ------------------------------------------------------------------------- */
+/* Cosmic Dust Particles (ambient effect)                                     */
+/* ------------------------------------------------------------------------- */
+.menu-btn .cosmic-dust {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    background: rgba(155, 126, 217, 0.6);
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+.menu-btn:hover .cosmic-dust {
+    opacity: 1;
+    animation: dustFloat 2s ease-in-out infinite;
+}
+
+@keyframes dustFloat {
+
+    0%,
+    100% {
+        transform: translate(0, 0) scale(1);
+        opacity: 0.6;
+    }
+
+    50% {
+        transform: translate(var(--dust-x, 5px), var(--dust-y, -10px)) scale(0.5);
+        opacity: 0.3;
+    }
 }
 
 /* ------------------------------------------------------------------------- */
@@ -369,38 +476,50 @@ Ultra-modern menu buttons featuring:
 /* ------------------------------------------------------------------------- */
 body.dark-theme .menu-btn {
     background: linear-gradient(135deg,
-            rgba(40, 40, 60, 0.9) 0%,
-            rgba(50, 50, 75, 0.8) 50%,
-            rgba(40, 40, 60, 0.9) 100%);
+            rgba(35, 35, 50, 0.95) 0%,
+            rgba(45, 45, 65, 0.9) 50%,
+            rgba(35, 35, 50, 0.95) 100%);
     color: #e8e8f0;
+    border-color: rgba(122, 92, 200, 0.2);
     box-shadow:
         0 2px 10px rgba(0, 0, 0, 0.3),
-        0 8px 30px rgba(122, 92, 200, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 8px 30px rgba(122, 92, 200, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
         inset 0 -1px 0 rgba(0, 0, 0, 0.2);
 }
 
+body.dark-theme .menu-btn::before {
+    opacity: 0;
+}
+
 body.dark-theme .menu-btn::after {
-    background: radial-gradient(circle at var(--shimmer-x) var(--shimmer-y),
-            rgba(255, 255, 255, 0.2) 0%,
-            rgba(122, 92, 200, 0.2) 25%,
-            rgba(155, 126, 217, 0.15) 50%,
-            rgba(122, 92, 200, 0.1) 75%,
+    background: radial-gradient(circle 80px at var(--shimmer-x) var(--shimmer-y),
+            rgba(155, 126, 217, 0.4) 0%,
+            rgba(122, 92, 200, 0.2) 40%,
             transparent 100%);
 }
 
 body.dark-theme .menu-btn:hover {
+    border-color: rgba(122, 92, 200, 0.4);
     box-shadow:
-        0 4px 25px rgba(122, 92, 200, 0.4),
-        0 12px 45px rgba(122, 92, 200, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.15),
+        0 4px 30px rgba(122, 92, 200, 0.35),
+        0 8px 50px rgba(122, 92, 200, 0.2),
+        0 0 80px rgba(122, 92, 200, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
         inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .menu-btn:hover::before {
+    opacity: 0.5;
+    filter: blur(15px);
+    transition: opacity 1s ease, filter 1s ease;
+    /* Same fade-in timing as light theme */
 }
 
 body.dark-theme .menu-btn:active {
     box-shadow:
         0 2px 20px rgba(122, 92, 200, 0.5),
-        0 0 40px rgba(122, 92, 200, 0.3),
+        0 0 50px rgba(122, 92, 200, 0.3),
         inset 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
@@ -418,20 +537,13 @@ body.dark-theme .menu-btn:active {
 
     .menu-btn::before {
         animation: none;
-        background: linear-gradient(135deg, #7a5cc8, #9b7ed9);
+        background: rgba(122, 92, 200, 0.3);
     }
 
     .menu-btn .ripple,
-    .menu-btn .particle {
+    .menu-btn .particle,
+    .menu-btn .cosmic-dust {
         animation: none;
         display: none;
-    }
-
-    @keyframes floatIdle {
-
-        0%,
-        100% {
-            transform: none;
-        }
     }
 }

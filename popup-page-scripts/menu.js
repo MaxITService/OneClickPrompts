@@ -1,10 +1,12 @@
 /**
  * menu.js
- * Premium menu button interactions
+ * AURORA EDITION ✨ - Premium menu button interactions
  * 
  * Features:
  * - 3D tilt with magnetic cursor attraction
- * - Holographic shimmer following mouse position
+ * - Aurora glow following button
+ * - Cursor spotlight effect
+ * - Cosmic dust particles
  * - Particle burst explosion on click
  * - Smooth ripple effects
  */
@@ -14,6 +16,29 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!menuNav) return;
 
     const menuButtons = menuNav.querySelectorAll('.menu-btn');
+
+    // Initialize each button with extra elements
+    menuButtons.forEach(btn => {
+        // Add glow ring element
+        if (!btn.querySelector('.glow-ring')) {
+            const glowRing = document.createElement('span');
+            glowRing.className = 'glow-ring';
+            btn.appendChild(glowRing);
+        }
+
+        // Add cosmic dust particles
+        for (let i = 0; i < 5; i++) {
+            const dust = document.createElement('span');
+            dust.className = 'cosmic-dust';
+            dust.style.left = `${20 + Math.random() * 60}%`;
+            dust.style.top = `${20 + Math.random() * 60}%`;
+            dust.style.setProperty('--dust-x', `${(Math.random() - 0.5) * 20}px`);
+            dust.style.setProperty('--dust-y', `${-5 - Math.random() * 15}px`);
+            dust.style.animationDelay = `${Math.random() * 2}s`;
+            btn.appendChild(dust);
+        }
+    });
+
     const resetTilt = (btn) => {
         btn.style.setProperty('--tilt-rotate-x', '0deg');
         btn.style.setProperty('--tilt-rotate-y', '0deg');
@@ -41,12 +66,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const state = magnetState.get(btn);
                 if (!state) return;
 
-                state.currentX += (state.targetX - state.currentX) * 0.18;
-                state.currentY += (state.targetY - state.currentY) * 0.18;
+                state.currentX += (state.targetX - state.currentX) * 0.15;
+                state.currentY += (state.targetY - state.currentY) * 0.15;
 
                 const deltaX = Math.abs(state.currentX - state.targetX);
                 const deltaY = Math.abs(state.currentY - state.targetY);
-                if (deltaX > 0.02 || deltaY > 0.02) {
+                if (deltaX > 0.01 || deltaY > 0.01) {
                     moving = true;
                 } else {
                     state.currentX = state.targetX;
@@ -86,9 +111,9 @@ document.addEventListener('DOMContentLoaded', () => {
     menuButtons.forEach((btn) => {
         ensureMagnetState(btn);
 
-        // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
-        // Mouse Move: 3D Tilt + Holographic Shimmer + Magnetic Effect
-        // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
+        // ─────────────────────────────────────────────────────────────────────
+        // Mouse Move: 3D Tilt + Spotlight + Magnetic Effect
+        // ─────────────────────────────────────────────────────────────────────
         btn.addEventListener('mousemove', (e) => {
             const rect = btn.getBoundingClientRect();
             const x = e.clientX - rect.left;
@@ -96,58 +121,51 @@ document.addEventListener('DOMContentLoaded', () => {
             const centerX = rect.width / 2;
             const centerY = rect.height / 2;
 
-            // Calculate rotation (max 18 degrees)
-            const maxRotation = 18;
+            // Calculate rotation (max 15 degrees for smoother feel)
+            const maxRotation = 15;
             const rotateY = ((x - centerX) / centerX) * maxRotation;
             const rotateX = ((centerY - y) / centerY) * maxRotation;
 
             // Apply 3D transform with slight scale
             btn.style.setProperty('--tilt-rotate-x', `${rotateX}deg`);
             btn.style.setProperty('--tilt-rotate-y', `${rotateY}deg`);
-            btn.style.setProperty('--tilt-scale', '1.05');
-            btn.style.setProperty('--tilt-translate-z', '10px');
+            btn.style.setProperty('--tilt-scale', '1.04');
+            btn.style.setProperty('--tilt-translate-z', '8px');
             setMagnetTarget(btn, 0, 0, { immediate: true });
 
-            // Update shimmer position (CSS custom properties)
+            // Update spotlight position (CSS custom properties)
             const shimmerX = (x / rect.width) * 100;
             const shimmerY = (y / rect.height) * 100;
             btn.style.setProperty('--shimmer-x', `${shimmerX}%`);
             btn.style.setProperty('--shimmer-y', `${shimmerY}%`);
-
-            // Update gradient position - follows cursor smoothly
-            // Map cursor position to background-position (0-100% range scaled to 300% background)
-            const gradientX = (x / rect.width) * 100;
-            const gradientY = (y / rect.height) * 100;
-            btn.style.setProperty('--gradient-x', `${gradientX}%`);
-            btn.style.setProperty('--gradient-y', `${gradientY}%`);
         });
 
-        // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
+        // ─────────────────────────────────────────────────────────────────────
         // Mouse Enter
-        // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
+        // ─────────────────────────────────────────────────────────────────────
         btn.addEventListener('mouseenter', () => {
             btn.style.animationPlayState = 'paused';
             setMagnetTarget(btn, 0, 0, { immediate: true });
         });
 
-        // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
+        // ─────────────────────────────────────────────────────────────────────
         // Mouse Leave: Reset transforms
-        // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
+        // ─────────────────────────────────────────────────────────────────────
         btn.addEventListener('mouseleave', () => {
             resetTilt(btn);
             setMagnetTarget(btn, 0, 0, { immediate: true });
             btn.style.animationPlayState = 'running';
 
-            // Smooth transition back (2 seconds for graceful return)
-            btn.style.transition = 'transform 2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 1.2s ease';
+            // Smooth transition back (elastic ease)
+            btn.style.transition = 'transform 1.5s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.8s ease';
             setTimeout(() => {
                 btn.style.transition = '';
-            }, 2000);
+            }, 1500);
         });
 
-        // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
-        // Click: Ripple + Particle Burst
-        // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
+        // ─────────────────────────────────────────────────────────────────────
+        // Click: Ripple + Particle Burst + Shockwave
+        // ─────────────────────────────────────────────────────────────────────
         btn.addEventListener('click', (e) => {
             const rect = btn.getBoundingClientRect();
             const clickX = e.clientX - rect.left;
@@ -159,15 +177,15 @@ document.addEventListener('DOMContentLoaded', () => {
             // Create particle burst
             createParticleBurst(btn, clickX, clickY);
 
-            // Add clicked class for glow effect
+            // Add clicked class for glow pulse effect
             btn.classList.add('clicked');
-            setTimeout(() => btn.classList.remove('clicked'), 500);
+            setTimeout(() => btn.classList.remove('clicked'), 600);
         });
     });
 
-    // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
+    // ─────────────────────────────────────────────────────────────────────────
     // Ripple Effect
-    // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
+    // ─────────────────────────────────────────────────────────────────────────
     function createRipple(btn, x, y, rect) {
         const ripple = document.createElement('span');
         ripple.className = 'ripple';
@@ -182,17 +200,17 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => ripple.remove(), 800);
     }
 
-    // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
+    // ─────────────────────────────────────────────────────────────────────────
     // Particle Burst Effect
-    // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
+    // ─────────────────────────────────────────────────────────────────────────
     function createParticleBurst(btn, x, y) {
-        const particleCount = 12;
+        const particleCount = 16;
         const colors = [
-            'linear-gradient(135deg, #ff6b6b, #feca57)',
-            'linear-gradient(135deg, #48dbfb, #54a0ff)',
-            'linear-gradient(135deg, #ff9ff3, #f368e0)',
-            'linear-gradient(135deg, #5f27cd, #7a5cc8)',
-            'linear-gradient(135deg, #1dd1a1, #10ac84)'
+            'linear-gradient(135deg, #9b7ed9, #7a5cc8)',
+            'linear-gradient(135deg, #c084fc, #a855f7)',
+            'linear-gradient(135deg, #818cf8, #6366f1)',
+            'linear-gradient(135deg, #f0abfc, #e879f9)',
+            'linear-gradient(135deg, #a78bfa, #8b5cf6)'
         ];
 
         for (let i = 0; i < particleCount; i++) {
@@ -200,8 +218,8 @@ document.addEventListener('DOMContentLoaded', () => {
             particle.className = 'particle';
 
             // Random angle for burst direction
-            const angle = (360 / particleCount) * i + (Math.random() * 30 - 15);
-            const distance = 40 + Math.random() * 60;
+            const angle = (360 / particleCount) * i + (Math.random() * 20 - 10);
+            const distance = 50 + Math.random() * 70;
             const tx = Math.cos(angle * Math.PI / 180) * distance;
             const ty = Math.sin(angle * Math.PI / 180) * distance;
 
@@ -210,22 +228,22 @@ document.addEventListener('DOMContentLoaded', () => {
             particle.style.setProperty('--tx', `${tx}px`);
             particle.style.setProperty('--ty', `${ty}px`);
             particle.style.background = colors[i % colors.length];
-            particle.style.animationDelay = `${Math.random() * 0.1}s`;
+            particle.style.animationDelay = `${Math.random() * 0.08}s`;
 
             // Random size variation
-            const size = 4 + Math.random() * 4;
+            const size = 4 + Math.random() * 5;
             particle.style.width = `${size}px`;
             particle.style.height = `${size}px`;
 
             btn.appendChild(particle);
 
-            setTimeout(() => particle.remove(), 900);
+            setTimeout(() => particle.remove(), 950);
         }
     }
 
-    // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
-    // Optional: Magnetic effect for nearby cursor (subtle attraction)
-    // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
+    // ─────────────────────────────────────────────────────────────────────────
+    // Magnetic effect for nearby cursor (subtle attraction)
+    // ─────────────────────────────────────────────────────────────────────────
     if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         document.addEventListener('mousemove', (e) => {
             menuButtons.forEach(btn => {
@@ -241,21 +259,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 const distY = e.clientY - btnCenterY;
                 const distance = Math.sqrt(distX * distX + distY * distY);
 
-                const magneticRange = 200;
+                const magneticRange = 180;
                 if (distance >= magneticRange) {
                     setMagnetTarget(btn, 0, 0);
                     return;
                 }
 
-                // Soft attraction with eased falloff and clamp to avoid overlap
-                const maxOffsetPx = 6;
+                // Soft attraction with eased falloff
+                const maxOffsetPx = 5;
                 const influence = Math.max(0, (magneticRange - distance) / magneticRange);
                 if (influence < 0.01) {
                     setMagnetTarget(btn, 0, 0);
                     return;
                 }
 
-                const eased = influence * influence * influence; // softer near edges
+                const eased = influence * influence * influence; // cubic easing
                 if (distance === 0) {
                     setMagnetTarget(btn, 0, 0);
                     return;
