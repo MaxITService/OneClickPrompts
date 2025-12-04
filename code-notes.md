@@ -150,7 +150,7 @@ Current architectural reference for the OneClickPrompts Chrome extension (Manife
 - **`popup.html`**: organizes content into `<section>` blocks with `.collapsible` headers, sequential `<script>` tags to guarantee dependencies, shared toast container, hidden confirmation/error panels, and version banner.
 - **Main controller (`popup-page-script.js`)**: loads profiles, handles add/copy/delete, orchestrates drag-and-drop (`popup-page-customButtons.js`), updates global settings, manages queue configuration toggles, wires open-in-tab, width toggle, textarea autosize, event listeners, and `logToGUIConsole`.
 - **Supporting scripts**:
-  - `popup-page-customButtons.js`: builds card UI for buttons/separators, shows hotkey hints (with cross-chat offset), manages drag handles and autosend toggles.
+  - `popup-page-customButtons.js`: builds card UI for buttons/separators, shows hotkey hints (with cross-chat offset), manages drag handles and autosend toggles, and runs a 600ms FLIP drop animation that moves the released card into its slot while scaling back to full size.
   - `popup-page-profiles.js`: wraps service worker messaging for profile CRUD and ensures fallback to current profile when list is empty.
   - `popup-page-advanced.js`: handles advanced selector editor (JSON per site) with dependency on centralized collapsible logic; includes validation and reset flows.
   - `popup-page-theme.js`: toggles light/dark theme via service worker persistence and OS preference detection.

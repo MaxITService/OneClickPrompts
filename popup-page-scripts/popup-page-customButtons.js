@@ -443,11 +443,14 @@ function handleDragEnd(e) {
     dragOrigin = null;
 }
 
-function finalizeDrag() {
+async function finalizeDrag() {
+    const dropTargetElement = draggedItem;
+    const dropStartRect = dropTargetElement ? dropTargetElement.getBoundingClientRect() : null;
+    const dropOriginalIndex = dropTargetElement ? parseInt(dropTargetElement.dataset.index) : null;
+
     isDragging = false;
-    if (draggedItem) {
-        draggedItem.classList.remove('dragging');
-        draggedItem = null;
+    if (dropTargetElement) {
+        dropTargetElement.classList.remove('dragging');
     }
 
     document.body.classList.remove('dragging');
@@ -457,7 +460,34 @@ function finalizeDrag() {
     currentProfile.customButtons = newOrder.map(index => currentProfile.customButtons[index]);
 
     saveCurrentProfile();
-    updatebuttonCardsList();
+    draggedItem = null;
+
+    await updatebuttonCardsList();
+
+    if (!dropStartRect || dropOriginalIndex === null) return;
+
+    const targetIndex = newOrder.indexOf(dropOriginalIndex);
+    if (targetIndex === -1) return;
+
+    const newElement = buttonCardsList.querySelector(`.button-item[data-index="${targetIndex}"]`);
+    if (!newElement) return;
+
+    const dropEndRect = newElement.getBoundingClientRect();
+    const deltaX = dropStartRect.left - dropEndRect.left;
+    const deltaY = dropStartRect.top - dropEndRect.top;
+
+    // FLIP: move from the dragged position (scaled down) into its final slot and scale up.
+    newElement.style.transition = 'none';
+    newElement.style.transformOrigin = 'top left';
+    newElement.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(0.8)`;
+    newElement.offsetWidth; // force reflow before playing the animation
+    newElement.style.transition = 'transform 400ms cubic-bezier(0.22, 1, 0.36, 1)';
+    newElement.style.transform = 'translate(0, 0) scale(1)';
+    newElement.addEventListener('transitionend', () => {
+        newElement.style.transition = '';
+        newElement.style.transform = '';
+        newElement.style.transformOrigin = '';
+    }, { once: true });
 }
 
 
