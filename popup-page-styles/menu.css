@@ -53,6 +53,24 @@ Ultra-modern menu buttons featuring:
     initial-value: 0px;
 }
 
+@property --gradient-x {
+    syntax: '<percentage>';
+    inherits: false;
+    initial-value: 50%;
+}
+
+@property --gradient-y {
+    syntax: '<percentage>';
+    inherits: false;
+    initial-value: 50%;
+}
+
+@property --gradient-anim-x {
+    syntax: '<percentage>';
+    inherits: false;
+    initial-value: 0%;
+}
+
 /* ------------------------------------------------------------------------- */
 /* Menu Container                                                            */
 /* ------------------------------------------------------------------------- */
@@ -73,6 +91,8 @@ Ultra-modern menu buttons featuring:
     --gradient-angle: 135deg;
     --shimmer-x: 50%;
     --shimmer-y: 50%;
+    --gradient-x: 50%;
+    --gradient-y: 50%;
     --tilt-rotate-x: 0deg;
     --tilt-rotate-y: 0deg;
     --tilt-scale: 1;
@@ -106,13 +126,7 @@ Ultra-modern menu buttons featuring:
     /* 3D transform setup */
     transform-style: preserve-3d;
     transform:
-        perspective(800px)
-        translate(var(--magnet-translate-x), var(--magnet-translate-y))
-        translateY(var(--idle-translate-y))
-        rotateX(var(--tilt-rotate-x))
-        rotateY(var(--tilt-rotate-y))
-        scale(var(--tilt-scale))
-        translateZ(var(--tilt-translate-z));
+        perspective(800px) translate(var(--magnet-translate-x), var(--magnet-translate-y)) translateY(var(--idle-translate-y)) rotateX(var(--tilt-rotate-x)) rotateY(var(--tilt-rotate-y)) scale(var(--tilt-scale)) translateZ(var(--tilt-translate-z));
     transition:
         transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
         box-shadow 0.3s ease;
@@ -168,7 +182,7 @@ Ultra-modern menu buttons featuring:
 }
 
 /* ------------------------------------------------------------------------- */
-/* Animated Gradient Border - Rainbow with Purple Accent                     */
+/* Simple Purple Border on Hover                                              */
 /* ------------------------------------------------------------------------- */
 .menu-btn::before {
     content: '';
@@ -176,19 +190,8 @@ Ultra-modern menu buttons featuring:
     inset: 0;
     padding: 2px;
     border-radius: 16px;
-    background: linear-gradient(var(--gradient-angle),
-            #9b7ed9,
-            #7a5cc8,
-            #6366f1,
-            #06b6d4,
-            #7a5cc8,
-            #c084fc,
-            #f472b6,
-            #7a5cc8,
-            #fb923c,
-            #a78bfa,
-            #9b7ed9);
-    background-size: 300% 300%;
+    background: rgba(122, 92, 200, 0.5);
+    /* #7a5cc8 with 50% opacity */
     -webkit-mask:
         linear-gradient(#fff 0 0) content-box,
         linear-gradient(#fff 0 0);
@@ -198,23 +201,8 @@ Ultra-modern menu buttons featuring:
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     opacity: 0;
-    animation: borderRotate 4s linear infinite;
     transition: opacity 0.3s ease;
     pointer-events: none;
-}
-
-@keyframes borderRotate {
-    0% {
-        background-position: 0% 50%;
-    }
-
-    50% {
-        background-position: 100% 50%;
-    }
-
-    100% {
-        background-position: 0% 50%;
-    }
 }
 
 /* ------------------------------------------------------------------------- */

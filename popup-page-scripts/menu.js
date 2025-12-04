@@ -114,9 +114,12 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.style.setProperty('--shimmer-x', `${shimmerX}%`);
             btn.style.setProperty('--shimmer-y', `${shimmerY}%`);
 
-            // Update gradient angle based on mouse position
-            const angle = Math.atan2(y - centerY, x - centerX) * (180 / Math.PI) + 90;
-            btn.style.setProperty('--gradient-angle', `${angle}deg`);
+            // Update gradient position - follows cursor smoothly
+            // Map cursor position to background-position (0-100% range scaled to 300% background)
+            const gradientX = (x / rect.width) * 100;
+            const gradientY = (y / rect.height) * 100;
+            btn.style.setProperty('--gradient-x', `${gradientX}%`);
+            btn.style.setProperty('--gradient-y', `${gradientY}%`);
         });
 
         // ﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄﾄ
