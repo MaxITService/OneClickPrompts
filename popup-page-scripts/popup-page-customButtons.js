@@ -453,7 +453,8 @@ function handleDragOver(e) {
 
                 // Play: Enable transition ONLY for the transform property,
                 // and set the target transform state.
-                draggedItem.style.transition = 'transform 380ms ease-out';
+                // Faster catch-up so the card keeps closer to the cursor while staying smooth.
+                draggedItem.style.transition = 'transform 200ms cubic-bezier(0.25, 0.85, 0.35, 1)';
                 draggedItem.style.transform = playTransform;
 
                 // Cleanup will implicitly happen on the next dragover or dragend.
