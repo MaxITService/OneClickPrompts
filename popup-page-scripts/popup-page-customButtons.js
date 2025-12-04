@@ -317,22 +317,26 @@ function autoScrollStep(timestamp) {
 
 function autoScroll(e) {
     const scrollThreshold = 220;
-    const maxScrollSpeed = 480; // px per second
+    const maxScrollSpeed = 2000; // px per second
     const { innerWidth, innerHeight } = window;
     let scrollX = 0;
     let scrollY = 0;
 
-    if (e.clientY < scrollThreshold) {
-        scrollY = -maxScrollSpeed * ((scrollThreshold - e.clientY) / scrollThreshold);
-    } else if (innerHeight - e.clientY < scrollThreshold) {
-        scrollY = maxScrollSpeed * ((scrollThreshold - (innerHeight - e.clientY)) / scrollThreshold);
-    }
+    const calcSpeed = (distanceToEdge, threshold, sign) => {
+        if (distanceToEdge >= threshold) return 0;
+        const normalized = (threshold - distanceToEdge) / threshold; // 0..1
+        // Concave easing: ramps up even earlier so fast scroll kicks in before the extreme edge.
+        const eased = Math.pow(normalized, 0.35);
+        return sign * maxScrollSpeed * eased;
+    };
 
-    if (e.clientX < scrollThreshold) {
-        scrollX = -maxScrollSpeed * ((scrollThreshold - e.clientX) / scrollThreshold);
-    } else if (innerWidth - e.clientX < scrollThreshold) {
-        scrollX = maxScrollSpeed * ((scrollThreshold - (innerWidth - e.clientX)) / scrollThreshold);
-    }
+    scrollY = calcSpeed(e.clientY, scrollThreshold, -1);
+    const distanceFromBottom = innerHeight - e.clientY;
+    scrollY = distanceFromBottom < scrollThreshold ? calcSpeed(distanceFromBottom, scrollThreshold, 1) : scrollY;
+
+    scrollX = calcSpeed(e.clientX, scrollThreshold, -1);
+    const distanceFromRight = innerWidth - e.clientX;
+    scrollX = distanceFromRight < scrollThreshold ? calcSpeed(distanceFromRight, scrollThreshold, 1) : scrollX;
 
     autoScrollVelocity = { x: scrollX, y: scrollY };
 
