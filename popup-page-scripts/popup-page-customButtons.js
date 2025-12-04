@@ -246,6 +246,9 @@ let dragOrigin = null; // Stores the initial target of a mousedown/pointerdown e
 let isDragging = false;
 let draggedItem = null;
 let lastDragPosition = { x: 0, y: 0 };
+let autoScrollVelocity = { x: 0, y: 0 };
+let autoScrollRAF = null;
+let autoScrollLastTs = 0;
 
 /**
  * Captures the initial element clicked before a potential drag starts.
@@ -280,11 +283,44 @@ function handleDragStart(e) {
     }
 }
 
+function stopAutoScrollLoop() {
+    if (autoScrollRAF) {
+        cancelAnimationFrame(autoScrollRAF);
+        autoScrollRAF = null;
+    }
+    autoScrollVelocity = { x: 0, y: 0 };
+    autoScrollLastTs = 0;
+}
+
+function autoScrollStep(timestamp) {
+    if (!isDragging) {
+        stopAutoScrollLoop();
+        return;
+    }
+
+    if (!autoScrollLastTs) {
+        autoScrollLastTs = timestamp;
+    }
+
+    const dtMs = Math.min(32, timestamp - autoScrollLastTs);
+    autoScrollLastTs = timestamp;
+
+    const dx = autoScrollVelocity.x * (dtMs / 1000);
+    const dy = autoScrollVelocity.y * (dtMs / 1000);
+
+    if (dx !== 0 || dy !== 0) {
+        window.scrollBy({ left: dx, top: dy, behavior: 'auto' });
+    }
+
+    autoScrollRAF = requestAnimationFrame(autoScrollStep);
+}
+
 function autoScroll(e) {
     const scrollThreshold = 220;
-    const maxScrollSpeed = 400;
+    const maxScrollSpeed = 480; // px per second
     const { innerWidth, innerHeight } = window;
-    let scrollX = 0, scrollY = 0;
+    let scrollX = 0;
+    let scrollY = 0;
 
     if (e.clientY < scrollThreshold) {
         scrollY = -maxScrollSpeed * ((scrollThreshold - e.clientY) / scrollThreshold);
@@ -298,12 +334,15 @@ function autoScroll(e) {
         scrollX = maxScrollSpeed * ((scrollThreshold - (innerWidth - e.clientX)) / scrollThreshold);
     }
 
-    if (scrollX !== 0 || scrollY !== 0) {
-        window.scrollBy({
-            top: scrollY,
-            left: scrollX,
-            behavior: 'smooth'
-        });
+    autoScrollVelocity = { x: scrollX, y: scrollY };
+
+    if (scrollX === 0 && scrollY === 0) {
+        stopAutoScrollLoop();
+        return;
+    }
+
+    if (!autoScrollRAF) {
+        autoScrollRAF = requestAnimationFrame(autoScrollStep);
     }
 }
 
@@ -454,6 +493,7 @@ async function finalizeDrag() {
     }
 
     document.body.classList.remove('dragging');
+    stopAutoScrollLoop();
     // Removed clearInterval call as scrollInterval is unused.
 
     const newOrder = Array.from(buttonCardsList.children).map(child => parseInt(child.dataset.index));
