@@ -89,8 +89,7 @@ Ultra-premium menu buttons featuring:
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
-    justify-content: center;
-    padding: 12px 0;
+    justify-content: center;    
     perspective: 1200px;
 }
 
