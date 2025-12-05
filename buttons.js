@@ -391,33 +391,27 @@ async function processCustomSendButtonClick(event, customText, autoSend) {
     logConCgp('[buttons] Active site:', activeSite);
 
     // Route to site-specific handlers (unchanged)
+    // Route to site-specific handlers (unchanged)
     switch (activeSite) {
         case 'ChatGPT':
-            await processChatGPTCustomSendButtonClick(event, customText, autoSend);
-            break;
+            return await processChatGPTCustomSendButtonClick(event, customText, autoSend);
         case 'Claude':
-            await processClaudeCustomSendButtonClick(event, customText, autoSend);
-            break;
+            return await processClaudeCustomSendButtonClick(event, customText, autoSend);
         case 'Copilot':
-            await processCopilotCustomSendButtonClick(event, customText, autoSend);
-            break;
+            return await processCopilotCustomSendButtonClick(event, customText, autoSend);
         case 'DeepSeek':
-            await processDeepSeekCustomSendButtonClick(event, customText, autoSend);
-            break;
+            return await processDeepSeekCustomSendButtonClick(event, customText, autoSend);
         case 'AIStudio':
-            await processAIStudioCustomSendButtonClick(event, customText, autoSend);
-            break;
+            return await processAIStudioCustomSendButtonClick(event, customText, autoSend);
         case 'Grok':
-            await processGrokCustomSendButtonClick(event, customText, autoSend);
-            break;
+            return await processGrokCustomSendButtonClick(event, customText, autoSend);
         case 'Gemini': // Added Gemini case
-            await processGeminiCustomSendButtonClick(event, customText, autoSend);
-            break;
+            return await processGeminiCustomSendButtonClick(event, customText, autoSend);
         case 'Perplexity':
-            await processPerplexityCustomSendButtonClick(event, customText, autoSend);
-            break;
+            return await processPerplexityCustomSendButtonClick(event, customText, autoSend);
         default:
             logConCgp('[buttons] Unsupported site:', activeSite);
+            return { status: 'failed', reason: 'unsupported_site' };
     }
 }
 

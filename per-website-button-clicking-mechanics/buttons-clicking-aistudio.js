@@ -51,21 +51,22 @@ async function processAIStudioCustomSendButtonClick(event, customText, autoSend)
         let findAttempts = 0;
 
         // Start polling after initial delay to let text settle
-        setTimeout(() => {
-            ButtonsClickingShared.performAutoSend({
-                interval: 200,
-                maxAttempts: MAX_ATTEMPTS,
-                findButton: async () => {
-                    findAttempts += 1;
-                    if (findAttempts < MAX_ATTEMPTS) {
-                        return window.OneClickPromptsSelectorGuard._querySelectors(selectors, { requireEnabled: true });
-                    }
-                    return window.OneClickPromptsSelectorGuard.findSendButton();
-                },
-                clickAction: (btn) => MaxExtensionUtils.simulateClick(btn)
-            });
-        }, 100);
+        // Start polling after initial delay to let text settle
+        await new Promise(r => setTimeout(r, 100));
+        return ButtonsClickingShared.performAutoSend({
+            interval: 200,
+            maxAttempts: MAX_ATTEMPTS,
+            findButton: async () => {
+                findAttempts += 1;
+                if (findAttempts < MAX_ATTEMPTS) {
+                    return window.OneClickPromptsSelectorGuard._querySelectors(selectors, { requireEnabled: true });
+                }
+                return window.OneClickPromptsSelectorGuard.findSendButton();
+            },
+            clickAction: (btn) => MaxExtensionUtils.simulateClick(btn)
+        });
     }
+    return Promise.resolve({ status: 'sent', reason: 'manual' });
 }
 
 // Expose the function globally

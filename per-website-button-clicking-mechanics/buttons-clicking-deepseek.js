@@ -83,7 +83,7 @@ async function processDeepSeekCustomSendButtonClick(event, customText, autoSend)
 
     // 3. Robust auto-send system
     function startAutoSend() {
-        ButtonsClickingShared.performAutoSend({
+        return ButtonsClickingShared.performAutoSend({
             maxAttempts: 15,
             interval: 300,
             isEnabled: (sendButton) => {
@@ -99,6 +99,7 @@ async function processDeepSeekCustomSendButtonClick(event, customText, autoSend)
                     showToast('Could not find the send button.', 'error');
                 }
             }
+            return result;
         });
     }
 
@@ -108,8 +109,9 @@ async function processDeepSeekCustomSendButtonClick(event, customText, autoSend)
     // Initiate auto-send if enabled
     if (autoSend && globalMaxExtensionConfig.globalAutoSendEnabled) {
         logConCgp('[DeepSeek] Starting auto-send sequence');
-        startAutoSend();
+        return startAutoSend();
     }
+    return Promise.resolve({ status: 'sent', reason: 'manual' });
 }
 
 window.processDeepSeekCustomSendButtonClick = processDeepSeekCustomSendButtonClick;

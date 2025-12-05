@@ -53,10 +53,11 @@ async function processGeminiCustomSendButtonClick(event, customText, autoSend) {
     insertTextIntoGeminiEditor(editorArea, customText);
 
     // Auto-send logic
+    // Auto-send logic
     if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
         logConCgp('[Gemini] Auto-send enabled. Attempting to send.');
 
-        ButtonsClickingShared.performAutoSend({
+        return ButtonsClickingShared.performAutoSend({
             isEnabled: (sendButton) => sendButton && sendButton.getAttribute('aria-disabled') !== 'true',
             clickAction: (btn) => MaxExtensionUtils.simulateClick(btn)
         }).then((result) => {
@@ -64,12 +65,14 @@ async function processGeminiCustomSendButtonClick(event, customText, autoSend) {
                 logConCgp('[Gemini] Send button did not become enabled after multiple attempts.');
                 showToast('Send button did not become active.', 'error');
             }
+            return result;
         });
     } else {
         logConCgp('[Gemini] Auto-send disabled or not requested for this button.');
         // Optional: Re-focus editor after insertion if not auto-sending
         editorArea.focus();
         MaxExtensionUtils.moveCursorToEnd(editorArea);
+        return Promise.resolve({ status: 'sent', reason: 'manual' });
     }
 }
 

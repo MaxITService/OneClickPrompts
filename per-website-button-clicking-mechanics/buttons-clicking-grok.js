@@ -188,7 +188,7 @@ async function processGrokCustomSendButtonClick(event, customText, autoSend) {
         // Added extra delay to ensure the last character is fully processed.
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        ButtonsClickingShared.performAutoSend({
+        return ButtonsClickingShared.performAutoSend({
             preClickValidation: () => {
                 const currentText = isTextArea ? editorArea.value.trim() : editorArea.innerText.trim();
                 return currentText.length > 0;
@@ -196,6 +196,7 @@ async function processGrokCustomSendButtonClick(event, customText, autoSend) {
             clickAction: (btn) => window.MaxExtensionUtils.simulateClick(btn)
         });
     }
+    return Promise.resolve({ status: 'sent', reason: 'manual' });
 }
 
 // Expose the function globally

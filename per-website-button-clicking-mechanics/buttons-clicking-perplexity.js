@@ -33,11 +33,12 @@ async function processPerplexityCustomSendButtonClick(event, customText, autoSen
     }
 
     if (!autoSend || !globalMaxExtensionConfig?.globalAutoSendEnabled) {
-        return;
+        return Promise.resolve({ status: 'sent', reason: 'manual' });
     }
 
     logConCgp('[Perplexity] Auto-send requested; locating submit button.');
-    setTimeout(() => beginPerplexityAutoSend(customText, editorElement), 150);
+    await new Promise(r => setTimeout(r, 150));
+    return beginPerplexityAutoSend(customText, editorElement);
 }
 
 /**
@@ -87,20 +88,19 @@ function insertTextIntoPerplexityEditor(editorElement, textToInsert) {
  * @param {HTMLElement} editorElement - The editor element to check for content.
  */
 function beginPerplexityAutoSend(expectedText, editorElement) {
-    ButtonsClickingShared.performAutoSend({
+    return ButtonsClickingShared.performAutoSend({
         interval: 250,
         maxAttempts: 20,
         isEnabled: (button) => isPerplexityButtonEnabled(button),
         preClickValidation: () => perplexityEditorHasContent(expectedText, editorElement)
     }).then((result) => {
-    }).then((result) => {
         if (result.status === 'sent' || result.status === 'blocked_by_stop') {
-            return;
+            return result;
         }
         if (result.reason === 'validation_failed') {
             logConCgp('[Perplexity] Editor content still not ready after retries; aborting auto-send.');
             showToast('Editor content not ready; please send manually.', 'error');
-            return;
+            return result;
         }
         if (result.status === 'not_found' || result.reason === 'disabled') {
             if (result.reason !== 'post-stop-missing-send') {
@@ -108,6 +108,7 @@ function beginPerplexityAutoSend(expectedText, editorElement) {
                 showToast('Could not find the send button.', 'error');
             }
         }
+        return result;
     });
 }
 

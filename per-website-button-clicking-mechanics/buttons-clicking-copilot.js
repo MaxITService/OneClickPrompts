@@ -45,7 +45,7 @@ async function processCopilotCustomSendButtonClick(event, customText, autoSend) 
 
     const startAutoSend = (_, editor) => {
         logConCgp('[auto-send] Auto-send is enabled. Starting auto-send process.');
-        ButtonsClickingShared.performAutoSend({
+        return ButtonsClickingShared.performAutoSend({
             preClickValidation: () => {
                 const currentText = editor.value?.trim() ?? '';
                 return currentText.length > 0;
@@ -55,6 +55,7 @@ async function processCopilotCustomSendButtonClick(event, customText, autoSend) 
             if (!result?.success) {
                 showToast('Send button not found. Auto-send stopped.', 'error');
             }
+            return result;
         });
     };
 
@@ -81,9 +82,10 @@ async function processCopilotCustomSendButtonClick(event, customText, autoSend) 
 
         // Step 3: Handle auto-sending.
         if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
-            startAutoSend(null, editorArea);
+            return startAutoSend(null, editorArea);
         }
+        return Promise.resolve({ status: 'sent', reason: 'manual' });
     };
 
-    await handleMessageInsertion();
+    return await handleMessageInsertion();
 }

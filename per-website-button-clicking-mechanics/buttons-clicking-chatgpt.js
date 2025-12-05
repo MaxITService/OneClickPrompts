@@ -138,8 +138,9 @@ async function processChatGPTCustomSendButtonClick(event, customText, autoSend) 
 
         if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
             logConCgp('[buttons] Auto-send is enabled. Starting auto-send process.');
-            startAutoSend(null, editorArea);
+            return startAutoSend(null, editorArea);
         }
+        return Promise.resolve({ status: 'sent', reason: 'manual' });
     };
 
     /**
@@ -150,7 +151,7 @@ async function processChatGPTCustomSendButtonClick(event, customText, autoSend) 
      */
     const startAutoSend = (_, editor) => {
         logConCgp('[auto-send] startAutoSend called.');
-        ButtonsClickingShared.performAutoSend({
+        return ButtonsClickingShared.performAutoSend({
             preClickValidation: () => {
                 const currentText = editor.innerText.trim();
                 logConCgp('[auto-send] Current text in editor:', currentText);
@@ -172,6 +173,7 @@ async function processChatGPTCustomSendButtonClick(event, customText, autoSend) 
                     showToast('Could not find the send button.', 'error');
                 }
             }
+            return result;
         });
     };
 
@@ -205,28 +207,28 @@ async function processChatGPTCustomSendButtonClick(event, customText, autoSend) 
             logConCgp('[buttons][ChatGPT] Custom text inserted.');
 
             // Wait for send button
-            setTimeout(async () => {
-                try {
-                    const btn = await waitForSendButton(5000);
-                    handleSendButton(btn);
-                } catch (error) {
-                    logConCgp('[buttons] ' + error.message);
-                    showToast('Could not find the send button.', 'error');
-                }
-            }, 500); // Delay to allow the editor to update
+            await new Promise(r => setTimeout(r, 500));
+            try {
+                const btn = await waitForSendButton(5000);
+                return handleSendButton(btn);
+            } catch (error) {
+                logConCgp('[buttons] ' + error.message);
+                showToast('Could not find the send button.', 'error');
+                return { status: 'failed', reason: 'send_button_timeout' };
+            }
         } else {
             logConCgp('[buttons][ChatGPT] Editor has content. Appending text (bulk insert).');
             insertTextIntoChatGPTEditor(editorArea, customText, false);
             // Proceed to handle send buttons immediately
             const btn = await window.OneClickPromptsSelectorGuard.findSendButton();
-            handleSendButton(btn);
+            return handleSendButton(btn);
         }
     };
 
     // ----------------------------
     // Start the message insertion and sending process
     // ----------------------------
-    await handleMessageInsertion();
+    return await handleMessageInsertion();
 }
 
 // Expose the function globally

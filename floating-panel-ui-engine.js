@@ -528,7 +528,7 @@ window.MaxExtensionFloatingPanel.playQueueNotificationBeep = async function () {
 
         const ctx = this.queueAudioContext;
         if (ctx.state === 'suspended') {
-            await ctx.resume().catch(() => {});
+            await ctx.resume().catch(() => { });
         }
 
         const now = ctx.currentTime;
@@ -564,7 +564,7 @@ window.MaxExtensionFloatingPanel.playQueueCompletionBeep = async function () {
 
         const ctx = this.queueAudioContext;
         if (ctx.state === 'suspended') {
-            await ctx.resume().catch(() => {});
+            await ctx.resume().catch(() => { });
         }
 
         const scheduleTone = (startTime, frequency, options = {}) => {
@@ -786,24 +786,58 @@ window.MaxExtensionFloatingPanel.processNextQueueItem = async function () {
 
     // Clear any stale autosend interval from a previous run to avoid collisions on "first send".
     if (window.autoSendInterval) {
-        try { clearInterval(window.autoSendInterval); } catch (_) {}
+        try { clearInterval(window.autoSendInterval); } catch (_) { }
         window.autoSendInterval = null;
         logConCgp('[queue-engine] Cleared stale autoSendInterval before dispatching queued click.');
     }
 
     // Synthesize a "user-like" click by calling the same entry function that real buttons use.
     // We tag the event so processCustomSendButtonClick won't re-enqueue and won't apply Shift inversion.
-    const mockEvent = { preventDefault: () => {}, shiftKey: false, __fromQueue: true };
+    const mockEvent = { preventDefault: () => { }, shiftKey: false, __fromQueue: true };
 
     try {
+        if (typeof this.setQueueStatus === 'function') {
+            this.setQueueStatus('Sending...', 'info');
+        }
+
         // Use the canonical entry point so per-site behavior is identical to manual clicks.
-        processCustomSendButtonClick(
+        const sendResult = await processCustomSendButtonClick(
             mockEvent,
             item.text,
             true // Queue dispatch must always auto-send regardless of button toggle.
         );
+
+        // Handle result statuses
+        if (sendResult) {
+            if (sendResult.status === 'blocked_by_stop') {
+                logConCgp('[queue-engine] Queue paused: blocked by stop button/AI typing.');
+                if (typeof this.setQueueStatus === 'function') {
+                    this.setQueueStatus('Waiting for send button (AI still typing)…', 'info');
+                }
+                // Pause the queue effectively stopping the timer loop.
+                this.pauseQueue();
+                return;
+            } else if (sendResult.status === 'not_found' || sendResult.status === 'failed') {
+                logConCgp('[queue-engine] Queue paused: Send failed or button not found.');
+                if (typeof this.setQueueStatus === 'function') {
+                    const failMsg = sendResult.reason ? `Send failed: ${sendResult.reason}` : 'Send failed: unable to find send button.';
+                    this.setQueueStatus(failMsg, 'error');
+                }
+                this.pauseQueue();
+                return;
+            }
+            // If status === 'sent', we proceed to schedule the next item.
+        }
+
+        if (typeof this.setQueueStatus === 'function') {
+            this.setQueueStatus(null); // Clear status on success
+        }
+
     } catch (err) {
         logConCgp('[queue-engine] Error while dispatching queued click:', err?.message || err);
+        if (typeof this.setQueueStatus === 'function') {
+            this.setQueueStatus('Error: ' + (err?.message || 'Dispatch failed'), 'error');
+        }
         this.pauseQueue();
         return;
     }

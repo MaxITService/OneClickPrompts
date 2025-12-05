@@ -71,6 +71,15 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
     this.queueDisplayArea = document.getElementById('max-extension-queue-display');
     this.queueProgressContainer = document.getElementById('max-extension-queue-progress-container');
     this.queueProgressBar = document.getElementById('max-extension-queue-progress-bar');
+    this.queueStatusLabel = document.getElementById('max-extension-queue-status-label');
+    if (!this.queueStatusLabel && this.queueProgressContainer) {
+        // Create it if not in HTML
+        this.queueStatusLabel = document.createElement('div');
+        this.queueStatusLabel.id = 'max-extension-queue-status-label';
+        this.queueStatusLabel.className = 'queue-status-label';
+        this.queueStatusLabel.style.cssText = 'font-size: 11px; margin-top: 4px; text-align: center; display: none;';
+        this.queueProgressContainer.parentNode.insertBefore(this.queueStatusLabel, this.queueProgressContainer.nextSibling);
+    }
     this.randomDelayBadge = document.getElementById('max-extension-random-delay-toggle');
     const tosWarningContainer = document.getElementById('max-extension-queue-tos-warning');
     const tosAcceptButton = document.getElementById('max-extension-tos-accept-btn');
@@ -829,5 +838,34 @@ window.MaxExtensionFloatingPanel.updateRandomDelayBadge = function () {
 
     if (typeof this.syncRandomPercentSlider === 'function') {
         this.syncRandomPercentSlider();
+    }
+};
+
+/**
+ * Sets the text and visibility of the queue status label.
+ * @param {string|null} text - The text to show, or null to hide.
+ * @param {'info'|'error'|'success'} [type='info'] - The visual style type.
+ */
+window.MaxExtensionFloatingPanel.setQueueStatus = function (text, type = 'info') {
+    if (!this.queueStatusLabel) return;
+
+    if (!text) {
+        this.queueStatusLabel.textContent = '';
+        this.queueStatusLabel.style.display = 'none';
+        return;
+    }
+
+    this.queueStatusLabel.textContent = text;
+    this.queueStatusLabel.style.display = 'block';
+
+    // Simple styling reset
+    this.queueStatusLabel.style.color = '';
+
+    if (type === 'error') {
+        this.queueStatusLabel.style.color = '#ef4444'; // Red
+    } else if (type === 'success') {
+        this.queueStatusLabel.style.color = '#22c55e'; // Green
+    } else {
+        this.queueStatusLabel.style.color = 'var(--text-secondary, #888)'; // Muted
     }
 };

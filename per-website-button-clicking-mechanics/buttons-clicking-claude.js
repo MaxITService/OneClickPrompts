@@ -23,15 +23,16 @@ async function processClaudeCustomSendButtonClick(event, customText, autoSend) {
     // If auto-send is enabled, handle the send process
     if (globalMaxExtensionConfig.globalAutoSendEnabled && autoSend) {
         logConCgp('[Claude] Auto-send enabled, attempting to send message');
-        handleClaudeSend();
+        return handleClaudeSend();
     }
+    return Promise.resolve({ status: 'sent', reason: 'manual' });
 }
 
 /**
  * Handles the send button clicking process for Claude
  */
 async function handleClaudeSend() {
-    ButtonsClickingShared.performAutoSend({
+    return ButtonsClickingShared.performAutoSend({
         clickAction: (btn) => setTimeout(() => MaxExtensionUtils.simulateClick(btn), 200),
         isBusy: (btn) => ButtonsClickingShared.isBusyStopButton(btn)
     }).then((result) => {
@@ -39,6 +40,7 @@ async function handleClaudeSend() {
             logConCgp('[Claude] Auto-send exhausted without finding enabled send button.');
             showToast('Could not find the send button.', 'error');
         }
+        return result;
     });
 }
 
