@@ -852,13 +852,11 @@ window.MaxExtensionFloatingPanel.setQueueStatus = function (text, type = 'info',
 
     if (!text) {
         this.queueStatusLabel.textContent = '';
-        this.queueStatusLabel.title = '';
         this.queueStatusLabel.style.display = 'none';
         return;
     }
 
     this.queueStatusLabel.textContent = text;
-    this.queueStatusLabel.title = tooltip || text;
     this.queueStatusLabel.style.display = 'block';
 
     // Simple styling reset
@@ -870,5 +868,14 @@ window.MaxExtensionFloatingPanel.setQueueStatus = function (text, type = 'info',
         this.queueStatusLabel.style.color = '#22c55e'; // Green
     } else {
         this.queueStatusLabel.style.color = 'var(--text-secondary, #888)'; // Muted
+    }
+
+    // Update tooltip using the shared system if available
+    const finalTooltip = tooltip || text;
+    if (window.OCPTooltip) {
+        // Use attach to forcefully update the text and ensure listeners are bound
+        window.OCPTooltip.attach(this.queueStatusLabel, finalTooltip);
+    } else {
+        this.queueStatusLabel.title = finalTooltip;
     }
 };
