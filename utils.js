@@ -317,7 +317,11 @@ class InjectionTargetsOnWebsite {
                     'textarea',
                 ],
                 threadRoot: '#thread',
-                buttonsContainerId: 'chatgpt-custom-buttons-container'
+                buttonsContainerId: 'chatgpt-custom-buttons-container',
+                stopButtons: [
+                    'button[aria-label="Stop generating"]',
+                    'button[data-testid="stop-button"]'
+                ]
             },
             Claude: {
                 containers: [
@@ -334,7 +338,11 @@ class InjectionTargetsOnWebsite {
                 ],
                 editors: ['div.ProseMirror[contenteditable="true"]'],
                 threadRoot: 'div.flex-1.max-w-3xl.mx-auto:has([data-testid="user-message"])',
-                buttonsContainerId: 'claude-custom-buttons-container'
+                buttonsContainerId: 'claude-custom-buttons-container',
+                stopButtons: [
+                    'button[aria-label="Stop generating"]',
+                    'button:has(div.text-text-200)' // Heuristic for stop button text
+                ]
             },
             Copilot: {
                 containers: [
@@ -358,7 +366,11 @@ class InjectionTargetsOnWebsite {
                     'button[type="submit"]',
                 ],
                 threadRoot: 'div.max-w-chat[data-content="conversation"]',
-                buttonsContainerId: 'copilot-custom-buttons-container'
+                buttonsContainerId: 'copilot-custom-buttons-container',
+                stopButtons: [
+                    'button[title="Stop responding"]',
+                    'button[aria-label="Stop responding"]'
+                ]
             },
             DeepSeek: {
                 "buttonsContainerId": "deepseek-custom-buttons-container",
@@ -386,7 +398,11 @@ class InjectionTargetsOnWebsite {
                     "[aria-label*=\"send\" i]:not([data-testid^=\"custom-send-button\"])"
                 ],
                 // Heuristic fallback: try to find the scroll area containing messages
-                "threadRoot": ".ds-scroll-area:has(.ds-message), .scrollable:has(textarea, [contenteditable=\"true\"])"
+                "threadRoot": ".ds-scroll-area:has(.ds-message), .scrollable:has(textarea, [contenteditable=\"true\"])",
+                "stopButtons": [
+                    "div.ds-icon-button:has(svg rect)", // Stop usually has a square icon
+                    "[aria-label=\"Stop generating\"]"
+                ]
             },
             AIStudio: {
                 containers: [
@@ -414,7 +430,11 @@ class InjectionTargetsOnWebsite {
                     'ms-autosize-textarea textarea',
                     'ms-autosize-textarea textarea.v3-font-body'
                 ],
-                buttonsContainerId: 'aistudio-custom-buttons-container'
+                buttonsContainerId: 'aistudio-custom-buttons-container',
+                stopButtons: [
+                    'button[aria-label="Stop generating"]',
+                    'button[aria-label="Cancel"]'
+                ]
             },
             Grok: {
                 containers: [
@@ -445,7 +465,10 @@ class InjectionTargetsOnWebsite {
                     'textarea' // last resort
                 ],
                 threadRoot: '.w-full.h-full.overflow-y-auto.overflow-x-hidden.scrollbar-gutter-stable.flex.flex-col.items-center.px-gutter',
-                buttonsContainerId: 'grok-custom-buttons-container'
+                buttonsContainerId: 'grok-custom-buttons-container',
+                stopButtons: [
+                    'button[aria-label="Stop generating"]'
+                ]
             },
             Gemini: {
                 containers: [
@@ -462,7 +485,11 @@ class InjectionTargetsOnWebsite {
                     'rich-textarea div.ql-editor'
                 ],
                 threadRoot: 'infinite-scroller[data-test-id="chat-history-container"]',
-                buttonsContainerId: 'gemini-custom-buttons-container'
+                buttonsContainerId: 'gemini-custom-buttons-container',
+                stopButtons: [
+                    'button[aria-label="Stop response"]',
+                    'button[aria-label="Stop generating"]'
+                ]
             },
             Perplexity: {
                 containers: [
@@ -483,7 +510,11 @@ class InjectionTargetsOnWebsite {
                     'div[contenteditable="true"]'
                 ],
                 threadRoot: 'div.relative.border-subtlest.ring-subtlest.divide-subtlest.bg-base',
-                buttonsContainerId: 'perplexity-custom-buttons-container'
+                buttonsContainerId: 'perplexity-custom-buttons-container',
+                stopButtons: [
+                    'button[aria-label="Stop"]',
+                    'button[data-testid="stop-button"]'
+                ]
             }
         };
         return selectors[site] || {};

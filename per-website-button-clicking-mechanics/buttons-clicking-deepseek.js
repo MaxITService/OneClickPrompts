@@ -92,11 +92,12 @@ async function processDeepSeekCustomSendButtonClick(event, customText, autoSend)
                     sendButton.getAttribute('aria-disabled') !== 'true' &&
                     !sendButton.classList.contains('disabled');
             },
-            clickAction: (btn) => btn && btn.click()
+            clickAction: (btn) => window.MaxExtensionUtils.simulateClick(btn)
         }).then((result) => {
-            if (!result?.success) {
-                logConCgp('[DeepSeek] Max attempts reached, send button not found.');
-                showToast('Could not find the send button.', 'error');
+            if (result.status !== 'sent' && result.status !== 'blocked_by_stop') {
+                if (result.status === 'not_found' && result.reason !== 'post-stop-missing-send') {
+                    showToast('Could not find the send button.', 'error');
+                }
             }
         });
     }

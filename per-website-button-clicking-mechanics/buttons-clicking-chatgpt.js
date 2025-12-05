@@ -167,8 +167,10 @@ async function processChatGPTCustomSendButtonClick(event, customText, autoSend) 
             },
             clickAction: (btn) => MaxExtensionUtils.simulateClick(btn)
         }).then((result) => {
-            if (!result?.success && result?.reason !== 'validation_failed') {
-                showToast('Could not find the send button.', 'error');
+            if (result.status !== 'sent' && result.status !== 'blocked_by_stop') {
+                if (result.status === 'not_found' && result.reason !== 'post-stop-missing-send') {
+                    showToast('Could not find the send button.', 'error');
+                }
             }
         });
     };

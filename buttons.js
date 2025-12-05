@@ -354,7 +354,7 @@ window.MaxExtensionButtons = {
  * @param {string} customText - The custom text to be inserted
  * @param {boolean} autoSend - Flag indicating whether to automatically send the message
  */
-function processCustomSendButtonClick(event, customText, autoSend) {
+async function processCustomSendButtonClick(event, customText, autoSend) {
     // Detect if this invocation originates from the queue engine.
     const invokedByQueue = !!(event && event.__fromQueue);
 
@@ -393,28 +393,28 @@ function processCustomSendButtonClick(event, customText, autoSend) {
     // Route to site-specific handlers (unchanged)
     switch (activeSite) {
         case 'ChatGPT':
-            processChatGPTCustomSendButtonClick(event, customText, autoSend);
+            await processChatGPTCustomSendButtonClick(event, customText, autoSend);
             break;
         case 'Claude':
-            processClaudeCustomSendButtonClick(event, customText, autoSend);
+            await processClaudeCustomSendButtonClick(event, customText, autoSend);
             break;
         case 'Copilot':
-            processCopilotCustomSendButtonClick(event, customText, autoSend);
+            await processCopilotCustomSendButtonClick(event, customText, autoSend);
             break;
         case 'DeepSeek':
-            processDeepSeekCustomSendButtonClick(event, customText, autoSend);
+            await processDeepSeekCustomSendButtonClick(event, customText, autoSend);
             break;
         case 'AIStudio':
-            processAIStudioCustomSendButtonClick(event, customText, autoSend);
+            await processAIStudioCustomSendButtonClick(event, customText, autoSend);
             break;
         case 'Grok':
-            processGrokCustomSendButtonClick(event, customText, autoSend);
+            await processGrokCustomSendButtonClick(event, customText, autoSend);
             break;
         case 'Gemini': // Added Gemini case
-            processGeminiCustomSendButtonClick(event, customText, autoSend);
+            await processGeminiCustomSendButtonClick(event, customText, autoSend);
             break;
         case 'Perplexity':
-            processPerplexityCustomSendButtonClick(event, customText, autoSend);
+            await processPerplexityCustomSendButtonClick(event, customText, autoSend);
             break;
         default:
             logConCgp('[buttons] Unsupported site:', activeSite);

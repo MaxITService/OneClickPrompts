@@ -93,17 +93,20 @@ function beginPerplexityAutoSend(expectedText, editorElement) {
         isEnabled: (button) => isPerplexityButtonEnabled(button),
         preClickValidation: () => perplexityEditorHasContent(expectedText, editorElement)
     }).then((result) => {
-        if (result?.success) {
+    }).then((result) => {
+        if (result.status === 'sent' || result.status === 'blocked_by_stop') {
             return;
         }
-        if (result?.reason === 'validation_failed') {
+        if (result.reason === 'validation_failed') {
             logConCgp('[Perplexity] Editor content still not ready after retries; aborting auto-send.');
             showToast('Editor content not ready; please send manually.', 'error');
             return;
         }
-        if (result?.reason === 'not_found' || result?.reason === 'disabled') {
-            logConCgp('[Perplexity] Failed to find enabled submit button within timeout.');
-            showToast('Could not find the send button.', 'error');
+        if (result.status === 'not_found' || result.reason === 'disabled') {
+            if (result.reason !== 'post-stop-missing-send') {
+                logConCgp('[Perplexity] Failed to find enabled submit button within timeout.');
+                showToast('Could not find the send button.', 'error');
+            }
         }
     });
 }
