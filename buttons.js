@@ -196,13 +196,13 @@ window.MaxExtensionButtons = {
         const autoSendEnabled = (type === 'copy')
             ? window.globalCrossChatConfig?.autosendCopy
             : window.globalCrossChatConfig?.autosendPaste;
-        const autoSendDescription = autoSendEnabled ? ' (Auto-sends)' : '';
+        const autoSendDescription = autoSendEnabled ? ' <i><b>(Auto-sends)</b></i>' : '';
 
         let shortcutDescription = '';
         if (shortcutKey) {
             buttonElement.dataset.shortcutKey = shortcutKey.toString();
             const displayKey = shortcutKey === 10 ? 0 : shortcutKey;
-            shortcutDescription = ` (Shortcut: Alt+${displayKey})`;
+            shortcutDescription = ` <i><b>(Shortcut: Alt+${displayKey})</b></i>`;
         }
 
         const updateTooltip = (text) => {
@@ -297,8 +297,8 @@ window.MaxExtensionButtons = {
         }
 
         // Prepare tooltip parts: append (Auto-sends) if autoSend behavior is enabled
-        const autoSendDescription = buttonConfig.autoSend ? ' (Auto-sends)' : '';
-        const shortcutDescription = assignedShortcutKey !== null ? ` (Shortcut: Alt+${assignedShortcutKey === 10 ? 0 : assignedShortcutKey})` : '';
+        const autoSendDescription = buttonConfig.autoSend ? ' <i><b>(Auto-sends)</b></i>' : '';
+        const shortcutDescription = assignedShortcutKey !== null ? ` <i><b>(Shortcut: Alt+${assignedShortcutKey === 10 ? 0 : assignedShortcutKey})</b></i>` : '';
 
         // Set the tooltip (title attribute) combining the button text (or a custom tooltip) with auto-send and shortcut info
         const baseTooltipText = buttonConfig.tooltip || buttonConfig.text;

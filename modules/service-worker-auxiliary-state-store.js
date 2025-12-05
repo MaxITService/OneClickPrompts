@@ -51,6 +51,7 @@ const KEYS = {
     inlineProfileSelector: 'modules.inlineProfileSelector', // object { enabled:boolean, placement:'before'|'after' }
     tokenApproximator: 'modules.tokenApproximator', // object { enabled:boolean, calibration:number, threadMode:string, showEditorCounter:boolean, placement:'before'|'after' }
     selectorAutoDetector: 'modules.selectorAutoDetector', // object { enableEditorHeuristics:boolean, enableSendButtonHeuristics:boolean }
+    tooltip: 'modules.tooltip', // object { enabled:boolean, showDelayMs:number, fontColor:string|null }
   },
   floatingPanel: 'floatingPanel', // object map { [hostname]: settings }
   global: {
@@ -136,7 +137,7 @@ async function getValue(path) {
       // Ensure shape and defaults
       // Handle migration from old countingMethod values (simple/advanced) to new model IDs
       let countingMethod = 'ultralight-state-machine'; // New default
-      
+
       if (obj.countingMethod) {
         // Map legacy values
         if (obj.countingMethod === 'simple') {
@@ -148,7 +149,7 @@ async function getValue(path) {
           countingMethod = obj.countingMethod;
         }
       }
-      
+
       // Handle enabledSites property - default all sites to enabled if not present
       const defaultEnabledSites = {
         'ChatGPT': true,
@@ -160,12 +161,12 @@ async function getValue(path) {
         'Gemini': true,
         'Perplexity': true
       };
-      
+
       // Use provided enabledSites if exists, otherwise use defaults
       const enabledSites = obj.enabledSites && typeof obj.enabledSites === 'object'
         ? obj.enabledSites
         : defaultEnabledSites;
-      
+
       return {
         enabled: !!obj.enabled,
         calibration: Number.isFinite(obj.calibration) && obj.calibration > 0 ? Number(obj.calibration) : 1.0,
@@ -209,6 +210,26 @@ async function getValue(path) {
       };
     }
     return { ...SELECTOR_AUTO_DETECTOR_DEFAULTS };
+  }
+  if (path === KEYS.modules.tooltip) {
+    const r = await lsGet([KEYS.modules.tooltip]);
+    const obj = r[KEYS.modules.tooltip];
+    if (obj && typeof obj === 'object') {
+      return {
+        enabled: obj.enabled !== false, // defaults to true
+        showDelayMs: Number.isFinite(obj.showDelayMs) && obj.showDelayMs >= 0 ? Number(obj.showDelayMs) : 400,
+        fontColor: typeof obj.fontColor === 'string' && obj.fontColor ? obj.fontColor : null,
+        themeOverride: !!obj.themeOverride, // defaults to false (auto detection)
+        forcedTheme: obj.forcedTheme === 'light' ? 'light' : 'dark', // defaults to 'dark'
+      };
+    }
+    return {
+      enabled: true,
+      showDelayMs: 400,
+      fontColor: null, // null means use default
+      themeOverride: false, // false = auto (page theme → OS fallback)
+      forcedTheme: 'dark', // only used when themeOverride is true
+    };
   }
   if (path === KEYS.floatingPanel) {
     // Build map from structured store if exists, else from legacy scattered keys
@@ -277,13 +298,13 @@ async function setValue(path, value) {
   }
   if (path === KEYS.modules.tokenApproximator) {
     const settings = value && typeof value === 'object' ? value : {};
-    
+
     // Handle counting method values
     let countingMethod = 'ultralight-state-machine'; // Default
     if (settings.countingMethod) {
       // Valid model IDs
       const validModels = ['simple', 'advanced', 'cpt-blend-mix', 'single-regex-pass', 'ultralight-state-machine'];
-      
+
       // Map legacy values or use valid model ID
       if (settings.countingMethod === 'simple') {
         countingMethod = 'simple';
@@ -293,7 +314,7 @@ async function setValue(path, value) {
         countingMethod = settings.countingMethod;
       }
     }
-    
+
     // Default enabled sites
     const defaultEnabledSites = {
       'ChatGPT': true,
@@ -305,12 +326,12 @@ async function setValue(path, value) {
       'Gemini': true,
       'Perplexity': true
     };
-    
+
     // Use provided enabledSites if exists and is an object, otherwise use defaults
     const enabledSites = settings.enabledSites && typeof settings.enabledSites === 'object'
       ? settings.enabledSites
       : defaultEnabledSites;
-    
+
     const normalized = {
       enabled: !!settings.enabled,
       calibration: Number.isFinite(settings.calibration) && settings.calibration > 0 ? Number(settings.calibration) : 1.0,
@@ -330,6 +351,18 @@ async function setValue(path, value) {
       enableSendButtonHeuristics: settings.enableSendButtonHeuristics !== false,
     };
     await lsSet({ [KEYS.modules.selectorAutoDetector]: normalized });
+    return;
+  }
+  if (path === KEYS.modules.tooltip) {
+    const settings = value && typeof value === 'object' ? value : {};
+    const normalized = {
+      enabled: settings.enabled !== false,
+      showDelayMs: Number.isFinite(settings.showDelayMs) && settings.showDelayMs >= 0 ? Number(settings.showDelayMs) : 400,
+      fontColor: typeof settings.fontColor === 'string' && settings.fontColor ? settings.fontColor : null,
+      themeOverride: !!settings.themeOverride,
+      forcedTheme: settings.forcedTheme === 'light' ? 'light' : 'dark',
+    };
+    await lsSet({ [KEYS.modules.tooltip]: normalized });
     return;
   }
   if (path.startsWith(KEYS.floatingPanel)) {
@@ -520,6 +553,15 @@ export const StateStore = {
   async saveSelectorAutoDetectorSettings(settings) {
     await setValue(KEYS.modules.selectorAutoDetector, settings);
     this.broadcast({ type: 'selectorAutoDetectorSettingsChanged', settings });
+  },
+
+  // ===== Tooltip (Global Module) =====
+  async getTooltipSettings() {
+    return await getValue(KEYS.modules.tooltip);
+  },
+  async saveTooltipSettings(settings) {
+    await setValue(KEYS.modules.tooltip, settings);
+    this.broadcast({ type: 'tooltipSettingsChanged', settings });
   },
 
   // Broadcast utility

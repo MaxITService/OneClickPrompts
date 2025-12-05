@@ -44,7 +44,8 @@
       ],
       "css": [
         "floating-panel-files/floating-panel.css",
-        "common-ui-elements/ocp_toast.css"
+        "common-ui-elements/ocp_toast.css",
+        "common-ui-elements/ocp_tooltip.css"
       ],
       "js": [
         "log.js",
@@ -70,6 +71,7 @@
         "/modules/deepseek-heuristics.js",
         "/modules/backend-tokenApproximator.js",
         "common-ui-elements/ocp_toast.js",
+        "common-ui-elements/ocp_tooltip.js",
         "per-website-button-clicking-mechanics/buttons-clicking-shared.js",
         "per-website-button-clicking-mechanics/buttons-clicking-chatgpt.js",
         "per-website-button-clicking-mechanics/buttons-clicking-copilot.js",

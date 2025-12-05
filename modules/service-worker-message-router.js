@@ -123,7 +123,7 @@ export function handleMessage(request, sender, sendResponse) {
                     try {
                         const raw = await chrome.storage.local.get(['ui.theme']);
                         initialized = Object.prototype.hasOwnProperty.call(raw, 'ui.theme');
-                    } catch {}
+                    } catch { }
                     logConfigurationRelatedStuff(`Retrieved theme preference: ${theme} (initialized=${initialized})`);
                     // Return both a canonical string and a legacy boolean, plus init flag
                     sendResponse({ theme, darkTheme: theme === 'dark', initialized });
@@ -157,12 +157,12 @@ export function handleMessage(request, sender, sendResponse) {
             (async () => {
                 try {
                     const selectors = await StateStore.getCustomSelectors(request.site);
-                       if (selectors) {
-                           logConfigurationRelatedStuff('Retrieved custom selectors for: ' + request.site);
-                       } else {                          
-                           logConfigurationRelatedStuff('No custom selectors found for: ' + request.site +
-                               '. Using default selectors defined in utils.js.');
-                       }
+                    if (selectors) {
+                        logConfigurationRelatedStuff('Retrieved custom selectors for: ' + request.site);
+                    } else {
+                        logConfigurationRelatedStuff('No custom selectors found for: ' + request.site +
+                            '. Using default selectors defined in utils.js.');
+                    }
                     sendResponse({ selectors: selectors || null });
                 } catch (error) {
                     handleStorageError(error);
@@ -521,6 +521,34 @@ export function handleMessage(request, sender, sendResponse) {
             })();
             return true;
         // ===== End Selector Auto-Detector Cases =====
+
+        // ===== Tooltip Cases =====
+        case 'getTooltipSettings':
+            (async () => {
+                try {
+                    const settings = await StateStore.getTooltipSettings();
+                    logConfigurationRelatedStuff('Retrieved Tooltip settings:', settings);
+                    sendResponse({ settings });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
+            return true;
+
+        case 'saveTooltipSettings':
+            (async () => {
+                try {
+                    await StateStore.saveTooltipSettings(request.settings);
+                    logConfigurationRelatedStuff('Saved Tooltip settings:', request.settings);
+                    sendResponse({ success: true });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
+            return true;
+        // ===== End Tooltip Cases =====
 
         case 'openSettingsPage':
             (async () => {

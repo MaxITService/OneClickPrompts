@@ -1,0 +1,240 @@
+/**
+ * ocp_tooltip.css
+ * Ultramodern Frosted Glass Tooltips - Clipped/Notched Rectangle Design
+ * 
+ * Part of the OneClickPrompts shared UI element library.
+ * Designed to work across both popup and injected content contexts.
+ */
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Tooltip Container
+   ───────────────────────────────────────────────────────────────────────────── */
+.ocp-tooltip {
+    position: fixed;
+    z-index: 2147483647;
+    /* Maximum z-index for extension UI */
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+        visibility 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+        transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateY(4px);
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+.ocp-tooltip.ocp-tooltip--visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Frosted Glass Panel - Clipped Rectangle (Notched Corners)
+   ───────────────────────────────────────────────────────────────────────────── */
+.ocp-tooltip__panel {
+    position: relative;
+    padding: 10px 14px;
+    max-width: 320px;
+    min-width: 60px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.95);
+
+    /* Frosted glass effect - needs semi-transparent solid base for backdrop-filter */
+    background: linear-gradient(135deg,
+            rgba(30, 30, 40, 0.60) 0%,
+            rgba(40, 40, 50, 0.56) 50%,
+            rgba(30, 30, 40, 0.60) 100%);
+    backdrop-filter: blur(12.8px) saturate(144%);
+    -webkit-backdrop-filter: blur(12.8px) saturate(144%);
+
+    /* Clipped rectangle (notched corners) using clip-path */
+    --notch-size: 6px;
+    clip-path: polygon(var(--notch-size) 0,
+            /* Top left notch start */
+            calc(100% - var(--notch-size)) 0,
+            /* Top right notch start */
+            100% var(--notch-size),
+            /* Top right corner */
+            100% calc(100% - var(--notch-size)),
+            /* Bottom right notch start */
+            calc(100% - var(--notch-size)) 100%,
+            /* Bottom right corner */
+            var(--notch-size) 100%,
+            /* Bottom left corner */
+            0 calc(100% - var(--notch-size)),
+            /* Bottom left notch end */
+            0 var(--notch-size)
+            /* Top left corner */
+        );
+
+    /* Subtle shadow for depth */
+    filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.32)) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.16));
+}
+
+/* Glowing border effect via pseudo-element */
+.ocp-tooltip__panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg,
+            rgba(168, 130, 255, 0.154) 0%,
+            rgba(130, 160, 255, 0.077) 25%,
+            rgba(130, 200, 255, 0.115) 50%,
+            rgba(168, 130, 255, 0.077) 75%,
+            rgba(200, 130, 255, 0.154) 100%);
+    clip-path: polygon(var(--notch-size) 0,
+            calc(100% - var(--notch-size)) 0,
+            100% var(--notch-size),
+            100% calc(100% - var(--notch-size)),
+            calc(100% - var(--notch-size)) 100%,
+            var(--notch-size) 100%,
+            0 calc(100% - var(--notch-size)),
+            0 var(--notch-size));
+    z-index: -1;
+    opacity: 0.304;
+    animation: none;
+}
+
+/* Shimmer effect */
+.ocp-tooltip__panel::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    background: linear-gradient(110deg,
+            transparent 0%,
+            transparent 40%,
+            rgba(255, 255, 255, 0.052) 50%,
+            transparent 60%,
+            transparent 100%);
+    background-size: 200% 100%;
+    clip-path: polygon(calc(var(--notch-size) + 1px) 1px,
+            calc(100% - var(--notch-size) - 1px) 1px,
+            calc(100% - 1px) calc(var(--notch-size) + 1px),
+            calc(100% - 1px) calc(100% - var(--notch-size) - 1px),
+            calc(100% - var(--notch-size) - 1px) calc(100% - 1px),
+            calc(var(--notch-size) + 1px) calc(100% - 1px),
+            1px calc(100% - var(--notch-size) - 1px),
+            1px calc(var(--notch-size) + 1px));
+    animation: none;
+    pointer-events: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Directional Arrow/Pointer (Notched Style)
+   ───────────────────────────────────────────────────────────────────────────── */
+.ocp-tooltip__arrow {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: linear-gradient(135deg,
+            rgba(30, 30, 40, 0.60) 0%,
+            rgba(40, 40, 50, 0.56) 100%);
+    backdrop-filter: blur(12.8px);
+    -webkit-backdrop-filter: blur(12.8px);
+}
+
+/* Arrow positioned below tooltip (pointing down to target) */
+.ocp-tooltip--top .ocp-tooltip__arrow {
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
+/* Arrow positioned above tooltip (pointing up to target) */
+.ocp-tooltip--bottom .ocp-tooltip__arrow {
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Text Content Styling
+   ───────────────────────────────────────────────────────────────────────────── */
+.ocp-tooltip__text {
+    display: block;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+/* Multiline tooltip with ellipsis for very long content */
+.ocp-tooltip--truncate .ocp-tooltip__text {
+    display: -webkit-box;
+    -webkit-line-clamp: 8;
+    line-clamp: 8;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+
+/* Custom font color support */
+.ocp-tooltip--custom-color .ocp-tooltip__panel {
+    color: var(--ocp-tooltip-custom-color);
+}
+
+.ocp-tooltip--custom-color .ocp-tooltip__text {
+    color: inherit;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Light Theme Override - Light background with dark text
+   ───────────────────────────────────────────────────────────────────────────── */
+.ocp-tooltip--light .ocp-tooltip__panel {
+    background: linear-gradient(135deg,
+            rgba(255, 255, 255, 0.68) 0%,
+            rgba(240, 240, 250, 0.72) 50%,
+            rgba(255, 255, 255, 0.68) 100%);
+    color: rgba(30, 30, 40, 0.95);
+}
+
+.ocp-tooltip--light .ocp-tooltip__panel::before {
+    background: linear-gradient(135deg,
+            rgba(130, 100, 200, 0.115) 0%,
+            rgba(100, 130, 200, 0.077) 25%,
+            rgba(100, 160, 200, 0.096) 50%,
+            rgba(130, 100, 200, 0.077) 75%,
+            rgba(160, 100, 200, 0.115) 100%);
+}
+
+.ocp-tooltip--light .ocp-tooltip__text {
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+}
+
+.ocp-tooltip--light .ocp-tooltip__arrow {
+    background: linear-gradient(135deg,
+            rgba(255, 255, 255, 0.68) 0%,
+            rgba(240, 240, 250, 0.72) 100%);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Compact Variant (for smaller triggers)
+   ───────────────────────────────────────────────────────────────────────────── */
+.ocp-tooltip--compact .ocp-tooltip__panel {
+    padding: 6px 10px;
+    font-size: 11px;
+    --notch-size: 4px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Animations
+   ───────────────────────────────────────────────────────────────────────────── */
+/* shimmer animation removed for static gradient */
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Reduced Motion Preference
+   ───────────────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    .ocp-tooltip {
+        transition: opacity 0.1s ease, visibility 0.1s ease;
+        transform: none !important;
+    }
+
+    .ocp-tooltip__panel::before,
+    .ocp-tooltip__panel::after {
+        animation: none;
+    }
+}

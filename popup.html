@@ -22,8 +22,8 @@
     <link rel="stylesheet" href="/common-ui-elements/common-style.css" />
     <!-- Toast notifications -->
     <link rel="stylesheet" href="/common-ui-elements/ocp_toast.css" />
-    <!-- Custom Tooltips -->
-    <link rel="stylesheet" href="/common-ui-elements/tooltips.css" />
+    <!-- Ultramodern frosted glass tooltips -->
+    <link rel="stylesheet" href="/common-ui-elements/ocp_tooltip.css" />
   </head>
 
   <body>
@@ -336,6 +336,118 @@
                   value="5"
                   title="Maximum percent of the base delay used as the random offset (1–100)."
                 />
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Tooltip Settings -->
+        <div class="collapsible" id="tooltipSettingsSection">
+          <div class="section-header">
+            <h2>
+              Tooltip Settings 
+              <span class="expand-text">(click to expand)</span>
+            </h2>
+            <span class="toggle-icon">▶</span>
+          </div>
+          <div class="section-content">
+            <div class="text-inside-container mb-16">
+              <p>
+                Configure the frosted glass tooltips that appear when hovering over buttons and elements.
+              </p>
+            </div>
+            <div class="row">
+              <div class="toggle-container">
+                <div class="toggle">
+                  <input
+                    type="checkbox"
+                    id="tooltipEnableToggle"
+                    class="toggle__input"
+                    aria-label="Enable frosted glass tooltips"
+                  />
+                  <label for="tooltipEnableToggle" class="toggle__label">
+                    <span class="toggle__emoji"></span>
+                    <span class="toggle__emoji"></span>
+                  </label>
+                </div>
+                <span class="switch-label">Enable frosted glass tooltips</span>
+              </div>
+            </div>
+            <!-- Settings visible when enabled -->
+            <div id="tooltipSettingsContainer" class="is-hidden ml-20">
+              <div class="row mt-16">
+                <label for="tooltipShowDelay" class="min-w-120"
+                  >Show delay (ms):</label
+                >
+                <input
+                  id="tooltipShowDelay"
+                  type="number"
+                  inputmode="numeric"
+                  step="50"
+                  min="0"
+                  max="5000"
+                  value="400"
+                  title="Time in milliseconds before tooltip appears after hover. 0 = instant."
+                  class="input-number-compact"
+                />
+                <button
+                  id="tooltipShowDelayReset"
+                  class="btn-compact"
+                  title="Reset to default (400ms)"
+                >
+                  Reset
+                </button>
+              </div>
+              <div class="row mt-16">
+                <label for="tooltipFontColor" class="min-w-120"
+                  >Text color:</label
+                >
+                <input
+                  id="tooltipFontColor"
+                  type="color"
+                  value="#ffffff"
+                  title="Custom tooltip text color. Leave default for theme-aware automatic coloring."
+                  class="input-color-compact"
+                />
+                <button
+                  id="tooltipFontColorReset"
+                  class="btn-compact"
+                  title="Reset to default (theme-aware automatic coloring)"
+                >
+                  Reset
+                </button>
+              </div>
+              <!-- Theme Override -->
+              <div class="row mt-16">
+                <label class="checkbox-row" for="tooltipThemeOverride">
+                  <input type="checkbox" id="tooltipThemeOverride" />
+                  <span>Override tooltip theme</span>
+                </label>
+              </div>
+              <div id="tooltipThemeRadioContainer" class="is-hidden ml-20 mt-8">
+                <div class="text-inside-container mb-8">
+                  <p>By default, tooltips follow page theme (if detected) or OS preference as fallback.</p>
+                </div>
+                <div>
+                  <label>
+                    <input
+                      type="radio"
+                      name="tooltipThemeChoice"
+                      value="dark"
+                      checked
+                    />
+                    Always Dark
+                  </label>
+                </div>
+                <div class="mt-8">
+                  <label>
+                    <input
+                      type="radio"
+                      name="tooltipThemeChoice"
+                      value="light"
+                    />
+                    Always Light
+                  </label>
+                </div>
               </div>
             </div>
           </div>
@@ -1421,7 +1533,8 @@
     <script src="log.js"></script>
     <script src="utils.js"></script>
     <script src="/common-ui-elements/ocp_toast.js"></script>
-    <script src="/common-ui-elements/tooltips.js"></script>
+    <!-- Frosted glass tooltip system -->
+    <script src="/common-ui-elements/ocp_tooltip.js"></script>
     <script src="/popup-page-scripts/popup-page-visuals.js"></script>
     <script src="/common-ui-elements/onclick-smooth-scroll-highlight.js"></script>
     <!-- Menu navigation script for 3D tilt and ripple effects -->
@@ -1444,6 +1557,8 @@
     <script src="/modules/popup-page-modules-inlineSelector.js"></script>
     <!-- Token Approximator UI handler script -->
     <script src="/modules/popup-page-modules-tokenApproximator.js"></script>
+    <!-- Tooltip Settings UI handler script -->
+    <script src="/modules/popup-page-modules-tooltip.js"></script>
     <!-- (kept single include to avoid double init) -->
   </body>
 </html>
