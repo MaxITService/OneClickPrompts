@@ -797,7 +797,7 @@ window.MaxExtensionFloatingPanel.processNextQueueItem = async function () {
 
     try {
         if (typeof this.setQueueStatus === 'function') {
-            this.setQueueStatus('Sending...', 'info');
+            this.setQueueStatus(null);
         }
 
         // Use the canonical entry point so per-site behavior is identical to manual clicks.
@@ -812,7 +812,11 @@ window.MaxExtensionFloatingPanel.processNextQueueItem = async function () {
             if (sendResult.status === 'blocked_by_stop') {
                 logConCgp('[queue-engine] Queue paused: blocked by stop button/AI typing.');
                 if (typeof this.setQueueStatus === 'function') {
-                    this.setQueueStatus('Waiting for send button (AI still typing)…', 'info');
+                    this.setQueueStatus(
+                        'Waiting for AI...',
+                        'info',
+                        'Paused while the AI is typing. Queue will resume once the Stop button disappears.'
+                    );
                 }
                 // Pause the queue effectively stopping the timer loop.
                 this.pauseQueue();
@@ -820,8 +824,20 @@ window.MaxExtensionFloatingPanel.processNextQueueItem = async function () {
             } else if (sendResult.status === 'not_found' || sendResult.status === 'failed') {
                 logConCgp('[queue-engine] Queue paused: Send failed or button not found.');
                 if (typeof this.setQueueStatus === 'function') {
-                    const failMsg = sendResult.reason ? `Send failed: ${sendResult.reason}` : 'Send failed: unable to find send button.';
-                    this.setQueueStatus(failMsg, 'error');
+                    let failMsg = 'Send Failed';
+                    let failTooltip = 'Unable to find the send button. Please check if the AI is still generating or if the page layout has changed.';
+
+                    if (sendResult.reason === 'send_button_timeout') {
+                        failMsg = 'Send Timeout';
+                        failTooltip = 'Timed out waiting for the send button. The AI might be generating a long response, or the button selector is broken.';
+                    } else if (sendResult.reason === 'post-stop-missing-send') {
+                        failMsg = 'Send Button Missing';
+                        failTooltip = 'The Stop button disappeared, but the Send button did not reappear. The page state might be inconsistent.';
+                    } else if (sendResult.reason) {
+                        failTooltip = `Reason: ${sendResult.reason}. ` + failTooltip;
+                    }
+
+                    this.setQueueStatus(failMsg, 'error', failTooltip);
                 }
                 this.pauseQueue();
                 return;

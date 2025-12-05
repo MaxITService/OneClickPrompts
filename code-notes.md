@@ -106,7 +106,8 @@ Current architectural reference for the OneClickPrompts Chrome extension (Manife
 - **Inline profile selector module** (`modules/popup-page-modules-inlineSelector.js`): Popup component fires on `DOMContentLoaded`, syncs state via worker, observes collapsible expansion, and ensures the selector stops hostile event propagation while emitting `switchProfile` with `origin` hints.
 - **Window helpers**: `popup-page-script.js` surfaces `window.showToast`, `window.resizeVerticalTextarea`, and `window.updatebuttonCardsList` for nested modules to reuse.
 - **Site-specific send handlers** (`per-website-button-clicking-mechanics/*`):
-  - **ChatGPT**: collapses selector lists to find the editor, bulk inserts text (textarea vs contenteditable), waits for send buttons via promise-based observer, and runs autosend through interval polling.
+  - **Shared Contract**: All handlers return a Promise resolving to `{ status: 'sent' | 'blocked_by_stop' | 'not_found' | 'failed', reason?: string }`. This allows the queue engine to pause on stop buttons or failures.
+  - **ChatGPT**: collapses selector lists to find the editor, bulk inserts text, waits for send buttons via promise-based observer, and runs autosend through interval polling.
   - **Claude**: distinguishes between ProseMirror and standard contenteditable, clears placeholders, inserts text via `execCommand`, and observes send buttons with capped retries.
   - **Copilot**: writes through the native value setter for React-controlled textareas, restores caret position, and polls for send button (autosend only).
   - **DeepSeek**: scans visible editors, handles textareas/contenteditables with manual range insertion, filters disabled send buttons (SVG detection), and performs adaptive autosend retries.
@@ -136,9 +137,12 @@ Current architectural reference for the OneClickPrompts Chrome extension (Manife
 - **Queue UI (`floating-panel-ui-queue.js`)**:
   - Connects DOM controls (play/pause/skip/reset buttons, delay inputs, random-delay badge, automation toggles) to `globalMaxExtensionConfig`.
   - Enforces queue TOS acceptance, updates progress bar width, synchronizes random delay status (🎲 vs 🚫🎲 with detailed tooltip including last sample), and provides helper hooks like `recalculateRunningTimer()` to recompute timers after delay adjustments.
-  - Manages button state based on `isQueueRunning`, `remainingTimeOnPause`, and queue length.
+  - Manages button state based on `isQueueRunning`, `remainingTimeOnPause`, and queue length. Displays real-time status updates ("Sending...", "Waiting for send button...") via `setQueueStatus`.
 - **Queue engine (`floating-panel-ui-engine.js`)**:
-  - Stores queue items with stable `queueId`, reuses `processCustomSendButtonClick` for dispatch, and maintains timers (`queueTimerId`, `currentTimerDelay`, `remainingTimeOnPause`) for precise pause/resume behavior.
+  - Stores queue items with stable `queueId`.
+  - **Sequential Processing**: `processNextQueueItem` awaits the Promise returned by `processCustomSendButtonClick`. It only starts the next timer if the result is `status: 'sent'`.
+  - **Stop/Failure Handling**: If the contract returns `blocked_by_stop` or `failed`, the queue pauses automatically and shows the relevant status message, preventing the timer from starting prematurely.
+  - Maintains timers (`queueTimerId`, `currentTimerDelay`, `remainingTimeOnPause`) for precise pause/resume behavior.
   - Calculates delays via `getQueueBaseDelayMs` and `getQueueDelayWithRandomMs`, logs base/offset, and resets progress animation per item.
   - Runs pre-send automation (`performQueuePreSendActions`) for scroll/beep/speech/finish beep, driven by config toggles persisted through `saveCurrentProfileConfig`.
   - Handles queue completion (`markQueueFinished`), clearing `autoSendInterval` before dispatch to avoid double sends.

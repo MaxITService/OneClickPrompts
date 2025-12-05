@@ -845,17 +845,20 @@ window.MaxExtensionFloatingPanel.updateRandomDelayBadge = function () {
  * Sets the text and visibility of the queue status label.
  * @param {string|null} text - The text to show, or null to hide.
  * @param {'info'|'error'|'success'} [type='info'] - The visual style type.
+ * @param {string} [tooltip=''] - Optional tooltip text for hover explanation.
  */
-window.MaxExtensionFloatingPanel.setQueueStatus = function (text, type = 'info') {
+window.MaxExtensionFloatingPanel.setQueueStatus = function (text, type = 'info', tooltip = '') {
     if (!this.queueStatusLabel) return;
 
     if (!text) {
         this.queueStatusLabel.textContent = '';
+        this.queueStatusLabel.title = '';
         this.queueStatusLabel.style.display = 'none';
         return;
     }
 
     this.queueStatusLabel.textContent = text;
+    this.queueStatusLabel.title = tooltip || text;
     this.queueStatusLabel.style.display = 'block';
 
     // Simple styling reset
