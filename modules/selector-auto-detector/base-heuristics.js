@@ -199,6 +199,107 @@ window.OneClickPromptsSelectorAutoDetectorBase = {
 
         logConCgp('[SelectorAutoDetector] No high-scoring send button candidates found.');
         return null;
+    },
+
+    /**
+     * Attempts to find the stop/stop-generating button using heuristics.
+     * @returns {HTMLElement|null} The found stop button element or null.
+     */
+    detectStopButton: async function () {
+        logConCgp('[SelectorAutoDetector] Running stop button heuristics...');
+
+        // 1. Find all potential candidates
+        const candidates = [
+            ...document.querySelectorAll('button'),
+            ...document.querySelectorAll('[role="button"]'),
+            ...document.querySelectorAll('div[onclick]'),
+            ...document.querySelectorAll('span[onclick]')
+        ];
+
+        // 2. Filter for visibility and size
+        const visibleCandidates = candidates.filter(el => {
+            const rect = el.getBoundingClientRect();
+            const style = window.getComputedStyle(el);
+
+            const isVisible = style.display !== 'none' &&
+                style.visibility !== 'hidden' &&
+                style.opacity !== '0' &&
+                rect.width > 10 &&
+                rect.height > 10;
+
+            return isVisible;
+        });
+
+        if (visibleCandidates.length === 0) return null;
+
+        // 3. Try to find the editor for proximity
+        let editor = null;
+        try {
+            editor = await this.detectEditor();
+        } catch (e) { /* ignore */ }
+        const editorRect = editor ? editor.getBoundingClientRect() : null;
+
+        // 4. Score candidates
+        const scoredCandidates = visibleCandidates.map(el => {
+            let score = 0;
+            const text = (el.innerText || '').toLowerCase().trim();
+            const ariaLabel = (el.getAttribute('aria-label') || '').toLowerCase();
+            const title = (el.getAttribute('title') || '').toLowerCase();
+            const testId = (el.getAttribute('data-testid') || '').toLowerCase();
+
+            // A. Keywords
+            const keywords = ['stop', 'cancel', 'abort', 'pause'];
+            const matchesKeyword = (str) => keywords.some(k => str.includes(k));
+
+            if (matchesKeyword(ariaLabel)) score += 10;
+            if (matchesKeyword(title)) score += 5;
+            if (matchesKeyword(testId)) score += 8;
+            if (keywords.includes(text)) score += 8;
+
+            // B. Iconography
+            // Suggestive of square/stop/rect shapes
+            const iconKeywords = ['rect', 'square', 'stop'];
+            if (el.querySelector('svg')) {
+                const svgContent = el.innerHTML.toLowerCase();
+                if (iconKeywords.some(k => svgContent.includes(k))) {
+                    score += 5;
+                }
+            }
+
+            // C. Proximity & Location
+            // Usually in the same area as the send button (bottom right of editor or inside it)
+            // Or centralized at bottom
+            if (editorRect) {
+                const btnRect = el.getBoundingClientRect();
+
+                // Inside editor area or slightly below
+                if (btnRect.bottom >= editorRect.top && btnRect.top <= editorRect.bottom + 100) {
+                    score += 3;
+                }
+            }
+
+            // D. Negative Scoring
+            // Penalize send buttons
+            const negativeKeywords = ['send', 'submit', 'arrow', 'mic', 'upload', 'attach'];
+            const matchesNegative = (str) => negativeKeywords.some(k => str.includes(k));
+            if (matchesNegative(ariaLabel) || matchesNegative(title) || matchesNegative(testId)) {
+                score -= 50;
+            }
+            // Don't pick numbers (like generic token counters or such)
+            if (/^\d+$/.test(text)) score -= 20;
+
+            return { el, score };
+        });
+
+        scoredCandidates.sort((a, b) => b.score - a.score);
+
+        if (scoredCandidates.length > 0 && scoredCandidates[0].score > 0) {
+            const best = scoredCandidates[0];
+            logConCgp(`[SelectorAutoDetector] Best stop button match:`, best);
+            return best.el;
+        }
+
+        return null;
     }
 };
 

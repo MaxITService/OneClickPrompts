@@ -44,15 +44,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetButton = document.getElementById('resetSelectors');
     const editorHeuristicsToggle = document.getElementById('editorHeuristicsToggle');
     const sendButtonHeuristicsToggle = document.getElementById('sendButtonHeuristicsToggle');
+    const stopButtonHeuristicsToggle = document.getElementById('stopButtonHeuristicsToggle');
 
     const heuristicsDefaults = {
         enableEditorHeuristics: true,
         enableSendButtonHeuristics: true,
+        enableStopButtonHeuristics: true,
     };
     let heuristicsSettings = { ...heuristicsDefaults };
 
     async function loadHeuristicsSettings() {
-        if (!editorHeuristicsToggle || !sendButtonHeuristicsToggle) return;
+        if (!editorHeuristicsToggle || !sendButtonHeuristicsToggle || !stopButtonHeuristicsToggle) return;
         try {
             const response = await chrome.runtime.sendMessage({ type: 'getSelectorAutoDetectorSettings' });
             if (response && response.settings) {
@@ -67,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         editorHeuristicsToggle.checked = !!heuristicsSettings.enableEditorHeuristics;
         sendButtonHeuristicsToggle.checked = !!heuristicsSettings.enableSendButtonHeuristics;
+        stopButtonHeuristicsToggle.checked = !!heuristicsSettings.enableStopButtonHeuristics;
     }
 
     async function saveHeuristicsSettings() {
@@ -209,6 +212,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sendButtonHeuristicsToggle) {
         sendButtonHeuristicsToggle.addEventListener('change', () => {
             heuristicsSettings.enableSendButtonHeuristics = sendButtonHeuristicsToggle.checked;
+            saveHeuristicsSettings();
+        });
+    }
+    if (stopButtonHeuristicsToggle) {
+        stopButtonHeuristicsToggle.addEventListener('change', () => {
+            heuristicsSettings.enableStopButtonHeuristics = stopButtonHeuristicsToggle.checked;
             saveHeuristicsSettings();
         });
     }

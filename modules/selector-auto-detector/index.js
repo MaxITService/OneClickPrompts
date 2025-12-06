@@ -23,6 +23,13 @@ window.OneClickPromptsSelectorAutoDetector = {
             everFound: false,
             lastSeenAt: 0
         },
+        stopButton: {
+            failures: 0,
+            lastFailure: 0,
+            recovering: false,
+            everFound: false,
+            lastSeenAt: 0
+        },
         container: {
             failures: 0,
             lastFailure: 0,
@@ -37,18 +44,20 @@ window.OneClickPromptsSelectorAutoDetector = {
     settings: {
         enableEditorHeuristics: true,
         enableSendButtonHeuristics: true,
+        enableStopButtonHeuristics: true,
         enableContainerHeuristics: true,
         loaded: false
     },
     lastOffers: {
         editor: { selector: null, site: null, at: 0 },
         sendButton: { selector: null, site: null, at: 0 },
+        stopButton: { selector: null, site: null, at: 0 },
         container: { selector: null, site: null, at: 0 }
     },
 
     /**
      * Reports a failure to find a specific element type.
-     * @param {string} type - 'editor' or 'sendButton'
+     * @param {string} type - 'editor', 'sendButton', or 'stopButton'
      * @param {Object} context - Additional context (e.g., selectors tried)
      */
     reportFailure: async function (type, context = {}) {
@@ -79,7 +88,8 @@ window.OneClickPromptsSelectorAutoDetector = {
     /**
      * Reports that an element was successfully found.
      * Resets failure counters.
-     * @param {string} type - 'editor' or 'sendButton'
+     * @param {string} type - 'editor', 'sendButton', or 'stopButton'
+     * @param {HTMLElement} [element] - Optional found element to update stats
      */
     reportRecovery: function (type) {
         const s = this.state[type];
@@ -88,7 +98,7 @@ window.OneClickPromptsSelectorAutoDetector = {
             s.failures = 0;
             s.recovering = false;
         }
-        if (type === 'sendButton' && s) {
+        if ((type === 'sendButton' || type === 'stopButton') && s) {
             s.everFound = true;
             s.lastSeenAt = Date.now();
         }
@@ -107,10 +117,15 @@ window.OneClickPromptsSelectorAutoDetector = {
             ? this.settings.enableEditorHeuristics !== false
             : type === 'sendButton'
                 ? this.settings.enableSendButtonHeuristics !== false
-                : this.settings.enableContainerHeuristics !== false;
+                : type === 'stopButton'
+                    ? this.settings.enableStopButtonHeuristics !== false
+                    : this.settings.enableContainerHeuristics !== false;
 
         // Readable name for the type
-        const typeName = type === 'editor' ? 'Text input area' : type === 'sendButton' ? 'send button' : 'button container';
+        const typeName = type === 'editor' ? 'Text input area'
+            : type === 'sendButton' ? 'send button'
+                : type === 'stopButton' ? 'stop button'
+                    : 'button container';
 
         // Unified message logic
         const statusSuffix = heuristicsAllowed ? "Trying to find it..." : "Auto-detect is off.";
@@ -168,6 +183,14 @@ window.OneClickPromptsSelectorAutoDetector = {
                 result = await heuristics.detectEditor({ site });
             } else if (type === 'sendButton') {
                 result = await heuristics.detectSendButton({ site });
+            } else if (type === 'stopButton') {
+                // Ensure the method exists in case of partial rollout or custom overrides
+                if (typeof heuristics.detectStopButton === 'function') {
+                    result = await heuristics.detectStopButton({ site });
+                } else if (typeof window.OneClickPromptsSelectorAutoDetectorBase.detectStopButton === 'function') {
+                    // Fallback to base if site heuristics don't implement it yet
+                    result = await window.OneClickPromptsSelectorAutoDetectorBase.detectStopButton({ site });
+                }
             }
 
             if (result) {
@@ -177,7 +200,7 @@ window.OneClickPromptsSelectorAutoDetector = {
                     window.showToast(`OneClickPrompts: Found the ${typeName}.`, 'success');
                 }
                 s.failures = 0;
-                if (type === 'sendButton') {
+                if (type === 'sendButton' || type === 'stopButton') {
                     s.everFound = true;
                     s.lastSeenAt = Date.now();
                 }
@@ -201,6 +224,7 @@ window.OneClickPromptsSelectorAutoDetector = {
                 this.settings = {
                     enableEditorHeuristics: response.settings.enableEditorHeuristics !== false,
                     enableSendButtonHeuristics: response.settings.enableSendButtonHeuristics !== false,
+                    enableStopButtonHeuristics: response.settings.enableStopButtonHeuristics !== false,
                     enableContainerHeuristics: response.settings.enableContainerHeuristics !== false,
                     loaded: true
                 };
@@ -318,7 +342,7 @@ window.OneClickPromptsSelectorAutoDetector = {
 
     /**
      * Offers the user to save a newly found selector via toast action.
-     * @param {'editor'|'sendButton'} type
+     * @param {'editor'|'sendButton'|'stopButton'} type
      * @param {HTMLElement} element
      * @returns {Promise<boolean>} whether an actionable toast was shown
      */
@@ -341,7 +365,9 @@ window.OneClickPromptsSelectorAutoDetector = {
         }
         this.lastOffers[type] = { selector, site, at: now };
 
-        const typeName = type === 'editor' ? 'text input selector' : 'send button selector';
+        const typeName = type === 'editor' ? 'text input selector'
+            : type === 'sendButton' ? 'send button selector'
+                : 'stop button selector';
         logConCgp('[SelectorAutoDetector] Offering to save selector.', { type, selector, site });
         const tooltip = `Will save selector: ${selector}\nUsed automatically next time (skips auto-detect).\nYou can edit selectors in Settings → Advanced selectors (bottom).`;
         window.showToast(`OneClickPrompts: Found a ${typeName}. Save it to Custom selectors?`, 'success', {
@@ -378,6 +404,7 @@ if (chrome?.runtime?.onMessage?.addListener) {
             window.OneClickPromptsSelectorAutoDetector.settings = {
                 enableEditorHeuristics: message.settings.enableEditorHeuristics !== false,
                 enableSendButtonHeuristics: message.settings.enableSendButtonHeuristics !== false,
+                enableStopButtonHeuristics: message.settings.enableStopButtonHeuristics !== false,
                 enableContainerHeuristics: message.settings.enableContainerHeuristics !== false,
                 loaded: true
             };
