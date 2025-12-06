@@ -36,7 +36,7 @@ async function handleClaudeSend() {
         clickAction: (btn) => setTimeout(() => MaxExtensionUtils.simulateClick(btn), 200),
         isBusy: (btn) => ButtonsClickingShared.isBusyStopButton(btn)
     }).then((result) => {
-        if (!result?.success) {
+        if (result.status !== 'sent' && result.status !== 'blocked_by_stop') {
             logConCgp('[Claude] Auto-send exhausted without finding enabled send button.');
             showToast('Could not find the send button.', 'error');
         }

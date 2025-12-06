@@ -61,7 +61,7 @@ async function processGeminiCustomSendButtonClick(event, customText, autoSend) {
             isEnabled: (sendButton) => sendButton && sendButton.getAttribute('aria-disabled') !== 'true',
             clickAction: (btn) => MaxExtensionUtils.simulateClick(btn)
         }).then((result) => {
-            if (!result?.success) {
+            if (result.status !== 'sent' && result.status !== 'blocked_by_stop') {
                 logConCgp('[Gemini] Send button did not become enabled after multiple attempts.');
                 showToast('Send button did not become active.', 'error');
             }

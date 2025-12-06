@@ -52,7 +52,7 @@ async function processCopilotCustomSendButtonClick(event, customText, autoSend) 
             },
             clickAction: (btn) => btn && btn.click()
         }).then((result) => {
-            if (!result?.success) {
+            if (result.status !== 'sent' && result.status !== 'blocked_by_stop') {
                 showToast('Send button not found. Auto-send stopped.', 'error');
             }
             return result;
