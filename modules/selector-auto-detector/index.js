@@ -33,7 +33,8 @@ window.OneClickPromptsSelectorAutoDetector = {
         container: {
             failures: 0,
             lastFailure: 0,
-            recovering: false
+            recovering: false,
+            toastShown: false
         }
     },
 
@@ -97,6 +98,7 @@ window.OneClickPromptsSelectorAutoDetector = {
             logConCgp(`[SelectorAutoDetector] ${type} recovered. Resetting state.`);
             s.failures = 0;
             s.recovering = false;
+            if (type === 'container') s.toastShown = false;
         }
         if ((type === 'sendButton' || type === 'stopButton') && s) {
             s.everFound = true;
@@ -133,7 +135,10 @@ window.OneClickPromptsSelectorAutoDetector = {
 
         if (window.showToast) {
             if (type === 'container' && heuristicsAllowed) {
-                window.showToast('OneClickPrompts: Container where I can insert buttons is not found. Trying to find it automatically, results may disappoint you…', toastType, 10000);
+                if (!s.toastShown) {
+                    window.showToast('OneClickPrompts: Container where I can insert buttons is not found. Trying to find it automatically, results may disappoint you…', toastType, 10000);
+                    s.toastShown = true;
+                }
             } else {
                 window.showToast(`OneClickPrompts: ${typeName} not found. ${statusSuffix}`, toastType);
             }
@@ -168,6 +173,7 @@ window.OneClickPromptsSelectorAutoDetector = {
                 // For containers, trigger manual move mode instead of auto-save
                 await this.offerContainerPlacement(result);
                 s.failures = 0;
+                s.toastShown = false;
             } else {
                 logConCgp(`[SelectorAutoDetector] Container heuristics failed. Triggering floating panel fallback.`);
                 // Trigger floating panel as last resort
