@@ -392,15 +392,15 @@ class InjectionTargetsOnWebsite {
                     "textarea.ds-scroll-area"
                 ],
                 "sendButtons": [
-                    "div.bf38813a .ds-icon-button:has(svg):not([aria-disabled=\"true\"])",
-                    "[data-testid=\"send-button\"]:not([data-testid^=\"custom-send-button\"])",
-                    "[data-testid*=\"send\"]:not([data-testid^=\"custom-send-button\"])",
-                    "[aria-label*=\"send\" i]:not([data-testid^=\"custom-send-button\"])"
+                    "div.bf38813a .ds-icon-button:has(svg):not([aria-disabled=\"true\"]):not(:has(rect))",
+                    "[data-testid=\"send-button\"]:not([data-testid^=\"custom-send-button\"]):not(:has(rect))",
+                    "[data-testid*=\"send\"]:not([data-testid^=\"custom-send-button\"]):not(:has(rect))",
+                    "[aria-label*=\"send\" i]:not([data-testid^=\"custom-send-button\"]):not(.max-extension-queue-option-button):not(:has(rect))"
                 ],
                 // Heuristic fallback: try to find the scroll area containing messages
                 "threadRoot": ".ds-scroll-area:has(.ds-message), .scrollable:has(textarea, [contenteditable=\"true\"])",
                 "stopButtons": [
-                    "div.ds-icon-button:has(svg rect)", // Stop usually has a square icon
+                    "div.ds-icon-button:has(svg rect)",
                     "[aria-label=\"Stop generating\"]"
                 ]
             },

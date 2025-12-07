@@ -189,23 +189,36 @@ window.ButtonsClickingShared = {
                         // Stop button disappeared!
                         clearInterval(stopWatcher);
 
-                        // Retry send search ONCE
-                        const retryBtn = await findButton();
-                        if (retryBtn && isEnabled(retryBtn) && preClickValidation(retryBtn)) {
-                            // Check isBusy one last time
-                            if (isBusy(retryBtn)) {
-                                // Still busy? Weird. Fail.
-                                finish({ status: 'blocked_by_stop', reason: 'still_busy_after_wait' });
+                        // Retry send search with a short polling loop to handle transitional DOM delays
+                        let postStopAttempts = 0;
+                        const postStopMaxAttempts = 20; // Try for ~3 seconds
+
+                        const postStopPoller = setInterval(async () => {
+                            postStopAttempts++;
+                            const retryBtn = await findButton();
+
+                            if (retryBtn && isEnabled(retryBtn) && preClickValidation(retryBtn)) {
+                                if (isBusy(retryBtn)) {
+                                    // Should not happen if selectors are correct, but safety net
+                                    if (postStopAttempts >= postStopMaxAttempts) {
+                                        clearInterval(postStopPoller);
+                                        finish({ status: 'blocked_by_stop', reason: 'still_busy_after_transition' });
+                                    }
+                                } else {
+                                    clearInterval(postStopPoller);
+                                    clickAction(retryBtn);
+                                    finish({ status: 'sent', button: retryBtn });
+                                }
                             } else {
-                                clickAction(retryBtn);
-                                finish({ status: 'sent', button: retryBtn });
+                                if (postStopAttempts >= postStopMaxAttempts) {
+                                    clearInterval(postStopPoller);
+                                    if (window.showToast) {
+                                        window.showToast('Unable to find send button after waiting.', 'error');
+                                    }
+                                    finish({ status: 'not_found', reason: 'post-stop-missing-send' });
+                                }
                             }
-                        } else {
-                            if (window.showToast) {
-                                window.showToast('Unable to find send button', 'error');
-                            }
-                            finish({ status: 'not_found', reason: 'post-stop-missing-send' });
-                        }
+                        }, 150);
                     } else if (Date.now() - watchStartTime > stopTimeout) {
                         // Timeout
                         clearInterval(stopWatcher);
