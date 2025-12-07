@@ -1348,13 +1348,6 @@
             When you edit values here, they will become the only source of selectors for the extension.
             If an element is not found on the page, fallback mechanics will kick in.
             Both the fallback mechanics and the "Move buttons" function save values here. </p>
-            <p>Thread is where token counter tries to count tokens. 
-            If token coding doesn't work properly, you can try changing the thread selector.
-            However, sometimes websites break this functionality beyond selecting specific selectors, so only I can fix it.
-            If something is off, reset selectors for the specific site - but be careful: 
-            the extension does not update defaults as fast as websites change, so default selectors may fail.</p>
-            <p>buttonsContainerId is an internal identifier for the buttons container.
-            You usually don't need to change it.</p>
           </div>
           <br />
           <div class="row">
@@ -1431,8 +1424,8 @@
             <span class="switch-label">Use heuristics when send button is not found</span>
           </div>
            <br />
-          <div class="toggle-container">
-            <div class="toggle">
+          <div class="toggle-container" title="tesst">
+            <div class="toggle" data-ocp-tooltip="Enable this if the extension fails to find the Stop button on the page.">
               <input
                 type="checkbox"
                 id="stopButtonHeuristicsToggle"
@@ -1444,7 +1437,7 @@
                 <span class="toggle__emoji"></span>
               </label>
             </div>
-            <span class="switch-label">Use heuristics when stop button is not found</span>
+            <span class="switch-label" data-ocp-tooltip="Enable this if the extension fails to find the Stop button on the page.">Use heuristics when stop button is not found</span>
           </div>
            <br />
           <!-- Collapsible Help Section -->
@@ -1469,9 +1462,13 @@
                     custom buttons.
                   </li>
                   <li>
-                    <strong>Send Buttons:</strong> The submit buttons that send
+                    <strong>Send Button:</strong> The submit buttons that send
                     messages. For auto-sending buttons, the extension will
                     automatically trigger these after inserting text.
+                  </li>
+                  <li>
+                    <strong>Stop Button:</strong> When you are trying to use button that autosends,
+                    but AI is typing, this safeguards against searching for send button.
                   </li>
                   <li>
                     <strong>Editors:</strong> The text input areas where
@@ -1485,6 +1482,13 @@
                     internal detection and troubleshooting - modification
                     usually isn't necessary.
                   </li>
+                  <li><strong>Thread:</strong> Thread is where token counter tries to count tokens. 
+                  If token coding doesn't work properly, you can try changing the thread selector.
+                  However, sometimes websites break this functionality beyond selecting specific selectors, so only I can fix it.
+                  If something is off, reset selectors for the specific site - but be careful: 
+                  the extension does not update defaults as fast as websites change, so default selectors may fail.</li>
+                  <li><strong>buttonsContainerId:</strong> buttonsContainerId is an internal identifier for the buttons container.
+                  You usually don't need to change it.</li>
                 </ul>
                 <p>
                   Format: JSON array for containers/sendButtons/editors, string
