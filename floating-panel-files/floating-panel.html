@@ -31,9 +31,19 @@
    </div>
  
    <!-- Container for prompt buttons -->
-   <div id="max-extension-floating-panel-content">
-     <!-- Buttons will be moved here by JS -->
-   </div>
+  <div id="max-extension-floating-panel-content">
+    <!-- Buttons will be moved here by JS -->
+    <div id="max-extension-buttons-area">
+      <!-- Regular buttons get moved here -->
+    </div>
+    <!-- Manual Queue Cards Section (hidden by default) -->
+    <div id="max-extension-manual-queue-section" style="display: none;">
+      <div class="manual-queue-divider"></div>
+      <div id="max-extension-manual-queue-cards">
+        <!-- 6 manual button cards will be created here by JS -->
+      </div>
+    </div>
+  </div>
  
    <!-- Queue Section -->
    <div id="max-extension-queue-section">
@@ -85,6 +95,12 @@
            >
              🔄
            </button>
+            <button
+              id="max-extension-manual-queue-mode-btn"
+              title="Manual queue mode: Add custom prompts that you can write right here in the floating panel. to the queue"
+            >
+              ✏️
+            </button>
          </div>
        </div>
      </div>

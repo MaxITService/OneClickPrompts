@@ -47,11 +47,11 @@ window.MaxExtensionFloatingPanel.togglePanel = async function (event) {
                 originalContainer.remove();
             }
 
-            // 2. Create buttons directly in the panel.
-            const panelContent = document.getElementById('max-extension-floating-panel-content');
-            if (panelContent) {
-                panelContent.innerHTML = ''; // Ensure it's clean before creating.
-                window.MaxExtensionButtonsInit.createAndInsertCustomElements(panelContent);
+            // 2. Create buttons directly in the panel's buttons area.
+            const buttonsArea = document.getElementById('max-extension-buttons-area');
+            if (buttonsArea) {
+                buttonsArea.innerHTML = ''; // Ensure it's clean before creating.
+                window.MaxExtensionButtonsInit.createAndInsertCustomElements(buttonsArea);
             }
 
             // 3. Show and position the panel.
@@ -86,10 +86,10 @@ window.MaxExtensionFloatingPanel.togglePanel = async function (event) {
                 this.resetQueue();
             }
 
-            // 1. Destroy buttons inside the panel.
-            const panelContent = document.getElementById('max-extension-floating-panel-content');
-            if (panelContent) {
-                panelContent.innerHTML = '';
+            // 1. Destroy buttons inside the panel's buttons area.
+            const buttonsArea = document.getElementById('max-extension-buttons-area');
+            if (buttonsArea) {
+                buttonsArea.innerHTML = '';
             }
 
             // 2. Hide the panel.

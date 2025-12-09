@@ -367,6 +367,9 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
             if (typeof this.updateQueueTogglePlacement === 'function') {
                 this.updateQueueTogglePlacement();
             }
+            if (typeof this.updateManualQueueAvailability === 'function') {
+                this.updateManualQueueAvailability(state);
+            }
         };
 
         this.queueModeToggle = MaxExtensionInterface.createToggle(
@@ -434,6 +437,9 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         if (typeof this.updateQueueTogglePlacement === 'function') {
             this.updateQueueTogglePlacement();
         }
+        if (typeof this.updateManualQueueAvailability === 'function') {
+            this.updateManualQueueAvailability(true);
+        }
     });
 
     tosDeclineButton.addEventListener('click', () => {
@@ -449,10 +455,60 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         if (typeof this.updateQueueTogglePlacement === 'function') {
             this.updateQueueTogglePlacement();
         }
+        if (typeof this.updateManualQueueAvailability === 'function') {
+            this.updateManualQueueAvailability(false);
+        }
     });
 
     // Attach event listeners to queue action buttons
-    this.playQueueButton.addEventListener('click', () => {
+    this.playQueueButton.addEventListener('click', (event) => {
+        // Shift-click / Ctrl+Shift-click handler: when queue is empty and manual queue mode is on
+        // Shift+Click = add all valid cards only (don't start)
+        // Ctrl+Shift+Click = add all valid cards AND start
+        if (event.shiftKey && !this.isQueueRunning) {
+            logConCgp('[floating-panel-queue] Shift-click detected on play button. manualQueueExpanded:', this.manualQueueExpanded, 'ctrlKey:', event.ctrlKey);
+
+            // Only trigger if manual queue mode is on and queue is empty
+            if (!this.manualQueueExpanded) {
+                logConCgp('[floating-panel-queue] Manual queue mode is not active, ignoring shift-click.');
+                return;
+            }
+
+            const hasItems = this.promptQueue && this.promptQueue.length > 0;
+            if (hasItems) {
+                logConCgp('[floating-panel-queue] Queue has items, ignoring shift-click.');
+                return; // Only works when queue is empty
+            }
+
+            event.preventDefault();
+
+            // Add all valid manual cards to queue
+            const addedCount = this.addAllValidManualCardsToQueue();
+
+            if (addedCount > 0) {
+                if (event.ctrlKey) {
+                    // Ctrl+Shift+Click: add AND start
+                    logConCgp(`[floating-panel-queue] Ctrl+Shift-click added ${addedCount} manual cards to queue. Starting...`);
+                    setTimeout(() => {
+                        this.startQueue();
+                    }, 100);
+                } else {
+                    // Shift+Click only: add but don't start
+                    logConCgp(`[floating-panel-queue] Shift-click added ${addedCount} manual cards to queue. Ready to start.`);
+                    if (typeof window.showToast === 'function') {
+                        window.showToast(`Added ${addedCount} card${addedCount > 1 ? 's' : ''} to queue. Click Play to start.`, 'success', 3000);
+                    }
+                }
+            } else {
+                // No valid cards, show toast
+                if (typeof window.showToast === 'function') {
+                    window.showToast('No valid manual queue cards to add. Enter text in at least one card.', 'warning', 3000);
+                }
+            }
+            return;
+        }
+
+        // Normal click: play/pause
         if (this.isQueueRunning) {
             this.pauseQueue();
         } else {
@@ -472,7 +528,606 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         this.initializeQueueDragAndDrop();
     }
 
+    // ===== MANUAL QUEUE MODE INITIALIZATION =====
+    // Must be called BEFORE updateQueueControlsState so manualQueueExpanded is defined
+    this.initializeManualQueueMode();
+
     this.updateQueueControlsState();
+    if (typeof this.updateManualQueueAvailability === 'function') {
+        this.updateManualQueueAvailability(isQueueEnabled);
+    }
+};
+
+// Default emojis for manual queue cards (supports up to 9)
+const MANUAL_QUEUE_DEFAULT_EMOJIS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣'];
+const MANUAL_QUEUE_MIN_CARDS = 1;
+const MANUAL_QUEUE_MAX_CARDS = 9;
+const MANUAL_QUEUE_DEFAULT_COUNT = 6;
+
+/**
+ * Initializes the Manual Queue Mode feature.
+ * Creates the 6 button cards and sets up toggle behavior.
+ */
+window.MaxExtensionFloatingPanel.initializeManualQueueMode = function () {
+    this.manualQueueModeButton = document.getElementById('max-extension-manual-queue-mode-btn');
+    this.manualQueueSection = document.getElementById('max-extension-manual-queue-section');
+    this.manualQueueCardsContainer = document.getElementById('max-extension-manual-queue-cards');
+    this.panelContent = document.getElementById('max-extension-floating-panel-content');
+    this.buttonsArea = document.getElementById('max-extension-buttons-area');
+
+    if (!this.manualQueueModeButton || !this.manualQueueSection || !this.manualQueueCardsContainer) {
+        logConCgp('[floating-panel-queue] Manual queue mode elements not found.');
+        return;
+    }
+
+    // Store card data locally
+    this.manualQueueCards = [];
+    this.manualQueueExpanded = false;
+    this.manualQueueWasExpandedBeforeDisable = false;
+
+    // Load saved card data from storage
+    this.loadManualQueueCards();
+
+    // Toggle button click handler
+    this.manualQueueModeButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        this.toggleManualQueueMode();
+    });
+};
+
+/**
+ * Enables or hides manual queue UI based on queue toggle state.
+ * Remembers prior expansion so it can be restored when re-enabled.
+ * @param {boolean} queueEnabled
+ */
+window.MaxExtensionFloatingPanel.updateManualQueueAvailability = function (queueEnabled) {
+    if (!this.manualQueueModeButton || !this.manualQueueSection) return;
+
+    this.manualQueueModeButton.disabled = !queueEnabled;
+
+    if (!queueEnabled) {
+        this.manualQueueWasExpandedBeforeDisable = Boolean(this.manualQueueExpanded);
+        if (this.manualQueueExpanded && typeof this.hideManualQueueSection === 'function') {
+            this.hideManualQueueSection();
+        } else {
+            this.manualQueueSection.style.display = 'none';
+            this.manualQueueModeButton.classList.remove('active');
+            if (this.panelContent) {
+                this.panelContent.classList.remove('manual-queue-expanded');
+            }
+        }
+        return;
+    }
+
+    if (this.manualQueueWasExpandedBeforeDisable || this.manualQueueExpanded) {
+        this.manualQueueWasExpandedBeforeDisable = false;
+        if (typeof this.showManualQueueSection === 'function') {
+            this.showManualQueueSection();
+        }
+    }
+};
+
+/**
+ * Loads manual queue cards from storage and renders them.
+ */
+window.MaxExtensionFloatingPanel.loadManualQueueCards = async function () {
+    try {
+        const response = await new Promise((resolve, reject) => {
+            try {
+                chrome.runtime.sendMessage({ type: 'getManualQueueCards' }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        // Extension context invalidated - this happens after extension reload
+                        logConCgp('[floating-panel-queue] Extension context error loading cards:', chrome.runtime.lastError.message);
+                        resolve(null);
+                        return;
+                    }
+                    resolve(response);
+                });
+            } catch (e) {
+                reject(e);
+            }
+        });
+
+        if (response && response.data) {
+            this.manualQueueCards = response.data.cards || [];
+            this.manualQueueExpanded = response.data.expanded || false;
+            // Load card count, default to 6 if not set, or infer from cards array length
+            this.manualQueueCardCount = response.data.cardCount ||
+                (this.manualQueueCards.length > 0 ? this.manualQueueCards.length : MANUAL_QUEUE_DEFAULT_COUNT);
+            // Clamp the count to valid range
+            this.manualQueueCardCount = Math.max(MANUAL_QUEUE_MIN_CARDS,
+                Math.min(MANUAL_QUEUE_MAX_CARDS, this.manualQueueCardCount));
+        } else {
+            // Initialize with defaults
+            this.manualQueueCards = MANUAL_QUEUE_DEFAULT_EMOJIS.slice(0, MANUAL_QUEUE_DEFAULT_COUNT)
+                .map(emoji => ({ emoji, text: '' }));
+            this.manualQueueExpanded = false;
+            this.manualQueueCardCount = MANUAL_QUEUE_DEFAULT_COUNT;
+        }
+
+        this.renderManualQueueCards();
+        const queueEnabled = Boolean(window.globalMaxExtensionConfig?.enableQueueMode);
+        if (typeof this.updateManualQueueAvailability === 'function') {
+            this.updateManualQueueAvailability(queueEnabled);
+        } else if (this.manualQueueExpanded && queueEnabled) {
+            this.showManualQueueSection();
+        }
+    } catch (error) {
+        logConCgp('[floating-panel-queue] Error loading manual queue cards:', error);
+        // Initialize with defaults on error
+        this.manualQueueCards = MANUAL_QUEUE_DEFAULT_EMOJIS.slice(0, MANUAL_QUEUE_DEFAULT_COUNT)
+            .map(emoji => ({ emoji, text: '' }));
+        this.manualQueueExpanded = false;
+        this.manualQueueCardCount = MANUAL_QUEUE_DEFAULT_COUNT;
+        this.renderManualQueueCards();
+        const queueEnabled = Boolean(window.globalMaxExtensionConfig?.enableQueueMode);
+        if (typeof this.updateManualQueueAvailability === 'function') {
+            this.updateManualQueueAvailability(queueEnabled);
+        }
+    }
+};
+
+/**
+ * Saves manual queue cards to storage.
+ */
+window.MaxExtensionFloatingPanel.saveManualQueueCards = function () {
+    const data = {
+        cards: this.manualQueueCards,
+        expanded: this.manualQueueExpanded,
+        cardCount: this.manualQueueCardCount,
+    };
+
+    try {
+        chrome.runtime.sendMessage({ type: 'saveManualQueueCards', data }, (response) => {
+            if (chrome.runtime.lastError) {
+                // Extension context invalidated - silently ignore
+                logConCgp('[floating-panel-queue] Extension context error saving cards:', chrome.runtime.lastError.message);
+                return;
+            }
+            if (response && response.error) {
+                logConCgp('[floating-panel-queue] Error saving manual queue cards:', response.error);
+            }
+        });
+    } catch (e) {
+        logConCgp('[floating-panel-queue] Failed to save manual queue cards:', e);
+    }
+};
+
+/**
+ * Toggles the manual queue mode section visibility.
+ */
+window.MaxExtensionFloatingPanel.toggleManualQueueMode = function () {
+    if (this.manualQueueExpanded) {
+        this.hideManualQueueSection();
+    } else {
+        this.showManualQueueSection();
+    }
+    this.saveManualQueueCards();
+};
+
+/**
+ * Shows the manual queue section with cards.
+ */
+window.MaxExtensionFloatingPanel.showManualQueueSection = function () {
+    this.manualQueueExpanded = true;
+    this.manualQueueSection.style.display = 'block';
+    this.manualQueueModeButton.classList.add('active');
+
+    // Add scrollbar class to content area
+    if (this.panelContent) {
+        this.panelContent.classList.add('manual-queue-expanded');
+    }
+
+    // Update play button tooltip to reflect manual mode
+    if (typeof this.updateQueueControlsState === 'function') {
+        this.updateQueueControlsState();
+    }
+};
+
+/**
+ * Hides the manual queue section.
+ */
+window.MaxExtensionFloatingPanel.hideManualQueueSection = function () {
+    this.manualQueueExpanded = false;
+    this.manualQueueSection.style.display = 'none';
+    this.manualQueueModeButton.classList.remove('active');
+
+    // Remove scrollbar class from content area
+    if (this.panelContent) {
+        this.panelContent.classList.remove('manual-queue-expanded');
+    }
+
+    // Update play button tooltip to reflect normal mode
+    if (typeof this.updateQueueControlsState === 'function') {
+        this.updateQueueControlsState();
+    }
+};
+
+/**
+ * Renders manual queue cards based on current cardCount.
+ */
+window.MaxExtensionFloatingPanel.renderManualQueueCards = function () {
+    if (!this.manualQueueCardsContainer) return;
+
+    this.manualQueueCardsContainer.innerHTML = '';
+
+    const count = this.manualQueueCardCount || MANUAL_QUEUE_DEFAULT_COUNT;
+    for (let i = 0; i < count; i++) {
+        const cardData = this.manualQueueCards[i] || { emoji: MANUAL_QUEUE_DEFAULT_EMOJIS[i], text: '' };
+        const cardElement = this.createManualQueueCard(i, cardData);
+        this.manualQueueCardsContainer.appendChild(cardElement);
+    }
+
+    // Add the control card with +/- buttons
+    const controlCard = this.createManualQueueControlCard();
+    this.manualQueueCardsContainer.appendChild(controlCard);
+};
+
+/**
+ * Creates the thin control card with +/- buttons to add/remove manual queue cards.
+ * @returns {HTMLElement} The control card element.
+ */
+window.MaxExtensionFloatingPanel.createManualQueueControlCard = function () {
+    const card = document.createElement('div');
+    card.className = 'manual-queue-control-card';
+
+    const count = this.manualQueueCardCount || MANUAL_QUEUE_DEFAULT_COUNT;
+
+    // Remove button (-)
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'manual-queue-control-btn manual-queue-control-remove';
+    removeBtn.textContent = '−';
+    removeBtn.title = 'Remove a card (minimum 1)';
+    removeBtn.disabled = count <= MANUAL_QUEUE_MIN_CARDS;
+    removeBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        this.removeManualQueueCard();
+    });
+
+    // Add button (+)
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'manual-queue-control-btn manual-queue-control-add';
+    addBtn.textContent = '+';
+    addBtn.title = 'Add a card (maximum 9)';
+    addBtn.disabled = count >= MANUAL_QUEUE_MAX_CARDS;
+    addBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        this.addManualQueueCard();
+    });
+
+    card.appendChild(removeBtn);
+    card.appendChild(addBtn);
+
+    return card;
+};
+
+/**
+ * Adds a new manual queue card (if under max limit).
+ */
+window.MaxExtensionFloatingPanel.addManualQueueCard = function () {
+    if (this.manualQueueCardCount >= MANUAL_QUEUE_MAX_CARDS) {
+        logConCgp('[floating-panel-queue] Cannot add more cards, already at maximum.');
+        return;
+    }
+
+    this.manualQueueCardCount++;
+
+    // Ensure the cards array has an entry for the new card
+    if (!this.manualQueueCards[this.manualQueueCardCount - 1]) {
+        this.manualQueueCards[this.manualQueueCardCount - 1] = {
+            emoji: MANUAL_QUEUE_DEFAULT_EMOJIS[this.manualQueueCardCount - 1],
+            text: ''
+        };
+    }
+
+    this.renderManualQueueCards();
+    this.saveManualQueueCards();
+    logConCgp(`[floating-panel-queue] Added manual queue card. Count: ${this.manualQueueCardCount}`);
+};
+
+/**
+ * Removes the last manual queue card (if above min limit).
+ */
+window.MaxExtensionFloatingPanel.removeManualQueueCard = function () {
+    if (this.manualQueueCardCount <= MANUAL_QUEUE_MIN_CARDS) {
+        logConCgp('[floating-panel-queue] Cannot remove more cards, already at minimum.');
+        return;
+    }
+
+    // Clear the text of the card being removed
+    const removedIndex = this.manualQueueCardCount - 1;
+    if (this.manualQueueCards[removedIndex]) {
+        this.manualQueueCards[removedIndex].text = '';
+    }
+
+    this.manualQueueCardCount--;
+
+    this.renderManualQueueCards();
+    this.saveManualQueueCards();
+    logConCgp(`[floating-panel-queue] Removed manual queue card. Count: ${this.manualQueueCardCount}`);
+};
+
+/**
+ * Creates a single manual queue card element.
+ * @param {number} index - The card index (0-5).
+ * @param {Object} cardData - The card data { emoji, text }.
+ * @returns {HTMLElement} The card element.
+ */
+window.MaxExtensionFloatingPanel.createManualQueueCard = function (index, cardData) {
+    const card = document.createElement('div');
+    card.className = 'manual-queue-card';
+    card.dataset.cardIndex = String(index);
+
+    // Add button (+)
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'manual-queue-card-add-btn';
+    addBtn.textContent = '+';
+    addBtn.title = 'Click: Add to queue | Shift+Click: Save as permanent button';
+    addBtn.addEventListener('click', (event) => {
+        if (event.shiftKey) {
+            // Shift+Click: Save as permanent button
+            this.saveManualCardAsPermanentButton(index);
+        } else {
+            // Normal click: Add to queue with visual feedback
+            this.addManualCardToQueue(index);
+            // Visual flash feedback
+            card.style.transition = 'background-color 0.15s ease';
+            card.style.backgroundColor = 'rgba(46, 204, 113, 0.35)';
+            setTimeout(() => {
+                card.style.backgroundColor = '';
+            }, 300);
+        }
+    });
+
+    // Emoji input
+    const emojiInput = document.createElement('input');
+    emojiInput.type = 'text';
+    emojiInput.className = 'manual-queue-card-emoji';
+    emojiInput.value = cardData.emoji || MANUAL_QUEUE_DEFAULT_EMOJIS[index];
+    emojiInput.title = 'Emoji for this prompt (shown in queue)';
+    emojiInput.addEventListener('input', () => {
+        this.updateManualCardEmoji(index, emojiInput.value);
+    });
+    emojiInput.addEventListener('blur', () => {
+        // Restore default emoji if empty
+        if (!emojiInput.value.trim()) {
+            emojiInput.value = MANUAL_QUEUE_DEFAULT_EMOJIS[index];
+            this.updateManualCardEmoji(index, emojiInput.value);
+        }
+    });
+
+    // Text input - using textarea for multiline support with auto-resize
+    const textInput = document.createElement('textarea');
+    textInput.className = 'manual-queue-card-text';
+    textInput.value = cardData.text || '';
+    textInput.placeholder = 'Enter prompt text...';
+    textInput.title = 'Prompt text to send';
+    textInput.rows = 1;
+    textInput.style.resize = 'none';
+    textInput.style.overflow = 'hidden';
+
+    // Auto-resize function
+    const autoResize = () => {
+        textInput.style.height = 'auto';
+        const computed = window.getComputedStyle(textInput);
+        const lineHeight = parseFloat(computed.lineHeight) || 18;
+        const padding = parseFloat(computed.paddingTop) + parseFloat(computed.paddingBottom);
+        const minHeight = lineHeight + padding;
+        const newHeight = Math.max(minHeight, textInput.scrollHeight);
+        textInput.style.height = `${newHeight}px`;
+    };
+
+    textInput.addEventListener('input', () => {
+        this.updateManualCardText(index, textInput.value);
+        autoResize();
+    });
+
+    // Initial auto-resize after DOM insertion
+    setTimeout(autoResize, 0);
+
+    card.appendChild(addBtn);
+    card.appendChild(emojiInput);
+    card.appendChild(textInput);
+
+    return card;
+};
+
+/**
+ * Saves a manual queue card as a permanent custom button in the current profile.
+ * @param {number} index - Card index.
+ */
+window.MaxExtensionFloatingPanel.saveManualCardAsPermanentButton = function (index) {
+    const cardData = this.manualQueueCards[index];
+
+    if (!cardData) {
+        logConCgp('[floating-panel-queue] Manual card data not found for index:', index);
+        return;
+    }
+
+    const text = (cardData.text || '').trim();
+
+    // Validation: text must not be empty
+    if (!text) {
+        if (typeof window.showToast === 'function') {
+            window.showToast('Cannot save empty prompt as button', 'error', 3000);
+        }
+        return;
+    }
+
+    // Get emoji (use default if empty)
+    let emoji = (cardData.emoji || '').trim();
+    if (!emoji) {
+        emoji = MANUAL_QUEUE_DEFAULT_EMOJIS[index];
+    }
+
+    // Add to current profile's customButtons
+    if (!window.globalMaxExtensionConfig) {
+        logConCgp('[floating-panel-queue] No global config available');
+        return;
+    }
+
+    if (!Array.isArray(window.globalMaxExtensionConfig.customButtons)) {
+        window.globalMaxExtensionConfig.customButtons = [];
+    }
+
+    const newButton = {
+        icon: emoji,
+        text: text,
+        autoSend: true // Default to autosend for convenience
+    };
+
+    window.globalMaxExtensionConfig.customButtons.push(newButton);
+
+    // Save the profile
+    if (typeof this.saveCurrentProfileConfig === 'function') {
+        this.saveCurrentProfileConfig();
+    }
+
+
+
+    if (typeof window.showToast === 'function') {
+        window.showToast(`Saved "${emoji}" as permanent button`, 'success', 3000);
+    }
+
+    logConCgp(`[floating-panel-queue] Saved manual card ${index} as permanent button:`, text.substring(0, 30) + '...');
+};
+
+/**
+ * Updates the emoji value for a manual card.
+ * @param {number} index - Card index.
+ * @param {string} emoji - New emoji value.
+ */
+window.MaxExtensionFloatingPanel.updateManualCardEmoji = function (index, emoji) {
+    if (!this.manualQueueCards[index]) {
+        this.manualQueueCards[index] = { emoji: '', text: '' };
+    }
+    this.manualQueueCards[index].emoji = emoji;
+    this.saveManualQueueCards();
+};
+
+/**
+ * Updates the text value for a manual card.
+ * @param {number} index - Card index.
+ * @param {string} text - New text value.
+ */
+window.MaxExtensionFloatingPanel.updateManualCardText = function (index, text) {
+    if (!this.manualQueueCards[index]) {
+        this.manualQueueCards[index] = { emoji: '', text: '' };
+    }
+    this.manualQueueCards[index].text = text;
+    this.saveManualQueueCards();
+};
+
+/**
+ * Adds a manual card's prompt to the queue.
+ * @param {number} index - Card index.
+ */
+window.MaxExtensionFloatingPanel.addManualCardToQueue = function (index) {
+    const cardData = this.manualQueueCards[index];
+
+    if (!cardData) {
+        logConCgp('[floating-panel-queue] Manual card data not found for index:', index);
+        return;
+    }
+
+    const text = (cardData.text || '').trim();
+
+    // Validation: text must not be empty
+    if (!text) {
+        // Show toast error
+        if (typeof window.showToast === 'function') {
+            window.showToast('Cannot add empty prompt to queue', 'error', 3000);
+        } else if (typeof showToast === 'function') {
+            showToast('Cannot add empty prompt to queue', 'error', 3000);
+        } else {
+            logConCgp('[floating-panel-queue] Cannot add empty prompt to queue');
+        }
+        return;
+    }
+
+    // Get emoji (use default if empty)
+    let emoji = (cardData.emoji || '').trim();
+    if (!emoji) {
+        emoji = MANUAL_QUEUE_DEFAULT_EMOJIS[index];
+        // Update the card data and UI
+        this.manualQueueCards[index].emoji = emoji;
+        const emojiInput = this.manualQueueCardsContainer?.querySelector(
+            `.manual-queue-card[data-card-index="${index}"] .manual-queue-card-emoji`
+        );
+        if (emojiInput) {
+            emojiInput.value = emoji;
+        }
+        this.saveManualQueueCards();
+    }
+
+    // Add to queue using the existing queue infrastructure
+    const queueItem = {
+        icon: emoji,
+        text: text,
+        buttonId: `manual-queue-card-${index}`,
+        buttonIndex: index,
+        autosend: true, // Manual queue items always auto-send
+        queueId: `manual-${index}-${Date.now()}`,
+        isManualCard: true,
+    };
+
+    if (typeof this.addToQueue === 'function') {
+        this.addToQueue(queueItem);
+        logConCgp(`[floating-panel-queue] Added manual card ${index} to queue:`, text.substring(0, 50) + '...');
+    } else {
+        logConCgp('[floating-panel-queue] addToQueue function not available');
+    }
+};
+
+/**
+ * Adds all valid (non-empty text) manual queue cards to the queue.
+ * Called when double-clicking the play button with manual queue mode active.
+ * @returns {number} The number of cards successfully added.
+ */
+window.MaxExtensionFloatingPanel.addAllValidManualCardsToQueue = function () {
+    if (!this.manualQueueCards || !Array.isArray(this.manualQueueCards)) {
+        logConCgp('[floating-panel-queue] No manual queue cards available.');
+        return 0;
+    }
+
+    let addedCount = 0;
+
+    // Iterate through all 6 cards in order (1 to 6)
+    for (let i = 0; i < 6; i++) {
+        const cardData = this.manualQueueCards[i];
+        if (!cardData) continue;
+
+        const text = (cardData.text || '').trim();
+        if (!text) continue; // Skip empty cards
+
+        // Get emoji (use default if empty)
+        let emoji = (cardData.emoji || '').trim();
+        if (!emoji) {
+            emoji = MANUAL_QUEUE_DEFAULT_EMOJIS[i];
+        }
+
+        // Add to queue using the existing queue infrastructure
+        const queueItem = {
+            icon: emoji,
+            text: text,
+            buttonId: `manual-queue-card-${i}`,
+            buttonIndex: i,
+            autosend: true,
+            queueId: `manual-${i}-${Date.now()}-${addedCount}`,
+            isManualCard: true,
+        };
+
+        if (typeof this.addToQueue === 'function') {
+            this.addToQueue(queueItem);
+            addedCount++;
+            logConCgp(`[floating-panel-queue] Auto-added manual card ${i + 1} to queue:`, text.substring(0, 30) + '...');
+        }
+    }
+
+    return addedCount;
 };
 
 window.MaxExtensionFloatingPanel.setupQueueAutomationButtons = function (parentElement) {
@@ -631,9 +1286,16 @@ window.MaxExtensionFloatingPanel.updateQueueControlsState = function () {
 
     // If queue mode is OFF, disable controls regardless of items, and hide progress bar.
     if (!queueEnabled) {
+        logConCgp('[floating-panel-queue] updateQueueControlsState: Queue mode is OFF, skipping tooltip update.');
         this.playQueueButton.innerHTML = '▶️';
-        this.playQueueButton.title = 'Enable Queue Mode to start.';
+        const disabledTooltip = 'Enable Queue Mode to start.';
+        this.playQueueButton.title = disabledTooltip;
         this.playQueueButton.disabled = true;
+
+        // Force tooltip update if OCPTooltip is available
+        if (window.OCPTooltip) {
+            window.OCPTooltip.updateText(this.playQueueButton, disabledTooltip);
+        }
 
         if (this.skipQueueButton) {
             this.skipQueueButton.disabled = true;
@@ -649,14 +1311,36 @@ window.MaxExtensionFloatingPanel.updateQueueControlsState = function () {
     }
 
     // Play/Pause Button
+    let tooltipText = '';
     if (this.isQueueRunning) {
         this.playQueueButton.innerHTML = '⏸️'; // Pause icon
-        this.playQueueButton.title = 'Pause the queue.';
+        tooltipText = 'Pause the queue.';
         this.playQueueButton.disabled = false;
     } else {
         this.playQueueButton.innerHTML = '▶️'; // Play icon
-        this.playQueueButton.title = 'Start sending the queued prompts.';
-        this.playQueueButton.disabled = !hasItems && !isPaused; // Disabled if no items and not paused
+
+        // Dynamic tooltip based on queue state and manual mode
+        logConCgp('[floating-panel-queue] updateQueueControlsState: hasItems=', hasItems, 'isPaused=', isPaused, 'manualQueueExpanded=', this.manualQueueExpanded);
+        if (!hasItems && !isPaused) {
+            // Queue is empty - show appropriate message
+            if (this.manualQueueExpanded) {
+                logConCgp('[floating-panel-queue] Setting MANUAL MODE tooltip');
+                tooltipText = 'Queue is empty. Shift+Click: add all manual cards to queue. Ctrl+Shift+Click: add all and start immediately.';
+            } else {
+                logConCgp('[floating-panel-queue] Setting NORMAL tooltip');
+                tooltipText = 'Queue is empty. Click on buttons to add them to queue, then click me to start queue.';
+            }
+        } else {
+            tooltipText = 'Start sending the queued prompts.';
+        }
+
+        this.playQueueButton.disabled = !hasItems && !isPaused && !this.manualQueueExpanded; // Keep enabled if manual mode is on for shift-click
+    }
+
+    // Set title attribute and force tooltip update
+    this.playQueueButton.title = tooltipText;
+    if (window.OCPTooltip) {
+        window.OCPTooltip.updateText(this.playQueueButton, tooltipText);
     }
 
     if (this.skipQueueButton) {

@@ -14,7 +14,8 @@
     color: rgba(255, 255, 255, 0.9);
     font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
     /* Create a dedicated stacking context so our internal z-index ordering is predictable */
-    isolation: isolate; /* MDN: forces a new stacking context */
+    isolation: isolate;
+    /* MDN: forces a new stacking context */
 }
 
 /* Panel Header */
@@ -40,8 +41,10 @@
     min-height: 0;
     padding-top: 0;
     padding-bottom: 0;
-    cursor: default; /* No move cursor when collapsed */
-    pointer-events: none; /* Allow clicks to pass through header area */
+    cursor: default;
+    /* No move cursor when collapsed */
+    pointer-events: none;
+    /* Allow clicks to pass through header area */
 }
 
 #max-extension-panel-title {
@@ -49,10 +52,12 @@
     font-size: 12px;
     color: rgba(255, 255, 255, 0.9);
     transition: opacity 0.2s ease-out, max-width 0.3s ease-in-out, margin-right 0.3s ease-in-out;
-    max-width: 1000px; /* Some large value for transition */
+    max-width: 1000px;
+    /* Some large value for transition */
     white-space: nowrap;
     overflow: hidden;
-    margin-right: 8px; /* Space between title and buttons */
+    margin-right: 8px;
+    /* Space between title and buttons */
 }
 
 #max-extension-floating-panel-header.collapsed #max-extension-panel-title {
@@ -63,13 +68,15 @@
 
 /* Header controls: float above content and remain clickable even when header is collapsed */
 #max-extension-panel-header-controls {
-    position: absolute;            /* Overlay inside the fixed panel container */
+    position: absolute;
+    /* Overlay inside the fixed panel container */
     top: 5px;
     right: 5px;
     display: flex;
     align-items: center;
     gap: 4px;
-    pointer-events: auto;          /* Ensure buttons capture clicks */
+    pointer-events: auto;
+    /* Ensure buttons capture clicks */
     /* Must be above ANY child inside the panel; use very high index inside our isolated context */
     z-index: 2147483647;
 }
@@ -88,8 +95,10 @@
 /* Popover container for transparency slider */
 #max-extension-transparency-popover,
 #max-extension-random-percent-popover {
-    position: absolute;  /* Positioned relative to header-controls overlay */
-    top: 26px;           /* Below the header controls row */
+    position: absolute;
+    /* Positioned relative to header-controls overlay */
+    top: 26px;
+    /* Below the header controls row */
     right: 0;
     background-color: rgba(30, 30, 30, 0.95);
     border: 1px solid rgba(100, 100, 100, 0.5);
@@ -97,7 +106,7 @@
     padding: 8px 10px;
     color: rgba(255, 255, 255, 0.95);
     min-width: 220px;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
 }
 
 .max-extension-popover-inner {
@@ -113,19 +122,23 @@
 #max-extension-transparency-slider {
     width: 100%;
 }
+
 #max-extension-random-percent-slider {
     width: 100%;
 }
 
 /* Container for the footer controls */
 #max-extension-panel-footer-controls {
-    position: absolute;             /* Position relative to the main panel */
-    bottom: 5px;                    /* Visual placement */
+    position: absolute;
+    /* Position relative to the main panel */
+    bottom: 5px;
+    /* Visual placement */
     right: 5px;
     display: flex;
     align-items: center;
     gap: 4px;
-    pointer-events: auto;           /* Ensure this layer receives pointer events */
+    pointer-events: auto;
+    /* Ensure this layer receives pointer events */
     /* Keep this very high too, so play nice with any queued overlays in content */
     z-index: 2147483646;
 }
@@ -188,14 +201,17 @@
 /* When footer is collapsed, reserve a thin click-safe strip for the controls.
    This prevents the queue section from overlaying the control buttons' hit area. */
 #max-extension-floating-panel.has-collapsed-footer #max-extension-queue-section {
-    padding-bottom: 24px; /* Should be >= visual height of controls strip */
+    padding-bottom: 24px;
+    /* Should be >= visual height of controls strip */
     position: relative;
 }
 
 /* Queue section also needs protection from header controls overlay when collapsed */
 #max-extension-floating-panel.has-collapsed-header #max-extension-queue-section {
-    position: relative;  /* Ensure proper stacking context */
-    z-index: 1;          /* Keep queue below controls but above base content */
+    position: relative;
+    /* Ensure proper stacking context */
+    z-index: 1;
+    /* Keep queue below controls but above base content */
     /* No extra margin — we don't want to consume vertical space when header is collapsed */
 }
 
@@ -445,9 +461,9 @@
 
 .max-extension-queued-item--placeholder {
     border: 1px dashed rgba(255, 255, 255, 0.4);
-   background-color: rgba(255, 255, 255, 0.08);
-   opacity: 0.5;
-   pointer-events: none;
+    background-color: rgba(255, 255, 255, 0.08);
+    opacity: 0.5;
+    pointer-events: none;
 }
 
 .max-extension-queue-automation-buttons {
@@ -532,9 +548,11 @@
 
 /* Profile Switcher Footer */
 #max-extension-profile-switcher {
-    padding: 4px 30px 4px 8px; /* Make space on the right for collapse button */
+    padding: 4px 30px 4px 8px;
+    /* Make space on the right for collapse button */
     display: flex;
-    justify-content: flex-start; /* Align profile selector to the left */
+    justify-content: flex-start;
+    /* Align profile selector to the left */
     align-items: center;
     border-top: 1px solid rgba(100, 100, 100, 0.3);
     cursor: move;
@@ -542,8 +560,10 @@
     /* Added for collapse functionality */
     overflow: hidden;
     transition: height 0.3s ease-in-out, padding 0.3s ease-in-out, border-color 0.3s ease-in-out;
-    height: 32px; /* Explicit height is crucial for animation */
-    position: relative; /* Ensure stacking context for children opacity transitions */
+    height: 32px;
+    /* Explicit height is crucial for animation */
+    position: relative;
+    /* Ensure stacking context for children opacity transitions */
 }
 
 /* Collapsed state for the footer */
@@ -556,7 +576,7 @@
     pointer-events: none;
 }
 
-#max-extension-profile-switcher.collapsed > * {
+#max-extension-profile-switcher.collapsed>* {
     opacity: 0;
     transition: opacity 0.1s ease-out;
 }
@@ -645,4 +665,213 @@
     width: 16px;
     height: 16px;
     cursor: pointer;
+}
+
+/* ========== Manual Queue Mode Styles ========== */
+
+/* When manual queue mode is active, show scrollbar always */
+#max-extension-floating-panel-content.manual-queue-expanded {
+    overflow-y: scroll !important;
+}
+
+/* Buttons area - where regular buttons are moved */
+#max-extension-buttons-area {
+    display: contents;
+    /* Let buttons flow normally */
+}
+
+/* Manual Queue Section Container */
+#max-extension-manual-queue-section {
+    width: 100%;
+    margin-top: 4px;
+}
+
+/* Divider between buttons and manual cards */
+.manual-queue-divider {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(160, 120, 220, 0.5) 20%,
+            rgba(160, 120, 220, 0.5) 80%,
+            transparent 100%);
+    margin: 8px 0;
+}
+
+/* Manual Queue Cards Container */
+#max-extension-manual-queue-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+}
+
+/* Individual Manual Button Card */
+.manual-queue-card {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(160, 120, 220, 0.25);
+    border-radius: 6px;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.manual-queue-card:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: rgba(160, 120, 220, 0.4);
+}
+
+/* Add button in card */
+.manual-queue-card-add-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    background-color: rgba(46, 204, 113, 0.2);
+    border: 1px solid rgba(46, 204, 113, 0.5);
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.95);
+    transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+    flex-shrink: 0;
+}
+
+.manual-queue-card-add-btn:hover {
+    background-color: rgba(46, 204, 113, 0.35);
+    transform: translateY(-1px);
+    box-shadow: 0 0 6px rgba(46, 204, 113, 0.4);
+}
+
+.manual-queue-card-add-btn:active {
+    transform: scale(0.95);
+}
+
+/* Emoji input in card */
+.manual-queue-card-emoji {
+    width: 36px;
+    min-width: 36px;
+    height: 26px;
+    padding: 2px 4px;
+    background-color: rgba(80, 80, 80, 0.8);
+    border: 1px solid rgba(100, 100, 100, 0.5);
+    border-radius: 4px;
+    font-size: 14px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.95);
+    flex-shrink: 0;
+}
+
+.manual-queue-card-emoji:focus {
+    outline: none;
+    border-color: rgba(160, 120, 220, 0.7);
+    box-shadow: 0 0 4px rgba(160, 120, 220, 0.4);
+}
+
+/* Text input in card - flexible width, auto-resizing textarea */
+.manual-queue-card-text {
+    flex: 1;
+    min-width: 80px;
+    min-height: 26px;
+    height: auto;
+    padding: 4px 6px;
+    background-color: rgba(80, 80, 80, 0.8);
+    border: 1px solid rgba(100, 100, 100, 0.5);
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: inherit;
+    color: rgba(255, 255, 255, 0.95);
+    line-height: 1.4;
+    resize: none;
+    overflow: hidden;
+}
+
+.manual-queue-card-text:focus {
+    outline: none;
+    border-color: rgba(160, 120, 220, 0.7);
+    box-shadow: 0 0 4px rgba(160, 120, 220, 0.4);
+}
+
+.manual-queue-card-text::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+/* Manual queue mode button active state */
+#max-extension-manual-queue-mode-btn.active {
+    background-color: rgba(160, 90, 255, 0.32);
+    border-color: rgba(210, 170, 255, 0.95);
+    box-shadow: 0 0 10px rgba(190, 120, 255, 0.55);
+}
+
+/* Manual Queue Control Card - thin card with +/- buttons */
+.manual-queue-control-card {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 6px;
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(160, 120, 220, 0.15);
+    border-radius: 6px;
+    margin-top: 2px;
+}
+
+.manual-queue-control-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 20px;
+    background-color: rgba(160, 120, 220, 0.15);
+    border: 1px solid rgba(160, 120, 220, 0.35);
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 1;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.85);
+    transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.manual-queue-control-btn:hover:not(:disabled) {
+    background-color: rgba(160, 120, 220, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 0 6px rgba(160, 120, 220, 0.4);
+}
+
+.manual-queue-control-btn:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.manual-queue-control-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+/* Add button specific styling */
+.manual-queue-control-add {
+    background-color: rgba(46, 204, 113, 0.15);
+    border-color: rgba(46, 204, 113, 0.35);
+}
+
+.manual-queue-control-add:hover:not(:disabled) {
+    background-color: rgba(46, 204, 113, 0.3);
+    box-shadow: 0 0 6px rgba(46, 204, 113, 0.4);
+}
+
+/* Remove button specific styling */
+.manual-queue-control-remove {
+    background-color: rgba(231, 76, 60, 0.15);
+    border-color: rgba(231, 76, 60, 0.35);
+}
+
+.manual-queue-control-remove:hover:not(:disabled) {
+    background-color: rgba(231, 76, 60, 0.3);
+    box-shadow: 0 0 6px rgba(231, 76, 60, 0.4);
 }

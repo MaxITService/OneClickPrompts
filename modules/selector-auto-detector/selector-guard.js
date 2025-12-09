@@ -53,7 +53,14 @@ window.OneClickPromptsSelectorGuard = {
                 await window.OneClickPromptsSelectorAutoDetector.reportFailure('editor', { selectors: editorSelectors });
             }
 
-            // If we've already seen the send button this session, treat misses as temporary (e.g., Stop button shown) and keep quiet.
+            // Check if stop button is visible — if so, the missing send button is expected (AI is generating)
+            const stopBtn = window.ButtonsClickingShared?.findStopButton?.();
+            if (stopBtn) {
+                // AI is generating, send button absence is expected — don't report failure
+                return null;
+            }
+
+            // If we've already seen the send button this session, treat misses as temporary and keep quiet.
             const detector = window.OneClickPromptsSelectorAutoDetector;
             const sendState = detector?.state?.sendButton;
             const seenBefore = !!sendState?.everFound;

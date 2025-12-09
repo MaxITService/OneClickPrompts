@@ -304,12 +304,12 @@ async function commenceExtensionInitialization(configurationObject) {
         logConCgp('[init] Decide-first: Panel should be visible. Creating panel and buttons directly.');
         if (window.MaxExtensionFloatingPanel) {
             await window.MaxExtensionFloatingPanel.createFloatingPanel();
-            const panelContent = document.getElementById('max-extension-floating-panel-content');
+            const buttonsArea = document.getElementById('max-extension-buttons-area');
             const panel = window.MaxExtensionFloatingPanel.panelElement;
 
-            if (panel && panelContent) {
-                // Create buttons directly in the panel. No flicker.
-                window.MaxExtensionButtonsInit.createAndInsertCustomElements(panelContent);
+            if (panel && buttonsArea) {
+                // Create buttons directly in the panel's buttons area. No flicker.
+                window.MaxExtensionButtonsInit.createAndInsertCustomElements(buttonsArea);
 
                 // Manually make panel visible and set state.
                 panel.style.display = 'flex';
@@ -361,13 +361,13 @@ async function commenceExtensionInitialization(configurationObject) {
                     logConCgp("[init] We haven't found the place to inject buttons, so we will fall back to a floating panel instead.");
                     window.MaxExtensionFloatingPanel.createFloatingPanel().then(() => {
                         const panelElement = window.MaxExtensionFloatingPanel.panelElement;
-                        const panelContent = document.getElementById('max-extension-floating-panel-content');
-                        if (panelElement && panelContent) {
-                            // Clear old content and insert custom buttons.
-                            panelContent.innerHTML = '';
+                        const buttonsArea = document.getElementById('max-extension-buttons-area');
+                        if (panelElement && buttonsArea) {
+                            // Clear old buttons and insert custom buttons.
+                            buttonsArea.innerHTML = '';
                             if (window.MaxExtensionButtonsInit &&
                                 typeof window.MaxExtensionButtonsInit.createAndInsertCustomElements === 'function') {
-                                window.MaxExtensionButtonsInit.createAndInsertCustomElements(panelContent);
+                                window.MaxExtensionButtonsInit.createAndInsertCustomElements(buttonsArea);
                             }
                             // Position the panel in the TOP-right corner (fallback).
                             if (typeof window.MaxExtensionFloatingPanel.positionPanelTopRight === 'function') {

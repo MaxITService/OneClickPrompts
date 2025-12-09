@@ -23,7 +23,7 @@ Current architectural reference for the OneClickPrompts Chrome extension (Manife
   - Cross-chat, inline selector, token approximator, and other modules use shared endpoints so settings survive regardless of which surface initiates the change.
   - Message flow: Content/Popup → `chrome.runtime.sendMessage({type})` → `config.js` listener → `modules/service-worker-message-router.js` (switch) → profile-manager/StateStore/helpers → `sendResponse()`.
 - **StateStore** (`modules/service-worker-auxiliary-state-store.js`):
-  - Namespaced schema (`ui`, `modules`, `floatingPanel`, `global`, `meta`) with dual read/write to legacy keys. Provides methods for theme, popup state, cross-chat data, inline selector, token approximator (including per-site `enabledSites`), floating panel settings, custom selectors, and debug flags.
+  - Namespaced schema (`ui`, `modules`, `floatingPanel`, `global`, `meta`) with dual read/write to legacy keys. Provides methods for theme, popup state, cross-chat data, inline selector, token approximator (including per-site `enabledSites`), floating panel settings, manual queue cards (`manualQueueCards`), custom selectors, and debug flags.
   - Broadcasts change payloads through `StateStore.broadcast()` (wraps `chrome.tabs.sendMessage`) so tabs refresh automatically.
   - Logging policy: use `logConCgp` (from `log.js`) everywhere outside the worker; inside the worker `logConfigurationRelatedStuff` (from service-worker-config-helpers.js) tags lifecycle messages.
 - **Backward Compatibility**: External API unchanged (all message types, requests, responses identical). Zero changes required in content scripts, popup, or other components. Refactoring is purely internal code organization.
@@ -148,6 +148,12 @@ Current architectural reference for the OneClickPrompts Chrome extension (Manife
   - Handles queue completion (`markQueueFinished`), clearing `autoSendInterval` before dispatch to avoid double sends.
 - **Queue drag-and-drop (`floating-panel-ui-queue-dnd.js`)**:
   - Implements long-press pointer tracking, FLIP transitions, placeholder insertion, and eviction of stale drags when items dispatch mid-operation. Signals order changes with toasts.
+- **Manual Queue Mode** (`floating-panel-ui-queue.js`):
+  - **Functionality**: A dedicated "Manual queue mode" toggle (✏️) in the floating panel reveals a split-view interface with 6 fixed, editable button cards. Each card has an emoji input (defaulting to 1️⃣-6️⃣) and an auto-resizing textarea that starts compact and grows as needed.
+  - **Quick Add**: Individual cards are added via their `+` button (with green flash feedback). Shift+Click on the Play button adds all non-empty manual cards to the queue (without starting). Ctrl+Shift+Click adds all cards AND starts processing immediately.
+  - **Save as Button**: Shift+Click on a card's `+` button converts that manual card into a permanent custom button in the current profile, with a toast confirmation.
+  - **Persistence**: Card content and the mode's expanded state are persisted globally via `StateStore` (`modules.manualQueueCards`), ensuring data survives page reloads and is independent of user profiles.
+  - **UI/UX**: Features a scrollable split layout (existing buttons top, manual cards bottom) with a visual divider. The play button tooltip dynamically updates to reflect available shortcuts. Tooltip updates are forced through `OCPTooltip.updateText()` to ensure real-time reflection of state changes.
 - **Floating panel assets**: `floating-panel-files/` provides HTML and CSS (declared web-accessible) for iframe-based rendering if needed.
 
 ### 3.3 Popup & Management UI
@@ -206,6 +212,7 @@ Current architectural reference for the OneClickPrompts Chrome extension (Manife
 | Drag-and-Drop Ordering | Reorder buttons and separators in popup interface | `popup-page-customButtons.js` |
 | Floating Panel | Resizable panel with per-host persistence, toolbar mirror, global toggles | `floating-panel.js`, `floating-panel-ui-creation.js`, `floating-panel-settings.js` |
 | Queue System | Sequential prompt execution with delays, automation toggles, randomization, finish cues | `floating-panel-ui-queue.js`, `floating-panel-ui-queue-dnd.js`, `floating-panel-ui-engine.js` |
+| Manual Queue Mode | 6 fixed manual input cards with global persistence and "add-all-and-start" double-click shortcut | `floating-panel-ui-queue.js`, `floating-panel.html`, `service-worker-auxiliary-state-store.js` |
 | Cross-Chat Sharing | Copy/paste prompt storage across sites with autosend options | `buttons.js`, `modules/popup-page-modules-promptShare.js`, `modules/service-worker-auxiliary-state-store.js` |
 | Danger Broadcast | Global "Danger" toggle reveals a broadcast button that sends the current editor text to every danger-enabled tab while hiding legacy copy/paste if requested. Tabs can shift-click the broadcast control to enter a shield mode that refuses remote dispatches but still pushes outbound messages. Broadcast payloads are trimmed, empty submissions are blocked with a toast, and the service worker prevents whitespace-only fan-outs. The initiating tab auto-sends using its existing input, while the service worker relays the prompt to remote tabs via `crossChatDangerDispatchPrompt`. State is persisted in the cross-chat module (`hideStandardButtons`, `dangerAutoSendAll`) and the inline toolbar dynamically adds or removes copy/paste/broadcast buttons based on those flags. | `buttons.js`, `modules/service-worker-message-router.js`, `init.js`, `buttons-init-and-render.js`, `modules/popup-page-modules-promptShare.js`, `modules/service-worker-auxiliary-state-store.js`, `popup.html` |
 | Token Approximation | Real-time token estimates using pluggable models | `modules/backend-tokenApproximator.js`, `modules/token-models/*`, `modules/popup-page-modules-tokenApproximator.js` |

@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="/popup-page-styles/popup-buttons.css" />
     <!-- UI Components: Console, save status, export/import buttons, confirmation & error dialogs, and toast notifications -->
     <link rel="stylesheet" href="/popup-page-styles/popup-components.css" />
+    <link rel="stylesheet" href="/popup-page-styles/modal.css" />
     <link rel="stylesheet" href="/common-ui-elements/onclick-smooth-scroll-highlight.css" />
     <!-- Toggle switch styles: iPhone-style toggle switches -->
     <link rel="stylesheet" href="/common-ui-elements/toggle.css" />
@@ -59,7 +60,7 @@
             <span class="menu-btn-icon">↔️</span>Wider
           </button>
         </nav>
-        <div id="version" class="small-hoovering-text menu-version">Version 0.0.5.3</div>
+        <div id="version" class="small-hoovering-text menu-version">Version 0.0.5.4</div>
       </section>
       
       <!-- Button Configuration via button cards (buttons have their UI - each on card that is added dynamically) -->
@@ -1285,8 +1286,9 @@
               have to work and have no spare time.
             </li>
             <li>
-              If buttons disappear, first step is to refresh the page, then try
-              pressing "Reset Floating Window Settings for all pages" up here in
+              If buttons disappear, first step is to refresh the page, then 
+              try go to advanced selector configurtion, and press button "reset ALL Websites' Selectors".
+              If you are using floaating window, try to  "Reset Floating Window Settings for all pages" up here in
               this popup. You can open an issue on Github:
               <a
                 href="https://github.com/MaxITService/OneClickPrompts/issues"
@@ -1389,6 +1391,13 @@
               title="Revert the CSS selectors for the selected website to the extension's defaults."
             >
               Reset This Website's Selectors to Defaults
+            </button>
+            <button
+              id="resetAllSelectors"
+              class="danger"
+              title="Revert the CSS selectors for ALL websites to the extension's defaults."
+            >
+              Reset ALL Websites' Selectors
             </button>
           </div>
           <br />
@@ -1561,6 +1570,7 @@
     <script src="/popup-page-scripts/menu.js"></script>
     <!-- NEW SCRIPT: Centralized handler for all collapsible sections -->
     <script src="/popup-page-scripts/popup-page-collapsible.js"></script>
+    <script src="/popup-page-scripts/popup-page-modal.js"></script>
     <script src="/popup-page-scripts/popup-page-profiles.js"></script>
     <script src="/popup-page-scripts/popup-page-backup-handler.js"></script>
     <script src="/popup-page-scripts/popup-page-customButtons.js"></script>

@@ -52,6 +52,7 @@ const KEYS = {
     tokenApproximator: 'modules.tokenApproximator', // object { enabled:boolean, calibration:number, threadMode:string, showEditorCounter:boolean, placement:'before'|'after' }
     selectorAutoDetector: 'modules.selectorAutoDetector', // object { enableEditorHeuristics:boolean, enableSendButtonHeuristics:boolean }
     tooltip: 'modules.tooltip', // object { enabled:boolean, showDelayMs:number, fontColor:string|null }
+    manualQueueCards: 'modules.manualQueueCards', // object { cards: Array<{emoji:string, text:string}>, expanded:boolean }
   },
   floatingPanel: 'floatingPanel', // object map { [hostname]: settings }
   global: {
@@ -62,6 +63,9 @@ const KEYS = {
     debugLogging: 'dev.debugLogging',
   }
 };
+
+// Default emoji for manual queue cards (numbered 1-6)
+const MANUAL_QUEUE_CARD_DEFAULT_EMOJIS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣'];
 
 // Legacy keys (existing)
 const LEGACY = {
@@ -231,6 +235,31 @@ async function getValue(path) {
       forcedTheme: 'dark', // only used when themeOverride is true
     };
   }
+  if (path === KEYS.modules.manualQueueCards) {
+    const r = await lsGet([KEYS.modules.manualQueueCards]);
+    const obj = r[KEYS.modules.manualQueueCards];
+    if (obj && typeof obj === 'object') {
+      // Ensure cards array has exactly 6 items, each with emoji and text
+      const cards = Array.isArray(obj.cards) ? obj.cards : [];
+      const normalizedCards = [];
+      for (let i = 0; i < 6; i++) {
+        const card = cards[i] || {};
+        normalizedCards.push({
+          emoji: typeof card.emoji === 'string' ? card.emoji : MANUAL_QUEUE_CARD_DEFAULT_EMOJIS[i],
+          text: typeof card.text === 'string' ? card.text : '',
+        });
+      }
+      return {
+        cards: normalizedCards,
+        expanded: !!obj.expanded,
+      };
+    }
+    // Return defaults: 6 empty cards with numbered emojis
+    return {
+      cards: MANUAL_QUEUE_CARD_DEFAULT_EMOJIS.map(emoji => ({ emoji, text: '' })),
+      expanded: false,
+    };
+  }
   if (path === KEYS.floatingPanel) {
     // Build map from structured store if exists, else from legacy scattered keys
     const all = await lsGet(null);
@@ -363,6 +392,24 @@ async function setValue(path, value) {
       forcedTheme: settings.forcedTheme === 'light' ? 'light' : 'dark',
     };
     await lsSet({ [KEYS.modules.tooltip]: normalized });
+    return;
+  }
+  if (path === KEYS.modules.manualQueueCards) {
+    const data = value && typeof value === 'object' ? value : {};
+    const cards = Array.isArray(data.cards) ? data.cards : [];
+    const normalizedCards = [];
+    for (let i = 0; i < 6; i++) {
+      const card = cards[i] || {};
+      normalizedCards.push({
+        emoji: typeof card.emoji === 'string' ? card.emoji : MANUAL_QUEUE_CARD_DEFAULT_EMOJIS[i],
+        text: typeof card.text === 'string' ? card.text : '',
+      });
+    }
+    const normalized = {
+      cards: normalizedCards,
+      expanded: !!data.expanded,
+    };
+    await lsSet({ [KEYS.modules.manualQueueCards]: normalized });
     return;
   }
   if (path.startsWith(KEYS.floatingPanel)) {
@@ -562,6 +609,15 @@ export const StateStore = {
   async saveTooltipSettings(settings) {
     await setValue(KEYS.modules.tooltip, settings);
     this.broadcast({ type: 'tooltipSettingsChanged', settings });
+  },
+
+  // ===== Manual Queue Cards (Global Module) =====
+  async getManualQueueCards() {
+    return await getValue(KEYS.modules.manualQueueCards);
+  },
+  async saveManualQueueCards(data) {
+    await setValue(KEYS.modules.manualQueueCards, data);
+    this.broadcast({ type: 'manualQueueCardsChanged', data });
   },
 
   // Broadcast utility

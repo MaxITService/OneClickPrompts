@@ -274,13 +274,13 @@ window.OneClickPromptsSelectorAutoDetector = {
         try {
             await window.MaxExtensionFloatingPanel.createFloatingPanel();
             const panelElement = window.MaxExtensionFloatingPanel.panelElement;
-            const panelContent = document.getElementById('max-extension-floating-panel-content');
+            const buttonsArea = document.getElementById('max-extension-buttons-area');
 
-            if (panelElement && panelContent) {
-                // Clear and populate panel
-                panelContent.innerHTML = '';
+            if (panelElement && buttonsArea) {
+                // Clear and populate panel's buttons area
+                buttonsArea.innerHTML = '';
                 if (window.MaxExtensionButtonsInit && typeof window.MaxExtensionButtonsInit.createAndInsertCustomElements === 'function') {
-                    window.MaxExtensionButtonsInit.createAndInsertCustomElements(panelContent);
+                    window.MaxExtensionButtonsInit.createAndInsertCustomElements(buttonsArea);
                 }
 
                 // Position panel

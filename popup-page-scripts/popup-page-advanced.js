@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectorConfig = document.getElementById('selectorConfig');
     const saveButton = document.getElementById('saveSelectors');
     const resetButton = document.getElementById('resetSelectors');
+    const resetAllButton = document.getElementById('resetAllSelectors');
     const editorHeuristicsToggle = document.getElementById('editorHeuristicsToggle');
     const sendButtonHeuristicsToggle = document.getElementById('sendButtonHeuristicsToggle');
     const stopButtonHeuristicsToggle = document.getElementById('stopButtonHeuristicsToggle');
@@ -190,6 +191,57 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Reset selectors for ALL websites
+    async function resetAllSelectors() {
+        const confirmed = await window.OCPModal.confirm(
+            'Are you sure you want to reset selectors for ALL websites?\n\nThis will delete all your custom selector configurations for every supported site.',
+            'Reset All Selectors',
+            'error'
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            const options = Array.from(websiteSelect.options);
+            let failureCount = 0;
+
+            for (const option of options) {
+                const site = option.value;
+                try {
+                    await chrome.runtime.sendMessage({
+                        type: 'saveCustomSelectors',
+                        site: site,
+                        selectors: null, // null means remove
+                    });
+                } catch (err) {
+                    console.error(`Failed to reset ${site}`, err);
+                    failureCount++;
+                }
+            }
+
+            if (failureCount === 0) {
+                // Refresh the current view
+                const defaultSelectors = getDefaultSelectorsForSite(websiteSelect.value);
+                selectorConfig.value = JSON.stringify(defaultSelectors, null, 2);
+
+                // Ensure textarea fits to new content
+                if (typeof resizeVerticalTextarea === 'function') {
+                    requestAnimationFrame(() => resizeVerticalTextarea(selectorConfig));
+                }
+
+                showToast('All websites selectors reset to defaults', 'success');
+            } else {
+                showToast(`Reset complete but ${failureCount} sites failed.`, 'warning');
+            }
+
+        } catch (error) {
+            console.error('Error resetting all selectors:', error);
+            showToast(`Error resetting: ${error.message}`, 'error');
+        }
+    }
+
     // Validate the selector structure
     function validateSelectors(selectors) {
         return selectors &&
@@ -203,6 +255,9 @@ document.addEventListener('DOMContentLoaded', () => {
     websiteSelect.addEventListener('change', loadSelectors);
     saveButton.addEventListener('click', saveSelectors);
     resetButton.addEventListener('click', resetSelectors);
+    if (resetAllButton) {
+        resetAllButton.addEventListener('click', resetAllSelectors);
+    }
     if (editorHeuristicsToggle) {
         editorHeuristicsToggle.addEventListener('change', () => {
             heuristicsSettings.enableEditorHeuristics = editorHeuristicsToggle.checked;

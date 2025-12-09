@@ -14,6 +14,11 @@
 // Special constants
 // -------------------------
 const SETTINGS_BUTTON_MAGIC_TEXT = '%OCP_APP_SETTINGS_SYSTEM_BUTTON%';
+const DELETE_UNDO_DURATION_MS = 2000;
+
+// Tracks buttons that are waiting out their undo window before deletion.
+// Keyed by the button object reference so reorders/edits keep the link intact.
+const pendingButtonDeletions = new Map();
 
 /**
  * Gets the Cross-Chat module settings.
@@ -46,6 +51,7 @@ function createButtonCardElement(button, index, crossChatSettings = null) {
     buttonItem.className = 'button-item';
     buttonItem.dataset.index = index;
     buttonItem.draggable = true; // The entire card is the draggable target.
+    buttonItem.__buttonDataRef = button; // Keep reference for undo timers across renders.
 
     if (button.separator) {
         buttonItem.classList.add('separator-item');
@@ -114,10 +120,18 @@ function createButtonCardElement(button, index, crossChatSettings = null) {
 
 /**
  * Updates the list of custom button cards in the buttonCardsList.
+ * @param {boolean} [restoreScroll=true] - Whether to restore the scroll position after updating.
  */
-async function updatebuttonCardsList() {
+async function updatebuttonCardsList(restoreScroll = true) {
     // Get Cross-Chat module settings
     const crossChatSettings = await getCrossChatSettings();
+
+    // Clean up any pending deletions that no longer exist in the profile
+    pendingButtonDeletions.forEach((state, buttonRef) => {
+        if (!currentProfile.customButtons.includes(buttonRef)) {
+            clearPendingDeletionState(buttonRef);
+        }
+    });
 
     // Capture scroll position to prevent jumping
     const scrollPos = {
@@ -142,9 +156,12 @@ async function updatebuttonCardsList() {
     textareaSaverAndResizerFunc();
     attachEmojiInputListeners();
     attachAutoSendToggleListeners();
+    reapplyPendingDeletionUI();
 
-    // Restore scroll position
-    window.scrollTo(scrollPos.left, scrollPos.top);
+    // Restore scroll position only if requested
+    if (restoreScroll) {
+        window.scrollTo(scrollPos.left, scrollPos.top);
+    }
 }
 
 // -------------------------
@@ -209,6 +226,155 @@ async function deleteButton(index) {
     await saveCurrentProfile();
     updatebuttonCardsList();
     logToGUIConsole('Deleted button');
+}
+
+/**
+ * Deletes a button by reference instead of index (stable across reorders).
+ * @param {Object} buttonRef - The button object to delete.
+ */
+async function deleteButtonByReference(buttonRef) {
+    const index = currentProfile.customButtons.indexOf(buttonRef);
+    if (index === -1) return;
+    await deleteButton(index);
+}
+
+/**
+ * Applies the undo visual state on a card's delete button.
+ * @param {HTMLElement} buttonItem
+ * @param {number} [remainingMs=DELETE_UNDO_DURATION_MS]
+ */
+function setUndoVisualState(buttonItem, remainingMs = DELETE_UNDO_DURATION_MS) {
+    if (!buttonItem) return;
+    const deleteBtn = buttonItem.querySelector('.delete-button');
+    if (!deleteBtn) return;
+    const secondsLeft = Math.max(1, Math.ceil(remainingMs / 1000));
+    deleteBtn.textContent = `Undo (${secondsLeft})`;
+    deleteBtn.classList.add('undo-state');
+    buttonItem.classList.add('pending-delete');
+    buttonItem.draggable = false;
+}
+
+/**
+ * Clears the undo visual state from a card's delete button.
+ * @param {HTMLElement} buttonItem
+ */
+function clearUndoVisualState(buttonItem) {
+    if (!buttonItem) return;
+    const deleteBtn = buttonItem.querySelector('.delete-button');
+    if (!deleteBtn) return;
+    deleteBtn.textContent = 'Delete';
+    deleteBtn.classList.remove('undo-state');
+    buttonItem.classList.remove('pending-delete');
+    buttonItem.draggable = true;
+}
+
+/**
+ * Retrieves the button data object from a card element.
+ * @param {HTMLElement} buttonItem
+ * @returns {Object|null}
+ */
+function getButtonDataFromCard(buttonItem) {
+    if (!buttonItem) return null;
+    if (buttonItem.__buttonDataRef) return buttonItem.__buttonDataRef;
+    const index = parseInt(buttonItem.dataset.index);
+    if (Number.isNaN(index) || !currentProfile.customButtons[index]) return null;
+    return currentProfile.customButtons[index];
+}
+
+/**
+ * Starts the undo countdown for a button deletion or undoes it if already pending.
+ * @param {HTMLElement} buttonItem
+ */
+function startUndoableDeletion(buttonItem) {
+    const buttonData = getButtonDataFromCard(buttonItem);
+    if (!buttonData) return;
+
+    if (pendingButtonDeletions.has(buttonData)) {
+        undoPendingDeletion(buttonData, buttonItem);
+        return;
+    }
+
+    const expiresAt = Date.now() + DELETE_UNDO_DURATION_MS;
+    const timeoutId = setTimeout(() => {
+        void finalizePendingDeletion(buttonData, 'timeout');
+    }, DELETE_UNDO_DURATION_MS);
+    const intervalId = setInterval(() => {
+        const pending = pendingButtonDeletions.get(buttonData);
+        if (!pending) return;
+        const remainingMs = pending.expiresAt - Date.now();
+        if (remainingMs <= 0) return;
+        setUndoVisualState(pending.buttonItem, remainingMs);
+    }, 500);
+
+    pendingButtonDeletions.set(buttonData, {
+        expiresAt,
+        timeoutId,
+        intervalId,
+        buttonItem
+    });
+
+    setUndoVisualState(buttonItem);
+}
+
+/**
+ * Clears timers for a pending deletion and optionally removes it from the map.
+ * @param {Object} buttonData
+ * @param {boolean} [remove=true]
+ */
+function clearPendingDeletionState(buttonData, remove = true) {
+    const pending = pendingButtonDeletions.get(buttonData);
+    if (!pending) return;
+    clearTimeout(pending.timeoutId);
+    clearInterval(pending.intervalId);
+    if (remove) {
+        pendingButtonDeletions.delete(buttonData);
+    }
+}
+
+/**
+ * Cancels a pending deletion.
+ * @param {Object} buttonData
+ * @param {HTMLElement} [cardOverride]
+ */
+function undoPendingDeletion(buttonData, cardOverride = null) {
+    const pending = pendingButtonDeletions.get(buttonData);
+    if (!pending) return;
+    clearPendingDeletionState(buttonData);
+    clearUndoVisualState(cardOverride || pending.buttonItem);
+}
+
+/**
+ * Finalizes a pending deletion immediately.
+ * @param {Object} buttonData
+ * @param {string} [reason='timeout']
+ */
+async function finalizePendingDeletion(buttonData, reason = 'timeout') {
+    const pending = pendingButtonDeletions.get(buttonData);
+    if (pending) {
+        clearPendingDeletionState(buttonData);
+    }
+    await deleteButtonByReference(buttonData);
+}
+
+/**
+ * Re-applies undo states after the list is re-rendered.
+ */
+function reapplyPendingDeletionUI() {
+    if (!buttonCardsList || pendingButtonDeletions.size === 0) return;
+    const now = Date.now();
+    const items = Array.from(buttonCardsList.querySelectorAll('.button-item'));
+
+    pendingButtonDeletions.forEach((pending, buttonData) => {
+        const matchingItem = items.find(item => item.__buttonDataRef === buttonData);
+        if (!matchingItem) return;
+        pending.buttonItem = matchingItem;
+        const remainingMs = pending.expiresAt - now;
+        if (remainingMs <= 0) {
+            void finalizePendingDeletion(buttonData, 'expired');
+        } else {
+            setUndoVisualState(matchingItem, remainingMs);
+        }
+    });
 }
 
 /**
@@ -799,3 +965,5 @@ function textareaSaverAndResizerFunc() {
         });
     });
 }
+
+// Pending deletions only complete if the popup stays open through the timer.

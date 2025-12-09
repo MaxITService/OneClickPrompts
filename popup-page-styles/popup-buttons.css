@@ -66,6 +66,22 @@ button.danger:hover {
     background: #f8d7da;
 }
 
+.delete-button.undo-state {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #ffffff;
+}
+
+.delete-button.undo-state:hover {
+    background: color-mix(in srgb, var(--primary-color) 90%, #ffffff 10%);
+    border-color: color-mix(in srgb, var(--primary-color) 90%, #ffffff 10%);
+}
+
+.button-item.pending-delete {
+    border-color: var(--primary-color);
+    background: var(--primary-color-faded, #f3ecff);
+}
+
 
 
 
@@ -101,6 +117,7 @@ button.danger:hover {
     background-color: #ffffff;
     transition: background-color var(--transition-duration) ease;
     overflow-y: auto;
+    overflow-x: hidden;
     flex: 1 1 auto;
     scroll-behavior: smooth;
     transform-style: preserve-3d;

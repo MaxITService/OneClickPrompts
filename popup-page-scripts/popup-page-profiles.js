@@ -76,7 +76,8 @@ async function switchProfile(profileName) {
         const configResponse = await chrome.runtime.sendMessage({ type: 'getConfig' });
         if (configResponse && configResponse.config) {
             currentProfile = configResponse.config;
-            updateInterface();
+            const profileSelect = document.getElementById('profileSelect');
+            await updateInterface(profileSelect);
             logToGUIConsole(`Switched to profile: ${profileName}`);
             updateSaveStatus();
         } else {
@@ -195,11 +196,16 @@ async function deleteCurrentProfile() {
     const profileName = currentProfile.PROFILE_NAME;
 
     if (profileName === 'Default') {
-        alert('Cannot delete Default profile');
+        await window.OCPModal.alert('This is needed in case there are no other profiles.', 'Cannot delete Default profile');
         return;
     }
 
-    if (!confirm(`Delete profile "${profileName}"?`)) return;
+    const confirmed = await window.OCPModal.confirm(
+        `Are you sure you want to delete profile "${profileName}"?`,
+        'Delete Profile',
+        'error'
+    );
+    if (!confirmed) return;
 
     try {
         await chrome.runtime.sendMessage({

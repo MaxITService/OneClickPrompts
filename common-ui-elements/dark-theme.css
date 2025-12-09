@@ -209,6 +209,25 @@ body.dark-theme .button-item.dragging .shortcut-indicator {
     color: #020617 !important;
 }
 
+/* Undo/delete pending state in dark theme */
+body.dark-theme .delete-button.undo-state {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #0d0b12;
+}
+
+body.dark-theme .delete-button.undo-state:hover {
+    background: color-mix(in srgb, var(--primary-color) 85%, #ffffff 15%);
+    border-color: color-mix(in srgb, var(--primary-color) 85%, #ffffff 15%);
+    color: #0d0b12;
+}
+
+body.dark-theme .button-item.pending-delete {
+    border-color: var(--primary-color);
+    background: rgba(154, 121, 211, 0.18);
+    color: #f5f2ff;
+}
+
 /* ------------------------------------------------------------------------- */
 /* Version Container and Links           */
 /* ------------------------------------------------------------------------- */

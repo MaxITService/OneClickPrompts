@@ -106,26 +106,21 @@ window.ButtonsClickingShared = {
             window.sharedAutoSendInterval = setInterval(async () => {
                 attempts++;
 
-                // A. Find Send Button
+                // A. Check for Stop Button FIRST (immediate "AI is still typing" detection)
+                const stopBtn = window.ButtonsClickingShared.findStopButton(findStopButton);
+                if (stopBtn) {
+                    // AI is mid-generation - enter watcher immediately
+                    handleStopButtonFound(stopBtn);
+                    return;
+                }
+
+                // B. No stop button visible - now look for Send Button
                 const btn = await findButton();
 
-                // B. If Send Button Found
                 if (btn) {
-                    // Check if it's actually a stop button (some sites reuse the same element)
+                    // Double-check: the found button might be in busy/stop state
+                    // (some sites reuse the same element for send/stop)
                     if (isBusy(btn)) {
-                        // It's busy/stop state. Treat as if send button not found, but we found a stop button.
-                        // Fall through to stop handling logic below? 
-                        // Or handle it here.
-                        // If the send button IS the stop button, we should wait for it to become send button.
-                        // But the requirement says: "if no send found, probe stop buttons".
-                        // If findButton returns the stop button, it means our selector matched it.
-                        // We should probably treat it as "blocked_by_stop" if we can't click it.
-                        // Let's assume isBusy means "don't click yet".
-                        // But if it persists as busy, we might want to enter the watcher flow.
-                        // For now, let's stick to the existing "wait" logic for isBusy, but maybe with a limit?
-                        // Actually, if it's busy, it IS a stop button. So we should probably trigger the stop watcher.
-
-                        // Let's trigger stop watcher if isBusy is true.
                         handleStopButtonFound(btn);
                         return;
                     }
@@ -146,14 +141,7 @@ window.ButtonsClickingShared = {
                     return;
                 }
 
-                // C. Send Button NOT Found - Probe for Stop Button
-                const stopBtn = window.ButtonsClickingShared.findStopButton(findStopButton);
-                if (stopBtn) {
-                    handleStopButtonFound(stopBtn);
-                    return;
-                }
-
-                // D. Neither Found - Timeout
+                // C. Neither stop nor send button found - Timeout check
                 if (attempts >= maxAttempts) {
                     finish({ status: 'not_found' });
                 }
@@ -162,6 +150,18 @@ window.ButtonsClickingShared = {
 
             // Shared Stop Button Watcher Logic
             const handleStopButtonFound = (stopElement) => {
+                const isStopButtonActive = (btn) => {
+                    if (!btn) return false;
+                    if (!document.body.contains(btn)) return false;
+                    if (btn.disabled || btn.getAttribute('aria-disabled') === 'true') return false;
+                    const style = window.getComputedStyle(btn);
+                    if (!style) return false;
+                    if (style.display === 'none' || style.visibility === 'hidden') return false;
+                    const opacity = parseFloat(style.opacity || '1');
+                    if (!Number.isNaN(opacity) && opacity === 0) return false;
+                    return isBusy(btn);
+                };
+
                 // Clear the search interval
                 if (window.sharedAutoSendInterval) {
                     clearInterval(window.sharedAutoSendInterval);
@@ -178,20 +178,36 @@ window.ButtonsClickingShared = {
                 const watchStartTime = Date.now();
 
                 const stopWatcher = setInterval(async () => {
-                    // Check if stop button is still there/visible
-                    const isStillVisible = document.body.contains(stopElement) &&
-                        window.getComputedStyle(stopElement).display !== 'none';
+                    // Check if the original stop element is still an active stop control
+                    const originalActive = isStopButtonActive(stopElement);
 
-                    // Also re-check using the finder in case the DOM node was replaced but a stop button still exists
+                    // Re-check using the finder in case the DOM node was replaced but a stop button still exists
                     const currentStopBtn = window.ButtonsClickingShared.findStopButton(findStopButton);
+                    const currentActive = isStopButtonActive(currentStopBtn);
 
-                    if (!isStillVisible && !currentStopBtn) {
+                    if (!originalActive && !currentActive) {
                         // Stop button disappeared!
                         clearInterval(stopWatcher);
 
-                        // Retry send search with a short polling loop to handle transitional DOM delays
+                        // First, try immediately in case the send button is already back
+                        const immediateAttempt = async () => {
+                            const retryBtn = await findButton();
+                            if (retryBtn && !isBusy(retryBtn) && isEnabled(retryBtn) && preClickValidation(retryBtn)) {
+                                clickAction(retryBtn);
+                                return true;
+                            }
+                            return false;
+                        };
+
+                        const immediateHit = await immediateAttempt();
+                        if (immediateHit) {
+                            finish({ status: 'sent' });
+                            return;
+                        }
+
+                        // Retry send search with a slightly longer polling loop to handle transitional DOM delays
                         let postStopAttempts = 0;
-                        const postStopMaxAttempts = 20; // Try for ~3 seconds
+                        const postStopMaxAttempts = 25; // ~3.8 seconds at 150ms cadence
 
                         const postStopPoller = setInterval(async () => {
                             postStopAttempts++;
@@ -209,6 +225,11 @@ window.ButtonsClickingShared = {
                                     clickAction(retryBtn);
                                     finish({ status: 'sent', button: retryBtn });
                                 }
+                            } else if (retryBtn && isEnabled(retryBtn) && !isBusy(retryBtn) && postStopAttempts >= postStopMaxAttempts - 5) {
+                                // Fallback: if validation keeps failing but the button is present/enabled, attempt a send near the end.
+                                clearInterval(postStopPoller);
+                                clickAction(retryBtn);
+                                finish({ status: 'sent', button: retryBtn, reason: 'validation_bypassed_post_stop' });
                             } else {
                                 if (postStopAttempts >= postStopMaxAttempts) {
                                     clearInterval(postStopPoller);
@@ -224,7 +245,7 @@ window.ButtonsClickingShared = {
                         clearInterval(stopWatcher);
                         finish({ status: 'blocked_by_stop', reason: 'timeout' });
                     }
-                }, 1000);
+                }, 300);
             };
         });
     }

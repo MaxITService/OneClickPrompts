@@ -179,12 +179,20 @@ async function processChatGPTCustomSendButtonClick(event, customText, autoSend) 
 
     /**
      * Waits for send button to appear in the DOM using SelectorGuard polling.
+     * Returns null if stop button is detected (AI is generating).
      * @param {number} timeout - Maximum time in milliseconds to wait for the buttons.
-     * @returns {Promise<HTMLElement>} Resolves with the send button if found.
+     * @returns {Promise<HTMLElement|null>} Resolves with the send button if found, null if stop button detected.
      */
     const waitForSendButton = async (timeout = 5000) => {
         const startTime = Date.now();
         while (Date.now() - startTime < timeout) {
+            // Check for stop button first — if AI is generating, don't wait for send button
+            const stopBtn = window.ButtonsClickingShared?.findStopButton?.();
+            if (stopBtn) {
+                logConCgp('[buttons] Stop button detected while waiting for send button. AI is generating.');
+                return null; // Let performAutoSend handle the stop button detection
+            }
+
             const btn = await window.OneClickPromptsSelectorGuard.findSendButton();
             if (btn) return btn;
             await new Promise(r => setTimeout(r, 200));

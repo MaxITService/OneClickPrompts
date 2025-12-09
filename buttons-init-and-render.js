@@ -217,7 +217,7 @@ window.MaxExtensionButtonsInit = {
         // Prevent duplication across SPA re-renders by reusing or moving the existing container if present
         const containerId = window.InjectionTargetsOnWebsite.selectors.buttonsContainerId;
         let existingContainer = document.getElementById(containerId);
-        const isPanel = targetContainer.id === 'max-extension-floating-panel-content';
+        const isPanel = targetContainer.id === 'max-extension-floating-panel-content' || targetContainer.id === 'max-extension-buttons-area';
 
         // If multiple containers with the same id exist (should not happen), keep the first and remove the rest
         try {
@@ -335,12 +335,12 @@ window.MaxExtensionButtonsInit = {
         // If origin is 'panel', only update the floating panel
         if (origin === 'panel') {
             if (window.MaxExtensionFloatingPanel && window.MaxExtensionFloatingPanel.panelElement) {
-                const panelContent = document.getElementById('max-extension-floating-panel-content');
-                if (panelContent) {
+                const buttonsArea = document.getElementById('max-extension-buttons-area');
+                if (buttonsArea) {
                     const panelVisible = !!window.MaxExtensionFloatingPanel.isPanelVisible;
                     const containerId = window?.InjectionTargetsOnWebsite?.selectors?.buttonsContainerId || null;
                     const selector = containerId ? `#${CSS.escape(containerId)}` : null;
-                    let panelButtonsContainer = selector ? panelContent.querySelector(selector) : null;
+                    let panelButtonsContainer = selector ? buttonsArea.querySelector(selector) : null;
 
                     if (!panelVisible && !panelButtonsContainer) {
                         logConCgp('[init] Panel refresh skipped because panel is hidden and contains no buttons.');
@@ -361,8 +361,8 @@ window.MaxExtensionButtonsInit = {
                             logConCgp('[init] Panel container absent while hidden; skipping recreation to preserve inline buttons.');
                             return;
                         }
-                        panelContent.innerHTML = '';
-                        this.createAndInsertCustomElements(panelContent);
+                        buttonsArea.innerHTML = '';
+                        this.createAndInsertCustomElements(buttonsArea);
                         logConCgp('[init] Recreated floating panel button container after profile change (panel origin).');
                         this.__resetRefreshRetry('panel');
                     }
@@ -418,7 +418,8 @@ window.MaxExtensionButtonsInit = {
                     return;
                 }
                 originalContainer.innerHTML = '';
-                this.generateAndAppendAllButtons(originalContainer, false);
+                const isInsidePanel = !!originalContainer.closest('#max-extension-floating-panel-content');
+                this.generateAndAppendAllButtons(originalContainer, isInsidePanel);
                 logConCgp('[init] Updated buttons in original container for profile change (inline origin).');
                 this.__resetRefreshRetry('inline');
                 return;

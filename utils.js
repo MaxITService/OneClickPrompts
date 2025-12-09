@@ -319,8 +319,8 @@ class InjectionTargetsOnWebsite {
                 threadRoot: '#thread',
                 buttonsContainerId: 'chatgpt-custom-buttons-container',
                 stopButtons: [
-                    'button[aria-label="Stop generating"]',
-                    'button[data-testid="stop-button"]'
+                    'button[data-testid="stop-button"]',
+                    'button[aria-label="Stop generating"]'
                 ]
             },
             Claude: {
@@ -340,8 +340,9 @@ class InjectionTargetsOnWebsite {
                 threadRoot: 'div.flex-1.max-w-3xl.mx-auto:has([data-testid="user-message"])',
                 buttonsContainerId: 'claude-custom-buttons-container',
                 stopButtons: [
-                    'button[aria-label="Stop generating"]',
-                    'button:has(div.text-text-200)' // Heuristic for stop button text
+                    'button[aria-label="Stop response"]',
+                    'button[aria-label*="stop response" i]',
+                    'button[type="button"][aria-label*="stop" i]'
                 ]
             },
             Copilot: {
@@ -392,10 +393,9 @@ class InjectionTargetsOnWebsite {
                     "textarea.ds-scroll-area"
                 ],
                 "sendButtons": [
-                    "div.bf38813a .ds-icon-button:has(svg):not([aria-disabled=\"true\"]):not(:has(rect))",
-                    "[data-testid=\"send-button\"]:not([data-testid^=\"custom-send-button\"]):not(:has(rect))",
-                    "[data-testid*=\"send\"]:not([data-testid^=\"custom-send-button\"]):not(:has(rect))",
-                    "[aria-label*=\"send\" i]:not([data-testid^=\"custom-send-button\"]):not(.max-extension-queue-option-button):not(:has(rect))"
+                    "div.ec4f5d61 .bf38813a .ds-icon-button._7436101.ds-icon-button--sizing-container:not([aria-disabled=\"true\"])",
+                    "div.ec4f5d61 .bf38813a .ds-icon-button.ds-icon-button--sizing-container:last-of-type:not([aria-disabled=\"true\"])",
+                    ".bf38813a .ds-icon-button._7436101:not([aria-disabled=\"true\"])"
                 ],
                 // Heuristic fallback: try to find the scroll area containing messages
                 "threadRoot": ".ds-scroll-area:has(.ds-message), .scrollable:has(textarea, [contenteditable=\"true\"])",
@@ -467,7 +467,8 @@ class InjectionTargetsOnWebsite {
                 threadRoot: '.w-full.h-full.overflow-y-auto.overflow-x-hidden.scrollbar-gutter-stable.flex.flex-col.items-center.px-gutter',
                 buttonsContainerId: 'grok-custom-buttons-container',
                 stopButtons: [
-                    'button[aria-label="Stop generating"]'
+                    'button[aria-label="Stop model response"]',
+                    'button:has(svg path[d^="M4 9.2"])'
                 ]
             },
             Gemini: {

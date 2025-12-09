@@ -243,12 +243,12 @@ window.MaxExtensionContainerMover = {
                 try {
                     await window.MaxExtensionFloatingPanel.createFloatingPanel();
                     const panelElement = window.MaxExtensionFloatingPanel.panelElement;
-                    const panelContent = document.getElementById('max-extension-floating-panel-content');
+                    const buttonsArea = document.getElementById('max-extension-buttons-area');
 
-                    if (panelElement && panelContent) {
-                        panelContent.innerHTML = '';
+                    if (panelElement && buttonsArea) {
+                        buttonsArea.innerHTML = '';
                         if (window.MaxExtensionButtonsInit && typeof window.MaxExtensionButtonsInit.createAndInsertCustomElements === 'function') {
-                            window.MaxExtensionButtonsInit.createAndInsertCustomElements(panelContent);
+                            window.MaxExtensionButtonsInit.createAndInsertCustomElements(buttonsArea);
                         }
 
                         if (typeof window.MaxExtensionFloatingPanel.positionPanelTopRight === 'function') {
@@ -307,7 +307,7 @@ window.MaxExtensionContainerMover = {
             : 'Move Buttons Container. Use Forward/Back to find the best spot. If buttons disappear, keep clicking to find them. If you are satisfied, just press Save.';
 
         window.showToast(message, 'info', {
-            duration: 0,
+            duration: mode === 'auto-recovery' ? 10000 : 0,
             customButtons: customButtons,
             onDismiss: mode === 'auto-recovery' ? () => {
                 // Mark as dismissed when user manually closes it

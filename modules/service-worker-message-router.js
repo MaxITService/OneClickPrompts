@@ -550,6 +550,34 @@ export function handleMessage(request, sender, sendResponse) {
             return true;
         // ===== End Tooltip Cases =====
 
+        // ===== Manual Queue Cards Cases =====
+        case 'getManualQueueCards':
+            (async () => {
+                try {
+                    const data = await StateStore.getManualQueueCards();
+                    logConfigurationRelatedStuff('Retrieved Manual Queue Cards:', data);
+                    sendResponse({ data });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
+            return true;
+
+        case 'saveManualQueueCards':
+            (async () => {
+                try {
+                    await StateStore.saveManualQueueCards(request.data);
+                    logConfigurationRelatedStuff('Saved Manual Queue Cards:', request.data);
+                    sendResponse({ success: true });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
+            return true;
+        // ===== End Manual Queue Cards Cases =====
+
         case 'openSettingsPage':
             (async () => {
                 try {

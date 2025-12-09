@@ -213,7 +213,13 @@ function handleQueueRandomizePercentChange(event) {
  * Reverts the current profile to default settings.
  */
 async function revertToDefault() {
-    if (!confirm('Revert current profile to default settings?')) return;
+    const confirmed = await window.OCPModal.confirm(
+        'Are you sure you want to revert the current profile to default settings? This cannot be undone.',
+        'Revert to Defaults',
+        'error'
+    );
+
+    if (!confirmed) return;
 
     try {
         const response = await chrome.runtime.sendMessage({ type: 'createDefaultProfile' });
@@ -253,7 +259,11 @@ async function saveCurrentProfile() {
 /**
  * Updates the entire interface based on the current profile.
  */
-async function updateInterface() {
+/**
+ * Updates the entire interface based on the current profile.
+ * @param {HTMLElement|null} anchorElement - Optional element to keep visually stable (prevent jumping).
+ */
+async function updateInterface(anchorElement = null) {
     // --- Added guard to check if currentProfile is valid ---
     if (!currentProfile || !currentProfile.customButtons) {
         logToGUIConsole('No valid current profile found. Attempting to retrieve default profile...');
@@ -261,7 +271,7 @@ async function updateInterface() {
             const response = await chrome.runtime.sendMessage({ type: 'getConfig' });
             if (response && response.config) {
                 currentProfile = response.config;
-                await updateInterface(); // Call updateInterface again after retrieving default
+                await updateInterface(anchorElement); // Call updateInterface again after retrieving default
             } else {
                 logToGUIConsole('Failed to retrieve default profile in updateInterface.');
             }
@@ -271,8 +281,15 @@ async function updateInterface() {
         return;
     }
 
+    // Capture anchor position relative to viewport BEFORE update
+    let anchorOffset = 0;
+    if (anchorElement) {
+        anchorOffset = anchorElement.getBoundingClientRect().top;
+    }
+
     // Update buttons, settings, etc. based on currentProfile
-    await updatebuttonCardsList(); // Now awaiting this async function
+    // Pass !anchorElement as restoreScroll: if we are anchoring, don't restore old scroll.
+    await updatebuttonCardsList(!anchorElement);
 
     document.getElementById('autoSendToggle').checked = currentProfile.globalAutoSendEnabled;
     document.getElementById('shortcutsToggle').checked = currentProfile.enableShortcuts;
@@ -283,9 +300,20 @@ async function updateInterface() {
     document.getElementById('buttonAutoSendToggle').checked = true; // Reset to default checked
 
     // Set the profileSelect dropdown to the current profile
-    profileSelect.value = currentProfile.PROFILE_NAME;
+    const profileSelect = document.getElementById('profileSelect');
+    if (profileSelect) {
+        profileSelect.value = currentProfile.PROFILE_NAME;
+    }
 
     updateQueueSettingsUIFromProfile();
+
+    // Restore anchor position relative to viewport AFTER update
+    if (anchorElement) {
+        const newAnchorTop = anchorElement.getBoundingClientRect().top + window.scrollY;
+        // Target: newAnchorTop - window.scrollY = anchorOffset
+        // window.scrollY = newAnchorTop - anchorOffset
+        window.scrollTo(0, newAnchorTop - anchorOffset);
+    }
 }
 
 /**
@@ -438,11 +466,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('dragend', handleDragEnd); // dragend doesn't bubble, must be on document/window.
 
     // Button list event delegation for delete buttons
-    buttonCardsList.addEventListener('click', async (e) => {
+    buttonCardsList.addEventListener('click', (e) => {
         if (e.target.classList.contains('delete-button')) {
             const buttonItem = e.target.closest('.button-item');
-            const index = parseInt(buttonItem.dataset.index);
-            await deleteButton(index);
+            startUndoableDeletion(buttonItem);
         }
     });
 
