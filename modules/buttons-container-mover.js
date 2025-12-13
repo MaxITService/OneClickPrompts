@@ -179,6 +179,211 @@ window.MaxExtensionContainerMover = {
         }
     },
 
+    __buildNudgeCandidates: function (session) {
+        if (!session?.active) return { items: [], scrollY: 0 };
+
+        const container = session.container;
+        const roots = session.uiRoots || [];
+
+        const scrollY = typeof window.scrollY === 'number' ? window.scrollY : 0;
+        const innerHeight = typeof window.innerHeight === 'number' ? window.innerHeight : 0;
+        const innerWidth = typeof window.innerWidth === 'number' ? window.innerWidth : 0;
+
+        const rangeTop = scrollY - innerHeight;
+        const rangeBottom = scrollY + innerHeight * 2;
+
+        const allowedTags = new Set([
+            'BODY',
+            'DIV', 'SECTION', 'MAIN', 'FORM', 'ARTICLE', 'ASIDE', 'NAV', 'HEADER', 'FOOTER'
+        ]);
+
+        const rootSet = new Set(roots.filter(Boolean));
+        const items = [];
+        const seen = new Set();
+
+        const minWidthPx = Math.max(140, Math.min(260, Math.floor(innerWidth * 0.6)));
+        const minHeightPx = 18;
+
+        let scanned = 0;
+        const maxScanned = 25000;
+        const maxCandidates = 2500;
+
+        const filter = {
+            acceptNode: (node) => {
+                if (!node || node.nodeType !== Node.ELEMENT_NODE) return NodeFilter.FILTER_SKIP;
+                if (rootSet.has(node)) return NodeFilter.FILTER_REJECT;
+
+                const tag = node.tagName;
+                if (!tag) return NodeFilter.FILTER_SKIP;
+                if (tag.includes('-')) return NodeFilter.FILTER_ACCEPT; // custom elements (likely wrappers)
+                if (allowedTags.has(tag)) return NodeFilter.FILTER_ACCEPT;
+                return NodeFilter.FILTER_SKIP;
+            }
+        };
+
+        let walker;
+        try {
+            walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, filter);
+        } catch (err) {
+            logConCgp('[ContainerMover] Failed to create TreeWalker for nudge candidates:', err);
+            return { items: [], scrollY };
+        }
+
+        while (walker.nextNode()) {
+            scanned++;
+            if (scanned > maxScanned) break;
+            if (items.length >= maxCandidates) break;
+
+            const el = walker.currentNode;
+            if (!el || el === container) continue;
+
+            if (seen.has(el)) continue;
+            seen.add(el);
+
+            try {
+                if (el.isContentEditable || el.getAttribute('contenteditable') === 'true') {
+                    continue;
+                }
+            } catch (_) { /* ignore */ }
+
+            try {
+                if (el.matches('input,textarea,button,select,option,optgroup,label')) {
+                    continue;
+                }
+            } catch (_) { /* ignore */ }
+
+            let rect;
+            try {
+                rect = el.getBoundingClientRect();
+            } catch (_) {
+                continue;
+            }
+
+            if (!rect || rect.width <= 0 || rect.height <= 0) continue;
+
+            const absTop = rect.top + scrollY;
+            const absBottom = rect.bottom + scrollY;
+
+            // Keep it "nearby" so arrows feel like a nudge. User can scroll and nudge again.
+            if (absBottom < rangeTop || absTop > rangeBottom) continue;
+
+            // Avoid tiny containers that are almost never good placements.
+            if (el !== document.body && rect.width < minWidthPx && rect.height < minHeightPx) continue;
+
+            items.push({
+                el,
+                top: absTop,
+                left: rect.left,
+                area: rect.width * rect.height
+            });
+        }
+
+        // Always allow body as a fallback.
+        if (!seen.has(document.body)) {
+            items.push({ el: document.body, top: 0, left: 0, area: Number.MAX_SAFE_INTEGER });
+        }
+
+        items.sort((a, b) => (a.top - b.top) || (a.left - b.left));
+
+        if (typeof logConCgp === 'function') {
+            logConCgp('[ContainerMover] Nudge candidates built.', { scanned, candidates: items.length });
+        }
+
+        return { items, scrollY };
+    },
+
+    __nudgeContainer: function (session, direction) {
+        if (!session?.active) return;
+
+        const container = session.container;
+        const currentParent = container?.parentElement || document.body;
+
+        const now = Date.now();
+        const scrollY = typeof window.scrollY === 'number' ? window.scrollY : 0;
+        const shouldRebuild = !session.nudgeCache ||
+            (now - session.nudgeCache.at > 600) ||
+            (session.nudgeCache.scrollY !== scrollY);
+
+        if (shouldRebuild) {
+            const built = this.__buildNudgeCandidates(session);
+            session.nudgeCache = {
+                at: now,
+                scrollY: built.scrollY,
+                items: built.items
+            };
+        }
+
+        const items = session.nudgeCache?.items || [];
+        if (items.length === 0) {
+            this.__toast('No nearby containers found. Try Pick instead.', 'warning', 2500);
+            return;
+        }
+
+        let currentRect;
+        try {
+            currentRect = currentParent.getBoundingClientRect();
+        } catch (_) {
+            currentRect = null;
+        }
+
+        const currentTop = currentRect ? (currentRect.top + scrollY) : scrollY;
+        const currentCenterTop = currentRect ? (currentTop + currentRect.height / 2) : currentTop;
+
+        let baseIndex = items.findIndex(item => item.el === currentParent);
+        if (baseIndex === -1) {
+            // If current parent isn't in the list, pick the closest by vertical distance.
+            let bestIndex = 0;
+            let bestDist = Infinity;
+            for (let i = 0; i < items.length; i++) {
+                const dist = Math.abs(items[i].top - currentCenterTop);
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    bestIndex = i;
+                }
+            }
+            baseIndex = bestIndex;
+        }
+
+        const step = direction === 'back' ? -1 : 1;
+        let index = baseIndex + step;
+        let wrapped = false;
+        let moved = false;
+
+        const maxTries = Math.min(items.length, 60);
+        for (let attempt = 0; attempt < maxTries; attempt++) {
+            if (index < 0) {
+                index = items.length - 1;
+                wrapped = true;
+            } else if (index >= items.length) {
+                index = 0;
+                wrapped = true;
+            }
+
+            const target = items[index]?.el;
+            if (!target || target === currentParent || target === container) {
+                index += step;
+                continue;
+            }
+
+            moved = this.__moveContainerTo(container, target);
+            if (moved) {
+                this.__highlight(target, '#4CAF50');
+                break;
+            }
+
+            index += step;
+        }
+
+        if (!moved) {
+            this.__toast('Could not move using arrows here. Try Pick instead.', 'error', 3000);
+            return;
+        }
+
+        if (wrapped) {
+            this.__toast('Wrapped around nearby containers.', 'info', 1800);
+        }
+    },
+
     __cancelSession: function (session) {
         if (!session || !session.active) return;
         session.active = false;
@@ -187,7 +392,22 @@ window.MaxExtensionContainerMover = {
                 document.removeEventListener('click', session.pickClickHandler, true);
             }
         } catch (_) { /* ignore */ }
+        try {
+            if (session.hoverMoveHandler) {
+                document.removeEventListener('pointermove', session.hoverMoveHandler, true);
+            }
+        } catch (_) { /* ignore */ }
+        try {
+            if (typeof cancelAnimationFrame === 'function' && session.hoverRafId) {
+                cancelAnimationFrame(session.hoverRafId);
+            }
+        } catch (_) { /* ignore */ }
         session.pickClickHandler = null;
+        session.hoverMoveHandler = null;
+        session.hoverRafId = null;
+        session.hoverLastTarget = null;
+        session.hoverPreviewEl = null;
+        session.nudgeCache = null;
         session.isPicking = false;
         this.__clearHighlight();
         if (this.__activeSession === session) {
@@ -339,9 +559,58 @@ window.MaxExtensionContainerMover = {
         }
 
         session.isPicking = true;
-        this.__toast('Pick mode: click a spot on the page to move the buttons there.', 'info', 2500);
+        this.__toast('Pick mode: hover to preview, then click a spot to move the buttons there.', 'info', 2500);
 
         const mover = this;
+
+        // Hover preview highlight (blue) for the container that would be used on click.
+        session.hoverMoveHandler = (event) => {
+            if (!session.active || !session.isPicking) return;
+
+            const rawTarget = mover.__getEventTargetElement(event);
+            if (!rawTarget) return;
+
+            if (mover.__isInUiRoots(rawTarget, session.uiRoots)) {
+                if (session.hoverPreviewEl) {
+                    session.hoverPreviewEl = null;
+                    mover.__clearHighlight();
+                }
+                return;
+            }
+
+            session.hoverLastTarget = rawTarget;
+            if (session.hoverRafId) return;
+
+            session.hoverRafId = requestAnimationFrame(() => {
+                session.hoverRafId = null;
+                if (!session.active || !session.isPicking) return;
+
+                const target = session.hoverLastTarget;
+                session.hoverLastTarget = null;
+                if (!target) return;
+
+                const candidate = mover.__findPlaceableContainer(target, session.uiRoots);
+                if (!candidate) {
+                    if (session.hoverPreviewEl) {
+                        session.hoverPreviewEl = null;
+                        mover.__clearHighlight();
+                    }
+                    return;
+                }
+
+                if (session.hoverPreviewEl !== candidate) {
+                    session.hoverPreviewEl = candidate;
+                    mover.__highlight(candidate, '#7a5cc8');
+                }
+            });
+        };
+
+        try {
+            document.addEventListener('pointermove', session.hoverMoveHandler, { capture: true, passive: true });
+        } catch (_) {
+            document.addEventListener('pointermove', session.hoverMoveHandler, true);
+        }
+
         session.pickClickHandler = (event) => {
             if (!session.active) return;
             const rawTarget = mover.__getEventTargetElement(event);
@@ -365,6 +634,21 @@ window.MaxExtensionContainerMover = {
                 mover.__toast('Could not move there (protected element). Try another spot.', 'error', 3000);
                 return;
             }
+
+            try {
+                if (session.hoverMoveHandler) {
+                    document.removeEventListener('pointermove', session.hoverMoveHandler, true);
+                }
+            } catch (_) { /* ignore */ }
+            try {
+                if (typeof cancelAnimationFrame === 'function' && session.hoverRafId) {
+                    cancelAnimationFrame(session.hoverRafId);
+                }
+            } catch (_) { /* ignore */ }
+            session.hoverMoveHandler = null;
+            session.hoverRafId = null;
+            session.hoverLastTarget = null;
+            session.hoverPreviewEl = null;
 
             mover.__highlight(pickedParent, '#4CAF50');
 
@@ -409,7 +693,12 @@ window.MaxExtensionContainerMover = {
             originalParent: container.parentElement,
             originalNextSibling: container.nextSibling,
             isPicking: false,
-            pickClickHandler: null
+            pickClickHandler: null,
+            hoverMoveHandler: null,
+            hoverRafId: null,
+            hoverLastTarget: null,
+            hoverPreviewEl: null,
+            nudgeCache: null
         };
 
         this.__activeSession = session;
@@ -425,8 +714,13 @@ window.MaxExtensionContainerMover = {
 
         const customButtons = [
             {
+                text: '⬅️ Back',
+                title: 'Move to the previous nearby container',
+                onClick: () => { mover.__nudgeContainer(session, 'back'); return false; }
+            },
+            {
                 text: '🎯 Pick',
-                title: 'Click this, then click a spot on the page',
+                title: 'Click this, then hover + click a spot on the page',
                 onClick: () => { mover.__startPickMode(session); return false; }
             },
             {
@@ -437,6 +731,11 @@ window.MaxExtensionContainerMover = {
                     const ok = await mover.__saveLocation(container);
                     return ok === true;
                 }
+            },
+            {
+                text: 'Forward ➡️',
+                title: 'Move to the next nearby container',
+                onClick: () => { mover.__nudgeContainer(session, 'forward'); return false; }
             },
             {
                 text: dismissLabel,

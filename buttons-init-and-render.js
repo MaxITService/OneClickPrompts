@@ -164,7 +164,7 @@ window.MaxExtensionButtonsInit = {
             } else { // 'custom' button type
                 if (def.config.text === SETTINGS_BUTTON_MAGIC_TEXT) {
                     // Special handling for the settings button.
-                    const settingsButtonConfig = { ...def.config, text: 'Settings', tooltip: 'Click to open extension settings in a new tab. Shift+Click to move the buttons container (Pick a spot + Save).' };
+                    const settingsButtonConfig = { ...def.config, text: 'Settings', tooltip: 'Click to open extension settings in a new tab. Shift+Click to move the buttons container (Pick or use arrows + Save).' };
                     const settingsClickHandler = (event) => {
                         // Shift+Click: Move/Save Container Feature
                         if (event && event.shiftKey) {
