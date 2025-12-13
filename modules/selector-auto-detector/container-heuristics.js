@@ -318,7 +318,13 @@ window.OneClickPromptsContainerHeuristics = {
         const firstVisible = (list = [], extraFilter = null) => {
             for (const selector of list) {
                 if (!selector) continue;
-                const nodes = document.querySelectorAll(selector);
+                let nodes;
+                try {
+                    nodes = document.querySelectorAll(selector);
+                } catch (err) {
+                    logConCgp('[ContainerHeuristics] Skipping invalid selector while finding anchors.', { selector, error: err?.message || err });
+                    continue;
+                }
                 for (const node of nodes) {
                     if (!isVisible(node)) continue;
                     if (extraFilter && !extraFilter(node)) continue;

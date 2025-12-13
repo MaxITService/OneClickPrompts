@@ -77,7 +77,15 @@ function buttonBoxCheckingAndInjection(enableResiliency = true, activeWebsite) {
     // Get the list of selectors for the containers into which the buttons should be injected.
     const selectors = window?.InjectionTargetsOnWebsite?.selectors?.containers;
     if (!Array.isArray(selectors) || selectors.length === 0) {
-        logConCgp('[button-injection] No selectors available for injection targets. Skipping.');
+        logConCgp('[button-injection] No container selectors configured. Reporting failure to auto-detector.');
+        try {
+            if (window.OneClickPromptsSelectorAutoDetector && typeof window.OneClickPromptsSelectorAutoDetector.reportFailure === 'function') {
+                window.OneClickPromptsSelectorAutoDetector.reportFailure('container', {
+                    selectors: Array.isArray(selectors) ? selectors : [],
+                    reason: 'no_container_selectors'
+                });
+            }
+        } catch (_) { /* ignore */ }
         return;
     }
 

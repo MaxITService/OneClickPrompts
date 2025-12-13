@@ -430,7 +430,13 @@ window.MaxExtensionButtonsInit = {
                 if (!selector) {
                     continue;
                 }
-                const target = document.querySelector(selector);
+                let target = null;
+                try {
+                    target = document.querySelector(selector);
+                } catch (err) {
+                    logConCgp('[init] Skipping invalid container selector during inline refresh.', { selector, error: err?.message || err });
+                    continue;
+                }
                 if (target) {
                     logConCgp(`[init] Inline container missing; reinserting via selector '${selector}'.`);
                     if (!Array.isArray(window?.globalMaxExtensionConfig?.customButtons)) {

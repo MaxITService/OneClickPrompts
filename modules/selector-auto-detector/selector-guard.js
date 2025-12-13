@@ -38,6 +38,23 @@ window.OneClickPromptsSelectorGuard = {
     findSendButton: async function () {
         const selectors = window.InjectionTargetsOnWebsite?.selectors?.sendButtons || [];
         const editorSelectors = window.InjectionTargetsOnWebsite?.selectors?.editors || [];
+        const detector = window.OneClickPromptsSelectorAutoDetector;
+        const sendState = detector?.state?.sendButton;
+        const autoSendActive = !!window.sharedAutoSendInterval;
+
+        // During Auto-Send recovery, pause lookups until the user confirms/adjusts the send button.
+        if (autoSendActive && sendState?.autoSendAwaitingUser) {
+            return null;
+        }
+
+        // After the user closes the picker, Auto-Send should click the chosen element once.
+        if (autoSendActive && sendState?.autoSendPendingElement) {
+            const pending = sendState.autoSendPendingElement;
+            if (pending && pending.nodeType === Node.ELEMENT_NODE && pending.isConnected) {
+                return pending;
+            }
+            sendState.autoSendPendingElement = null;
+        }
 
         // 1. Try standard selectors
         let element = this._querySelectors(selectors, { requireEnabled: true });
@@ -61,8 +78,6 @@ window.OneClickPromptsSelectorGuard = {
             }
 
             // If we've already seen the send button this session, treat misses as temporary and keep quiet.
-            const detector = window.OneClickPromptsSelectorAutoDetector;
-            const sendState = detector?.state?.sendButton;
             const seenBefore = !!sendState?.everFound;
             if (seenBefore) {
                 // Detect disabled/busy variants to refresh lastSeenAt and prolong the grace period.
@@ -89,9 +104,18 @@ window.OneClickPromptsSelectorGuard = {
 
         // Try to find a visible element first
         // Some sites have multiple hidden textareas, we usually want the visible one
-        const candidates = selectors
-            .map(s => document.querySelectorAll(s))
-            .flatMap(nodeList => Array.from(nodeList));
+        const candidates = [];
+        for (const selector of selectors) {
+            if (!selector) continue;
+            let nodeList;
+            try {
+                nodeList = document.querySelectorAll(selector);
+            } catch (err) {
+                logConCgp('[SelectorGuard] Skipping invalid selector.', { selector, error: err?.message || err });
+                continue;
+            }
+            candidates.push(...Array.from(nodeList));
+        }
 
         // Filter for existence and basic visibility (offsetParent is a quick check for 'display: none')
         const visibleCandidate = candidates.find(el => {

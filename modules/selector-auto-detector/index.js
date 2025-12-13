@@ -21,7 +21,10 @@ window.OneClickPromptsSelectorAutoDetector = {
             lastFailure: 0,
             recovering: false,
             everFound: false,
-            lastSeenAt: 0
+            lastSeenAt: 0,
+            autoSendAwaitingUser: false,
+            autoSendPendingElement: null,
+            autoSendLastToastAt: 0
         },
         stopButton: {
             failures: 0,
@@ -58,6 +61,7 @@ window.OneClickPromptsSelectorAutoDetector = {
     },
 
     activePickerSession: null,
+    pickerQueue: [],
 
     /**
      * Reports a failure to find a specific element type.
@@ -216,9 +220,18 @@ window.OneClickPromptsSelectorAutoDetector = {
                     window.showToast(`OneClickPrompts: Found the ${typeName}.`, 'success');
                 }
                 s.failures = 0;
-                if (type === 'sendButton' || type === 'stopButton') {
+                if (type === 'stopButton') {
                     s.everFound = true;
                     s.lastSeenAt = Date.now();
+                }
+                if (type === 'sendButton') {
+                    const autoSendActive = !!window.sharedAutoSendInterval;
+                    if (autoSendActive && offered) {
+                        s.autoSendAwaitingUser = true;
+                        s.autoSendPendingElement = result;
+                        s.autoSendLastToastAt = Date.now();
+                        result = null;
+                    }
                 }
             } else {
                 logConCgp(`[SelectorAutoDetector] Heuristics failed to find ${type}.`);
@@ -791,6 +804,30 @@ window.OneClickPromptsSelectorAutoDetector = {
         return false;
     },
 
+    __tryOpenQueuedPicker: function () {
+        if (this.activePickerSession?.active) return false;
+        const queue = Array.isArray(this.pickerQueue) ? this.pickerQueue : (this.pickerQueue = []);
+        if (queue.length === 0) return false;
+
+        while (queue.length > 0 && !this.activePickerSession?.active) {
+            const next = queue.shift();
+            if (!next) continue;
+            const el = next.element;
+            if (!el || el.nodeType !== Node.ELEMENT_NODE) {
+                if (next.type === 'sendButton') {
+                    const s = this.state?.sendButton;
+                    if (s) s.autoSendAwaitingUser = false;
+                }
+                continue;
+            }
+            Promise.resolve()
+                .then(() => this.offerToAdjustAndSaveSelector(next.type, el))
+                .catch(() => { /* ignore */ });
+            return true;
+        }
+        return false;
+    },
+
     /**
      * Offers an interactive picker (arrows + hover pick) to adjust editor/send selectors before saving.
      * Stop button is intentionally out-of-scope for this flow.
@@ -803,8 +840,25 @@ window.OneClickPromptsSelectorAutoDetector = {
         if (!element || element.nodeType !== Node.ELEMENT_NODE) return false;
         if (typeof window.showToast !== 'function') return false;
 
+        const autoSendActive = type === 'sendButton' && !!window.sharedAutoSendInterval;
+
         if (this.activePickerSession?.active) {
-            this.__toast('OneClickPrompts: Selector picker already open. Close it first.', 'info', 2500);
+            const queue = Array.isArray(this.pickerQueue) ? this.pickerQueue : (this.pickerQueue = []);
+            for (let i = queue.length - 1; i >= 0; i--) {
+                if (queue[i]?.type === type) queue.splice(i, 1);
+            }
+            queue.push({ type, element });
+
+            if (autoSendActive) {
+                const s = this.state?.sendButton;
+                if (s) {
+                    s.autoSendAwaitingUser = true;
+                    s.autoSendPendingElement = element;
+                    s.autoSendLastToastAt = Date.now();
+                }
+            }
+
+            this.__toast('OneClickPrompts: Selector helper queued. Close the current one to continue.', 'info', 2800);
             return true;
         }
 
@@ -812,6 +866,11 @@ window.OneClickPromptsSelectorAutoDetector = {
         const roots = this.__getPickerUiRoots();
         const candidates = this.__buildPickerCandidates(type, element, roots);
         if (candidates.length === 0) {
+            if (autoSendActive) {
+                const s = this.state?.sendButton;
+                if (s) s.autoSendAwaitingUser = false;
+                this.__toast('OneClickPrompts: Could not open the selector helper here. Auto-Send will continue.', 'warning', 3500);
+            }
             return false;
         }
 
@@ -829,10 +888,20 @@ window.OneClickPromptsSelectorAutoDetector = {
             hoverMoveHandler: null,
             pickClickHandler: null,
             hoverRafId: null,
-            hoverLastEvent: null
+            hoverLastEvent: null,
+            autoSendActive
         };
 
         this.activePickerSession = session;
+
+        if (autoSendActive) {
+            const s = this.state?.sendButton;
+            if (s) {
+                s.autoSendAwaitingUser = true;
+                s.autoSendPendingElement = element;
+                s.autoSendLastToastAt = Date.now();
+            }
+        }
 
         const detector = this;
         const typeName = type === 'editor' ? 'Text input area' : 'Send button';
@@ -847,11 +916,19 @@ window.OneClickPromptsSelectorAutoDetector = {
             `- Saved selectors can break after site updates; reopen Advanced selectors if needed.`
         ].join('\n');
 
+        const tooltipForToast = autoSendActive
+            ? `${tooltip}\n\nAuto-Send is paused while this helper is open. Save or close it to continue.`
+            : tooltip;
+
         this.__selectCandidateIndex(session, session.index, false);
 
-        window.showToast(`OneClickPrompts: Adjust ${typeName}, then Save.`, 'info', {
+        const toastMessage = autoSendActive
+            ? `OneClickPrompts: Adjust ${typeName}, then Save (Auto-Send paused).`
+            : `OneClickPrompts: Adjust ${typeName}, then Save.`;
+
+        window.showToast(toastMessage, 'info', {
             duration: 0,
-            tooltip,
+            tooltip: tooltipForToast,
             customButtons: [
                 {
                     text: '⬅️ Back',
@@ -885,12 +962,20 @@ window.OneClickPromptsSelectorAutoDetector = {
                 }
             ],
             onDismiss: () => {
+                if (session.autoSendActive && session.type === 'sendButton') {
+                    const s = detector.state?.sendButton;
+                    if (s) {
+                        s.autoSendPendingElement = session.selectedEl || s.autoSendPendingElement || null;
+                        s.autoSendAwaitingUser = false;
+                    }
+                }
                 session.active = false;
                 detector.__stopPickMode(session);
                 detector.__clearPickerHighlight(session);
                 if (detector.activePickerSession === session) {
                     detector.activePickerSession = null;
                 }
+                detector.__tryOpenQueuedPicker();
             }
         });
 

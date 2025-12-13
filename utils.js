@@ -209,6 +209,42 @@ class InjectionTargetsOnWebsite {
         this.initializeSelectors();
     }
 
+    normalizeSelectors(current, fallback) {
+        const safeCurrent = (current && typeof current === 'object') ? current : {};
+        const safeFallback = (fallback && typeof fallback === 'object') ? fallback : {};
+
+        const normalizeList = (key) => {
+            if (Array.isArray(safeCurrent[key])) {
+                return safeCurrent[key].filter((selector) => typeof selector === 'string' && selector.trim().length > 0);
+            }
+            if (Array.isArray(safeFallback[key])) {
+                return safeFallback[key].filter((selector) => typeof selector === 'string' && selector.trim().length > 0);
+            }
+            return [];
+        };
+
+        const normalizeString = (key) => {
+            const currentValue = safeCurrent[key];
+            if (typeof currentValue === 'string' && currentValue.trim().length > 0) {
+                return currentValue.trim();
+            }
+            const fallbackValue = safeFallback[key];
+            if (typeof fallbackValue === 'string' && fallbackValue.trim().length > 0) {
+                return fallbackValue.trim();
+            }
+            return '';
+        };
+
+        const merged = { ...safeFallback, ...safeCurrent };
+        merged.containers = normalizeList('containers');
+        merged.sendButtons = normalizeList('sendButtons');
+        merged.editors = normalizeList('editors');
+        merged.stopButtons = normalizeList('stopButtons');
+        merged.buttonsContainerId = normalizeString('buttonsContainerId');
+        merged.threadRoot = normalizeString('threadRoot');
+        return merged;
+    }
+
     /**
      * Identifies the active website based on the current hostname.
      * @returns {string} - The name of the active website (e.g., 'ChatGPT', 'Claude', 'Copilot', 'Unknown').
@@ -256,7 +292,7 @@ class InjectionTargetsOnWebsite {
             // Try to get custom selectors first
             const customSelectors = await this.getCustomSelectors(this.activeSite);
             if (customSelectors) {
-                this.selectors = customSelectors;
+                this.selectors = this.normalizeSelectors(customSelectors, defaultSelectors);
                 logConCgp(`[utils] Using custom selectors for ${this.activeSite}`);
             } else {
                 this.selectors = defaultSelectors;

@@ -228,9 +228,16 @@ window.MaxExtensionButtons = {
         buttonElement.addEventListener('click', (event) => {
             event.preventDefault();
             if (type === 'copy') {
-                const editor = window.InjectionTargetsOnWebsite.selectors.editors
-                    .map(s => document.querySelector(s))
-                    .find(el => el);
+                const editorSelectors = window?.InjectionTargetsOnWebsite?.selectors?.editors;
+                const editor = (Array.isArray(editorSelectors) ? editorSelectors : [])
+                    .map((selector) => {
+                        try {
+                            return document.querySelector(selector);
+                        } catch (_) {
+                            return null;
+                        }
+                    })
+                    .find((el) => el);
 
                 if (!editor) {
                     logConCgp('[buttons-cross-chat] Editor area not found for copy.');
@@ -437,4 +444,3 @@ async function processCustomSendButtonClick(event, customText, autoSend) {
 }
 
 // #endregion
-

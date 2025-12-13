@@ -100,12 +100,17 @@ window.ButtonsClickingShared = {
                     clearInterval(window.sharedAutoSendInterval);
                     window.sharedAutoSendInterval = null;
                 }
+                try {
+                    const sendState = window.OneClickPromptsSelectorAutoDetector?.state?.sendButton;
+                    if (sendState) {
+                        sendState.autoSendAwaitingUser = false;
+                        sendState.autoSendPendingElement = null;
+                    }
+                } catch (_) { /* ignore */ }
                 resolve(result);
             };
 
             window.sharedAutoSendInterval = setInterval(async () => {
-                attempts++;
-
                 // A. Check for Stop Button FIRST (immediate "AI is still typing" detection)
                 const stopBtn = window.ButtonsClickingShared.findStopButton(findStopButton);
                 if (stopBtn) {
@@ -114,10 +119,23 @@ window.ButtonsClickingShared = {
                     return;
                 }
 
+                // If selector recovery is waiting on the user, pause without consuming attempts.
+                const awaitingUser = !!window.OneClickPromptsSelectorAutoDetector?.state?.sendButton?.autoSendAwaitingUser;
+                if (awaitingUser) {
+                    return;
+                }
+
+                attempts++;
+
                 // B. No stop button visible - now look for Send Button
                 const btn = await findButton();
 
                 if (btn) {
+                    const awaitingUserAfterFind = !!window.OneClickPromptsSelectorAutoDetector?.state?.sendButton?.autoSendAwaitingUser;
+                    if (awaitingUserAfterFind) {
+                        return;
+                    }
+
                     // Double-check: the found button might be in busy/stop state
                     // (some sites reuse the same element for send/stop)
                     if (isBusy(btn)) {
