@@ -57,6 +57,8 @@ window.OneClickPromptsSelectorAutoDetector = {
         container: { selector: null, site: null, at: 0 }
     },
 
+    activePickerSession: null,
+
     /**
      * Reports a failure to find a specific element type.
      * @param {string} type - 'editor', 'sendButton', or 'stopButton'
@@ -146,7 +148,7 @@ window.OneClickPromptsSelectorAutoDetector = {
                 window.showToast(`OneClickPrompts: ${typeName} not found. ${statusSuffix}`, toastType);
             }
         } else {
-            console.warn(`OneClickPrompts: ${typeName} not found. ${statusSuffix}`);
+            logConCgp(`[SelectorAutoDetector] ${typeName} not found. ${statusSuffix}`);
         }
 
         // If heuristics are disabled, stop here.
@@ -203,7 +205,13 @@ window.OneClickPromptsSelectorAutoDetector = {
 
             if (result) {
                 logConCgp(`[SelectorAutoDetector] Heuristics found new ${type}!`, result);
-                const offered = await this.offerToSaveSelector(type, result);
+                let offered = false;
+                if (type === 'editor' || type === 'sendButton') {
+                    offered = await this.offerToAdjustAndSaveSelector(type, result);
+                }
+                if (!offered) {
+                    offered = await this.offerToSaveSelector(type, result);
+                }
                 if (!offered && window.showToast) {
                     window.showToast(`OneClickPrompts: Found the ${typeName}.`, 'success');
                 }
@@ -346,6 +354,547 @@ window.OneClickPromptsSelectorAutoDetector = {
         } else {
             logConCgp('[SelectorAutoDetector] ContainerMover not available for manual placement.');
         }
+    },
+
+    __toast: function (message, type = 'info', options = 3000) {
+        try {
+            if (typeof window.showToast === 'function') {
+                window.showToast(message, type, options);
+                return;
+            }
+        } catch (_) { /* ignore */ }
+        try {
+            logConCgp('[SelectorAutoDetector] Toast unavailable:', { type, message });
+        } catch (_) { /* ignore */ }
+    },
+
+    __getPickerUiRoots: function () {
+        const roots = [];
+
+        try {
+            const toastContainer = document.getElementById('toastContainer');
+            if (toastContainer) roots.push(toastContainer);
+        } catch (_) { /* ignore */ }
+
+        try {
+            const buttonsContainerId = window?.InjectionTargetsOnWebsite?.selectors?.buttonsContainerId;
+            if (typeof buttonsContainerId === 'string' && buttonsContainerId) {
+                const buttonsContainer = document.getElementById(buttonsContainerId);
+                if (buttonsContainer) roots.push(buttonsContainer);
+            }
+        } catch (_) { /* ignore */ }
+
+        try {
+            const floatingPanel = document.getElementById('max-extension-floating-panel');
+            if (floatingPanel) roots.push(floatingPanel);
+        } catch (_) { /* ignore */ }
+
+        return roots;
+    },
+
+    __isInPickerUiRoots: function (el, roots) {
+        if (!el || el.nodeType !== Node.ELEMENT_NODE) return false;
+        const list = Array.isArray(roots) ? roots : [];
+        for (const root of list) {
+            try {
+                if (root && root.contains(el)) return true;
+            } catch (_) { /* ignore */ }
+        }
+        return false;
+    },
+
+    __isOcpUiElement: function (el) {
+        if (!el || el.nodeType !== Node.ELEMENT_NODE) return true;
+        try {
+            const testId = (el.getAttribute?.('data-testid') || '').toLowerCase();
+            if (testId.startsWith('custom-send-button')) return true;
+        } catch (_) { /* ignore */ }
+        try {
+            if (el.closest?.('[id*="custom-buttons-container"]')) return true;
+        } catch (_) { /* ignore */ }
+        return false;
+    },
+
+    __isVisibleElement: function (el) {
+        if (!el || el.nodeType !== Node.ELEMENT_NODE) return false;
+        let rect;
+        try {
+            rect = el.getBoundingClientRect();
+        } catch (_) {
+            return false;
+        }
+        if (!rect || rect.width <= 10 || rect.height <= 10) return false;
+
+        try {
+            const style = window.getComputedStyle(el);
+            if (!style) return false;
+            if (style.display === 'none' || style.visibility === 'hidden') return false;
+            const opacity = parseFloat(style.opacity || '1');
+            if (!Number.isNaN(opacity) && opacity === 0) return false;
+        } catch (_) { /* ignore */ }
+
+        return true;
+    },
+
+    __clearPickerHighlight: function (session) {
+        if (!session?.highlightedEl) return;
+        try {
+            session.highlightedEl.style.outline = session.highlightedOriginalOutline || '';
+        } catch (_) { /* ignore */ }
+        session.highlightedEl = null;
+        session.highlightedOriginalOutline = null;
+    },
+
+    __highlightPicker: function (session, el, color) {
+        if (!session?.active || !el) return;
+
+        if (session.highlightedEl && session.highlightedEl !== el) {
+            this.__clearPickerHighlight(session);
+        }
+
+        if (!session.highlightedEl) {
+            session.highlightedEl = el;
+            try {
+                session.highlightedOriginalOutline = el.style.outline;
+            } catch (_) {
+                session.highlightedOriginalOutline = null;
+            }
+        }
+
+        try {
+            el.style.outline = `2px solid ${color}`;
+        } catch (_) { /* ignore */ }
+    },
+
+    __describeElement: function (el) {
+        if (!el || el.nodeType !== Node.ELEMENT_NODE) return 'unknown';
+
+        const tag = (el.tagName || 'unknown').toLowerCase();
+        let idPart = '';
+        try {
+            if (el.id) idPart = `#${el.id}`;
+        } catch (_) { /* ignore */ }
+
+        const pickAttr = (name) => {
+            try {
+                const v = el.getAttribute?.(name);
+                return typeof v === 'string' && v.trim() ? v.trim() : null;
+            } catch (_) {
+                return null;
+            }
+        };
+
+        const label = pickAttr('aria-label') || pickAttr('title') || pickAttr('data-testid') || pickAttr('name') || null;
+        const text = (() => {
+            try {
+                const t = (el.innerText || '').trim().replace(/\s+/g, ' ');
+                return t ? t : '';
+            } catch (_) {
+                return '';
+            }
+        })();
+
+        const hint = (label || text || '').slice(0, 60);
+        const hintPart = hint ? ` (${hint})` : '';
+        return `${tag}${idPart}${hintPart}`;
+    },
+
+    __getEventPathElements: function (event) {
+        const path = typeof event?.composedPath === 'function' ? event.composedPath() : [];
+        if (!Array.isArray(path)) return [];
+        return path.filter(node => node && node.nodeType === Node.ELEMENT_NODE);
+    },
+
+    __resolvePickedElement: function (type, event, roots) {
+        const elements = this.__getEventPathElements(event);
+        for (const el of elements) {
+            if (this.__isInPickerUiRoots(el, roots)) return null;
+
+            if (type === 'editor') {
+                try {
+                    if (el.matches('textarea, [contenteditable="true"], [role="textbox"]')) return el;
+                } catch (_) { /* ignore */ }
+                continue;
+            }
+
+            if (type === 'sendButton') {
+                try {
+                    if (el.matches('button, [role="button"], div[onclick], span[onclick]')) return el;
+                } catch (_) { /* ignore */ }
+                continue;
+            }
+        }
+        return null;
+    },
+
+    __buildPickerCandidates: function (type, seed, roots) {
+        if (!seed || seed.nodeType !== Node.ELEMENT_NODE) return [];
+
+        const candidates = [];
+        const seen = new Set();
+        const maxCandidates = 60;
+        const scrollY = typeof window.scrollY === 'number' ? window.scrollY : 0;
+
+        const push = (el) => {
+            if (!el || el.nodeType !== Node.ELEMENT_NODE) return;
+            if (seen.has(el)) return;
+            if (this.__isInPickerUiRoots(el, roots)) return;
+            if (this.__isOcpUiElement(el)) return;
+            if (!this.__isVisibleElement(el)) return;
+            seen.add(el);
+            candidates.push(el);
+        };
+
+        if (type === 'editor') {
+            try {
+                document.querySelectorAll('textarea, [contenteditable="true"], [role="textbox"]').forEach(el => push(el));
+            } catch (_) { /* ignore */ }
+            push(seed);
+
+            candidates.sort((a, b) => {
+                const ra = a.getBoundingClientRect();
+                const rb = b.getBoundingClientRect();
+                const ta = ra.top + scrollY;
+                const tb = rb.top + scrollY;
+                return (ta - tb) || (ra.left - rb.left);
+            });
+            return candidates.slice(0, maxCandidates);
+        }
+
+        if (type === 'sendButton') {
+            const anchorRect = (() => {
+                try { return seed.getBoundingClientRect(); } catch (_) { return null; }
+            })();
+            const region = (() => {
+                try {
+                    return seed.closest('form') ||
+                        seed.closest('footer, section, main, article') ||
+                        document.body;
+                } catch (_) {
+                    return document.body;
+                }
+            })();
+
+            const maxDx = 700;
+            const maxDy = 500;
+            const isNearAnchor = (el) => {
+                if (!anchorRect) return true;
+                let r;
+                try { r = el.getBoundingClientRect(); } catch (_) { return false; }
+                const dx = Math.min(
+                    Math.abs(r.left - anchorRect.left),
+                    Math.abs(r.right - anchorRect.right),
+                    Math.abs((r.left + r.right) / 2 - (anchorRect.left + anchorRect.right) / 2)
+                );
+                const dy = Math.min(
+                    Math.abs(r.top - anchorRect.top),
+                    Math.abs(r.bottom - anchorRect.bottom),
+                    Math.abs((r.top + r.bottom) / 2 - (anchorRect.top + anchorRect.bottom) / 2)
+                );
+                return dx <= maxDx && dy <= maxDy;
+            };
+
+            try {
+                region.querySelectorAll('button, [role="button"], div[onclick], span[onclick]').forEach(el => {
+                    if (!isNearAnchor(el)) return;
+                    push(el);
+                });
+            } catch (_) { /* ignore */ }
+
+            push(seed);
+
+            candidates.sort((a, b) => {
+                const ra = a.getBoundingClientRect();
+                const rb = b.getBoundingClientRect();
+                const ta = ra.top + scrollY;
+                const tb = rb.top + scrollY;
+                return (ta - tb) || (ra.left - rb.left);
+            });
+            return candidates.slice(0, maxCandidates);
+        }
+
+        return [];
+    },
+
+    __stopPickMode: function (session) {
+        if (!session?.active || !session.isPicking) return;
+
+        try {
+            if (session.pickClickHandler) {
+                document.removeEventListener('click', session.pickClickHandler, true);
+            }
+        } catch (_) { /* ignore */ }
+        try {
+            if (session.hoverMoveHandler) {
+                document.removeEventListener('pointermove', session.hoverMoveHandler, true);
+            }
+        } catch (_) { /* ignore */ }
+        try {
+            if (typeof cancelAnimationFrame === 'function' && session.hoverRafId) {
+                cancelAnimationFrame(session.hoverRafId);
+            }
+        } catch (_) { /* ignore */ }
+
+        session.pickClickHandler = null;
+        session.hoverMoveHandler = null;
+        session.hoverRafId = null;
+        session.hoverLastEvent = null;
+        session.isPicking = false;
+    },
+
+    __selectCandidateIndex: function (session, desiredIndex, announce = true) {
+        if (!session?.active) return false;
+        this.__stopPickMode(session);
+
+        const list = Array.isArray(session.candidates) ? session.candidates : [];
+        if (list.length === 0) {
+            this.__toast('No candidates available. Try Pick.', 'warning', 2500);
+            return false;
+        }
+
+        const len = list.length;
+        let index = desiredIndex;
+        for (let attempt = 0; attempt < len; attempt++) {
+            const normalized = ((index % len) + len) % len;
+            const el = list[normalized];
+            if (el && el.isConnected && this.__isVisibleElement(el) && !this.__isInPickerUiRoots(el, session.roots)) {
+                session.index = normalized;
+                session.selectedEl = el;
+                this.__highlightPicker(session, el, '#4CAF50');
+                try {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+                } catch (_) { /* ignore */ }
+
+                if (announce) {
+                    const typeName = session.type === 'editor' ? 'Text input' : 'Send button';
+                    this.__toast(`${typeName} candidate ${normalized + 1}/${len}: ${this.__describeElement(el)}`, 'info', 1800);
+                }
+                return true;
+            }
+            index += 1;
+        }
+
+        this.__toast('All candidates look unavailable right now. Try Pick.', 'warning', 2500);
+        return false;
+    },
+
+    __stepCandidate: function (session, direction) {
+        if (!session?.active) return;
+        const next = (session.index || 0) + (direction || 0);
+        this.__selectCandidateIndex(session, next, true);
+    },
+
+    __startPickMode: function (session) {
+        if (!session?.active) return;
+        if (session.isPicking) {
+            this.__toast('Pick mode already active: hover to preview, click to select.', 'info', 2200);
+            return;
+        }
+
+        session.isPicking = true;
+        this.__toast('Pick mode: hover previews purple, click selects (click is blocked so nothing will send).', 'info', 2600);
+
+        const detector = this;
+        session.hoverMoveHandler = (event) => {
+            if (!session.active || !session.isPicking) return;
+
+            if (detector.__isInPickerUiRoots(event.target, session.roots)) {
+                return;
+            }
+
+            session.hoverLastEvent = event;
+            if (session.hoverRafId) return;
+
+            session.hoverRafId = requestAnimationFrame(() => {
+                session.hoverRafId = null;
+                if (!session.active || !session.isPicking) return;
+
+                const ev = session.hoverLastEvent;
+                session.hoverLastEvent = null;
+                if (!ev) return;
+
+                const candidate = detector.__resolvePickedElement(session.type, ev, session.roots);
+                if (!candidate) {
+                    detector.__clearPickerHighlight(session);
+                    return;
+                }
+                detector.__highlightPicker(session, candidate, '#7a5cc8');
+            });
+        };
+
+        try {
+            document.addEventListener('pointermove', session.hoverMoveHandler, { capture: true, passive: true });
+        } catch (_) {
+            document.addEventListener('pointermove', session.hoverMoveHandler, true);
+        }
+
+        session.pickClickHandler = (event) => {
+            if (!session.active || !session.isPicking) return;
+
+            // Allow interacting with our own UI/toasts while pick mode is active.
+            if (detector.__isInPickerUiRoots(event.target, session.roots)) {
+                return;
+            }
+
+            const picked = detector.__resolvePickedElement(session.type, event, session.roots);
+            if (!picked) {
+                detector.__toast('Could not pick that. Try clicking directly on the control.', 'warning', 2500);
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation?.();
+
+            detector.__stopPickMode(session);
+
+            session.candidates = detector.__buildPickerCandidates(session.type, picked, session.roots);
+            const index = session.candidates.indexOf(picked);
+            session.index = index >= 0 ? index : 0;
+            detector.__selectCandidateIndex(session, session.index, true);
+            detector.__toast('Picked. If it looks right, press Save.', 'success', 2200);
+        };
+
+        document.addEventListener('click', session.pickClickHandler, true);
+    },
+
+    __savePickedSelector: async function (session) {
+        if (!session?.active) return false;
+        this.__stopPickMode(session);
+
+        const el = session.selectedEl;
+        if (!el) {
+            this.__toast('Nothing selected yet. Use arrows or Pick first.', 'warning', 2500);
+            return false;
+        }
+
+        const saver = await this.ensureSelectorSaver();
+        if (!saver || typeof saver.saveSelectorFromElement !== 'function' || typeof saver.deriveSelectorFromElement !== 'function') {
+            this.__toast('Selector saver not available. Try Advanced selectors.', 'error', 3000);
+            return false;
+        }
+
+        const site = session.site || (window.InjectionTargetsOnWebsite?.activeSite || 'Unknown');
+        const derived = saver.deriveSelectorFromElement(el);
+        if (!derived) {
+            this.__toast('Could not derive a stable selector here (Shadow DOM / iframe?). Try Advanced selectors.', 'error', 4000);
+            return false;
+        }
+
+        const result = await saver.saveSelectorFromElement({ site, type: session.type, element: el, selectorOverride: derived });
+        if (result?.ok) {
+            this.__toast(`Selector saved: ${result.selector}`, 'success', 3000);
+            return true;
+        }
+
+        this.__toast(`Could not save selector (${result?.reason || 'unknown'}). Try Advanced selectors.`, 'error', 4000);
+        return false;
+    },
+
+    /**
+     * Offers an interactive picker (arrows + hover pick) to adjust editor/send selectors before saving.
+     * Stop button is intentionally out-of-scope for this flow.
+     * @param {'editor'|'sendButton'} type
+     * @param {HTMLElement} element
+     * @returns {Promise<boolean>} whether a picker toast was shown
+     */
+    offerToAdjustAndSaveSelector: async function (type, element) {
+        if (type !== 'editor' && type !== 'sendButton') return false;
+        if (!element || element.nodeType !== Node.ELEMENT_NODE) return false;
+        if (typeof window.showToast !== 'function') return false;
+
+        if (this.activePickerSession?.active) {
+            this.__toast('OneClickPrompts: Selector picker already open. Close it first.', 'info', 2500);
+            return true;
+        }
+
+        const site = window.InjectionTargetsOnWebsite?.activeSite || 'Unknown';
+        const roots = this.__getPickerUiRoots();
+        const candidates = this.__buildPickerCandidates(type, element, roots);
+        if (candidates.length === 0) {
+            return false;
+        }
+
+        const session = {
+            active: true,
+            type,
+            site,
+            roots,
+            candidates,
+            index: Math.max(0, candidates.indexOf(element)),
+            selectedEl: element,
+            highlightedEl: null,
+            highlightedOriginalOutline: null,
+            isPicking: false,
+            hoverMoveHandler: null,
+            pickClickHandler: null,
+            hoverRafId: null,
+            hoverLastEvent: null
+        };
+
+        this.activePickerSession = session;
+
+        const detector = this;
+        const typeName = type === 'editor' ? 'Text input area' : 'Send button';
+        const tooltip = [
+            `${typeName} selector helper:`,
+            `- ⬅️ Back / ➡️ Forward: cycles nearby candidates (green outline).`,
+            `- 🎯 Pick: hover previews (purple), click selects (click is blocked; nothing sends).`,
+            `- 💾 Save: saves selector for this site (Settings → Advanced selectors to edit).`,
+            ``,
+            `Possible issues:`,
+            `- Some sites use iframes / Shadow DOM: selector may be impossible to derive.`,
+            `- Saved selectors can break after site updates; reopen Advanced selectors if needed.`
+        ].join('\n');
+
+        this.__selectCandidateIndex(session, session.index, false);
+
+        window.showToast(`OneClickPrompts: Adjust ${typeName}, then Save.`, 'info', {
+            duration: 0,
+            tooltip,
+            customButtons: [
+                {
+                    text: '⬅️ Back',
+                    title: 'Previous candidate',
+                    onClick: () => { detector.__stepCandidate(session, -1); return false; }
+                },
+                {
+                    text: '🎯 Pick',
+                    title: 'Hover preview (purple), click to select (blocked)',
+                    onClick: () => { detector.__startPickMode(session); return false; }
+                },
+                {
+                    text: '💾 Save',
+                    title: 'Save the selected selector',
+                    className: 'toast-action-primary',
+                    onClick: async () => {
+                        const ok = await detector.__savePickedSelector(session);
+                        return ok === true;
+                    }
+                },
+                {
+                    text: 'Forward ➡️',
+                    title: 'Next candidate',
+                    onClick: () => { detector.__stepCandidate(session, 1); return false; }
+                },
+                {
+                    text: '✖ Dismiss',
+                    title: 'Close this helper',
+                    className: 'toast-action-secondary',
+                    onClick: () => true
+                }
+            ],
+            onDismiss: () => {
+                session.active = false;
+                detector.__stopPickMode(session);
+                detector.__clearPickerHighlight(session);
+                if (detector.activePickerSession === session) {
+                    detector.activePickerSession = null;
+                }
+            }
+        });
+
+        return true;
     },
 
     /**
