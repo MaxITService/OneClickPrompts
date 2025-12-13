@@ -130,8 +130,7 @@ async function processChatGPTCustomSendButtonClick(event, customText, autoSend) 
     };
 
     /**
-     * Handles the send buttons by initiating auto-send if enabled.
-     * @param {HTMLElement} sendButton - The send button element.
+     * Handles the send process by initiating auto-send if enabled.
      */
     const handleSendButton = () => {
         logConCgp('[buttons] handleSendButton called.');
@@ -178,29 +177,6 @@ async function processChatGPTCustomSendButtonClick(event, customText, autoSend) 
     };
 
     /**
-     * Waits for send button to appear in the DOM using SelectorGuard polling.
-     * Returns null if stop button is detected (AI is generating).
-     * @param {number} timeout - Maximum time in milliseconds to wait for the buttons.
-     * @returns {Promise<HTMLElement|null>} Resolves with the send button if found, null if stop button detected.
-     */
-    const waitForSendButton = async (timeout = 5000) => {
-        const startTime = Date.now();
-        while (Date.now() - startTime < timeout) {
-            // Check for stop button first — if AI is generating, don't wait for send button
-            const stopBtn = window.ButtonsClickingShared?.findStopButton?.();
-            if (stopBtn) {
-                logConCgp('[buttons] Stop button detected while waiting for send button. AI is generating.');
-                return null; // Let performAutoSend handle the stop button detection
-            }
-
-            const btn = await window.OneClickPromptsSelectorGuard.findSendButton();
-            if (btn) return btn;
-            await new Promise(r => setTimeout(r, 200));
-        }
-        throw new Error('Timeout waiting for send buttons');
-    };
-
-    /**
      * Handles the entire process of inserting text and sending the message.
      * This includes state detection, text insertion, and send button handling.
      */
@@ -214,22 +190,12 @@ async function processChatGPTCustomSendButtonClick(event, customText, autoSend) 
             insertTextIntoChatGPTEditor(editorArea, customText, true);
             logConCgp('[buttons][ChatGPT] Custom text inserted.');
 
-            // Wait for send button
-            await new Promise(r => setTimeout(r, 500));
-            try {
-                const btn = await waitForSendButton(5000);
-                return handleSendButton(btn);
-            } catch (error) {
-                logConCgp('[buttons] ' + error.message);
-                showToast('Could not find the send button.', 'error');
-                return { status: 'failed', reason: 'send_button_timeout' };
-            }
+            return handleSendButton();
         } else {
             logConCgp('[buttons][ChatGPT] Editor has content. Appending text (bulk insert).');
             insertTextIntoChatGPTEditor(editorArea, customText, false);
             // Proceed to handle send buttons immediately
-            const btn = await window.OneClickPromptsSelectorGuard.findSendButton();
-            return handleSendButton(btn);
+            return handleSendButton();
         }
     };
 

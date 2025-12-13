@@ -39,6 +39,17 @@
 */
 'use strict';
 
+// Escape tooltip body text so user-provided strings don't break HTML parsing in the tooltip renderer.
+const escapeTooltipHtml = (text) => {
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+};
+
 /**
  * Namespace object containing functions related to creating and managing custom buttons.
  */
@@ -196,17 +207,20 @@ window.MaxExtensionButtons = {
         const autoSendEnabled = (type === 'copy')
             ? window.globalCrossChatConfig?.autosendCopy
             : window.globalCrossChatConfig?.autosendPaste;
-        const autoSendDescription = autoSendEnabled ? ' <i><b>(Auto-sends)</b></i>' : '';
+        const autoSendDescription = autoSendEnabled
+            ? ' <span class="ocp-tooltip__system-msg"><i><b>(Auto-sends)</b></i></span>'
+            : '';
 
         let shortcutDescription = '';
         if (shortcutKey) {
             buttonElement.dataset.shortcutKey = shortcutKey.toString();
             const displayKey = shortcutKey === 10 ? 0 : shortcutKey;
-            shortcutDescription = ` <i><b>(Shortcut: Alt+${displayKey})</b></i>`;
+            shortcutDescription = ` <span class="ocp-tooltip__system-msg"><i><b>(Shortcut: Alt+${displayKey})</b></i></span>`;
         }
 
         const updateTooltip = (text) => {
-            buttonElement.setAttribute('title', text + autoSendDescription + shortcutDescription);
+            const safeText = escapeTooltipHtml(text);
+            buttonElement.setAttribute('title', safeText + autoSendDescription + shortcutDescription);
         };
 
         updateTooltip(baseTooltips[type]);
@@ -297,11 +311,18 @@ window.MaxExtensionButtons = {
         }
 
         // Prepare tooltip parts: append (Auto-sends) if autoSend behavior is enabled
-        const autoSendDescription = buttonConfig.autoSend ? ' <i><b>(Auto-sends)</b></i>' : '';
-        const shortcutDescription = assignedShortcutKey !== null ? ` <i><b>(Shortcut: Alt+${assignedShortcutKey === 10 ? 0 : assignedShortcutKey})</b></i>` : '';
+        // We wrap these in a specific class so the tooltip system can strip them out and place them in the footer,
+        // preventing them from being truncated if the main text is long.
+        const autoSendDescription = buttonConfig.autoSend
+            ? ' <span class="ocp-tooltip__system-msg"><i><b>(Auto-sends)</b></i></span>'
+            : '';
+
+        const shortcutDescription = assignedShortcutKey !== null
+            ? ` <span class="ocp-tooltip__system-msg"><i><b>(Shortcut: Alt+${assignedShortcutKey === 10 ? 0 : assignedShortcutKey})</b></i></span>`
+            : '';
 
         // Set the tooltip (title attribute) combining the button text (or a custom tooltip) with auto-send and shortcut info
-        const baseTooltipText = buttonConfig.tooltip || buttonConfig.text;
+        const baseTooltipText = escapeTooltipHtml(buttonConfig.tooltip || buttonConfig.text);
         customButtonElement.setAttribute('title', `${baseTooltipText}${autoSendDescription}${shortcutDescription}`);
 
         customButtonElement.style.cssText = `
@@ -416,5 +437,4 @@ async function processCustomSendButtonClick(event, customText, autoSend) {
 }
 
 // #endregion
-
 

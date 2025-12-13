@@ -34,7 +34,8 @@ window.OneClickPromptsSelectorAutoDetector = {
             failures: 0,
             lastFailure: 0,
             recovering: false,
-            toastShown: false
+            containerNotFoundToastEverShown: false,
+            containerNotFoundToastDismissed: false
         }
     },
 
@@ -98,7 +99,6 @@ window.OneClickPromptsSelectorAutoDetector = {
             logConCgp(`[SelectorAutoDetector] ${type} recovered. Resetting state.`);
             s.failures = 0;
             s.recovering = false;
-            if (type === 'container') s.toastShown = false;
         }
         if ((type === 'sendButton' || type === 'stopButton') && s) {
             s.everFound = true;
@@ -135,9 +135,12 @@ window.OneClickPromptsSelectorAutoDetector = {
 
         if (window.showToast) {
             if (type === 'container' && heuristicsAllowed) {
-                if (!s.toastShown) {
-                    window.showToast('OneClickPrompts: Container where I can insert buttons is not found. Trying to find it automatically, results may disappoint you…', toastType, 10000);
-                    s.toastShown = true;
+                if (!s.containerNotFoundToastEverShown && !s.containerNotFoundToastDismissed) {
+                    s.containerNotFoundToastEverShown = true;
+                    window.showToast('OneClickPrompts: Container where I can insert buttons is not found. Trying to find it automatically, results may disappoint you…', toastType, {
+                        duration: 10000,
+                        onDismiss: () => { s.containerNotFoundToastDismissed = true; }
+                    });
                 }
             } else {
                 window.showToast(`OneClickPrompts: ${typeName} not found. ${statusSuffix}`, toastType);
@@ -173,7 +176,6 @@ window.OneClickPromptsSelectorAutoDetector = {
                 // For containers, trigger manual move mode instead of auto-save
                 await this.offerContainerPlacement(result);
                 s.failures = 0;
-                s.toastShown = false;
             } else {
                 logConCgp(`[SelectorAutoDetector] Container heuristics failed. Triggering floating panel fallback.`);
                 // Trigger floating panel as last resort

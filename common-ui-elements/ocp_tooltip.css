@@ -154,18 +154,33 @@
 /* ─────────────────────────────────────────────────────────────────────────────
    Text Content Styling
    ───────────────────────────────────────────────────────────────────────────── */
-.ocp-tooltip__text {
+.ocp-tooltip__content {
     display: block;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     word-break: break-word;
     white-space: pre-wrap;
 }
 
+.ocp-tooltip__footer {
+    display: block;
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 0.95em;
+    opacity: 0.9;
+}
+
+.ocp-tooltip__truncation-notice {
+    opacity: 0.6;
+    font-style: italic;
+    margin-bottom: 4px;
+}
+
 /* Multiline tooltip with ellipsis for very long content */
-.ocp-tooltip--truncate .ocp-tooltip__text {
+.ocp-tooltip--truncate .ocp-tooltip__content {
     display: -webkit-box;
-    -webkit-line-clamp: 8;
-    line-clamp: 8;
+    -webkit-line-clamp: var(--ocp-tooltip-max-lines, 30);
+    line-clamp: var(--ocp-tooltip-max-lines, 30);
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
@@ -210,6 +225,10 @@
             rgba(240, 240, 250, 0.72) 100%);
 }
 
+.ocp-tooltip--light .ocp-tooltip__footer {
+    border-top-color: rgba(0, 0, 0, 0.08);
+}
+
 /* ─────────────────────────────────────────────────────────────────────────────
    Compact Variant (for smaller triggers)
    ───────────────────────────────────────────────────────────────────────────── */
@@ -217,6 +236,17 @@
     padding: 6px 10px;
     font-size: 11px;
     --notch-size: 4px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Adaptive Width Modifiers
+   ───────────────────────────────────────────────────────────────────────────── */
+.ocp-tooltip--width-md .ocp-tooltip__panel {
+    max-width: 480px;
+}
+
+.ocp-tooltip--width-lg .ocp-tooltip__panel {
+    max-width: 800px;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────

@@ -81,9 +81,93 @@ async function processDeepSeekCustomSendButtonClick(event, customText, autoSend)
         }
     }
 
+    // 2.1 Stop button detection tuned for DeepSeek (class churn-safe)
+    const isStopButtonLike = (el) => {
+        if (!el) return false;
+        const label = (
+            (el.getAttribute('aria-label') || '') +
+            (el.getAttribute('title') || '') +
+            (el.getAttribute('data-testid') || '') +
+            (el.innerText || '')
+        ).toLowerCase();
+        const stopKeywords = ['stop', 'cancel', 'abort', 'pause'];
+        if (stopKeywords.some(k => label.includes(k))) return true;
+
+        // Require a square-ish icon in the main action cluster; avoids false positives on toggles
+        const inActionCluster = !!el.closest('.bf38813a');
+        if (!inActionCluster) return false;
+
+        const hasSquareIcon = !!el.querySelector('svg rect, svg use[href*="stop"], svg use[*|href*="stop"]');
+        if (hasSquareIcon) return true;
+
+        const stopLikePath = Array.from(el.querySelectorAll('svg path')).some(p => {
+            const d = (p.getAttribute('d') || '').toLowerCase().replace(/\s+/g, '');
+            // Square used by DeepSeek stop: starts near M2 4.88 ... ends near 11.12
+            return /m2\.?0?4\.?8/.test(d) && d.includes('11.12');
+        });
+        return stopLikePath;
+    };
+
+    const findDeepSeekStopButton = () => {
+        const selectors = window.InjectionTargetsOnWebsite?.selectors?.stopButtons || [];
+        const fromSelectors = selectors
+            .map(sel => {
+                try {
+                    return Array.from(document.querySelectorAll(sel));
+                } catch {
+                    return [];
+                }
+            })
+            .flat();
+
+        const candidates = [
+            ...fromSelectors,
+            ...Array.from(document.querySelectorAll('.bf38813a .ds-icon-button.ds-icon-button--sizing-container'))
+        ];
+
+        return candidates.find((el) => {
+            if (!el || el.offsetParent === null) return false;
+            const style = window.getComputedStyle(el);
+            if (!style || style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+            return isStopButtonLike(el);
+        }) || null;
+    };
+
+    const isVisible = (el) => {
+        if (!el) return false;
+        if (el.offsetParent === null) return false;
+        const style = window.getComputedStyle(el);
+        if (!style) return false;
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+        return true;
+    };
+
+    const findDeepSeekSendButton = async () => {
+        // Prefer the rightmost visible action button in the main action cluster, excluding stops
+        const clusterButtons = Array.from(document.querySelectorAll('.bf38813a .ds-icon-button.ds-icon-button--sizing-container:not([aria-disabled=\"true\"])'))
+            .filter(isVisible)
+            .filter(el => !isStopButtonLike(el));
+
+        if (clusterButtons.length > 0) {
+            clusterButtons.sort((a, b) => {
+                const ra = a.getBoundingClientRect();
+                const rb = b.getBoundingClientRect();
+                // Rightmost wins; if tie, lower wins
+                if (rb.left !== ra.left) return rb.left - ra.left;
+                return rb.top - ra.top;
+            });
+            return clusterButtons[0];
+        }
+
+        const guardBtn = await window.OneClickPromptsSelectorGuard.findSendButton();
+        return isStopButtonLike(guardBtn) ? null : guardBtn;
+    };
+
     // 3. Robust auto-send system
     function startAutoSend() {
         return ButtonsClickingShared.performAutoSend({
+            findButton: findDeepSeekSendButton,
+            findStopButton: findDeepSeekStopButton,
             maxAttempts: 15,
             interval: 300,
             isEnabled: (sendButton) => {
@@ -92,6 +176,8 @@ async function processDeepSeekCustomSendButtonClick(event, customText, autoSend)
                     sendButton.getAttribute('aria-disabled') !== 'true' &&
                     !sendButton.classList.contains('disabled');
             },
+            isBusy: (btn) => isStopButtonLike(btn) || ButtonsClickingShared.isBusyStopButton(btn),
+            preClickValidation: () => !findDeepSeekStopButton(),
             clickAction: (btn) => window.MaxExtensionUtils.simulateClick(btn)
         }).then((result) => {
             if (result.status !== 'sent' && result.status !== 'blocked_by_stop') {

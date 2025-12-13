@@ -164,6 +164,105 @@ function Test-ShouldExclude {
 # --------------------------- Main Script --------------------------- #
 
 try {
+    # ------------------- Interaction Prompt ------------------- #
+    Write-Host "--------------------------------------------------------" -ForegroundColor Cyan
+    Write-Host "Select mode:" -ForegroundColor Cyan
+    Write-Host " [ENTER]  Automatic Version Increase + Git Commit" -ForegroundColor Green
+    Write-Host " [c]      Increase Version ONLY (No Commit)" -ForegroundColor Yellow
+    Write-Host " [v]      Proceed with NO changes (Build only)" -ForegroundColor Gray
+    Write-Host "--------------------------------------------------------" -ForegroundColor Cyan
+
+    $doVersionIncrease = $false
+    $doCommit = $false
+
+    while ($true) {
+        $keyInfo = $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        if ($keyInfo.VirtualKeyCode -eq 13) {
+            # Enter
+            $doVersionIncrease = $true
+            $doCommit = $true
+            Write-Host "Selected: Version Increase + Git Commit" -ForegroundColor Green
+            break
+        }
+        elseif ($keyInfo.Character -eq 'c') {
+            $doVersionIncrease = $true
+            Write-Host "Selected: Version Increase ONLY" -ForegroundColor Yellow
+            break
+        }
+        elseif ($keyInfo.Character -eq 'v') {
+            Write-Host "Selected: No Changes (Build Only)" -ForegroundColor Gray
+            break
+        }
+    }
+
+    # ------------------- Version Management ------------------- #
+    $manifestPath = Join-Path $source "manifest.json"
+    $popupPath = Join-Path $source "popup.html"
+    $newVersion = $null 
+
+    if ($doVersionIncrease) {
+        Write-Host "Proceeding with version increase..."
+        if (Test-Path $manifestPath) {
+            $manifestContent = Get-Content $manifestPath -Raw
+            # Regex for "version": "X.X.X.X"
+            $versionPattern = '"version":\s*"(\d+\.\d+\.\d+\.\d+)"'
+            if ($manifestContent -match $versionPattern) {
+                $currentVersion = $matches[1]
+                Write-Host "Current Version: $currentVersion"
+                
+                $parts = $currentVersion.Split('.') | ForEach-Object { [int]$_ }
+                if ($parts.Count -eq 4) {
+                    $parts[3]++
+                    
+                    # Handle decimal carry-over (e.g. 0.0.0.9 -> 0.0.1.0)
+                    for ($i = 3; $i -gt 0; $i--) {
+                        if ($parts[$i] -gt 9) {
+                            $parts[$i] = 0
+                            $parts[$i - 1]++
+                        }
+                    }
+
+                    $newVersion = $parts -join '.'
+                    
+                    # Update Manifest
+                    $manifestContent = $manifestContent -replace $versionPattern, "`"version`": `"$newVersion`""
+                    $manifestContent | Set-Content $manifestPath -NoNewline
+                    Write-Host "Updated manifest.json to $newVersion"
+                    
+                    # Update popup.html
+                    if (Test-Path $popupPath) {
+                        $popupContent = Get-Content $popupPath -Raw
+                        # Escape dots for regex matching of the literal version string
+                        $escapedCurrentVersion = $currentVersion.Replace('.', '\.')
+                        # Match "Version X.X.X.X"
+                        $popupVersionPattern = "Version\s+$escapedCurrentVersion"
+                        
+                        if ($popupContent -match $popupVersionPattern) {
+                            $popupContent = $popupContent -replace $popupVersionPattern, "Version $newVersion"
+                            $popupContent | Set-Content $popupPath -NoNewline
+                            Write-Host "Updated popup.html to $newVersion"
+                        }
+                        else {
+                            Write-Host "CRITICAL ERROR: Could not find 'Version $currentVersion' in popup.html" -ForegroundColor Red -BackgroundColor Black
+                        }
+                    }
+                    else {
+                        Write-Host "CRITICAL ERROR: popup.html not found at $popupPath" -ForegroundColor Red -BackgroundColor Black
+                    }
+                }
+                else {
+                    Write-Host "CRITICAL ERROR: Version format in manifest is not X.X.X.X (Found: $currentVersion)" -ForegroundColor Red -BackgroundColor Black
+                }
+            }
+            else {
+                Write-Host "CRITICAL ERROR: Could not find version pattern in manifest.json" -ForegroundColor Red -BackgroundColor Black
+            }
+        }
+        else {
+            Write-Host "CRITICAL ERROR: manifest.json not found at $manifestPath" -ForegroundColor Red -BackgroundColor Black
+        }
+    }
+
     Write-Host "Starting the copy and archive process..."
 
     # ------------------- Purge Existing Destination Directory ------------------- #
@@ -257,6 +356,36 @@ try {
     Write-Host "`nCreating ZIP archive..."
     Compress-Archive -Path "$destination\*" -DestinationPath $zipPath -Force
     Write-Host "ZIP archive created at: $zipPath"
+
+    # ------------------- Git Commit ------------------- #
+    
+    if ($doCommit -and $newVersion) {
+        $commitMsg = "Version $newVersion"
+        Write-Host "Committing changes with message: '$commitMsg'..."
+        
+        # Execute Git commands
+        try {
+            git add .
+            if ($LASTEXITCODE -eq 0) {
+                git commit -m "$commitMsg"
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "Git commit successful." -ForegroundColor Green
+                }
+                else {
+                    Write-Warning "Git commit failed (perhaps nothing to commit?)"
+                }
+            }
+            else {
+                Write-Error "Git add failed."
+            }
+        }
+        catch {
+            Write-Warning "Git command execution failed. Ensure git is installed and available."
+        }
+    }
+    elseif ($doCommit -and -not $newVersion) {
+        Write-Warning "Commit was requested but new version was not generated. Skipping commit."
+    }
 }
 catch {
     Write-Error "An unexpected error occurred: $_"
@@ -264,6 +393,6 @@ catch {
 }
 
 # ------------------- Final Report and Exit ------------------- #
-Write-Host "`nProcess completed. Press any key to exit."
-Write-Host "Exiting in 5 seconds..."
-Start-Sleep -Seconds 5
+Write-Host "`nProcess completed."
+Write-Host "Exiting in 2 seconds..."
+Start-Sleep -Seconds 2

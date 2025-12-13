@@ -375,6 +375,7 @@ class InjectionTargetsOnWebsite {
             },
             DeepSeek: {
                 "buttonsContainerId": "deepseek-custom-buttons-container",
+                // Deepseek changes selectors frequently, the selectors here are basis for heuristic matching.
                 "containers": [
                     "div._020ab5b",
                     "div.ec4f5d61",
@@ -393,14 +394,16 @@ class InjectionTargetsOnWebsite {
                     "textarea.ds-scroll-area"
                 ],
                 "sendButtons": [
-                    "div.ec4f5d61 .bf38813a .ds-icon-button._7436101.ds-icon-button--sizing-container:not([aria-disabled=\"true\"])",
+                    ".bf38813a .ds-icon-button.ds-icon-button--sizing-container:not([aria-disabled=\"true\"])",
                     "div.ec4f5d61 .bf38813a .ds-icon-button.ds-icon-button--sizing-container:last-of-type:not([aria-disabled=\"true\"])",
+                    "div.ec4f5d61 .bf38813a .ds-icon-button._7436101.ds-icon-button--sizing-container:not([aria-disabled=\"true\"])",
                     ".bf38813a .ds-icon-button._7436101:not([aria-disabled=\"true\"])"
                 ],
-                // Heuristic fallback: try to find the scroll area containing messages
                 "threadRoot": ".ds-scroll-area:has(.ds-message), .scrollable:has(textarea, [contenteditable=\"true\"])",
                 "stopButtons": [
-                    "div.ds-icon-button:has(svg rect)",
+                    ".bf38813a .ds-icon-button:has(svg rect)",
+                    ".bf38813a .ds-icon-button:has(svg path[d*=\"4.88\"])",
+                    ".bf38813a .ds-icon-button:has(svg path[d*=\"4.88C23.68\"])",
                     "[aria-label=\"Stop generating\"]"
                 ]
             },

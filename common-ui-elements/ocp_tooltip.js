@@ -49,10 +49,10 @@ const OCP_TOOLTIP_SETTINGS = {
     preferTop: true,
 
     /** Maximum width for tooltips in pixels */
-    maxWidth: 320,
+    maxWidth: 800,
 
     /** Truncate long tooltips after this many lines (0 = no truncation) */
-    maxLines: 8,
+    maxLines: 30,
 
     /** Custom font color (CSS color string), null = use theme-aware default */
     fontColor: null,
@@ -76,15 +76,52 @@ const OCPTooltip = (() => {
     let _hideTimeout = null;
     let _initialized = false;
     let _isPopupContext = false;
+    let _isExtensionDocument = false;
 
     // Detect context (popup vs content script)
     const detectContext = () => {
         try {
             _isPopupContext = document.querySelector('.container') !== null &&
                 document.querySelector('.menu-nav') !== null;
+            _isExtensionDocument = (typeof location !== 'undefined') &&
+                (location.protocol === 'chrome-extension:' || location.protocol === 'moz-extension:');
         } catch (e) {
             _isPopupContext = false;
+            _isExtensionDocument = false;
         }
+    };
+
+    /**
+     * For injected webpages (https://...), we must never hijack the host page's tooltips.
+     * Scope automatic [title] attachment to known OneClickPrompts UI containers only.
+     * Explicit opt-in (data-ocp-tooltip / OCPTooltip.attach) still works anywhere.
+     */
+    const getInjectedUiRoots = () => {
+        const roots = [];
+
+        const buttonsContainerId = window?.InjectionTargetsOnWebsite?.selectors?.buttonsContainerId;
+        if (typeof buttonsContainerId === 'string' && buttonsContainerId) {
+            const buttonsContainer = document.getElementById(buttonsContainerId);
+            if (buttonsContainer) roots.push(buttonsContainer);
+        }
+
+        // Floating panel (when enabled)
+        const floatingPanel = document.getElementById('max-extension-floating-panel');
+        if (floatingPanel) roots.push(floatingPanel);
+
+        // Toasts (created by ocp_toast.js on injected pages)
+        const toastContainer = document.getElementById('toastContainer');
+        if (toastContainer) roots.push(toastContainer);
+
+        return roots;
+    };
+
+    const isInInjectedUiRoots = (element, roots) => {
+        if (!element || element.nodeType !== Node.ELEMENT_NODE) return false;
+        for (const root of roots) {
+            if (root && root.contains(element)) return true;
+        }
+        return false;
     };
 
     /**
@@ -169,7 +206,8 @@ const OCPTooltip = (() => {
 
         _tooltipEl.innerHTML = `
             <div class="ocp-tooltip__panel">
-                <span class="ocp-tooltip__text"></span>
+                <div class="ocp-tooltip__content"></div>
+                <div class="ocp-tooltip__footer"></div>
             </div>
             <div class="ocp-tooltip__arrow"></div>
         `;
@@ -240,46 +278,173 @@ const OCPTooltip = (() => {
 
         clearTimeout(_hideTimeout);
 
-        // If same trigger already showing, just update text
+        const viewportPadding = 8;
+
+        const getLineHeightPx = (el) => {
+            try {
+                const cs = window.getComputedStyle(el);
+                const lh = cs.lineHeight;
+                if (lh && lh !== 'normal') {
+                    const v = Number.parseFloat(lh);
+                    if (Number.isFinite(v) && v > 0) return v;
+                }
+                const fs = Number.parseFloat(cs.fontSize || '12');
+                if (Number.isFinite(fs) && fs > 0) return fs * 1.45;
+            } catch (_) { /* ignore */ }
+            return 18;
+        };
+
+        const applyViewportLineClamp = (tooltipEl) => {
+            if (!tooltipEl?.classList?.contains('ocp-tooltip--truncate')) {
+                tooltipEl?.style?.removeProperty('--ocp-tooltip-max-lines');
+                return;
+            }
+            const maxLinesSetting = Number(OCP_TOOLTIP_SETTINGS.maxLines);
+            if (!Number.isFinite(maxLinesSetting) || maxLinesSetting <= 0) {
+                tooltipEl?.style?.removeProperty('--ocp-tooltip-max-lines');
+                return;
+            }
+
+            const contentEl = tooltipEl.querySelector('.ocp-tooltip__content');
+            if (!contentEl) return;
+
+            const footerEl = tooltipEl.querySelector('.ocp-tooltip__footer');
+
+            // Start with the configured max lines, then shrink to fit viewport (so footer stays visible).
+            tooltipEl.style.setProperty('--ocp-tooltip-max-lines', String(maxLinesSetting));
+
+            const tooltipRect = tooltipEl.getBoundingClientRect();
+            const contentRect = contentEl.getBoundingClientRect();
+            const availableHeight = Math.max(80, window.innerHeight - viewportPadding * 2);
+
+            if (tooltipRect.height <= availableHeight) {
+                return;
+            }
+
+            // Non-content height includes panel padding, footer, arrow, etc.
+            const nonContentHeight = Math.max(0, tooltipRect.height - contentRect.height);
+
+            // If even non-content doesn't fit, we can't guarantee footer visibility; do best-effort with 1 line.
+            const lineHeight = getLineHeightPx(contentEl);
+            const contentMaxHeight = Math.max(0, availableHeight - nonContentHeight);
+            const maxLinesByViewport = Math.max(1, Math.floor(contentMaxHeight / lineHeight));
+
+            const nextLines = Math.max(1, Math.min(maxLinesSetting, maxLinesByViewport));
+            tooltipEl.style.setProperty('--ocp-tooltip-max-lines', String(nextLines));
+
+            // If footer exists but was hidden, keep behavior consistent (display toggled by parse/apply).
+            if (footerEl && footerEl.style.display === 'none' && footerEl.innerHTML) {
+                footerEl.style.display = 'block';
+            }
+        };
+
+        /**
+         * Parses the raw tooltip text to separate the main content from system messages.
+         * System messages (wrapped in .ocp-tooltip__system-msg) are moved to the footer.
+         * 
+         * @param {HTMLElement} el - The tooltip DOM element
+         * @param {string} rawText - The raw HTML string to parsing
+         * @returns {string} - The cleaned body content string
+         */
+        const parseAndApply = (el, rawText) => {
+            const tempParser = document.createElement('div');
+            tempParser.innerHTML = rawText;
+
+            // Extract system messages to footer
+            const systemMsgs = tempParser.querySelectorAll('.ocp-tooltip__system-msg');
+            let footerHtml = '';
+            systemMsgs.forEach(msg => {
+                footerHtml += msg.outerHTML;
+                msg.remove();
+            });
+            const bodyContent = tempParser.innerHTML;
+
+            // DOM Updates
+            const contentEl = el.querySelector('.ocp-tooltip__content');
+            const footerEl = el.querySelector('.ocp-tooltip__footer');
+
+            if (contentEl) contentEl.innerHTML = bodyContent;
+            if (footerEl) {
+                // If body content is sufficiently long (approx > 3000 chars), 
+                // insert a visual indicator before the footer to signal truncation.
+                if (bodyContent.length > 3000) {
+                    footerHtml = '<div class="ocp-tooltip__truncation-notice">...(content truncated)</div>' + footerHtml;
+                }
+
+                footerEl.innerHTML = footerHtml;
+                footerEl.style.display = footerHtml ? 'block' : 'none';
+            }
+            return bodyContent;
+        };
+
+        const applyAdaptiveWidthClass = (tooltipEl, rawText) => {
+            tooltipEl.classList.remove('ocp-tooltip--width-md', 'ocp-tooltip--width-lg');
+
+            const contentEl = tooltipEl.querySelector('.ocp-tooltip__content');
+            const rawContent = contentEl ? contentEl.textContent : (rawText || '');
+            const textLen = rawContent.length;
+
+            if (textLen > 500) {
+                tooltipEl.classList.add('ocp-tooltip--width-lg');
+            } else if (textLen > 200) {
+                tooltipEl.classList.add('ocp-tooltip--width-md');
+            }
+        };
+
+        const finalizePosition = (tooltipEl) => {
+            const triggerRect = trigger.getBoundingClientRect();
+            const { top, left, position } = calculatePosition(triggerRect);
+
+            tooltipEl.style.top = `${top}px`;
+            tooltipEl.style.left = `${left}px`;
+
+            tooltipEl.classList.remove('ocp-tooltip--top', 'ocp-tooltip--bottom');
+            tooltipEl.classList.add(`ocp-tooltip--${position}`);
+        };
+
+        // Case 1: Trigger is already active and tooltip is visible -> Update existing instance
         if (_currentTrigger === trigger && _tooltipEl?.classList.contains('ocp-tooltip--visible')) {
-            const textEl = _tooltipEl.querySelector('.ocp-tooltip__text');
-            if (textEl) textEl.innerHTML = text;
+            const tooltip = _tooltipEl;
+
+            // Measure/layout without flicker while we recompute width/line clamp/position
+            const prevVisibility = tooltip.style.visibility;
+            tooltip.style.visibility = 'hidden';
+            tooltip.style.display = 'block';
+
+            parseAndApply(tooltip, text);
+            tooltip.classList.toggle('ocp-tooltip--truncate', OCP_TOOLTIP_SETTINGS.maxLines > 0);
+
+            applyAdaptiveWidthClass(tooltip, text);
+            applyViewportLineClamp(tooltip);
+            finalizePosition(tooltip);
+
+            tooltip.style.visibility = prevVisibility || '';
+            tooltip.style.display = '';
             return;
         }
 
-        // Create tooltip if needed
+        // Case 2: New tooltip needed -> Create and populate
         const tooltip = createTooltipElement();
+        parseAndApply(tooltip, text);
 
-        // Update content with formatting
-        const textEl = tooltip.querySelector('.ocp-tooltip__text');
-        if (textEl) textEl.innerHTML = text;
-
-        // Apply truncation class if needed
+        // Apply global settings
         tooltip.classList.toggle('ocp-tooltip--truncate', OCP_TOOLTIP_SETTINGS.maxLines > 0);
 
-        // Determine theme: override → page theme → OS preference
+        // Determine theme logic (Override -> Page Class -> OS Preference)
         let useLightTheme = false;
         if (OCP_TOOLTIP_SETTINGS.themeOverride) {
-            // User explicitly chose a theme
             useLightTheme = OCP_TOOLTIP_SETTINGS.forcedTheme === 'light';
         } else {
-            // Auto detection: check page theme first, then OS preference
             const hasPageDarkTheme = document.body.classList.contains('dark-theme');
             const hasPageLightTheme = document.body.classList.contains('light-theme');
 
-            if (hasPageDarkTheme) {
-                useLightTheme = false; // Dark page = dark tooltip
-            } else if (hasPageLightTheme) {
-                useLightTheme = true; // Light page = light tooltip
-            } else {
-                // No page theme detected, fall back to OS preference
-                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                useLightTheme = !prefersDark;
-            }
+            if (hasPageDarkTheme) useLightTheme = false;
+            else if (hasPageLightTheme) useLightTheme = true;
+            else useLightTheme = !(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
         }
         tooltip.classList.toggle('ocp-tooltip--light', useLightTheme);
 
-        // Apply custom font color if set
+        // Apply custom font color if configured
         const panel = tooltip.querySelector('.ocp-tooltip__panel');
         if (panel) {
             if (OCP_TOOLTIP_SETTINGS.fontColor) {
@@ -291,22 +456,22 @@ const OCPTooltip = (() => {
             }
         }
 
-        // Make visible for measurement (but still hidden via opacity)
+        // Position Calculation (Hidden visibility for measurement)
         tooltip.style.visibility = 'hidden';
         tooltip.style.display = 'block';
 
-        // Calculate and apply position
-        const triggerRect = trigger.getBoundingClientRect();
-        const { top, left, position } = calculatePosition(triggerRect);
+        // Adaptive Width Strategy:
+        // - Default: Compact (320px)
+        // - Medium: > 200 chars (480px)
+        // - Large: > 500 chars (800px)
+        applyAdaptiveWidthClass(tooltip, text);
 
-        tooltip.style.top = `${top}px`;
-        tooltip.style.left = `${left}px`;
+        // On small viewports, shrink line clamp so footer/system row remains visible.
+        applyViewportLineClamp(tooltip);
 
-        // Set direction class
-        tooltip.classList.remove('ocp-tooltip--top', 'ocp-tooltip--bottom');
-        tooltip.classList.add(`ocp-tooltip--${position}`);
+        finalizePosition(tooltip);
 
-        // Show with animation
+        // Finalize Show
         tooltip.style.visibility = '';
         tooltip.style.display = '';
         tooltip.classList.add('ocp-tooltip--visible');
@@ -413,8 +578,25 @@ const OCPTooltip = (() => {
 
         // If this element's tooltip is currently showing, update the visible tooltip
         if (_currentTrigger === element && _tooltipEl) {
-            const textEl = _tooltipEl.querySelector('.ocp-tooltip__text');
-            if (textEl) textEl.innerHTML = text;
+            const tempParser = document.createElement('div');
+            tempParser.innerHTML = text;
+
+            const systemMsgs = tempParser.querySelectorAll('.ocp-tooltip__system-msg');
+            let footerHtml = '';
+            systemMsgs.forEach(msg => {
+                footerHtml += msg.outerHTML;
+                msg.remove();
+            });
+            const bodyContent = tempParser.innerHTML;
+
+            const contentEl = _tooltipEl.querySelector('.ocp-tooltip__content');
+            const footerEl = _tooltipEl.querySelector('.ocp-tooltip__footer');
+
+            if (contentEl) contentEl.innerHTML = bodyContent;
+            if (footerEl) {
+                footerEl.innerHTML = footerHtml;
+                footerEl.style.display = footerHtml ? 'block' : 'none';
+            }
         }
     };
 
@@ -433,13 +615,23 @@ const OCPTooltip = (() => {
         // Listen for settings changes from popup/background
         listenForSettingsChanges();
 
-        // Auto-attach to ALL elements with title attribute or data-ocp-tooltip
-        // This replaces native browser tooltips with frosted glass tooltips
-        const autoAttachSelector = '[data-ocp-tooltip], [title]';
+        const isGlobalTitleAutoAttachAllowed = _isPopupContext || _isExtensionDocument;
 
         const attachAllElements = () => {
-            document.querySelectorAll(autoAttachSelector).forEach(el => {
-                attach(el);
+            if (isGlobalTitleAutoAttachAllowed) {
+                // Popup/extension pages: replace native tooltips everywhere (backward-compatible behavior).
+                document.querySelectorAll('[data-ocp-tooltip], [title]').forEach(el => attach(el));
+                return;
+            }
+
+            // Injected webpages: only attach [title] inside our UI. Never touch the host page's elements.
+            document.querySelectorAll('[data-ocp-tooltip]').forEach(el => attach(el));
+            const roots = getInjectedUiRoots();
+            roots.forEach(root => {
+                try {
+                    root.querySelectorAll('[title]').forEach(el => attach(el));
+                    root.querySelectorAll('[data-ocp-tooltip]').forEach(el => attach(el));
+                } catch (_) { /* safe best-effort */ }
             });
         };
 
@@ -452,31 +644,60 @@ const OCPTooltip = (() => {
 
         // Watch for dynamically added elements AND attribute changes
         const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                // Handle new nodes
-                if (mutation.type === 'childList') {
-                    mutation.addedNodes.forEach((node) => {
-                        if (node.nodeType === Node.ELEMENT_NODE) {
-                            if (node.matches && node.matches(autoAttachSelector)) {
-                                attach(node);
-                            }
-                            // Check children
-                            if (node.querySelectorAll) {
-                                node.querySelectorAll(autoAttachSelector).forEach(el => {
-                                    attach(el);
-                                });
-                            }
-                        }
-                    });
+            const roots = isGlobalTitleAutoAttachAllowed ? [] : getInjectedUiRoots();
+
+            const maybeAttachElement = (el) => {
+                if (!el || el.nodeType !== Node.ELEMENT_NODE) return;
+
+                // Always allow explicit opt-in
+                if (el.hasAttribute('data-ocp-tooltip')) {
+                    attach(el);
+                    return;
                 }
-                // Handle attribute changes (title being added)
-                if (mutation.type === 'attributes' && mutation.attributeName === 'title') {
-                    const el = mutation.target;
-                    if (el.nodeType === Node.ELEMENT_NODE && el.hasAttribute('title')) {
+
+                // Only allow [title] auto-attach globally on extension pages, or inside our injected UI roots.
+                if (el.hasAttribute('title')) {
+                    if (isGlobalTitleAutoAttachAllowed || isInInjectedUiRoots(el, roots)) {
                         attach(el);
                     }
                 }
-            });
+            };
+
+            for (const mutation of mutations) {
+                if (mutation.type === 'childList') {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+                        maybeAttachElement(node);
+
+                        if (!node.querySelectorAll) return;
+
+                        // Explicit opt-in anywhere
+                        node.querySelectorAll('[data-ocp-tooltip]').forEach(el => attach(el));
+
+                        // Scoped title attachment for injected pages
+                        if (isGlobalTitleAutoAttachAllowed || isInInjectedUiRoots(node, roots)) {
+                            node.querySelectorAll('[title]').forEach(el => attach(el));
+                        }
+                    });
+                }
+
+                if (mutation.type === 'attributes') {
+                    const el = mutation.target;
+                    if (el.nodeType !== Node.ELEMENT_NODE) continue;
+
+                    if (mutation.attributeName === 'data-ocp-tooltip' && el.hasAttribute('data-ocp-tooltip')) {
+                        attach(el);
+                        continue;
+                    }
+
+                    if (mutation.attributeName === 'title' && el.hasAttribute('title')) {
+                        if (isGlobalTitleAutoAttachAllowed || isInInjectedUiRoots(el, roots)) {
+                            attach(el);
+                        }
+                    }
+                }
+            }
         });
 
         observer.observe(document.body, {

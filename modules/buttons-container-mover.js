@@ -8,6 +8,38 @@ window.MaxExtensionContainerMover = {
     __selectorSaverPromise: null,
     __autoRecoveryToastShown: false,     // Track if auto-recovery toast has been shown this session
     __autoRecoveryToastDismissed: false, // Track if user explicitly closed the toast
+    __highlightedElement: null,
+    __highlightedElementOriginalOutline: null,
+    __highlightedElementClearTimerId: null,
+
+    __clearHighlight: function () {
+        if (this.__highlightedElementClearTimerId) {
+            clearTimeout(this.__highlightedElementClearTimerId);
+            this.__highlightedElementClearTimerId = null;
+        }
+        if (this.__highlightedElement) {
+            try {
+                this.__highlightedElement.style.outline = this.__highlightedElementOriginalOutline || '';
+            } catch (_) {
+                // ignore
+            }
+        }
+        this.__highlightedElement = null;
+        this.__highlightedElementOriginalOutline = null;
+    },
+
+    __highlightElementOnce: function (el, durationMs = 1000) {
+        if (!el) return;
+        this.__clearHighlight();
+
+        this.__highlightedElement = el;
+        this.__highlightedElementOriginalOutline = el.style.outline;
+        el.style.outline = '2px solid #4CAF50';
+
+        this.__highlightedElementClearTimerId = setTimeout(() => {
+            this.__clearHighlight();
+        }, durationMs);
+    },
 
     /**
      * Lazy-loads the selector persistence module so Save works even if it wasn't preloaded.
@@ -68,12 +100,16 @@ window.MaxExtensionContainerMover = {
             return;
         }
 
+        const mover = this;
+
         // History of valid parents we've successfully attached to.
         // We initialize it with the current parent if it exists.
         const visitedPath = [];
         if (container.parentElement) {
             visitedPath.push(container.parentElement);
         }
+
+        let wrapToastShown = false;
 
         const moveContainer = (direction) => {
             let startNode = container.parentElement;
@@ -123,56 +159,101 @@ window.MaxExtensionContainerMover = {
                 ];
                 if (invalidTags.includes(el.tagName)) return false;
 
-                if (el.offsetParent === null && el.tagName !== 'BODY' && el.tagName !== 'HTML') return false;
+                if (el.tagName !== 'BODY' && el.tagName !== 'HTML') {
+                    const rects = el.getClientRects();
+                    if (rects.length === 0) {
+                        // Some useful layout containers have 0 rects (e.g. display: contents).
+                        // If the element is totally empty, treat it as not useful.
+                        if (!el.firstElementChild && !el.textContent?.trim()) return false;
+                    }
+                }
 
                 return true;
             };
 
-            const walker = document.createTreeWalker(
-                document.body,
-                NodeFilter.SHOW_ELEMENT,
-                {
-                    acceptNode: (node) => {
-                        return NodeFilter.FILTER_ACCEPT;
+            const buildCandidates = () => {
+                const candidates = [];
+                const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT);
+                let scanned = 0;
+                const maxScanned = 35000;
+                const maxCandidates = 7000;
+
+                while (walker.nextNode()) {
+                    scanned++;
+                    if (scanned > maxScanned) break;
+                    const node = walker.currentNode;
+                    if (isValidContainer(node)) {
+                        candidates.push(node);
+                        if (candidates.length >= maxCandidates) break;
                     }
                 }
-            );
 
-            walker.currentNode = startNode;
+                logConCgp('[moveContainer] Candidate scan:', { scanned, candidates: candidates.length });
+                return candidates;
+            };
 
-            let found = null;
-            let attempts = 0;
-            const maxAttempts = 500;
+            const pickCandidate = () => {
+                const candidates = buildCandidates();
+                if (!candidates.length) return null;
 
-            while (attempts < maxAttempts) {
-                attempts++;
-                const node = direction === 'forward' ? walker.nextNode() : walker.previousNode();
+                const findPreviousIndex = () => {
+                    const exact = candidates.indexOf(startNode);
+                    if (exact !== -1) return exact - 1;
 
-                if (!node) {
-                    logConCgp(`[moveContainer] End of DOM reached after ${attempts} attempts.`);
-                    break;
+                    let previous = -1;
+                    for (let index = 0; index < candidates.length; index++) {
+                        const candidate = candidates[index];
+                        const pos = candidate.compareDocumentPosition(startNode);
+                        if (pos & Node.DOCUMENT_POSITION_FOLLOWING) {
+                            previous = index;
+                        } else {
+                            break;
+                        }
+                    }
+                    return previous;
+                };
+
+                const previousIndex = findPreviousIndex();
+                const nextIndex = previousIndex + 1;
+
+                if (direction === 'forward') {
+                    const preferEscape = true;
+                    if (preferEscape) {
+                        for (let index = nextIndex; index < candidates.length; index++) {
+                            const candidate = candidates[index];
+                            if (candidate === startNode) continue;
+                            if (!startNode.contains(candidate)) return candidate;
+                        }
+                    }
+                    return candidates[nextIndex] || null;
                 }
 
-                if (isValidContainer(node)) {
-                    found = node;
-                    logConCgp(`[moveContainer] Found valid container after ${attempts} attempts:`, found);
-                    break;
+                // back
+                return previousIndex >= 0 ? candidates[previousIndex] : null;
+            };
+
+            let found = pickCandidate();
+            if (!found) {
+                const candidates = buildCandidates();
+                if (candidates.length) {
+                    found = direction === 'forward' ? candidates[0] : candidates[candidates.length - 1];
+                    if (!wrapToastShown) {
+                        wrapToastShown = true;
+                        window.showToast('Wrapped around the document (no more spots in that direction).', 'info', 2000);
+                    }
                 }
             }
 
             if (found) {
                 try {
+                    mover.__clearHighlight();
                     found.appendChild(container);
                     // Add to history
                     visitedPath.push(found);
 
                     container.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-                    const originalOutline = found.style.outline;
-                    found.style.outline = '2px solid #4CAF50';
-                    setTimeout(() => {
-                        found.style.outline = originalOutline;
-                    }, 1000);
+                    mover.__highlightElementOnce(found, 1000);
 
                     if (recovered) {
                         window.showToast('Something went wrong. Movement blocked. Restored to last valid position. Maybe try the other direction?', 'warning', 3000);
@@ -184,7 +265,6 @@ window.MaxExtensionContainerMover = {
                 }
 
             } else {
-                logConCgp(`[moveContainer] No valid container found after ${attempts} attempts.`);
                 window.showToast(`End of document reached. Cannot move further ${direction}.`, 'warning', 3000);
 
                 // If we failed to find a NEW place, but we were in a "recovered" state (container detached),
@@ -309,11 +389,14 @@ window.MaxExtensionContainerMover = {
         window.showToast(message, 'info', {
             duration: mode === 'auto-recovery' ? 10000 : 0,
             customButtons: customButtons,
-            onDismiss: mode === 'auto-recovery' ? () => {
+            onDismiss: () => {
+                mover.__clearHighlight();
                 // Mark as dismissed when user manually closes it
-                this.__autoRecoveryToastDismissed = true;
-                logConCgp('[ContainerMover] Auto-recovery toast dismissed by user.');
-            } : undefined
+                if (mode === 'auto-recovery') {
+                    mover.__autoRecoveryToastDismissed = true;
+                    logConCgp('[ContainerMover] Auto-recovery toast dismissed by user.');
+                }
+            }
         });
     }
 };
