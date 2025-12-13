@@ -22,7 +22,8 @@
   "options_page": "popup.html",
   "permissions": [
     "storage",
-    "contextMenus"
+    "contextMenus",
+    "power"
   ],
   "background": {
     "service_worker": "config.js",

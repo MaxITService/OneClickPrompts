@@ -910,3 +910,41 @@ window.MaxExtensionFloatingPanel.processNextQueueItem = async function () {
         }, 1000);
     }
 };
+
+window.MaxExtensionFloatingPanel.syncQueueKeepTabActive = async function (options = {}) {
+    const { force = false } = options;
+    const shouldKeepAwake = Boolean(this.queueKeepTabActiveEnabled);
+
+    if (!force && this.__queueKeepAwakeApplied === shouldKeepAwake) {
+        return;
+    }
+    this.__queueKeepAwakeApplied = shouldKeepAwake;
+
+    if (!chrome?.runtime?.sendMessage) {
+        logConCgp('[queue-engine] chrome.runtime.sendMessage unavailable; cannot set keep-awake state.');
+        return;
+    }
+
+    if (!this.__queueKeepAwakePagehideHooked) {
+        this.__queueKeepAwakePagehideHooked = true;
+        window.addEventListener('pagehide', () => {
+            try {
+                chrome.runtime.sendMessage({ type: 'queueKeepAwake', enabled: false, level: 'display' });
+            } catch (_) { }
+        });
+    }
+
+    try {
+        const response = await chrome.runtime.sendMessage({
+            type: 'queueKeepAwake',
+            enabled: shouldKeepAwake,
+            level: 'display'
+        });
+
+        if (!response || response.success !== true) {
+            logConCgp('[queue-engine] Keep-awake update failed:', response?.error || response);
+        }
+    } catch (err) {
+        logConCgp('[queue-engine] Keep-awake update failed:', err?.message || err);
+    }
+};

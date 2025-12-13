@@ -277,11 +277,13 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
     // --- TOS Confirmation (Global) and Queue Toggle (Profile-specific) ---
     const hideQueueToggle = Boolean(window.globalMaxExtensionConfig.queueHideActivationToggle);
     let isQueueEnabled = Boolean(window.globalMaxExtensionConfig.enableQueueMode);
+    if (!isQueueEnabled) this.setQueueKeepTabActive?.(false);
 
     if (hideQueueToggle) {
         if (window.globalMaxExtensionConfig.enableQueueMode) {
             window.globalMaxExtensionConfig.enableQueueMode = false;
         }
+        this.setQueueKeepTabActive?.(false);
         isQueueEnabled = false;
         if (togglePlaceholder) {
             togglePlaceholder.innerHTML = '';
@@ -336,6 +338,7 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
 
             // Freeze-on-disable behavior:
             if (!state) {
+                this.setQueueKeepTabActive?.(false);
                 // If it was running, pause (capture remaining time). Do not clear items.
                 if (this.isQueueRunning || this.remainingTimeOnPause > 0) {
                     logConCgp('[floating-panel-queue] Queue Mode disabled. Pausing to freeze state.');
@@ -1173,6 +1176,25 @@ window.MaxExtensionFloatingPanel.setupQueueAutomationButtons = function (parentE
         this.applyQueueAutomationButtonState(definition.flagProp);
     });
 
+    if (!this.queueAutomationButtons.queueKeepTabActiveEnabled) {
+        const keepAwakeButton = document.createElement('button');
+        keepAwakeButton.type = 'button';
+        keepAwakeButton.className = 'max-extension-queue-option-button';
+        keepAwakeButton.textContent = '☀️';
+        keepAwakeButton.title = 'Keeps your computer awake while this switch is ON. It stays ON until you turn it OFF (even if the queue finishes). Your screen stays on and your PC won\'t go to sleep, even if you switch to another tab/window. This is useful for long queues (the computer falling asleep would stop them). Turn this OFF when you\'re done to save power. Note: browsers can still slow down background tabs, so some websites may still pause or run slower in the background.';
+        keepAwakeButton.setAttribute('aria-label', 'Keep your computer awake (prevent sleep)');
+
+        keepAwakeButton.addEventListener('click', () => {
+            const newState = !Boolean(this.queueKeepTabActiveEnabled);
+            this.setQueueKeepTabActive(newState);
+            logConCgp(`[floating-panel-queue] Keep tab active ${newState ? 'enabled' : 'disabled'}.`);
+        });
+
+        this.queueAutomationButtons.queueKeepTabActiveEnabled = keepAwakeButton;
+        this.queuePreSendControlsWrapper.appendChild(keepAwakeButton);
+        this.applyQueueAutomationButtonState('queueKeepTabActiveEnabled');
+    }
+
     if (!this.queueFinishedIndicatorButton) {
         const finishedButton = document.createElement('button');
         finishedButton.type = 'button';
@@ -1202,6 +1224,12 @@ window.MaxExtensionFloatingPanel.updateQueueAutomationButtons = function () {
     Object.keys(this.queueAutomationButtons).forEach((flagProp) => {
         this.applyQueueAutomationButtonState(flagProp);
     });
+};
+
+window.MaxExtensionFloatingPanel.setQueueKeepTabActive = function (enabled) {
+    this.queueKeepTabActiveEnabled = Boolean(enabled);
+    this.applyQueueAutomationButtonState?.('queueKeepTabActiveEnabled');
+    void this.syncQueueKeepTabActive?.({ force: true });
 };
 
 window.MaxExtensionFloatingPanel.updateQueueFinishedIndicator = function () {

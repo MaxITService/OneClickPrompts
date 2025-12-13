@@ -113,6 +113,29 @@ export function handleMessage(request, sender, sendResponse) {
             })();
             return true;
 
+        // ----- Queue Keep Awake -----
+        case 'queueKeepAwake':
+            (async () => {
+                try {
+                    if (!chrome?.power?.requestKeepAwake || !chrome?.power?.releaseKeepAwake) {
+                        sendResponse({ success: false, error: 'chrome.power API is unavailable (missing permission or unsupported browser).' });
+                        return;
+                    }
+
+                    const level = request.level === 'system' ? 'system' : 'display';
+                    if (request.enabled) {
+                        chrome.power.requestKeepAwake(level);
+                    } else {
+                        chrome.power.releaseKeepAwake();
+                    }
+                    sendResponse({ success: true });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ success: false, error: error.message });
+                }
+            })();
+            return true;
+
         // ----- Dark Theme Saving -----
         case 'getTheme':
             (async () => {
