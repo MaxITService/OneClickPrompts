@@ -409,7 +409,7 @@ async function commenceExtensionInitialization(configurationObject) {
     // or when navigating away from the relevant site.
     window.removeEventListener('keydown', manageKeyboardShortcutEvents);
 
-    // Activate shortcuts on ANY supported site, not just ChatGPT.
+    // Keyboard shortcuts:
     if (activeWebsite !== 'Unknown' && window.globalMaxExtensionConfig.enableShortcuts) {
         window.addEventListener('keydown', manageKeyboardShortcutEvents);
         logConCgp(`[init] Keyboard shortcut listener is active for ${activeWebsite}.`);

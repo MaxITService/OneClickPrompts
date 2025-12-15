@@ -642,8 +642,8 @@
     cursor: pointer;
 }
 
-/* === ADDED TO RESTORE NUMBER INPUT SPINNERS === */
-/* This rule ensures the up/down arrows are visible on the queue delay input */
+
+/* This rule ensures the up/down arrows (number input spinners) are visible on the queue delay input */
 #max-extension-queue-delay-input {
     appearance: textfield;
 }

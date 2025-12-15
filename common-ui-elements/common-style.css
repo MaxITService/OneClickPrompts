@@ -22,4 +22,9 @@ This file contains shared base styles used across different pages of the extensi
     --box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     --box-shadow-hover: 0 4px 8px rgba(0,0,0,0.1);
     --checkbox-size: 18px;  
+    --font-base: 16px;
+    --lh-normal: 1.5;
+    --lh-tight: 1.2;
+    --font-2xl: 24px;
+    --font-xl: 20px;
 }
