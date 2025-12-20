@@ -5,11 +5,9 @@
 ---
 **[>>>➡️Install OneClickPrompts from Chrome Web Store<<<](https://chromewebstore.google.com/detail/chatgpt-quick-buttons-for/iiofmimaakhhoiablomgcjpilebnndbf)**
 ---
+ 
 
-
-**📢  Important Name Change:  "ChatGPT Quick Buttons" is now "OneClickPrompts"! 📢**
-
-![OneClickPrompts Extension Logo](Promo/promo440_280.png)
+![OneClickPrompts Extension Logo](Promo/All-tools-2025.png)
 # Effortless Prompts Across Your Favorite AI Chats: One Click Away!
 ![OneClickPrompts Prompt Insertion GIF](Promo/how_it_works_gifv.gif)
 
