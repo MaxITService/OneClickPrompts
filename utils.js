@@ -255,10 +255,10 @@ class InjectionTargetsOnWebsite {
         if (currentHostname.includes('chat.openai.com') || currentHostname.includes('chatgpt.com')) {
             return 'ChatGPT';
         }
-        else if (currentHostname.includes('claude.ai') || currentHostname.includes('another-claude-domain.com')) { // Update with actual hostname(s)
+        else if (currentHostname.includes('claude.ai')) { 
             return 'Claude';
         }
-        else if (currentHostname.includes('github.com') || currentHostname.includes('copilot')) {
+        else if ( currentHostname.includes('copilot')) {
             return 'Copilot';
         }
         else if (currentHostname.includes('chat.deepseek.com')) {
@@ -269,13 +269,13 @@ class InjectionTargetsOnWebsite {
         else if (currentHostname.includes('grok.com')) {
             return 'Grok';
         }
-        else if (currentHostname.includes('gemini.google.com')) { // Added Gemini detection
+        else if (currentHostname.includes('gemini.google.com')) { 
             return 'Gemini';
         }
         else if (currentHostname.includes('perplexity.ai')) {
             return 'Perplexity';
         }
-        // Add additional website detections here
+        // More websites can be added here as needed
         else {
             return 'Unknown';
         }
