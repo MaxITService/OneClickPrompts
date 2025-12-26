@@ -117,22 +117,6 @@ window.MaxExtensionUtils = {
         return null;
     },
 
-    // Function to insert text into the editor by updating innerHTML and dispatching input event
-    insertTextIntoEditor: function (editorDiv, text) {
-        logConCgp('[utils] Attempting to insert text into the editor by updating innerHTML.');
-        editorDiv.focus();
-
-        // Escape HTML entities in the text
-        const escapedText = text.replace(/</g, '<').replace(/>/g, '>');
-
-        // Update the innerHTML directly
-        editorDiv.innerHTML = `<p>${escapedText}</p>`;
-
-        // Dispatch an input event to notify ProseMirror of the change
-        const event = new Event('input', { bubbles: true });
-        editorDiv.dispatchEvent(event);
-        logConCgp('[utils] Editor content updated and input event dispatched.');
-    },
 
     // Function to move cursor to the end of a contenteditable element
     moveCursorToEnd: function (contentEditableElement) {
