@@ -106,7 +106,16 @@
         "per-website-button-clicking-mechanics/perplexity-injector.js"
       ],
       "matches": [
-        "<all_urls>"
+        "https://chat.openai.com/*",
+        "https://chatgpt.com/*",
+        "https://claude.ai/*",
+        "https://copilot.microsoft.com/*",
+        "https://chat.deepseek.com/*",
+        "https://aistudio.google.com/*",
+        "https://grok.com/*",
+        "https://gemini.google.com/*",
+        "https://www.perplexity.ai/*",
+        "https://perplexity.ai/*"
       ]
     }
   ]
