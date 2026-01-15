@@ -47,9 +47,9 @@ window.OneClickPromptsSelectorAutoDetector = {
         cooldownMs: 2000     // Time to wait before re-alerting or re-trying
     },
     settings: {
-        enableEditorHeuristics: true,
-        enableSendButtonHeuristics: true,
-        enableStopButtonHeuristics: true,
+        enableEditorHeuristics: false,
+        enableSendButtonHeuristics: false,
+        enableStopButtonHeuristics: false,
         enableContainerHeuristics: true,
         loaded: false
     },
@@ -122,11 +122,11 @@ window.OneClickPromptsSelectorAutoDetector = {
         s.recovering = true;
 
         const heuristicsAllowed = type === 'editor'
-            ? this.settings.enableEditorHeuristics !== false
+            ? this.settings.enableEditorHeuristics === true
             : type === 'sendButton'
-                ? this.settings.enableSendButtonHeuristics !== false
+                ? this.settings.enableSendButtonHeuristics === true
                 : type === 'stopButton'
-                    ? this.settings.enableStopButtonHeuristics !== false
+                    ? this.settings.enableStopButtonHeuristics === true
                     : this.settings.enableContainerHeuristics !== false;
 
         // Readable name for the type
@@ -251,9 +251,9 @@ window.OneClickPromptsSelectorAutoDetector = {
             const response = await chrome.runtime.sendMessage({ type: 'getSelectorAutoDetectorSettings' });
             if (response && response.settings) {
                 this.settings = {
-                    enableEditorHeuristics: response.settings.enableEditorHeuristics !== false,
-                    enableSendButtonHeuristics: response.settings.enableSendButtonHeuristics !== false,
-                    enableStopButtonHeuristics: response.settings.enableStopButtonHeuristics !== false,
+                    enableEditorHeuristics: response.settings.enableEditorHeuristics === true,
+                    enableSendButtonHeuristics: response.settings.enableSendButtonHeuristics === true,
+                    enableStopButtonHeuristics: response.settings.enableStopButtonHeuristics === true,
                     enableContainerHeuristics: response.settings.enableContainerHeuristics !== false,
                     loaded: true
                 };
@@ -1044,9 +1044,9 @@ if (chrome?.runtime?.onMessage?.addListener) {
     chrome.runtime.onMessage.addListener((message) => {
         if (message?.type === 'selectorAutoDetectorSettingsChanged' && message.settings) {
             window.OneClickPromptsSelectorAutoDetector.settings = {
-                enableEditorHeuristics: message.settings.enableEditorHeuristics !== false,
-                enableSendButtonHeuristics: message.settings.enableSendButtonHeuristics !== false,
-                enableStopButtonHeuristics: message.settings.enableStopButtonHeuristics !== false,
+                enableEditorHeuristics: message.settings.enableEditorHeuristics === true,
+                enableSendButtonHeuristics: message.settings.enableSendButtonHeuristics === true,
+                enableStopButtonHeuristics: message.settings.enableStopButtonHeuristics === true,
                 enableContainerHeuristics: message.settings.enableContainerHeuristics !== false,
                 loaded: true
             };

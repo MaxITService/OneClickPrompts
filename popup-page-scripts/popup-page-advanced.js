@@ -48,9 +48,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const stopButtonHeuristicsToggle = document.getElementById('stopButtonHeuristicsToggle');
 
     const heuristicsDefaults = {
-        enableEditorHeuristics: true,
-        enableSendButtonHeuristics: true,
-        enableStopButtonHeuristics: true,
+        enableEditorHeuristics: false,
+        enableSendButtonHeuristics: false,
+        enableStopButtonHeuristics: false,
     };
     let heuristicsSettings = { ...heuristicsDefaults };
 

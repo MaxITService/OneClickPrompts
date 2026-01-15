@@ -1278,6 +1278,13 @@
               it.
             </li>
             <li>
+              If buttons or auto-clicking stop working, go to Settings and open
+              "Advanced Selector Configuration". Turn on heuristics for the
+              editor, send button, and stop button. The extension will then try
+              to auto-detect the places where buttons are injected and where
+              clicks should happen, even if the website changed its structure.
+            </li>
+            <li>
               In case something is not working: try to use English version of
               the websites. LLMs do not care about language, so you can use any
               language you want in chat, while keeping interface language
@@ -1507,6 +1514,10 @@
                   If the configured selectors fail (e.g., after a website update),
                   the extension attempts to "guess" the correct elements using
                   smart heuristics.
+                </p>
+                <p>
+                  If something does not show up on the website, enable heuristics
+                  so the extension can try to find those spots on its own.
                 </p>
                 <ul>
                   <li>
