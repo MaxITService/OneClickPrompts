@@ -60,7 +60,7 @@
             <span class="menu-btn-icon">↔️</span>Wider
           </button>
         </nav>
-        <div id="version" class="small-hoovering-text menu-version">Version 0.0.5.8</div>
+        <div id="version" class="small-hoovering-text menu-version">Version 0.0.5.9</div>
       </section>
       
       <!-- Button Configuration via button cards (buttons have their UI - each on card that is added dynamically) -->
@@ -1439,8 +1439,8 @@
             <span class="switch-label">Use heuristics when send button is not found</span>
           </div>
            <br />
-          <div class="toggle-container" title="tesst">
-            <div class="toggle" data-ocp-tooltip="Enable this if the extension fails to find the Stop button on the page.">
+          <div class="toggle-container">
+            <div class="toggle">
               <input
                 type="checkbox"
                 id="stopButtonHeuristicsToggle"
@@ -1452,7 +1452,23 @@
                 <span class="toggle__emoji"></span>
               </label>
             </div>
-            <span class="switch-label" data-ocp-tooltip="Enable this if the extension fails to find the Stop button on the page.">Use heuristics when stop button is not found</span>
+            <span class="switch-label">Use heuristics when stop button is not found</span>
+          </div>
+           <br />
+          <div class="toggle-container">
+            <div class="toggle">
+              <input
+                type="checkbox"
+                id="containerHeuristicsToggle"
+                class="toggle__input"
+                aria-label="Enable heuristics when the injection target is not found"
+              />
+              <label for="containerHeuristicsToggle" class="toggle__label">
+                <span class="toggle__emoji"></span>
+                <span class="toggle__emoji"></span>
+              </label>
+            </div>
+            <span class="switch-label">Use heuristics when injection target is not found</span>
           </div>
            <br />
           <!-- Collapsible Help Section -->
@@ -1511,29 +1527,29 @@
                 </p>
                 <p><strong>Auto-Detection (Heuristics)</strong></p>
                 <p>
-                  If the configured selectors fail (e.g., after a website update),
-                  the extension attempts to "guess" the correct elements using
-                  smart heuristics.
-                </p>
-                <p>
-                  If something does not show up on the website, enable heuristics
-                  so the extension can try to find those spots on its own.
+                  If something doesn't work on a website, enable the matching heuristic.
+                  The extension will try to find elements automatically.
                 </p>
                 <ul>
                   <li>
-                    <strong>Editor Heuristics:</strong> Scans for visible text
-                    areas and content-editable fields, usually picking the
-                    largest one near the bottom.
+                    <strong>Editor:</strong> Can't insert text? Enable this.
+                    Searches for text input areas on the page.
                   </li>
                   <li>
-                    <strong>Send Button Heuristics:</strong> Looks for buttons
-                    with "Send" icons or text, especially those positioned near
-                    the found editor.
+                    <strong>Send Button:</strong> Auto-send not working? Enable this.
+                    Searches for the Send button near the text input.
+                  </li>
+                  <li>
+                    <strong>Stop Button:</strong> Extension clicks Send while AI is typing?
+                    Enable this. Helps detect when AI is still generating a response.
+                  </li>
+                  <li>
+                    <strong>Injection Target:</strong> Buttons don't appear at all?
+                    Enable this. Searches for an alternative place to insert the extension's buttons.
                   </li>
                 </ul>
                 <p>
-                  Use the toggles above to disable this behavior if it
-                  incorrectly identifies elements.
+                  All heuristics are off by default. Turn them on only if you have problems.
                 </p>
               </div>
             </div>

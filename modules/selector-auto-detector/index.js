@@ -50,7 +50,7 @@ window.OneClickPromptsSelectorAutoDetector = {
         enableEditorHeuristics: false,
         enableSendButtonHeuristics: false,
         enableStopButtonHeuristics: false,
-        enableContainerHeuristics: true,
+        enableContainerHeuristics: false,
         loaded: false
     },
     lastOffers: {
@@ -127,7 +127,7 @@ window.OneClickPromptsSelectorAutoDetector = {
                 ? this.settings.enableSendButtonHeuristics === true
                 : type === 'stopButton'
                     ? this.settings.enableStopButtonHeuristics === true
-                    : this.settings.enableContainerHeuristics !== false;
+                    : this.settings.enableContainerHeuristics === true;
 
         // Readable name for the type
         const typeName = type === 'editor' ? 'Text input area'
@@ -254,7 +254,7 @@ window.OneClickPromptsSelectorAutoDetector = {
                     enableEditorHeuristics: response.settings.enableEditorHeuristics === true,
                     enableSendButtonHeuristics: response.settings.enableSendButtonHeuristics === true,
                     enableStopButtonHeuristics: response.settings.enableStopButtonHeuristics === true,
-                    enableContainerHeuristics: response.settings.enableContainerHeuristics !== false,
+                    enableContainerHeuristics: response.settings.enableContainerHeuristics === true,
                     loaded: true
                 };
             }
@@ -1047,7 +1047,7 @@ if (chrome?.runtime?.onMessage?.addListener) {
                 enableEditorHeuristics: message.settings.enableEditorHeuristics === true,
                 enableSendButtonHeuristics: message.settings.enableSendButtonHeuristics === true,
                 enableStopButtonHeuristics: message.settings.enableStopButtonHeuristics === true,
-                enableContainerHeuristics: message.settings.enableContainerHeuristics !== false,
+                enableContainerHeuristics: message.settings.enableContainerHeuristics === true,
                 loaded: true
             };
         }

@@ -89,6 +89,7 @@ const SELECTOR_AUTO_DETECTOR_DEFAULTS = {
   enableEditorHeuristics: false,
   enableSendButtonHeuristics: false,
   enableStopButtonHeuristics: false,
+  enableContainerHeuristics: false,
 };
 
 // Utilities to get/set nested key paths by flattening as separate storage entries
@@ -213,6 +214,7 @@ async function getValue(path) {
         enableEditorHeuristics: obj.enableEditorHeuristics === true,
         enableSendButtonHeuristics: obj.enableSendButtonHeuristics === true,
         enableStopButtonHeuristics: obj.enableStopButtonHeuristics === true,
+        enableContainerHeuristics: obj.enableContainerHeuristics === true,
       };
     }
     return { ...SELECTOR_AUTO_DETECTOR_DEFAULTS };
@@ -381,6 +383,7 @@ async function setValue(path, value) {
       enableEditorHeuristics: settings.enableEditorHeuristics === true,
       enableSendButtonHeuristics: settings.enableSendButtonHeuristics === true,
       enableStopButtonHeuristics: settings.enableStopButtonHeuristics === true,
+      enableContainerHeuristics: settings.enableContainerHeuristics === true,
     };
     await lsSet({ [KEYS.modules.selectorAutoDetector]: normalized });
     return;
