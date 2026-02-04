@@ -129,18 +129,25 @@ window.OneClickPromptsSelectorAutoDetector = {
                     ? this.settings.enableStopButtonHeuristics === true
                     : this.settings.enableContainerHeuristics === true;
 
+        // If heuristics are disabled, stop early and SILENTLY.
+        if (!heuristicsAllowed) {
+            logConCgp(`[SelectorAutoDetector] ${type} not found. Heuristics disabled; skipping recovery silently.`);
+            s.recovering = false;
+            return null;
+        }
+
         // Readable name for the type
         const typeName = type === 'editor' ? 'Text input area'
             : type === 'sendButton' ? 'send button'
                 : type === 'stopButton' ? 'stop button'
                     : 'button container';
 
-        // Unified message logic
-        const statusSuffix = heuristicsAllowed ? "Trying to find it..." : "Auto-detect is off.";
-        const toastType = heuristicsAllowed ? 'info' : 'error';
+        // Unified message logic (only reached if heuristicsAllowed is true)
+        const statusSuffix = "Trying to find it...";
+        const toastType = 'info';
 
         if (window.showToast) {
-            if (type === 'container' && heuristicsAllowed) {
+            if (type === 'container') {
                 if (!s.containerNotFoundToastEverShown && !s.containerNotFoundToastDismissed) {
                     s.containerNotFoundToastEverShown = true;
                     window.showToast('OneClickPrompts: Container where I can insert buttons is not found. Trying to find it automatically, results may disappoint you…', toastType, {
@@ -153,13 +160,6 @@ window.OneClickPromptsSelectorAutoDetector = {
             }
         } else {
             logConCgp(`[SelectorAutoDetector] ${typeName} not found. ${statusSuffix}`);
-        }
-
-        // If heuristics are disabled, stop here.
-        if (!heuristicsAllowed) {
-            logConCgp(`[SelectorAutoDetector] Heuristics disabled for ${type}; skipping recovery.`);
-            s.recovering = false;
-            return null;
         }
 
         const site = window.InjectionTargetsOnWebsite?.activeSite || 'Unknown';
