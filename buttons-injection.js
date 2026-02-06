@@ -67,7 +67,8 @@ function buttonBoxCheckingAndInjection(enableResiliency = true, activeWebsite) {
         return;
     }
 
-    // Load the saved states of toggle switches (e.g., Auto-send, Hotkeys) from localStorage.
+    // Load tab-local toggle hints from localStorage (best-effort UI state for this tab/runtime).
+    // By design, profile config is still the source of truth after full re-initialization.
     MaxExtensionInterface.loadToggleStates();
     logConCgp('[button-injection] Toggle states have been loaded.');
 

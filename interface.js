@@ -31,6 +31,8 @@ window.MaxExtensionInterface = {
 
         checkbox.addEventListener('change', (event) => {
             onChangeCallback(event.target.checked);
+            // Per-tab, best-effort UI persistence for this surface only.
+            // Profile config remains the authoritative source after full re-initialization.
             localStorage.setItem(id, event.target.checked);
             logConCgp(`${labelText} ${event.target.checked ? 'enabled' : 'disabled'}`);
         });

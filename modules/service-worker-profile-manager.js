@@ -44,6 +44,18 @@ function normalizeProfileConfig(profile, profileName) {
         profile.queueHideActivationToggle = false;
         logConfigurationRelatedStuff(`Initialized missing 'queueHideActivationToggle' for profile: ${profileName}`);
     }
+    if (typeof profile.hideOnPageAutoSendToggle === 'undefined') {
+        profile.hideOnPageAutoSendToggle = false;
+        logConfigurationRelatedStuff(`Initialized missing 'hideOnPageAutoSendToggle' for profile: ${profileName}`);
+    }
+    if (typeof profile.hideOnPageHotkeysToggle === 'undefined') {
+        profile.hideOnPageHotkeysToggle = false;
+        logConfigurationRelatedStuff(`Initialized missing 'hideOnPageHotkeysToggle' for profile: ${profileName}`);
+    }
+    if (typeof profile.hideOnPageFloatingPanelToggle === 'undefined') {
+        profile.hideOnPageFloatingPanelToggle = false;
+        logConfigurationRelatedStuff(`Initialized missing 'hideOnPageFloatingPanelToggle' for profile: ${profileName}`);
+    }
     return profile;
 }
 

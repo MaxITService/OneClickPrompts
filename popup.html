@@ -220,10 +220,11 @@
       <!-- ===== Settings  ===== -->
       <section class="section" id="settingsSection">
         <h2>Settings</h2>
-        <div class="row">
+        <div class="row settings-linked-row">
           <label
             class="checkbox-row"
             for="autoSendToggle"
+            id="autoSendToggleLabel"
             title="Default for new sites. Each site remembers its own setting after you toggle it on the chat page. This only affects sites where you haven't changed the toggle yet."
           >
             <input type="checkbox" id="autoSendToggle" />
@@ -231,15 +232,34 @@
               >Auto-send (default for new sites)</span
             >
           </label>
+          <label
+            class="checkbox-row"
+            for="hideOnPageAutoSendToggle"
+            id="hideOnPageAutoSendToggleLabel"
+            title="This controls visibility of the on-page Auto-send checkbox near your injected button row."
+          >
+            <input type="checkbox" id="hideOnPageAutoSendToggle" />
+            <span>Hide Auto-send on-page control</span>
+          </label>
         </div>
-        <div class="row">
+        <div class="row settings-linked-row">
           <label
             class="checkbox-row"
             for="shortcutsToggle"
+            id="shortcutsToggleLabel"
             title="Default for new sites. Each site remembers its own setting after you toggle it on the chat page. This only affects sites where you haven't changed the toggle yet."
           >
             <input type="checkbox" id="shortcutsToggle" />
             <span>Keyboard Shortcuts (default for new sites)</span>
+          </label>
+          <label
+            class="checkbox-row"
+            for="hideOnPageHotkeysToggle"
+            id="hideOnPageHotkeysToggleLabel"
+            title="This controls visibility of the on-page Hotkeys checkbox near your injected button row."
+          >
+            <input type="checkbox" id="hideOnPageHotkeysToggle" />
+            <span>Hide Hotkeys on-page control</span>
           </label>
         </div>
         <div class="row">
@@ -261,6 +281,17 @@
             <span class="toggle-icon">▶</span>
           </div>
           <div class="section-content">
+            <div class="row queue-setting-row">
+              <label
+                class="checkbox-row"
+                for="hideOnPageFloatingPanelToggle"
+                id="hideOnPageFloatingPanelToggleLabel"
+                title="Hide the floating panel on-page toggle button (🔼) for cleaner UI."
+              >
+                <input type="checkbox" id="hideOnPageFloatingPanelToggle" />
+                <span>Hide floating panel toggle button (🔼)</span>
+              </label>
+            </div>
             <div id="panelPositionSettings">
               <div class="subsection-header">
                 <h3>Panel Position & Reset (Floating Panel position is profile independent)</h3>

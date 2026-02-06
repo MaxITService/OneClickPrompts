@@ -11,6 +11,9 @@ const minimalDefaultConfig = {
     ENABLE_SHORTCUTS_DEFAULT: true,
     globalAutoSendEnabled: true,
     enableShortcuts: true,
+    hideOnPageAutoSendToggle: false,
+    hideOnPageHotkeysToggle: false,
+    hideOnPageFloatingPanelToggle: false,
     firstModificationDone: false,
     customButtons: [], // No buttons or separators
     queueRandomizeEnabled: false,
@@ -221,5 +224,4 @@ async function deleteCurrentProfile() {
         logToGUIConsole(`Error deleting profile: ${error.message}`);
     }
 }
-
 

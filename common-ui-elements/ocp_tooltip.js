@@ -220,13 +220,11 @@ const OCPTooltip = (() => {
     /**
      * Calculates optimal position for the tooltip
      */
-    const calculatePosition = (triggerRect) => {
+    const calculatePosition = (triggerRect, anchorClientX = null) => {
         const tooltip = createTooltipElement();
         const tooltipRect = tooltip.getBoundingClientRect();
         const viewportHeight = window.innerHeight;
         const viewportWidth = window.innerWidth;
-        const scrollY = window.scrollY || document.documentElement.scrollTop;
-        const scrollX = window.scrollX || document.documentElement.scrollLeft;
 
         let top, left;
         let position = 'top';
@@ -238,34 +236,43 @@ const OCPTooltip = (() => {
 
         if (OCP_TOOLTIP_SETTINGS.preferTop && spaceAbove >= tooltipHeight) {
             // Position above
-            top = triggerRect.top + scrollY - tooltipRect.height - OCP_TOOLTIP_SETTINGS.offsetPx;
+            top = triggerRect.top - tooltipRect.height - OCP_TOOLTIP_SETTINGS.offsetPx;
             position = 'top';
         } else if (spaceBelow >= tooltipHeight) {
             // Position below
-            top = triggerRect.bottom + scrollY + OCP_TOOLTIP_SETTINGS.offsetPx;
+            top = triggerRect.bottom + OCP_TOOLTIP_SETTINGS.offsetPx;
             position = 'bottom';
         } else if (spaceAbove > spaceBelow) {
             // Force above even if tight
-            top = triggerRect.top + scrollY - tooltipRect.height - OCP_TOOLTIP_SETTINGS.offsetPx;
+            top = triggerRect.top - tooltipRect.height - OCP_TOOLTIP_SETTINGS.offsetPx;
             position = 'top';
         } else {
             // Force below
-            top = triggerRect.bottom + scrollY + OCP_TOOLTIP_SETTINGS.offsetPx;
+            top = triggerRect.bottom + OCP_TOOLTIP_SETTINGS.offsetPx;
             position = 'bottom';
         }
 
-        // Horizontal positioning (center on trigger, but keep within viewport)
+        // Horizontal anchor:
+        // Prefer actual pointer X when available, otherwise center of trigger.
         const triggerCenterX = triggerRect.left + triggerRect.width / 2;
-        left = triggerCenterX + scrollX - tooltipRect.width / 2;
+        const anchorX = Number.isFinite(anchorClientX) ? anchorClientX : triggerCenterX;
+        left = anchorX - tooltipRect.width / 2;
 
         // Clamp to viewport bounds with padding
         const viewportPadding = 8;
-        left = Math.max(viewportPadding + scrollX, Math.min(left, viewportWidth - tooltipRect.width - viewportPadding + scrollX));
+        left = Math.max(viewportPadding, Math.min(left, viewportWidth - tooltipRect.width - viewportPadding));
 
         // Ensure top doesn't go negative
-        top = Math.max(viewportPadding + scrollY, top);
+        top = Math.max(viewportPadding, top);
 
-        return { top, left, position };
+        // Arrow should point toward the actual anchor point even when tooltip is clamped.
+        const arrowHalf = 6; // matches 12px arrow width in CSS
+        const arrowInset = 8;
+        const minArrowLeft = arrowInset + arrowHalf;
+        const maxArrowLeft = Math.max(minArrowLeft, tooltipRect.width - arrowInset - arrowHalf);
+        const arrowLeft = Math.max(minArrowLeft, Math.min(anchorX - left, maxArrowLeft));
+
+        return { top, left, position, arrowLeft };
     };
 
 
@@ -273,7 +280,7 @@ const OCPTooltip = (() => {
     /**
      * Shows the tooltip for a given trigger element
      */
-    const show = (trigger, text) => {
+    const show = (trigger, text, anchorClientX = null) => {
         if (!OCP_TOOLTIP_SETTINGS.enabled || !text) return;
 
         clearTimeout(_hideTimeout);
@@ -393,10 +400,11 @@ const OCPTooltip = (() => {
 
         const finalizePosition = (tooltipEl) => {
             const triggerRect = trigger.getBoundingClientRect();
-            const { top, left, position } = calculatePosition(triggerRect);
+            const { top, left, position, arrowLeft } = calculatePosition(triggerRect, anchorClientX);
 
             tooltipEl.style.top = `${top}px`;
             tooltipEl.style.left = `${left}px`;
+            tooltipEl.style.setProperty('--ocp-tooltip-arrow-left', `${arrowLeft}px`);
 
             tooltipEl.classList.remove('ocp-tooltip--top', 'ocp-tooltip--bottom');
             tooltipEl.classList.add(`ocp-tooltip--${position}`);
@@ -499,6 +507,7 @@ const OCPTooltip = (() => {
     const handleMouseEnter = (event) => {
         const trigger = event.currentTarget;
         const text = trigger.getAttribute('data-ocp-tooltip') || trigger.getAttribute('title');
+        const anchorClientX = Number.isFinite(event?.clientX) ? event.clientX : null;
 
         if (!text) return;
 
@@ -512,14 +521,19 @@ const OCPTooltip = (() => {
         clearTimeout(_showTimeout);
 
         _showTimeout = setTimeout(() => {
-            show(trigger, text);
+            show(trigger, text, anchorClientX);
         }, OCP_TOOLTIP_SETTINGS.showDelayMs);
     };
 
     /**
      * Handler for mouseleave events
      */
-    const handleMouseLeave = () => {
+    const handleMouseLeave = (event) => {
+        const from = event?.currentTarget;
+        const to = event?.relatedTarget;
+        if (from && to && from.contains && from.contains(to)) {
+            return;
+        }
         clearTimeout(_showTimeout);
 
         _hideTimeout = setTimeout(() => {
@@ -551,6 +565,10 @@ const OCPTooltip = (() => {
 
         element.addEventListener('mouseenter', handleMouseEnter);
         element.addEventListener('mouseleave', handleMouseLeave);
+        element.addEventListener('pointerenter', handleMouseEnter);
+        element.addEventListener('pointerleave', handleMouseLeave);
+        element.addEventListener('mouseover', handleMouseEnter);
+        element.addEventListener('mouseout', handleMouseLeave);
         element.addEventListener('focus', handleMouseEnter);
         element.addEventListener('blur', handleMouseLeave);
     };
@@ -564,6 +582,10 @@ const OCPTooltip = (() => {
         element.removeAttribute('data-ocp-tooltip-attached');
         element.removeEventListener('mouseenter', handleMouseEnter);
         element.removeEventListener('mouseleave', handleMouseLeave);
+        element.removeEventListener('pointerenter', handleMouseEnter);
+        element.removeEventListener('pointerleave', handleMouseLeave);
+        element.removeEventListener('mouseover', handleMouseEnter);
+        element.removeEventListener('mouseout', handleMouseLeave);
         element.removeEventListener('focus', handleMouseEnter);
         element.removeEventListener('blur', handleMouseLeave);
     };

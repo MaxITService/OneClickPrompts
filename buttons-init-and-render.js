@@ -43,29 +43,40 @@ window.MaxExtensionButtonsInit = {
      * @param {HTMLElement} container - The DOM element to which toggles will be appended.
      */
     generateAndAppendToggles: function (container) {
-        const autoSendToggle = MaxExtensionInterface.createToggle(
-            'auto-send-toggle',
-            'Auto-send',
-            globalMaxExtensionConfig.globalAutoSendEnabled,
-            (state) => {
-                globalMaxExtensionConfig.globalAutoSendEnabled = state;
-            }
-        );
-        autoSendToggle.title = "If unchecked, this will disable all autosend for all buttons. For this tab only.";
-        container.appendChild(autoSendToggle);
-        logConCgp('[init] Auto-send toggle has been created and appended.');
+        const hideAutoSendToggle = !!globalMaxExtensionConfig.hideOnPageAutoSendToggle;
+        const hideHotkeysToggle = !!globalMaxExtensionConfig.hideOnPageHotkeysToggle;
 
-        const hotkeysToggle = MaxExtensionInterface.createToggle(
-            'hotkeys-toggle',
-            'Hotkeys',
-            globalMaxExtensionConfig.enableShortcuts,
-            (state) => {
-                globalMaxExtensionConfig.enableShortcuts = state;
-            }
-        );
-        hotkeysToggle.title = "If unchecked this will disable all hotkeys so your keyboard will never trigger any button pushes. For this tab only.";
-        container.appendChild(hotkeysToggle);
-        logConCgp('[init] Hotkeys toggle has been created and appended.');
+        if (!hideAutoSendToggle) {
+            const autoSendToggle = MaxExtensionInterface.createToggle(
+                'auto-send-toggle',
+                'Auto-send',
+                globalMaxExtensionConfig.globalAutoSendEnabled,
+                (state) => {
+                    globalMaxExtensionConfig.globalAutoSendEnabled = state;
+                }
+            );
+            autoSendToggle.title = "If unchecked, this will disable all autosend for all buttons. For this tab only.";
+            container.appendChild(autoSendToggle);
+            logConCgp('[init] Auto-send toggle has been created and appended.');
+        } else {
+            logConCgp('[init] Auto-send toggle rendering skipped by profile setting hideOnPageAutoSendToggle.');
+        }
+
+        if (!hideHotkeysToggle) {
+            const hotkeysToggle = MaxExtensionInterface.createToggle(
+                'hotkeys-toggle',
+                'Hotkeys',
+                globalMaxExtensionConfig.enableShortcuts,
+                (state) => {
+                    globalMaxExtensionConfig.enableShortcuts = state;
+                }
+            );
+            hotkeysToggle.title = "If unchecked this will disable all hotkeys so your keyboard will never trigger any button pushes. For this tab only.";
+            container.appendChild(hotkeysToggle);
+            logConCgp('[init] Hotkeys toggle has been created and appended.');
+        } else {
+            logConCgp('[init] Hotkeys toggle rendering skipped by profile setting hideOnPageHotkeysToggle.');
+        }
     },
 
     /**
@@ -124,10 +135,12 @@ window.MaxExtensionButtonsInit = {
         // --- Render all buttons from the unified list ---
 
         // Add floating panel toggle first, if applicable
-        if (window.MaxExtensionFloatingPanel && !isPanel) {
+        if (window.MaxExtensionFloatingPanel && !isPanel && !globalMaxExtensionConfig.hideOnPageFloatingPanelToggle) {
             const floatingPanelToggleButton = window.MaxExtensionFloatingPanel.createPanelToggleButton();
             container.appendChild(floatingPanelToggleButton);
             logConCgp('[init] Floating panel toggle button has been created and appended for inline container.');
+        } else if (!isPanel && globalMaxExtensionConfig.hideOnPageFloatingPanelToggle) {
+            logConCgp('[init] Floating panel toggle button rendering skipped by profile setting hideOnPageFloatingPanelToggle.');
         }
 
         // Inline Profile Selector BEFORE buttons

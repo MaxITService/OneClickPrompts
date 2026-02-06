@@ -20,6 +20,18 @@ and the various buttons used in profile actions.
     flex-wrap: wrap;
 }
 
+/* Keep paired settings on one logical line while allowing graceful wrapping on narrow windows. */
+.settings-linked-row {
+    align-items: center;
+    gap: 12px;
+    flex-wrap: nowrap;
+}
+
+.settings-linked-row .checkbox-row {
+    flex: 1 1 320px;
+    min-width: 280px;
+}
+
 /* ------------------------------------------------------------------------- */
 /* Form Controls: Inputs, Textareas, and Selects                             */
 /* ------------------------------------------------------------------------- */

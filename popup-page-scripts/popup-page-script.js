@@ -45,6 +45,9 @@ const queueHideActivationToggleEl = document.getElementById('queueHideActivation
 const queueRandomizeEnabledEl = document.getElementById('queueRandomizeEnabled');
 const queueRandomizePercentInput = document.getElementById('queueRandomizePercent');
 const queueRandomizePercentRow = document.getElementById('queueRandomizePercentRow');
+const hideOnPageAutoSendToggleEl = document.getElementById('hideOnPageAutoSendToggle');
+const hideOnPageHotkeysToggleEl = document.getElementById('hideOnPageHotkeysToggle');
+const hideOnPageFloatingPanelToggleEl = document.getElementById('hideOnPageFloatingPanelToggle');
 
 // -------------------------
 // Debounced Save Function
@@ -81,9 +84,152 @@ function debouncedSaveCurrentProfile() {
 async function updateGlobalSettings() {
     currentProfile.globalAutoSendEnabled = document.getElementById('autoSendToggle').checked;
     currentProfile.enableShortcuts = document.getElementById('shortcutsToggle').checked;
+    currentProfile.hideOnPageAutoSendToggle = !!hideOnPageAutoSendToggleEl?.checked;
+    currentProfile.hideOnPageHotkeysToggle = !!hideOnPageHotkeysToggleEl?.checked;
+    currentProfile.hideOnPageFloatingPanelToggle = !!hideOnPageFloatingPanelToggleEl?.checked;
     await saveCurrentProfile();
+    refreshOnPageControlVisibilityTooltips();
+    await refreshFloatingToggleVisibilityWarningTooltip();
     logToGUIConsole('Updated global settings');
     showToast('Global settings updated', 'success');
+}
+
+function setTooltipForElement(element, text) {
+    if (!element) return;
+    if (window.OCPTooltip) {
+        if (typeof window.OCPTooltip.attach === 'function') {
+            window.OCPTooltip.attach(element, text);
+        }
+        if (typeof window.OCPTooltip.updateText === 'function') {
+            window.OCPTooltip.updateText(element, text);
+        }
+        return;
+    }
+    element.setAttribute('title', text);
+    element.setAttribute('data-ocp-tooltip', text);
+}
+
+function setTooltipForCheckboxControl(checkboxId, text) {
+    const checkbox = document.getElementById(checkboxId);
+    if (!checkbox) return;
+    const label = document.querySelector(`label[for="${checkboxId}"]`);
+    setTooltipForElement(label, text);
+    // Optional focus target for keyboard users.
+    setTooltipForElement(checkbox, text);
+}
+
+function buildOnPageControlTooltip(controlName, isHidden) {
+    if (isHidden) {
+        return `Want cleaner UI?" If yes, enable this. The on-page "${controlName}" control (small checkbox near the injected OneClickPrompts button row, next to your emoji buttons) will be hidden for Aesthetics.`;
+    }
+    return `"Need quick on-page control?" Keep this OFF. The "${controlName}" control (small checkbox near the injected OneClickPrompts button row, next to your emoji buttons) stays visible so you can toggle it directly in chat.`;
+}
+
+function refreshOnPageControlVisibilityTooltips() {
+    const autoSendHidden = !!hideOnPageAutoSendToggleEl?.checked;
+    const hotkeysHidden = !!hideOnPageHotkeysToggleEl?.checked;
+    const autoTitle = buildOnPageControlTooltip('Auto-send', autoSendHidden);
+    const hotkeysTitle = buildOnPageControlTooltip('Hotkeys', hotkeysHidden);
+
+    setTooltipForCheckboxControl('hideOnPageAutoSendToggle', autoTitle);
+    setTooltipForCheckboxControl('hideOnPageHotkeysToggle', hotkeysTitle);
+
+    const autoDefaultTitle = 'This is the default Auto-send behavior for new sites. You can still override it from on-page controls (unless those controls are hidden).';
+    const hotkeysDefaultTitle = 'This is the default Hotkeys behavior for new sites. You can still override it from on-page controls (unless those controls are hidden).';
+    setTooltipForCheckboxControl('autoSendToggle', autoDefaultTitle);
+    setTooltipForCheckboxControl('shortcutsToggle', hotkeysDefaultTitle);
+}
+
+async function getActiveTabHostname() {
+    try {
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        const activeTab = Array.isArray(tabs) ? tabs[0] : null;
+        const rawUrl = activeTab?.url;
+        if (!rawUrl) return null;
+        const parsed = new URL(rawUrl);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+        return parsed.hostname || null;
+    } catch (error) {
+        logToGUIConsole(`Could not resolve active tab hostname for floating toggle warning: ${error.message}`);
+        return null;
+    }
+}
+
+async function isFloatingPanelOffForActiveTab() {
+    const hostname = await getActiveTabHostname();
+    if (!hostname) {
+        return false;
+    }
+
+    try {
+        const response = await chrome.runtime.sendMessage({ type: 'getFloatingPanelSettings', hostname });
+        return !response?.settings?.isVisible;
+    } catch (error) {
+        logToGUIConsole(`Could not load floating panel visibility for ${hostname}: ${error.message}`);
+        return false;
+    }
+}
+
+async function refreshFloatingToggleVisibilityWarningTooltip() {
+    const label = document.getElementById('hideOnPageFloatingPanelToggleLabel');
+    if (!label || !hideOnPageFloatingPanelToggleEl) {
+        return;
+    }
+
+    const baseTitle = ' This hides the on-page floating panel launcher (the 🔼 button in the injected OneClickPrompts button row). YOU WILL NOT BE ABLE TO SUMMON PANEL WITH THIS TOGGLE ENABLED.';
+    let nextTitle = baseTitle;
+
+    if (hideOnPageFloatingPanelToggleEl.checked) {
+        const isPanelOff = await isFloatingPanelOffForActiveTab();
+        if (isPanelOff) {
+            nextTitle = `${baseTitle} Warning: floating panel is currently OFF on this site. If you hide this now, you will not see the 🔼 on-page button to turn panel back on from chat page.`;
+        }
+    }
+
+    setTooltipForCheckboxControl('hideOnPageFloatingPanelToggle', nextTitle);
+}
+
+function getCheckboxTooltipSourceText(label) {
+    if (!label) return '';
+    const ownText = label.getAttribute('data-ocp-tooltip') || label.getAttribute('title');
+    if (ownText) {
+        return ownText;
+    }
+
+    // Some checkbox rows put title on an ancestor row/div instead of the label itself.
+    const titledAncestor = label.parentElement ? label.parentElement.closest('[title]') : null;
+    if (titledAncestor && titledAncestor !== label) {
+        return titledAncestor.getAttribute('title') || '';
+    }
+
+    return '';
+}
+
+function reinforceAllCheckboxTooltips() {
+    const checkboxLabels = Array.from(document.querySelectorAll('label.checkbox-row'));
+    checkboxLabels.forEach((label) => {
+        const text = getCheckboxTooltipSourceText(label);
+        if (!text) return;
+
+        setTooltipForElement(label, text);
+
+        // Also attach to the checkbox input itself for keyboard focus users.
+        const checkbox = label.querySelector('input[type="checkbox"]');
+        if (checkbox) {
+            setTooltipForElement(checkbox, text);
+        }
+    });
+}
+
+let checkboxTooltipReinforceTimer = null;
+function scheduleCheckboxTooltipReinforce() {
+    if (checkboxTooltipReinforceTimer !== null) {
+        clearTimeout(checkboxTooltipReinforceTimer);
+    }
+    checkboxTooltipReinforceTimer = setTimeout(() => {
+        reinforceAllCheckboxTooltips();
+        checkboxTooltipReinforceTimer = null;
+    }, 0);
 }
 
 /**
@@ -293,6 +439,18 @@ async function updateInterface(anchorElement = null) {
 
     document.getElementById('autoSendToggle').checked = currentProfile.globalAutoSendEnabled;
     document.getElementById('shortcutsToggle').checked = currentProfile.enableShortcuts;
+    if (hideOnPageAutoSendToggleEl) {
+        hideOnPageAutoSendToggleEl.checked = Boolean(currentProfile.hideOnPageAutoSendToggle);
+    }
+    if (hideOnPageHotkeysToggleEl) {
+        hideOnPageHotkeysToggleEl.checked = Boolean(currentProfile.hideOnPageHotkeysToggle);
+    }
+    if (hideOnPageFloatingPanelToggleEl) {
+        hideOnPageFloatingPanelToggleEl.checked = Boolean(currentProfile.hideOnPageFloatingPanelToggle);
+    }
+    refreshOnPageControlVisibilityTooltips();
+    await refreshFloatingToggleVisibilityWarningTooltip();
+    reinforceAllCheckboxTooltips();
 
     // Clear input fields
     document.getElementById('buttonIcon').value = '';
@@ -445,6 +603,32 @@ document.addEventListener('DOMContentLoaded', () => {
     // Settings
     document.getElementById('autoSendToggle').addEventListener('change', updateGlobalSettings);
     document.getElementById('shortcutsToggle').addEventListener('change', updateGlobalSettings);
+    if (hideOnPageAutoSendToggleEl) {
+        hideOnPageAutoSendToggleEl.addEventListener('change', updateGlobalSettings);
+    }
+    if (hideOnPageHotkeysToggleEl) {
+        hideOnPageHotkeysToggleEl.addEventListener('change', updateGlobalSettings);
+    }
+    if (hideOnPageFloatingPanelToggleEl) {
+        hideOnPageFloatingPanelToggleEl.addEventListener('change', updateGlobalSettings);
+    }
+    reinforceAllCheckboxTooltips();
+    // Some modules create checkbox rows dynamically. Keep tooltip wiring resilient.
+    const checkboxTooltipObserver = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+            if (mutation.type !== 'childList') continue;
+            const hasRelevantNodes = Array.from(mutation.addedNodes).some((node) => {
+                if (!(node instanceof Element)) return false;
+                if (node.matches('label.checkbox-row')) return true;
+                return !!node.querySelector?.('label.checkbox-row');
+            });
+            if (hasRelevantNodes) {
+                scheduleCheckboxTooltipReinforce();
+                break;
+            }
+        }
+    });
+    checkboxTooltipObserver.observe(document.body, { childList: true, subtree: true });
     document.getElementById('revertDefault').addEventListener('click', revertToDefault);
     if (queueHideActivationToggleEl) {
         queueHideActivationToggleEl.addEventListener('change', handleQueueHideActivationChange);
