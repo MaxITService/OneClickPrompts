@@ -13,6 +13,8 @@ window.MaxExtensionUtils = {
         let attempts = 0;
         let intervalId = null;
         let observer = null;
+        let cancelled = false;
+        let completed = false;
 
         const stopWatching = () => {
             if (observer) {
@@ -25,19 +27,56 @@ window.MaxExtensionUtils = {
             }
         };
 
+        const controller = {
+            cancel: () => {
+                if (cancelled || completed) {
+                    return;
+                }
+                cancelled = true;
+                stopWatching();
+            },
+            isCancelled: () => cancelled
+        };
+
+        const finishSuccess = (element) => {
+            if (cancelled || completed) {
+                return false;
+            }
+            completed = true;
+            stopWatching();
+            if (typeof onSuccess === 'function') {
+                onSuccess(element);
+            }
+            return true;
+        };
+
+        const finishFailure = () => {
+            if (cancelled || completed) {
+                return;
+            }
+            completed = true;
+            stopWatching();
+            logConCgp(`[utils] Elements ${selectors.join(', ')} not found after ${maxAttempts} attempts.`);
+            // Call onFailure callback if provided
+            if (typeof onFailure === 'function') {
+                onFailure(selectors);
+            }
+        };
+
         const tryFindElement = () => {
+            if (cancelled || completed) {
+                return false;
+            }
             const element = MaxExtensionUtils.pickUsableContainer(selectors);
             if (element) {
-                stopWatching();
-                onSuccess(element);
-                return true;
+                return finishSuccess(element);
             }
             return false;
         };
 
         // Immediate attempt before setting up observers
         if (tryFindElement()) {
-            return;
+            return controller;
         }
 
         observer = new MutationObserver(() => {
@@ -51,14 +90,11 @@ window.MaxExtensionUtils = {
                 return;
             }
             if (attempts >= maxAttempts) {
-                stopWatching();
-                logConCgp(`[utils] Elements ${selectors.join(', ')} not found after ${maxAttempts} attempts.`);
-                // Call onFailure callback if provided
-                if (typeof onFailure === 'function') {
-                    onFailure(selectors);
-                }
+                finishFailure();
             }
         }, 150);
+
+        return controller;
     },
     // Function to simulate a comprehensive click event
     simulateClick: function (element) {

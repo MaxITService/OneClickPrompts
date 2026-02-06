@@ -1438,6 +1438,33 @@
             </button>
           </div>
           <br />
+          <label
+            class="checkbox-row advanced-notify-checkbox"
+            for="containerMissingNotifyCheckbox"
+          >
+            <input
+              type="checkbox"
+              id="containerMissingNotifyCheckbox"
+              aria-label="Notify me when OneClickPrompts cannot inject buttons"
+            />
+            <span>Notify me when I cannot inject buttons (this may happen when either page updated by developers and there is nowhere to insert buttons, but it may also happen if you are in settings or just previewing the picture).</span>
+          </label>
+          <div class="toggle-container">
+            <div class="toggle">
+              <input
+                type="checkbox"
+                id="containerHeuristicsToggle"
+                class="toggle__input"
+                aria-label="Enable heuristics when the injection target is not found"
+              />
+              <label for="containerHeuristicsToggle" class="toggle__label">
+                <span class="toggle__emoji"></span>
+                <span class="toggle__emoji"></span>
+              </label>
+            </div>
+            <span class="switch-label">Use heuristics when injection target is not found</span>
+          </div>
+           <br />
           <div class="toggle-container">
             <div class="toggle">
               <input
@@ -1484,22 +1511,6 @@
               </label>
             </div>
             <span class="switch-label">Use heuristics when stop button is not found</span>
-          </div>
-           <br />
-          <div class="toggle-container">
-            <div class="toggle">
-              <input
-                type="checkbox"
-                id="containerHeuristicsToggle"
-                class="toggle__input"
-                aria-label="Enable heuristics when the injection target is not found"
-              />
-              <label for="containerHeuristicsToggle" class="toggle__label">
-                <span class="toggle__emoji"></span>
-                <span class="toggle__emoji"></span>
-              </label>
-            </div>
-            <span class="switch-label">Use heuristics when injection target is not found</span>
           </div>
            <br />
           <!-- Collapsible Help Section -->

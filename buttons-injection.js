@@ -14,6 +14,73 @@ const EXTENDED_CHECK_DURATION = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
 
 // Flag to coordinate with the floating panel toggle logic.
 window.OneClickPrompts_isTogglingPanel = false;
+window.__OCP_inlineSearchController = null;
+window.__OCP_inlineSearchAttemptId = 0;
+
+/**
+ * Creates floating panel fallback when inline container search is exhausted.
+ * Toast is shown at panel spawn time (if user enabled notifications in Advanced settings).
+ * @param {string} reason - Machine-readable reason for logging/debugging.
+ * @returns {Promise<boolean>} true when fallback panel was shown, false otherwise.
+ */
+async function triggerAutomaticFloatingPanelFallback(reason = 'container_not_found') {
+    const panelApi = window.MaxExtensionFloatingPanel;
+    if (!panelApi || typeof panelApi.createFloatingPanel !== 'function') {
+        logConCgp('[button-injection] Floating fallback unavailable: panel module missing.', { reason });
+        return false;
+    }
+    if (panelApi.isPanelVisible) {
+        logConCgp('[button-injection] Floating fallback skipped: panel is already visible.', { reason });
+        return false;
+    }
+    if (window.__OCP_userDisabledFallback) {
+        logConCgp('[button-injection] Floating fallback skipped: user disabled fallback.', { reason });
+        return false;
+    }
+    if (window.__OCP_inlineHealthy) {
+        logConCgp('[button-injection] Floating fallback skipped: inline already healthy in this tab.', { reason });
+        return false;
+    }
+
+    await panelApi.createFloatingPanel();
+    const panelElement = panelApi.panelElement;
+    const buttonsArea = document.getElementById('max-extension-buttons-area');
+    if (!panelElement || !buttonsArea) {
+        logConCgp('[button-injection] Floating fallback failed: panel or buttons area missing after create.', { reason });
+        return false;
+    }
+
+    buttonsArea.innerHTML = '';
+    if (window.MaxExtensionButtonsInit &&
+        typeof window.MaxExtensionButtonsInit.createAndInsertCustomElements === 'function') {
+        window.MaxExtensionButtonsInit.createAndInsertCustomElements(buttonsArea);
+    }
+
+    if (typeof panelApi.positionPanelTopRight === 'function') {
+        panelApi.positionPanelTopRight();
+    } else if (typeof panelApi.positionPanelBottomRight === 'function') {
+        panelApi.positionPanelBottomRight();
+    }
+
+    panelElement.style.display = 'flex';
+    panelApi.isPanelVisible = true;
+    if (panelApi.currentPanelSettings) {
+        panelApi.currentPanelSettings.isVisible = true;
+        panelApi.debouncedSavePanelSettings?.();
+    }
+
+    const notifyEnabled = window.OneClickPromptsSelectorAutoDetector?.settings?.notifyContainerMissing === true;
+    if (notifyEnabled && typeof window.showToast === 'function') {
+        window.showToast(
+            'OneClickPrompts: I cannot inject buttons here, so I opened Floating Panel.',
+            'error',
+            10000
+        );
+    }
+
+    logConCgp('[button-injection] Floating fallback panel activated after inline search timeout.', { reason });
+    return true;
+}
 
 /**
  * Summary of behavior:
@@ -57,9 +124,31 @@ function doCustomModificationsExist() {
  *
  * @param {boolean} enableResiliency - Flag indicating whether resiliency checks should be enabled.
  * @param {string} activeWebsite - The identifier of the active website (not used directly in this function).
+ * @param {Object} options - Optional behavior overrides.
+ * @param {number} options.maxSearchMs - Max search window in ms for inline container search.
+ * @param {number} options.maxAttempts - Explicit max polling attempts for inline container search.
+ * @param {boolean} options.allowAutoFloatingFallback - If true and container heuristics are off, spawn floating panel when search times out.
  */
-function buttonBoxCheckingAndInjection(enableResiliency = true, activeWebsite) {
+function buttonBoxCheckingAndInjection(enableResiliency = true, activeWebsite, options = {}) {
     logConCgp('[button-injection] Checking if mods already exist...');
+
+    const opts = (options && typeof options === 'object') ? options : {};
+    const allowAutoFloatingFallback = opts.allowAutoFloatingFallback === true;
+    const maxSearchMs = Number.isFinite(opts.maxSearchMs) && opts.maxSearchMs > 0
+        ? Number(opts.maxSearchMs)
+        : null;
+    const explicitMaxAttempts = Number.isFinite(opts.maxAttempts) && opts.maxAttempts > 0
+        ? Math.floor(opts.maxAttempts)
+        : null;
+    const searchMaxAttempts = explicitMaxAttempts || (maxSearchMs ? Math.max(1, Math.ceil(maxSearchMs / 150)) : 50);
+
+    // Cancel stale search watchers from previous invocations in this tab.
+    if (window.__OCP_inlineSearchController && typeof window.__OCP_inlineSearchController.cancel === 'function') {
+        window.__OCP_inlineSearchController.cancel();
+        window.__OCP_inlineSearchController = null;
+    }
+    const attemptId = (window.__OCP_inlineSearchAttemptId || 0) + 1;
+    window.__OCP_inlineSearchAttemptId = attemptId;
 
     // If modifications already exist and resiliency is disabled, skip the injection.
     if (doCustomModificationsExist() && !enableResiliency) {
@@ -75,18 +164,46 @@ function buttonBoxCheckingAndInjection(enableResiliency = true, activeWebsite) {
     // Flag to ensure we only process one target container (if multiple callbacks are fired).
     let targetFound = false;
 
+    const reportFailureToAutoDetector = (failedSelectors, reason = 'container_not_found') => {
+        logConCgp('[button-injection] Reporting container failure to auto-detector.', { reason });
+        if (window.OneClickPromptsSelectorAutoDetector && typeof window.OneClickPromptsSelectorAutoDetector.reportFailure === 'function') {
+            window.OneClickPromptsSelectorAutoDetector.reportFailure('container', {
+                selectors: Array.isArray(failedSelectors) ? failedSelectors : [],
+                reason
+            });
+        }
+    };
+
+    const handleContainerSearchFailure = (failedSelectors, reason = 'container_not_found') => {
+        if (attemptId !== window.__OCP_inlineSearchAttemptId) {
+            logConCgp('[button-injection] Ignoring stale container search failure callback.', { attemptId, latest: window.__OCP_inlineSearchAttemptId });
+            return;
+        }
+        window.__OCP_inlineSearchController = null;
+        const containerHeuristicsEnabled = window.OneClickPromptsSelectorAutoDetector?.settings?.enableContainerHeuristics === true;
+
+        if (containerHeuristicsEnabled || !allowAutoFloatingFallback) {
+            reportFailureToAutoDetector(failedSelectors, reason);
+            return;
+        }
+
+        triggerAutomaticFloatingPanelFallback(reason)
+            .then((didFallback) => {
+                if (!didFallback) {
+                    reportFailureToAutoDetector(failedSelectors, `${reason}_fallback_unavailable`);
+                }
+            })
+            .catch((err) => {
+                logConCgp('[button-injection] Error during automatic floating fallback:', err?.message || err);
+                reportFailureToAutoDetector(failedSelectors, `${reason}_fallback_error`);
+            });
+    };
+
     // Get the list of selectors for the containers into which the buttons should be injected.
     const selectors = window?.InjectionTargetsOnWebsite?.selectors?.containers;
     if (!Array.isArray(selectors) || selectors.length === 0) {
-        logConCgp('[button-injection] No container selectors configured. Reporting failure to auto-detector.');
-        try {
-            if (window.OneClickPromptsSelectorAutoDetector && typeof window.OneClickPromptsSelectorAutoDetector.reportFailure === 'function') {
-                window.OneClickPromptsSelectorAutoDetector.reportFailure('container', {
-                    selectors: Array.isArray(selectors) ? selectors : [],
-                    reason: 'no_container_selectors'
-                });
-            }
-        } catch (_) { /* ignore */ }
+        logConCgp('[button-injection] No container selectors configured.');
+        handleContainerSearchFailure(Array.isArray(selectors) ? selectors : [], 'no_container_selectors');
         return;
     }
 
@@ -97,8 +214,13 @@ function buttonBoxCheckingAndInjection(enableResiliency = true, activeWebsite) {
      * @param {HTMLElement} targetDiv - The container element in which to inject the custom buttons.
      */
     const handleTargetDiv = (targetDiv) => {
+        if (attemptId !== window.__OCP_inlineSearchAttemptId) {
+            logConCgp('[button-injection] Ignoring stale container search success callback.', { attemptId, latest: window.__OCP_inlineSearchAttemptId });
+            return;
+        }
         if (!targetFound) {
             targetFound = true; // Prevent further executions for this injection cycle.
+            window.__OCP_inlineSearchController = null;
             logConCgp('[button-injection] Target div has been found:', targetDiv);
 
             // Insert custom elements (custom send buttons and toggles) into the target container.
@@ -119,16 +241,14 @@ function buttonBoxCheckingAndInjection(enableResiliency = true, activeWebsite) {
     };
 
     // Use a utility function to wait for the target container(s) to appear in the DOM.
-    MaxExtensionUtils.waitForElements(
+    window.__OCP_inlineSearchController = MaxExtensionUtils.waitForElements(
         selectors,
         handleTargetDiv,
         // onFailure callback - triggered when container not found
         (failedSelectors) => {
-            logConCgp('[button-injection] Container not found. Reporting failure to auto-detector.');
-            if (window.OneClickPromptsSelectorAutoDetector && typeof window.OneClickPromptsSelectorAutoDetector.reportFailure === 'function') {
-                window.OneClickPromptsSelectorAutoDetector.reportFailure('container', { selectors: failedSelectors });
-            }
-        }
+            handleContainerSearchFailure(failedSelectors, 'max_attempts_reached');
+        },
+        searchMaxAttempts
     );
 }
 

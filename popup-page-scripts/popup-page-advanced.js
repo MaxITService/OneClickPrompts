@@ -47,17 +47,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendButtonHeuristicsToggle = document.getElementById('sendButtonHeuristicsToggle');
     const stopButtonHeuristicsToggle = document.getElementById('stopButtonHeuristicsToggle');
     const containerHeuristicsToggle = document.getElementById('containerHeuristicsToggle');
+    const containerMissingNotifyCheckbox = document.getElementById('containerMissingNotifyCheckbox');
 
     const heuristicsDefaults = {
         enableEditorHeuristics: false,
         enableSendButtonHeuristics: false,
         enableStopButtonHeuristics: false,
         enableContainerHeuristics: false,
+        notifyContainerMissing: false,
     };
     let heuristicsSettings = { ...heuristicsDefaults };
 
     async function loadHeuristicsSettings() {
-        if (!editorHeuristicsToggle || !sendButtonHeuristicsToggle || !stopButtonHeuristicsToggle || !containerHeuristicsToggle) return;
+        if (!editorHeuristicsToggle || !sendButtonHeuristicsToggle || !stopButtonHeuristicsToggle || !containerHeuristicsToggle || !containerMissingNotifyCheckbox) return;
         try {
             const response = await chrome.runtime.sendMessage({ type: 'getSelectorAutoDetectorSettings' });
             if (response && response.settings) {
@@ -74,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sendButtonHeuristicsToggle.checked = !!heuristicsSettings.enableSendButtonHeuristics;
         stopButtonHeuristicsToggle.checked = !!heuristicsSettings.enableStopButtonHeuristics;
         containerHeuristicsToggle.checked = !!heuristicsSettings.enableContainerHeuristics;
+        containerMissingNotifyCheckbox.checked = !!heuristicsSettings.notifyContainerMissing;
     }
 
     async function saveHeuristicsSettings() {
@@ -282,6 +285,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (containerHeuristicsToggle) {
         containerHeuristicsToggle.addEventListener('change', () => {
             heuristicsSettings.enableContainerHeuristics = containerHeuristicsToggle.checked;
+            saveHeuristicsSettings();
+        });
+    }
+    if (containerMissingNotifyCheckbox) {
+        containerMissingNotifyCheckbox.addEventListener('change', () => {
+            heuristicsSettings.notifyContainerMissing = containerMissingNotifyCheckbox.checked;
             saveHeuristicsSettings();
         });
     }

@@ -32,6 +32,11 @@ and the various buttons used in profile actions.
     min-width: 280px;
 }
 
+.advanced-notify-checkbox {
+    display: block;
+    margin-bottom: 12px;
+}
+
 /* ------------------------------------------------------------------------- */
 /* Form Controls: Inputs, Textareas, and Selects                             */
 /* ------------------------------------------------------------------------- */

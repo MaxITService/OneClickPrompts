@@ -324,74 +324,13 @@ async function commenceExtensionInitialization(configurationObject) {
         }
     } else {
         logConCgp('[init] Decide-first: Panel is hidden. Using standard inline injection.');
-        buttonBoxCheckingAndInjection(true);
         // Initialize per-tab flags if absent
         if (typeof window.__OCP_inlineHealthy === 'undefined') window.__OCP_inlineHealthy = false;
-        /**
-         * When inline injection fails (e.g., because the target container cannot be found),
-         * there is no user click event to supply a mouse position for the floating panel.
-         * In this scenario we automatically summon the floating panel after a short delay
-         * and position it in the bottom-right corner as a fallback. This ensures that the
-         * user always has access to the prompts even when inline injection is not possible.
-         * 
-         * NOTE: If container heuristics are enabled, we skip this automatic fallback and let
-         * the heuristics system handle recovery (which offers manual placement + floating panel option).
-         */
-        setTimeout(() => {
-            try {
-                // Check if container heuristics are enabled - if so, skip auto fallback
-                const containerHeuristicsEnabled = window.OneClickPromptsSelectorAutoDetector?.settings?.enableContainerHeuristics !== false;
-
-                if (containerHeuristicsEnabled) {
-                    logConCgp('[init] Container heuristics enabled. Skipping automatic floating panel fallback.');
-                    return;
-                }
-
-                // Check if inline buttons were injected by looking for the container and its children.
-                let modsExist = (() => {
-                    const containerId = window?.InjectionTargetsOnWebsite?.selectors?.buttonsContainerId;
-                    if (!containerId) return false;
-                    const el = document.getElementById(containerId);
-                    return !!(el && el.children && el.children.length > 0);
-                })();
-                // Only trigger fallback if no mods exist and the panel isn't already visible.
-                const userDisabled = !!window.__OCP_userDisabledFallback;
-                if (!modsExist && !window.__OCP_inlineHealthy && !userDisabled &&
-                    window.MaxExtensionFloatingPanel && !window.MaxExtensionFloatingPanel.isPanelVisible) {
-                    logConCgp("[init] We haven't found the place to inject buttons, so we will fall back to a floating panel instead.");
-                    window.MaxExtensionFloatingPanel.createFloatingPanel().then(() => {
-                        const panelElement = window.MaxExtensionFloatingPanel.panelElement;
-                        const buttonsArea = document.getElementById('max-extension-buttons-area');
-                        if (panelElement && buttonsArea) {
-                            // Clear old buttons and insert custom buttons.
-                            buttonsArea.innerHTML = '';
-                            if (window.MaxExtensionButtonsInit &&
-                                typeof window.MaxExtensionButtonsInit.createAndInsertCustomElements === 'function') {
-                                window.MaxExtensionButtonsInit.createAndInsertCustomElements(buttonsArea);
-                            }
-                            // Position the panel in the TOP-right corner (fallback).
-                            if (typeof window.MaxExtensionFloatingPanel.positionPanelTopRight === 'function') {
-                                window.MaxExtensionFloatingPanel.positionPanelTopRight();
-                            } else if (typeof window.MaxExtensionFloatingPanel.positionPanelBottomRight === 'function') {
-                                // safety net if someone removes the new helper
-                                window.MaxExtensionFloatingPanel.positionPanelBottomRight();
-                            }
-                            panelElement.style.display = 'flex';
-                            window.MaxExtensionFloatingPanel.isPanelVisible = true;
-                            if (window.MaxExtensionFloatingPanel.currentPanelSettings) {
-                                // note: do not set inlineHealthy here — we are in fallback mode
-                                window.MaxExtensionFloatingPanel.currentPanelSettings.isVisible = true;
-                                window.MaxExtensionFloatingPanel.debouncedSavePanelSettings?.();
-                            }
-                        }
-                    }).catch((err) => {
-                        logConCgp('[init] Error during fallback panel creation:', err);
-                    });
-                }
-            } catch (err) {
-                logConCgp('[init] Error during fallback detection:', err);
-            }
-        }, 2500); // Wait 2.5 seconds before checking; gives inline injection time to succeed.
+        const INLINE_SEARCH_WINDOW_MS = 3000;
+        buttonBoxCheckingAndInjection(true, undefined, {
+            maxSearchMs: INLINE_SEARCH_WINDOW_MS,
+            allowAutoFloatingFallback: true
+        });
     }
 
     // After the initial decision and creation, initialize the full floating panel system.

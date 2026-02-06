@@ -37,20 +37,21 @@ window.OneClickPromptsSelectorAutoDetector = {
             failures: 0,
             lastFailure: 0,
             recovering: false,
-            containerNotFoundToastEverShown: false,
-            containerNotFoundToastDismissed: false
+            lastMissingNotifyToastAt: 0
         }
     },
 
     config: {
         failureThreshold: 1, // Number of failures before triggering recovery (can be >1 to debounce)
-        cooldownMs: 2000     // Time to wait before re-alerting or re-trying
+        cooldownMs: 2000,    // Time to wait before re-alerting or re-trying
+        containerMissingNotifyDebounceMs: 30000
     },
     settings: {
         enableEditorHeuristics: false,
         enableSendButtonHeuristics: false,
         enableStopButtonHeuristics: false,
         enableContainerHeuristics: false,
+        notifyContainerMissing: false,
         loaded: false
     },
     lastOffers: {
@@ -112,6 +113,25 @@ window.OneClickPromptsSelectorAutoDetector = {
         }
     },
 
+    maybeNotifyContainerMissing: function () {
+        if (this.settings.notifyContainerMissing !== true || typeof window.showToast !== 'function') {
+            return;
+        }
+
+        const s = this.state.container;
+        const now = Date.now();
+        if ((now - (s.lastMissingNotifyToastAt || 0)) < this.config.containerMissingNotifyDebounceMs) {
+            return;
+        }
+
+        s.lastMissingNotifyToastAt = now;
+        window.showToast(
+            'OneClickPrompts: I cannot inject buttons here. This may happen if the page changed, or if you are in settings/preview pages with no injection target.',
+            'error',
+            10000
+        );
+    },
+
     /**
      * Initiates the recovery process.
      * @param {string} type - 'editor', 'sendButton', or 'container'
@@ -128,6 +148,10 @@ window.OneClickPromptsSelectorAutoDetector = {
                 : type === 'stopButton'
                     ? this.settings.enableStopButtonHeuristics === true
                     : this.settings.enableContainerHeuristics === true;
+
+        if (type === 'container') {
+            this.maybeNotifyContainerMissing();
+        }
 
         // If heuristics are disabled, stop early and SILENTLY.
         if (!heuristicsAllowed) {
@@ -147,15 +171,7 @@ window.OneClickPromptsSelectorAutoDetector = {
         const toastType = 'info';
 
         if (window.showToast) {
-            if (type === 'container') {
-                if (!s.containerNotFoundToastEverShown && !s.containerNotFoundToastDismissed) {
-                    s.containerNotFoundToastEverShown = true;
-                    window.showToast('OneClickPrompts: Container where I can insert buttons is not found. Trying to find it automatically, results may disappoint you…', toastType, {
-                        duration: 10000,
-                        onDismiss: () => { s.containerNotFoundToastDismissed = true; }
-                    });
-                }
-            } else {
+            if (type !== 'container') {
                 window.showToast(`OneClickPrompts: ${typeName} not found. ${statusSuffix}`, toastType);
             }
         } else {
@@ -255,6 +271,7 @@ window.OneClickPromptsSelectorAutoDetector = {
                     enableSendButtonHeuristics: response.settings.enableSendButtonHeuristics === true,
                     enableStopButtonHeuristics: response.settings.enableStopButtonHeuristics === true,
                     enableContainerHeuristics: response.settings.enableContainerHeuristics === true,
+                    notifyContainerMissing: response.settings.notifyContainerMissing === true,
                     loaded: true
                 };
             }
@@ -1048,6 +1065,7 @@ if (chrome?.runtime?.onMessage?.addListener) {
                 enableSendButtonHeuristics: message.settings.enableSendButtonHeuristics === true,
                 enableStopButtonHeuristics: message.settings.enableStopButtonHeuristics === true,
                 enableContainerHeuristics: message.settings.enableContainerHeuristics === true,
+                notifyContainerMissing: message.settings.notifyContainerMissing === true,
                 loaded: true
             };
         }
