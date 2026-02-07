@@ -120,7 +120,7 @@ function setTooltipForCheckboxControl(checkboxId, text) {
 
 function buildOnPageControlTooltip(controlName, isHidden) {
     if (isHidden) {
-        return `Want cleaner UI?" If yes, enable this. The on-page "${controlName}" control (small checkbox near the injected OneClickPrompts button row, next to your emoji buttons) will be hidden for Aesthetics.`;
+        return `Want cleaner UI? If yes, enable this. The on-page "${controlName}" control (small checkbox near the injected OneClickPrompts button row, next to your emoji buttons) will be hidden for Aesthetics.`;
     }
     return `"Need quick on-page control?" Keep this OFF. The "${controlName}" control (small checkbox near the injected OneClickPrompts button row, next to your emoji buttons) stays visible so you can toggle it directly in chat.`;
 }
