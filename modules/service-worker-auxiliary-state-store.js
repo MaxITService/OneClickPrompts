@@ -50,7 +50,7 @@ const KEYS = {
     crossChat: 'modules.crossChat', // object { settings: {...}, storedPrompt: string }
     inlineProfileSelector: 'modules.inlineProfileSelector', // object { enabled:boolean, placement:'before'|'after' }
     tokenApproximator: 'modules.tokenApproximator', // object { enabled:boolean, calibration:number, threadMode:string, showEditorCounter:boolean, placement:'before'|'after' }
-    selectorAutoDetector: 'modules.selectorAutoDetector', // object { enableEditorHeuristics:boolean, enableSendButtonHeuristics:boolean, enableStopButtonHeuristics:boolean, enableContainerHeuristics:boolean, notifyContainerMissing:boolean }
+    selectorAutoDetector: 'modules.selectorAutoDetector', // object { enableEditorHeuristics:boolean, enableSendButtonHeuristics:boolean, enableStopButtonHeuristics:boolean, enableContainerHeuristics:boolean, notifyContainerMissing:boolean, autoFallbackToFloatingPanel:boolean }
     tooltip: 'modules.tooltip', // object { enabled:boolean, showDelayMs:number, fontColor:string|null }
     manualQueueCards: 'modules.manualQueueCards', // object { cards: Array<{emoji:string, text:string}>, expanded:boolean }
   },
@@ -91,6 +91,7 @@ const SELECTOR_AUTO_DETECTOR_DEFAULTS = {
   enableStopButtonHeuristics: false,
   enableContainerHeuristics: false,
   notifyContainerMissing: false,
+  autoFallbackToFloatingPanel: true,
 };
 
 // Utilities to get/set nested key paths by flattening as separate storage entries
@@ -217,6 +218,7 @@ async function getValue(path) {
         enableStopButtonHeuristics: obj.enableStopButtonHeuristics === true,
         enableContainerHeuristics: obj.enableContainerHeuristics === true,
         notifyContainerMissing: obj.notifyContainerMissing === true,
+        autoFallbackToFloatingPanel: obj.autoFallbackToFloatingPanel !== false,
       };
     }
     return { ...SELECTOR_AUTO_DETECTOR_DEFAULTS };
@@ -387,6 +389,7 @@ async function setValue(path, value) {
       enableStopButtonHeuristics: settings.enableStopButtonHeuristics === true,
       enableContainerHeuristics: settings.enableContainerHeuristics === true,
       notifyContainerMissing: settings.notifyContainerMissing === true,
+      autoFallbackToFloatingPanel: settings.autoFallbackToFloatingPanel !== false,
     };
     await lsSet({ [KEYS.modules.selectorAutoDetector]: normalized });
     return;

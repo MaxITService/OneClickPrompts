@@ -1447,7 +1447,18 @@
               id="containerMissingNotifyCheckbox"
               aria-label="Notify me when OneClickPrompts cannot inject buttons"
             />
-            <span>Notify me when I cannot inject buttons (this may happen when either page updated by developers and there is nowhere to insert buttons, but it may also happen if you are in settings or just previewing the picture).</span>
+            <span>Notify me when extension cannot inject buttons (this may happen when either page updated by developers and there is nowhere to insert buttons, but it may also happen if you are in settings or just previewing the picture).</span>
+          </label>
+          <label
+            class="checkbox-row advanced-notify-checkbox"
+            for="autoFloatingFallbackCheckbox"
+          >
+            <input
+              type="checkbox"
+              id="autoFloatingFallbackCheckbox"
+              aria-label="If buttons cannot be injected, use fallback and enable floating panel"
+            />
+            <span>If extension could not find where to inject buttons, then do fallback and enable floating panel.</span>
           </label>
           <div class="toggle-container">
             <div class="toggle">

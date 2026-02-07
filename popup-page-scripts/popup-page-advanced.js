@@ -48,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const stopButtonHeuristicsToggle = document.getElementById('stopButtonHeuristicsToggle');
     const containerHeuristicsToggle = document.getElementById('containerHeuristicsToggle');
     const containerMissingNotifyCheckbox = document.getElementById('containerMissingNotifyCheckbox');
+    const autoFloatingFallbackCheckbox = document.getElementById('autoFloatingFallbackCheckbox');
 
     const heuristicsDefaults = {
         enableEditorHeuristics: false,
@@ -55,11 +56,12 @@ document.addEventListener('DOMContentLoaded', () => {
         enableStopButtonHeuristics: false,
         enableContainerHeuristics: false,
         notifyContainerMissing: false,
+        autoFallbackToFloatingPanel: true,
     };
     let heuristicsSettings = { ...heuristicsDefaults };
 
     async function loadHeuristicsSettings() {
-        if (!editorHeuristicsToggle || !sendButtonHeuristicsToggle || !stopButtonHeuristicsToggle || !containerHeuristicsToggle || !containerMissingNotifyCheckbox) return;
+        if (!editorHeuristicsToggle || !sendButtonHeuristicsToggle || !stopButtonHeuristicsToggle || !containerHeuristicsToggle || !containerMissingNotifyCheckbox || !autoFloatingFallbackCheckbox) return;
         try {
             const response = await chrome.runtime.sendMessage({ type: 'getSelectorAutoDetectorSettings' });
             if (response && response.settings) {
@@ -77,6 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
         stopButtonHeuristicsToggle.checked = !!heuristicsSettings.enableStopButtonHeuristics;
         containerHeuristicsToggle.checked = !!heuristicsSettings.enableContainerHeuristics;
         containerMissingNotifyCheckbox.checked = !!heuristicsSettings.notifyContainerMissing;
+        autoFloatingFallbackCheckbox.checked = !!heuristicsSettings.autoFallbackToFloatingPanel;
     }
 
     async function saveHeuristicsSettings() {
@@ -291,6 +294,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (containerMissingNotifyCheckbox) {
         containerMissingNotifyCheckbox.addEventListener('change', () => {
             heuristicsSettings.notifyContainerMissing = containerMissingNotifyCheckbox.checked;
+            saveHeuristicsSettings();
+        });
+    }
+    if (autoFloatingFallbackCheckbox) {
+        autoFloatingFallbackCheckbox.addEventListener('change', () => {
+            heuristicsSettings.autoFallbackToFloatingPanel = autoFloatingFallbackCheckbox.checked;
             saveHeuristicsSettings();
         });
     }

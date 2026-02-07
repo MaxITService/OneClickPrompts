@@ -52,6 +52,7 @@ window.OneClickPromptsSelectorAutoDetector = {
         enableStopButtonHeuristics: false,
         enableContainerHeuristics: false,
         notifyContainerMissing: false,
+        autoFallbackToFloatingPanel: true,
         loaded: false
     },
     lastOffers: {
@@ -126,7 +127,7 @@ window.OneClickPromptsSelectorAutoDetector = {
 
         s.lastMissingNotifyToastAt = now;
         window.showToast(
-            'OneClickPrompts: I cannot inject buttons here. This may happen if the page changed, or if you are in settings/preview pages with no injection target.',
+            'OneClickPrompts: Extension cannot inject buttons here. This may happen if the page changed, or if you are in settings/preview pages with no injection target.',
             'error',
             10000
         );
@@ -272,6 +273,7 @@ window.OneClickPromptsSelectorAutoDetector = {
                     enableStopButtonHeuristics: response.settings.enableStopButtonHeuristics === true,
                     enableContainerHeuristics: response.settings.enableContainerHeuristics === true,
                     notifyContainerMissing: response.settings.notifyContainerMissing === true,
+                    autoFallbackToFloatingPanel: response.settings.autoFallbackToFloatingPanel !== false,
                     loaded: true
                 };
             }
@@ -1066,6 +1068,7 @@ if (chrome?.runtime?.onMessage?.addListener) {
                 enableStopButtonHeuristics: message.settings.enableStopButtonHeuristics === true,
                 enableContainerHeuristics: message.settings.enableContainerHeuristics === true,
                 notifyContainerMissing: message.settings.notifyContainerMissing === true,
+                autoFallbackToFloatingPanel: message.settings.autoFallbackToFloatingPanel !== false,
                 loaded: true
             };
         }

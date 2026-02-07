@@ -72,7 +72,7 @@ async function triggerAutomaticFloatingPanelFallback(reason = 'container_not_fou
     const notifyEnabled = window.OneClickPromptsSelectorAutoDetector?.settings?.notifyContainerMissing === true;
     if (notifyEnabled && typeof window.showToast === 'function') {
         window.showToast(
-            'OneClickPrompts: I cannot inject buttons here, so I opened Floating Panel.',
+            'OneClickPrompts: Extension cannot inject buttons here, so extension opened Floating Panel.',
             'error',
             10000
         );
@@ -181,8 +181,9 @@ function buttonBoxCheckingAndInjection(enableResiliency = true, activeWebsite, o
         }
         window.__OCP_inlineSearchController = null;
         const containerHeuristicsEnabled = window.OneClickPromptsSelectorAutoDetector?.settings?.enableContainerHeuristics === true;
+        const autoFloatingFallbackEnabled = window.OneClickPromptsSelectorAutoDetector?.settings?.autoFallbackToFloatingPanel !== false;
 
-        if (containerHeuristicsEnabled || !allowAutoFloatingFallback) {
+        if (containerHeuristicsEnabled || !allowAutoFloatingFallback || !autoFloatingFallbackEnabled) {
             reportFailureToAutoDetector(failedSelectors, reason);
             return;
         }
