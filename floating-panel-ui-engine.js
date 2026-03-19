@@ -166,6 +166,46 @@ window.MaxExtensionFloatingPanel.formatQueueDelayForUnit = function (ms, unit) {
 };
 
 /**
+ * Starts a queue timer that ends by dispatching the next queued item.
+ * Used both for the normal between-item delay and the optional initial delay.
+ * @param {number} delayMs
+ * @param {Object} [options]
+ * @param {string} [options.logContext='next item'] - Human-readable label for logs.
+ */
+window.MaxExtensionFloatingPanel.scheduleQueueDispatchDelay = function (delayMs, options = {}) {
+    const { logContext = 'next item' } = options;
+    const config = window.globalMaxExtensionConfig || {};
+    const unit = (config.queueDelayUnit === 'sec') ? 'sec' : 'min';
+    const sample = this.lastQueueDelaySample || { baseMs: delayMs, offsetMs: 0, totalMs: delayMs };
+    const totalStr = this.formatQueueDelayForUnit(delayMs, unit);
+
+    if (config.queueRandomizeEnabled && sample.offsetMs > 0) {
+        const baseStr = this.formatQueueDelayForUnit(sample.baseMs, unit);
+        const offsetStr = this.formatQueueDelayForUnit(sample.offsetMs, unit);
+        logConCgp(`[queue-engine] Waiting for ${totalStr} (base ${baseStr} + offset ${offsetStr}) before ${logContext}.`);
+    } else {
+        logConCgp(`[queue-engine] Waiting for ${totalStr} before ${logContext}.`);
+    }
+
+    if (this.queueProgressBar) {
+        this.queueProgressBar.style.transition = 'none';
+        this.queueProgressBar.style.width = '0%';
+        setTimeout(() => {
+            this.queueProgressBar.style.transition = `width ${delayMs / 1000}s linear`;
+            this.queueProgressBar.style.width = '100%';
+        }, 20);
+    }
+
+    this.timerStartTime = Date.now();
+    this.currentTimerDelay = delayMs;
+    this.remainingTimeOnPause = 0;
+    this.queueTimerId = setTimeout(() => {
+        this.queueTimerId = null;
+        void this.processNextQueueItem();
+    }, delayMs);
+};
+
+/**
  * Immediately advances to the next item in the queue, bypassing the remaining delay.
  */
 window.MaxExtensionFloatingPanel.skipToNextQueueItem = function () {
@@ -287,8 +327,12 @@ window.MaxExtensionFloatingPanel.seekQueueTimerToRatio = function (ratio) {
 
 /**
  * Starts or resumes the queue processing.
+ * @param {Object} [options]
+ * @param {boolean} [options.waitBeforeFirstSend=false] - When true, a fresh start waits one full queue delay before the first dispatch.
  */
-window.MaxExtensionFloatingPanel.startQueue = function () {
+window.MaxExtensionFloatingPanel.startQueue = function (options = {}) {
+    const { waitBeforeFirstSend = false } = options;
+
     // Do not start if queue mode is disabled
     if (!window.globalMaxExtensionConfig?.enableQueueMode) {
         logConCgp('[queue-engine] Queue mode is disabled. startQueue aborted.');
@@ -335,9 +379,15 @@ window.MaxExtensionFloatingPanel.startQueue = function () {
         }, this.remainingTimeOnPause);
 
     } else {
-        // Fresh start: send first item immediately.
-        logConCgp('[queue-engine] Queue started.');
-        void this.processNextQueueItem();
+        // Fresh start: either send immediately or wait once before the first send.
+        if (waitBeforeFirstSend) {
+            const delayMs = this.getQueueDelayWithRandomMs();
+            logConCgp('[queue-engine] Queue started with initial delay before the first item.');
+            this.scheduleQueueDispatchDelay(delayMs, { logContext: 'the first item' });
+        } else {
+            logConCgp('[queue-engine] Queue started.');
+            void this.processNextQueueItem();
+        }
     }
 };
 
@@ -860,36 +910,8 @@ window.MaxExtensionFloatingPanel.processNextQueueItem = async function () {
 
     // If there are more items, schedule the next one.
     if (this.promptQueue.length > 0) {
-        const config = window.globalMaxExtensionConfig || {};
-        const unit = (config.queueDelayUnit === 'sec') ? 'sec' : 'min';
         const delayMs = this.getQueueDelayWithRandomMs();
-        const sample = this.lastQueueDelaySample || { baseMs: delayMs, offsetMs: 0, totalMs: delayMs };
-
-        const totalStr = this.formatQueueDelayForUnit(delayMs, unit);
-        if (config.queueRandomizeEnabled && sample.offsetMs > 0) {
-            const baseStr = this.formatQueueDelayForUnit(sample.baseMs, unit);
-            const offsetStr = this.formatQueueDelayForUnit(sample.offsetMs, unit);
-            logConCgp(`[queue-engine] Waiting for ${totalStr} (base ${baseStr} + offset ${offsetStr}) before next item.`);
-        } else {
-            logConCgp(`[queue-engine] Waiting for ${totalStr} before next item.`);
-        }
-
-        // Animate progress bar
-        if (this.queueProgressBar) {
-            this.queueProgressBar.style.transition = 'none';
-            this.queueProgressBar.style.width = '0%';
-            setTimeout(() => {
-                this.queueProgressBar.style.transition = `width ${delayMs / 1000}s linear`;
-                this.queueProgressBar.style.width = '100%';
-            }, 20);
-        }
-
-        this.timerStartTime = Date.now();
-        this.currentTimerDelay = delayMs;
-        this.remainingTimeOnPause = 0;
-        this.queueTimerId = setTimeout(() => {
-            void this.processNextQueueItem();
-        }, delayMs);
+        this.scheduleQueueDispatchDelay(delayMs, { logContext: 'the next item' });
     } else {
         logConCgp('[queue-engine] All items have been sent.');
         if (this.queueProgressBar) {

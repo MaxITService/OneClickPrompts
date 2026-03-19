@@ -515,7 +515,13 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         if (this.isQueueRunning) {
             this.pauseQueue();
         } else {
-            this.startQueue();
+            const waitBeforeFirstSend = !!(
+                event.ctrlKey &&
+                !event.shiftKey &&
+                this.promptQueue?.length > 0 &&
+                this.remainingTimeOnPause <= 0
+            );
+            this.startQueue({ waitBeforeFirstSend });
         }
     });
 
@@ -1353,13 +1359,13 @@ window.MaxExtensionFloatingPanel.updateQueueControlsState = function () {
             // Queue is empty - show appropriate message
             if (this.manualQueueExpanded) {
                 logConCgp('[floating-panel-queue] Setting MANUAL MODE tooltip');
-                tooltipText = 'Queue is empty. Shift+Click: add all manual cards to queue. Ctrl+Shift+Click: add all and start immediately.';
+                tooltipText = 'Queue is empty. Shift+Click: add all manual cards to queue. Ctrl+Shift+Click: add all and start immediately. Ctrl+Click on Play after adding items waits before the first send.';
             } else {
                 logConCgp('[floating-panel-queue] Setting NORMAL tooltip');
-                tooltipText = 'Queue is empty. Click on buttons to add them to queue, then click me to start queue.';
+                tooltipText = 'Queue is empty. Click on buttons to add them to queue, then click Play. Ctrl+Click on Play waits before the first send.';
             }
         } else {
-            tooltipText = 'Start sending the queued prompts.';
+            tooltipText = 'Start sending the queued prompts. Ctrl+Click waits the configured delay before the first send.';
         }
 
         this.playQueueButton.disabled = !hasItems && !isPaused && !this.manualQueueExpanded; // Keep enabled if manual mode is on for shift-click
