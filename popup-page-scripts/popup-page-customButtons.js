@@ -97,12 +97,17 @@ function createButtonCardElement(button, index, crossChatSettings = null) {
             }
         }
 
+        const metaSeparatorHTML = (autoSendHTML && hotkeyHintHTML)
+            ? `<div class="meta-separator"></div>`
+            : '';
+
         buttonItem.innerHTML = `
             <div class="drag-handle">&#9776;</div>
             <textarea class="emoji-input" rows="1">${button.icon}</textarea>
             ${textElementHTML}
             <div class="meta-block">
                 ${autoSendHTML}
+                ${metaSeparatorHTML}
                 ${hotkeyHintHTML}
             </div>
             <button class="delete-button danger">Delete</button>
@@ -162,6 +167,13 @@ async function updatebuttonCardsList(restoreScroll = true) {
     if (restoreScroll) {
         window.scrollTo(scrollPos.left, scrollPos.top);
     }
+
+    // Deferred resize pass: when switching profiles the sync resize above runs
+    // before the browser has computed layout, so scrollHeight is wrong (too small).
+    // One rAF gives the browser one frame to settle, then we re-measure correctly.
+    requestAnimationFrame(() => {
+        refitButtonCardLayouts();
+    });
 }
 
 // -------------------------
@@ -175,6 +187,7 @@ function clearText() {
     document.getElementById('buttonText').value = '';
     logToGUIConsole('Cleared button text input.');
     document.getElementById('buttonIcon').value = '';
+    refitButtonCreationInputs();
     showToast('Button text cleared', 'info');
 }
 
@@ -774,16 +787,19 @@ function textareaInputAreaResizerFun(textareaId) {
         return;
     }
 
-    textarea.style.overflow = 'hidden';
+    textarea.style.overflowY = 'hidden';
     textarea.style.resize = 'none';
 
-    const resizeTextarea = () => {
-        textarea.style.height = 'auto';
-        textarea.style.height = textarea.scrollHeight + 'px';
+    const resizeTextarea = (preventScrollRestoration = false) => {
+        resizeVerticalTextarea(textarea, preventScrollRestoration);
     };
 
-    textarea.addEventListener('input', resizeTextarea);
-    resizeTextarea();
+    if (textarea.dataset.ocpVerticalResizeBound !== 'true') {
+        textarea.addEventListener('input', () => resizeTextarea(false));
+        textarea.dataset.ocpVerticalResizeBound = 'true';
+    }
+
+    resizeTextarea(true);
 }
 
 /**
@@ -804,14 +820,86 @@ function resizeVerticalTextarea(textarea, preventScrollRestoration = false) {
         left: window.pageXOffset || document.documentElement.scrollLeft
     };
 
-    // Perform resize
-    textarea.style.height = 'auto';
+    // Measure from zero height so scrollHeight reflects the full content height
+    // even while layout is still settling after profile switches or sibling resizes.
+    const previousOverflowY = textarea.style.overflowY;
+    textarea.style.overflowY = 'hidden';
+    textarea.style.height = '0px';
     textarea.style.height = `${textarea.scrollHeight}px`;
+    textarea.style.overflowY = previousOverflowY;
 
     // Restore scroll position
     if (!preventScrollRestoration) {
         window.scrollTo(scrollPos.left, scrollPos.top);
     }
+}
+
+/**
+ * Fits an emoji input to its content width and optionally re-fits its paired textarea.
+ * @param {HTMLInputElement|HTMLTextAreaElement|null} inputElement The emoji field to size.
+ * @param {boolean} [preventScroll=false] Whether to skip restoring the window scroll position.
+ */
+function resizeEmojiInputWidth(inputElement, preventScroll = false) {
+    if (!inputElement) return;
+
+    inputElement.style.overflowX = 'hidden';
+    inputElement.style.whiteSpace = 'nowrap';
+    inputElement.style.width = '1px';
+
+    const bufferPx = 6;
+    const desired = inputElement.scrollWidth + bufferPx;
+
+    // Respect CSS max-width if present
+    const computed = getComputedStyle(inputElement);
+    const maxW = computed.maxWidth;
+    let finalWidth = desired;
+    if (maxW && maxW !== 'none') {
+        const maxNum = parseFloat(maxW);
+        if (!Number.isNaN(maxNum)) {
+            finalWidth = Math.min(desired, maxNum);
+        }
+    } else {
+        // Provide a reasonable cap for plain inputs if no CSS max-width is set
+        finalWidth = Math.min(desired, 200);
+    }
+
+    inputElement.style.width = `${finalWidth}px`;
+    const centerUntilPx = 100;
+    inputElement.style.textAlign = finalWidth <= centerUntilPx ? 'center' : 'left';
+
+    // Width changes of the emoji field alter the space left for the paired prompt textarea.
+    const buttonItem = inputElement.closest('.button-item');
+    if (buttonItem) {
+        const mainTextarea = buttonItem.querySelector('.text-input');
+        resizeVerticalTextarea(mainTextarea, preventScroll);
+    }
+}
+
+/**
+ * Re-fits the static "add new button" inputs after programmatic updates or tab restores.
+ */
+function refitButtonCreationInputs() {
+    const buttonIconInput = document.getElementById('buttonIcon');
+    const buttonTextInput = document.getElementById('buttonText');
+
+    resizeEmojiInputWidth(buttonIconInput, true);
+    resizeVerticalTextarea(buttonTextInput, true);
+}
+
+/**
+ * Re-fits all rendered button cards after hidden updates become visible again.
+ */
+function refitButtonCardLayouts() {
+    const buttonCardsListElement = document.getElementById('buttonCardsList');
+    if (!buttonCardsListElement) return;
+
+    buttonCardsListElement.querySelectorAll('textarea.emoji-input').forEach((inputElement) => {
+        resizeEmojiInputWidth(inputElement, true);
+    });
+
+    buttonCardsListElement.querySelectorAll('textarea.text-input').forEach((textarea) => {
+        resizeVerticalTextarea(textarea, true);
+    });
 }
 
 /**
@@ -823,41 +911,16 @@ function attachEmojiInputListeners() {
     const allEmojiInputs = document.querySelectorAll('#buttonIcon, #buttonCardsList textarea.emoji-input');
 
     allEmojiInputs.forEach((inputElement) => {
-        // Normalize styles for correct measuring and UX
-        inputElement.style.overflowX = 'hidden';
-        inputElement.style.whiteSpace = 'nowrap';
-
         const resizeSelf = (preventScroll = false) => {
-            // Horizontal resize with small buffer and center-align until threshold
-            inputElement.style.width = '1px';
-            const bufferPx = 6;
-            const desired = inputElement.scrollWidth + bufferPx;
-
-            // Respect CSS max-width if present
-            const computed = getComputedStyle(inputElement);
-            const maxW = computed.maxWidth;
-            let finalWidth = desired;
-            if (maxW && maxW !== 'none') {
-                const maxNum = parseFloat(maxW);
-                if (!Number.isNaN(maxNum)) {
-                    finalWidth = Math.min(desired, maxNum);
-                }
-            } else {
-                // Provide a reasonable cap for plain inputs if no CSS max-width is set
-                finalWidth = Math.min(desired, 200);
-            }
-
-            inputElement.style.width = `${finalWidth}px`;
-            const centerUntilPx = 100;
-            inputElement.style.textAlign = finalWidth <= centerUntilPx ? 'center' : 'left';
-
-            // Optional vertical resize of neighbor textarea when inside a card
-            const buttonItem = inputElement.closest('.button-item');
-            if (buttonItem) {
-                const mainTextarea = buttonItem.querySelector('.text-input');
-                resizeVerticalTextarea(mainTextarea, preventScroll);
-            }
+            resizeEmojiInputWidth(inputElement, preventScroll);
         };
+
+        if (inputElement.dataset.ocpEmojiListenersAttached === 'true') {
+            resizeSelf(true);
+            return;
+        }
+
+        inputElement.dataset.ocpEmojiListenersAttached = 'true';
 
         // Manual autoscroll while selecting without showing scrollbars
         let selecting = false;

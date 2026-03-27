@@ -13,9 +13,358 @@ import {
     switchProfile,
     listProfiles,
     deleteProfile,
-    createDefaultProfile
+    createDefaultProfile,
+    loadProfileConfig,
+    broadcastProfileChange,
+    normalizeProfileConfig
 } from './service-worker-profile-manager.js';
 import { logConfigurationRelatedStuff, handleStorageError } from './service-worker-config-helpers.js';
+
+const BACKUP_KIND = 'OneClickPromptsBackup';
+const BACKUP_VERSION = 2;
+const DANGEROUS_OBJECT_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+
+function isPlainObject(value) {
+    return Object.prototype.toString.call(value) === '[object Object]';
+}
+
+function deepCloneSafeJson(value) {
+    if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+        return value;
+    }
+
+    if (Array.isArray(value)) {
+        return value.map((item) => deepCloneSafeJson(item)).filter((item) => typeof item !== 'undefined');
+    }
+
+    if (!isPlainObject(value)) {
+        return undefined;
+    }
+
+    const sanitized = {};
+    Object.entries(value).forEach(([key, entryValue]) => {
+        if (DANGEROUS_OBJECT_KEYS.has(key)) {
+            return;
+        }
+        const safeValue = deepCloneSafeJson(entryValue);
+        if (typeof safeValue !== 'undefined') {
+            sanitized[key] = safeValue;
+        }
+    });
+    return sanitized;
+}
+
+function sanitizeProfileName(value) {
+    if (typeof value !== 'string') {
+        return null;
+    }
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
+}
+
+function sanitizeProfilesMap(rawProfiles) {
+    if (!isPlainObject(rawProfiles)) {
+        return {};
+    }
+
+    const sanitizedProfiles = {};
+    Object.entries(rawProfiles).forEach(([rawName, rawProfile]) => {
+        const profileName = sanitizeProfileName(rawName);
+        if (!profileName || !isPlainObject(rawProfile)) {
+            return;
+        }
+
+        const safeProfile = deepCloneSafeJson(rawProfile);
+        if (!isPlainObject(safeProfile)) {
+            return;
+        }
+
+        safeProfile.PROFILE_NAME = profileName;
+        sanitizedProfiles[profileName] = normalizeProfileConfig(safeProfile, profileName);
+    });
+
+    return sanitizedProfiles;
+}
+
+function sanitizeAppSettings(rawAppSettings) {
+    if (!isPlainObject(rawAppSettings)) {
+        return null;
+    }
+
+    const sanitized = {};
+
+    if (rawAppSettings.theme === 'light' || rawAppSettings.theme === 'dark') {
+        sanitized.theme = rawAppSettings.theme;
+    }
+
+    if (isPlainObject(rawAppSettings.globalSettings)) {
+        sanitized.globalSettings = deepCloneSafeJson(rawAppSettings.globalSettings);
+    }
+
+    if (isPlainObject(rawAppSettings.crossChatSettings)) {
+        sanitized.crossChatSettings = deepCloneSafeJson(rawAppSettings.crossChatSettings);
+    }
+
+    if (typeof rawAppSettings.crossChatStoredPrompt === 'string') {
+        sanitized.crossChatStoredPrompt = rawAppSettings.crossChatStoredPrompt;
+    }
+
+    if (isPlainObject(rawAppSettings.inlineProfileSelector)) {
+        sanitized.inlineProfileSelector = deepCloneSafeJson(rawAppSettings.inlineProfileSelector);
+    }
+
+    if (isPlainObject(rawAppSettings.tokenApproximator)) {
+        sanitized.tokenApproximator = deepCloneSafeJson(rawAppSettings.tokenApproximator);
+    }
+
+    if (isPlainObject(rawAppSettings.selectorAutoDetector)) {
+        sanitized.selectorAutoDetector = deepCloneSafeJson(rawAppSettings.selectorAutoDetector);
+    }
+
+    if (isPlainObject(rawAppSettings.tooltip)) {
+        sanitized.tooltip = deepCloneSafeJson(rawAppSettings.tooltip);
+    }
+
+    if (isPlainObject(rawAppSettings.manualQueueCards)) {
+        sanitized.manualQueueCards = deepCloneSafeJson(rawAppSettings.manualQueueCards);
+    }
+
+    if (isPlainObject(rawAppSettings.floatingPanel)) {
+        sanitized.floatingPanel = deepCloneSafeJson(rawAppSettings.floatingPanel);
+    }
+
+    if (isPlainObject(rawAppSettings.customSelectors)) {
+        sanitized.customSelectors = deepCloneSafeJson(rawAppSettings.customSelectors);
+    }
+
+    return Object.keys(sanitized).length > 0 ? sanitized : null;
+}
+
+function sanitizeBackupPayload(rawPayload) {
+    if (!isPlainObject(rawPayload)) {
+        return null;
+    }
+
+    const isLegacySingleProfile = typeof rawPayload.PROFILE_NAME === 'string' && Array.isArray(rawPayload.customButtons);
+    if (isLegacySingleProfile) {
+        const profileName = sanitizeProfileName(rawPayload.PROFILE_NAME);
+        if (!profileName) {
+            return null;
+        }
+
+        const safeProfile = deepCloneSafeJson(rawPayload);
+        if (!isPlainObject(safeProfile)) {
+            return null;
+        }
+
+        safeProfile.PROFILE_NAME = profileName;
+        return {
+            kind: BACKUP_KIND,
+            backupVersion: BACKUP_VERSION,
+            exportScope: 'currentProfile',
+            currentProfile: profileName,
+            profiles: {
+                [profileName]: normalizeProfileConfig(safeProfile, profileName),
+            },
+            appSettings: null,
+        };
+    }
+
+    const profiles = sanitizeProfilesMap(rawPayload.profiles);
+    const appSettings = sanitizeAppSettings(rawPayload.appSettings);
+    const currentProfile = sanitizeProfileName(rawPayload.currentProfile);
+    const exportScope = rawPayload.exportScope === 'allProfilesAndAppSettings'
+        ? 'allProfilesAndAppSettings'
+        : rawPayload.exportScope === 'allProfiles'
+            ? 'allProfiles'
+            : 'currentProfile';
+
+    if (Object.keys(profiles).length === 0 && !appSettings) {
+        return null;
+    }
+
+    return {
+        kind: BACKUP_KIND,
+        backupVersion: Number.isFinite(rawPayload.backupVersion) ? Number(rawPayload.backupVersion) : BACKUP_VERSION,
+        exportScope,
+        currentProfile,
+        profiles,
+        appSettings,
+    };
+}
+
+async function buildBackupPayload(scope = 'currentProfile') {
+    const normalizedScope = scope === 'allProfilesAndAppSettings'
+        ? 'allProfilesAndAppSettings'
+        : scope === 'allProfiles'
+            ? 'allProfiles'
+            : 'currentProfile';
+    const currentResponse = await chrome.storage.local.get(['currentProfile', 'globalSettings']);
+    const currentProfileName = sanitizeProfileName(currentResponse.currentProfile) || 'Default';
+    const profiles = {};
+
+    if (normalizedScope === 'currentProfile') {
+        const currentProfile = await getCurrentProfileConfig();
+        profiles[currentProfileName] = deepCloneSafeJson(currentProfile);
+    } else {
+        const profileNames = await listProfiles();
+        for (const profileName of profileNames) {
+            const profile = await loadProfileConfig(profileName);
+            if (!profile) {
+                continue;
+            }
+            profiles[profileName] = deepCloneSafeJson(normalizeProfileConfig(profile, profileName));
+        }
+    }
+
+    let appSettings = null;
+    if (normalizedScope === 'allProfilesAndAppSettings') {
+        const crossChat = await StateStore.getCrossChat();
+        const floatingPanel = {};
+        const hostnames = await StateStore.listFloatingPanelHostnames();
+        for (const hostname of hostnames) {
+            floatingPanel[hostname] = await StateStore.getFloatingPanelSettings(hostname);
+        }
+
+        appSettings = {
+            theme: await StateStore.getUiTheme(),
+            globalSettings: deepCloneSafeJson(currentResponse.globalSettings || { acceptedQueueTOS: false }),
+            crossChatSettings: deepCloneSafeJson(crossChat.settings),
+            crossChatStoredPrompt: typeof crossChat.storedPrompt === 'string' ? crossChat.storedPrompt : '',
+            inlineProfileSelector: deepCloneSafeJson(await StateStore.getInlineProfileSelectorSettings()),
+            tokenApproximator: deepCloneSafeJson(await StateStore.getTokenApproximatorSettings()),
+            selectorAutoDetector: deepCloneSafeJson(await StateStore.getSelectorAutoDetectorSettings()),
+            tooltip: deepCloneSafeJson(await StateStore.getTooltipSettings()),
+            manualQueueCards: deepCloneSafeJson(await StateStore.getManualQueueCards()),
+            floatingPanel: deepCloneSafeJson(floatingPanel),
+            customSelectors: deepCloneSafeJson(await StateStore.getCustomSelectors()),
+        };
+    }
+
+    return {
+        kind: BACKUP_KIND,
+        backupVersion: BACKUP_VERSION,
+        exportedAt: new Date().toISOString(),
+        exportScope: normalizedScope,
+        currentProfile: currentProfileName,
+        profiles,
+        appSettings,
+    };
+}
+
+async function applyBackupPayload(rawPayload, options = {}) {
+    const backup = sanitizeBackupPayload(rawPayload);
+    if (!backup) {
+        throw new Error('Backup payload is invalid or contains no importable data.');
+    }
+
+    const overwriteExisting = options.overwriteExisting !== false;
+    const existingProfiles = new Set(await listProfiles());
+    const profileEntries = Object.entries(backup.profiles || {});
+    const importedProfiles = [];
+    const skippedProfiles = [];
+    const storagePatch = {};
+
+    for (const [profileName, profileConfig] of profileEntries) {
+        if (!overwriteExisting && existingProfiles.has(profileName)) {
+            skippedProfiles.push(profileName);
+            continue;
+        }
+
+        storagePatch[`profiles.${profileName}`] = normalizeProfileConfig(deepCloneSafeJson(profileConfig), profileName);
+        importedProfiles.push(profileName);
+    }
+
+    if (Object.keys(storagePatch).length > 0) {
+        await chrome.storage.local.set(storagePatch);
+    }
+
+    let appSettingsApplied = false;
+    if (backup.appSettings) {
+        const appSettings = backup.appSettings;
+
+        if (appSettings.theme === 'light' || appSettings.theme === 'dark') {
+            await StateStore.setUiTheme(appSettings.theme);
+        }
+
+        if (isPlainObject(appSettings.globalSettings)) {
+            await chrome.storage.local.set({ globalSettings: deepCloneSafeJson(appSettings.globalSettings) });
+        }
+
+        if (isPlainObject(appSettings.crossChatSettings)) {
+            await StateStore.saveCrossChat(appSettings.crossChatSettings);
+        }
+
+        if (typeof appSettings.crossChatStoredPrompt === 'string') {
+            await StateStore.saveStoredPrompt(appSettings.crossChatStoredPrompt);
+        }
+
+        if (isPlainObject(appSettings.inlineProfileSelector)) {
+            await StateStore.saveInlineProfileSelectorSettings(appSettings.inlineProfileSelector);
+        }
+
+        if (isPlainObject(appSettings.tokenApproximator)) {
+            await StateStore.saveTokenApproximatorSettings(appSettings.tokenApproximator);
+        }
+
+        if (isPlainObject(appSettings.selectorAutoDetector)) {
+            await StateStore.saveSelectorAutoDetectorSettings(appSettings.selectorAutoDetector);
+        }
+
+        if (isPlainObject(appSettings.tooltip)) {
+            await StateStore.saveTooltipSettings(appSettings.tooltip);
+        }
+
+        if (isPlainObject(appSettings.manualQueueCards)) {
+            await StateStore.saveManualQueueCards(appSettings.manualQueueCards);
+        }
+
+        if (isPlainObject(appSettings.floatingPanel)) {
+            await StateStore.resetFloatingPanelSettings();
+            for (const [hostname, settings] of Object.entries(appSettings.floatingPanel)) {
+                if (!hostname || !isPlainObject(settings)) {
+                    continue;
+                }
+                await StateStore.saveFloatingPanelSettings(hostname, deepCloneSafeJson(settings));
+            }
+        }
+
+        if (isPlainObject(appSettings.customSelectors)) {
+            await StateStore.resetAdvancedSelectors();
+            for (const [site, selectors] of Object.entries(appSettings.customSelectors)) {
+                if (!site || !isPlainObject(selectors)) {
+                    continue;
+                }
+                await StateStore.saveCustomSelectors(site, deepCloneSafeJson(selectors));
+            }
+        }
+
+        appSettingsApplied = true;
+    }
+
+    const importedProfileSet = new Set(importedProfiles);
+    let nextCurrentProfile = sanitizeProfileName(backup.currentProfile);
+    if (!nextCurrentProfile || (!importedProfileSet.has(nextCurrentProfile) && !existingProfiles.has(nextCurrentProfile))) {
+        nextCurrentProfile = importedProfiles[0] || sanitizeProfileName((await chrome.storage.local.get(['currentProfile'])).currentProfile) || 'Default';
+    }
+
+    await chrome.storage.local.set({ currentProfile: nextCurrentProfile });
+    let activeProfile = await loadProfileConfig(nextCurrentProfile);
+    if (!activeProfile) {
+        activeProfile = await createDefaultProfile();
+        nextCurrentProfile = 'Default';
+    }
+    if (activeProfile) {
+        await broadcastProfileChange(nextCurrentProfile, normalizeProfileConfig(activeProfile, nextCurrentProfile), null, 'backupImport');
+    }
+
+    return {
+        importedProfiles,
+        skippedProfiles,
+        appSettingsApplied,
+        currentProfile: nextCurrentProfile,
+    };
+}
 
 // Main message handler function
 export function handleMessage(request, sender, sendResponse) {
@@ -50,6 +399,32 @@ export function handleMessage(request, sender, sendResponse) {
                 sendResponse({ profiles });
                 logConfigurationRelatedStuff('Profile list request processed');
             });
+            return true;
+
+        case 'getBackupPayload':
+            (async () => {
+                try {
+                    const payload = await buildBackupPayload(request.scope);
+                    sendResponse({ payload });
+                    logConfigurationRelatedStuff(`Backup payload built for scope: ${request.scope || 'currentProfile'}`);
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
+            return true;
+
+        case 'applyBackupPayload':
+            (async () => {
+                try {
+                    const result = await applyBackupPayload(request.payload, request.options || {});
+                    sendResponse({ success: true, result });
+                    logConfigurationRelatedStuff('Backup payload applied successfully');
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ success: false, error: error.message });
+                }
+            })();
             return true;
 
         case 'clearStorage':

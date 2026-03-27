@@ -684,6 +684,20 @@ window.MaxExtensionFloatingPanel.initializeResponsiveQueueToggle = function () {
 
     // Also check on window resize as fallback
     window.addEventListener('resize', checkSpaceAndMoveToggle);
+
+    if (!this.__queueUiRestoreHooksBound) {
+        this.__queueUiRestoreHooksBound = true;
+        this.__handleQueueUiRestore = () => {
+            if (!this.panelElement || !document.body.contains(this.panelElement)) return;
+            if (document.visibilityState === 'hidden') return;
+            this.syncQueueModeUiFromConfig?.();
+            this.updateQueueTogglePlacement?.();
+        };
+
+        document.addEventListener('visibilitychange', this.__handleQueueUiRestore);
+        window.addEventListener('focus', this.__handleQueueUiRestore);
+        window.addEventListener('pageshow', this.__handleQueueUiRestore);
+    }
 };
 
 /**

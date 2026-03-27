@@ -12,10 +12,11 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-    const menuNav = document.querySelector('.menu-nav');
-    if (!menuNav) return;
+    const menuSection = document.getElementById('menuSection');
+    const menuNav = menuSection?.querySelector('.menu-nav');
+    if (!menuSection || !menuNav) return;
 
-    const menuButtons = menuNav.querySelectorAll('.menu-btn');
+    const menuButtons = menuSection.querySelectorAll('.menu-btn');
 
     // Initialize each button with extra elements
     menuButtons.forEach(btn => {

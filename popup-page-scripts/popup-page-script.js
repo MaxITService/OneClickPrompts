@@ -456,11 +456,20 @@ async function updateInterface(anchorElement = null) {
     document.getElementById('buttonIcon').value = '';
     document.getElementById('buttonText').value = '';
     document.getElementById('buttonAutoSendToggle').checked = true; // Reset to default checked
+    if (typeof refitButtonCreationInputs === 'function') {
+        refitButtonCreationInputs();
+    }
 
     // Set the profileSelect dropdown to the current profile
     const profileSelect = document.getElementById('profileSelect');
     if (profileSelect) {
         profileSelect.value = currentProfile.PROFILE_NAME;
+    }
+
+    // Update the "Current profile:" eyebrow label in the Button Configuration section
+    const buttonConfigProfileName = document.getElementById('buttonConfigProfileName');
+    if (buttonConfigProfileName) {
+        buttonConfigProfileName.textContent = currentProfile.PROFILE_NAME;
     }
 
     updateQueueSettingsUIFromProfile();
@@ -494,8 +503,11 @@ function resetProfileActionsUI() {
     copyProfileButton.classList.remove('is-hidden');
     deleteProfileButton.classList.remove('is-hidden');
 
-    // Unlock the profile selector
+    // Restore the profile selector dropdown, hide static name
+    profileSelect.classList.remove('is-hidden');
     profileSelect.disabled = false;
+    const currentProfileNameStatic = document.getElementById('currentProfileNameStatic');
+    if (currentProfileNameStatic) currentProfileNameStatic.classList.add('is-hidden');
     currentProfileLabel.classList.add('is-hidden');
 }
 // -------------------------
@@ -515,7 +527,13 @@ document.addEventListener('DOMContentLoaded', () => {
         copyProfileButton.classList.add('is-hidden');
         copyProfileContainer.classList.add('is-hidden');
         deleteProfileButton.classList.add('is-hidden'); // Hide delete button during add
-        profileSelect.disabled = true; // Lock profile selector
+        // Replace dropdown with plain text to avoid confusion
+        profileSelect.classList.add('is-hidden');
+        const currentProfileNameStatic = document.getElementById('currentProfileNameStatic');
+        if (currentProfileNameStatic) {
+            currentProfileNameStatic.textContent = currentProfile?.PROFILE_NAME ?? '';
+            currentProfileNameStatic.classList.remove('is-hidden');
+        }
         currentProfileLabel.classList.remove('is-hidden');
     });
 
@@ -526,7 +544,13 @@ document.addEventListener('DOMContentLoaded', () => {
         addProfileButton.classList.add('is-hidden');
         addProfileContainer.classList.add('is-hidden');
         deleteProfileButton.classList.add('is-hidden'); // Hide delete button during copy
-        profileSelect.disabled = true; // Lock profile selector
+        // Replace dropdown with plain text to avoid confusion
+        profileSelect.classList.add('is-hidden');
+        const currentProfileNameStatic = document.getElementById('currentProfileNameStatic');
+        if (currentProfileNameStatic) {
+            currentProfileNameStatic.textContent = currentProfile?.PROFILE_NAME ?? '';
+            currentProfileNameStatic.classList.remove('is-hidden');
+        }
         currentProfileLabel.classList.remove('is-hidden');
     });
 
@@ -680,6 +704,21 @@ document.addEventListener('DOMContentLoaded', () => {
     attachAutoSendToggleListeners();
     // Call the function for your specific textarea by ID
     textareaInputAreaResizerFun('buttonText');
+
+    document.addEventListener('ocp:tab-changed', (event) => {
+        if (event.detail?.panelId !== 'buttonConfigurationSection') {
+            return;
+        }
+
+        requestAnimationFrame(() => {
+            if (typeof refitButtonCreationInputs === 'function') {
+                refitButtonCreationInputs();
+            }
+            if (typeof refitButtonCardLayouts === 'function') {
+                refitButtonCardLayouts();
+            }
+        });
+    });
 
     // -------------------------
     // Open external links in new tabs

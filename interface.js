@@ -31,9 +31,12 @@ window.MaxExtensionInterface = {
 
         checkbox.addEventListener('change', (event) => {
             onChangeCallback(event.target.checked);
-            // Per-tab, best-effort UI persistence for this surface only.
-            // Profile config remains the authoritative source after full re-initialization.
-            localStorage.setItem(id, event.target.checked);
+            // Queue mode is profile-backed, so do not let tab-local storage override it later.
+            if (id !== 'enableQueueMode') {
+                // Per-tab, best-effort UI persistence for this surface only.
+                // Profile config remains the authoritative source after full re-initialization.
+                localStorage.setItem(id, event.target.checked);
+            }
             logConCgp(`${labelText} ${event.target.checked ? 'enabled' : 'disabled'}`);
         });
 
@@ -50,13 +53,6 @@ window.MaxExtensionInterface = {
         const savedHotkeysState = localStorage.getItem('enableShortcuts');
         if (savedHotkeysState !== null) {
             globalMaxExtensionConfig.enableShortcuts = savedHotkeysState === 'true';
-        }
-
-        // Load queue mode state from localStorage
-        const savedQueueModeState = localStorage.getItem('enableQueueMode');
-        if (savedQueueModeState !== null) {
-            // This ensures that the global config reflects the stored toggle state on load
-            globalMaxExtensionConfig.enableQueueMode = savedQueueModeState === 'true';
         }
     }
 };

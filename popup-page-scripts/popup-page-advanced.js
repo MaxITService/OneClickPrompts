@@ -60,6 +60,20 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     let heuristicsSettings = { ...heuristicsDefaults };
 
+    const refitSelectorConfig = () => {
+        if (!selectorConfig || typeof resizeVerticalTextarea !== 'function') {
+            return;
+        }
+
+        resizeVerticalTextarea(selectorConfig, true);
+    };
+
+    const scheduleSelectorConfigRefit = () => {
+        requestAnimationFrame(() => {
+            refitSelectorConfig();
+        });
+    };
+
     async function loadHeuristicsSettings() {
         if (!editorHeuristicsToggle || !sendButtonHeuristicsToggle || !stopButtonHeuristicsToggle || !containerHeuristicsToggle || !containerMissingNotifyCheckbox || !autoFloatingFallbackCheckbox) return;
         try {
@@ -118,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // After programmatic value set, resize to content.
             if (typeof resizeVerticalTextarea === 'function') {
                 // If hidden (collapsed), defer until visible via rAF to let layout settle
-                requestAnimationFrame(() => resizeVerticalTextarea(selectorConfig));
+                scheduleSelectorConfigRefit();
             }
         } catch (error) {
             console.error('Error loading selectors:', error);
@@ -189,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Ensure textarea fits to new content
                 if (typeof resizeVerticalTextarea === 'function') {
-                    requestAnimationFrame(() => resizeVerticalTextarea(selectorConfig));
+                    scheduleSelectorConfigRefit();
                 }
             } else {
                 throw new Error('Failed to reset selectors');
@@ -237,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Ensure textarea fits to new content
                 if (typeof resizeVerticalTextarea === 'function') {
-                    requestAnimationFrame(() => resizeVerticalTextarea(selectorConfig));
+                    scheduleSelectorConfigRefit();
                 }
 
                 showToast('All websites selectors reset to defaults', 'success');
@@ -319,11 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (advancedSection && selectorConfig) {
         const onExpanded = () => {
             // Wait for paint so display: block takes effect, then measure
-            requestAnimationFrame(() => {
-                if (typeof resizeVerticalTextarea === 'function') {
-                    resizeVerticalTextarea(selectorConfig);
-                }
-            });
+            scheduleSelectorConfigRefit();
         };
         const onCollapsed = () => {
             // Drop stale inline height so next expand re-measures from CSS baseline
@@ -345,8 +355,14 @@ document.addEventListener('DOMContentLoaded', () => {
         mo.observe(advancedSection, { attributes: true, attributeFilter: ['class'] });
     }
 
-    // Also re-fit while user edits (keeps parity with button card logic)
-    if (selectorConfig && typeof resizeVerticalTextarea === 'function') {
-        selectorConfig.addEventListener('input', () => resizeVerticalTextarea(selectorConfig));
-    }
+    document.addEventListener('ocp:tab-changed', (event) => {
+        if (event.detail?.panelId !== 'advancedSection') {
+            return;
+        }
+        if (!advancedSection?.classList.contains('expanded')) {
+            return;
+        }
+
+        scheduleSelectorConfigRefit();
+    });
 });

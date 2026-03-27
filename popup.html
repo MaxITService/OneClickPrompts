@@ -31,41 +31,116 @@
     <div class="container">
       <!--Menu Section - Navigation with frosted glass buttons-->
       <section class="section" id="menuSection">
-        <nav class="menu-nav" aria-label="Page navigation">
-          <a href="#profileSection" class="menu-btn" data-scroll-only>
-            <span class="menu-btn-icon">👤</span>Profile
-          </a>
-          <a href="#settingsSection" class="menu-btn" data-scroll-only>
-            <span class="menu-btn-icon">⚙️</span>Settings
-          </a>
-          <a href="#backupSection" class="menu-btn" data-scroll-only>
-            <span class="menu-btn-icon">💾</span>Backup
-          </a>
-          <a href="#modulesSection" class="menu-btn" data-scroll-only>
-            <span class="menu-btn-icon">🧩</span>Modules
-          </a>
-          <a href="#helpSection" class="menu-btn" data-scroll-only>
-            <span class="menu-btn-icon">❓</span>Help
-          </a>
-          <a href="#advancedSection" class="menu-btn" data-scroll-only>
-            <span class="menu-btn-icon">🔧</span>Advanced
-          </a>
-          <a href="#themeSection" class="menu-btn" data-scroll-only>
-            <span class="menu-btn-icon">🎨</span>Theme
-          </a>
-          <button id="open-in-tab-button" class="menu-btn">
-            <span class="menu-btn-icon">↗️</span>Open this page in Tab
+        <nav class="menu-nav menu-tabs" aria-label="Popup sections and actions">
+          <button
+            id="tab-buttonConfigurationSection"
+            class="menu-btn menu-tab-btn"
+            type="button"
+            role="tab"
+            aria-selected="true"
+            aria-controls="buttonConfigurationSection"
+            data-tab-target="buttonConfigurationSection"
+          >
+            <span class="menu-btn-icon">✨</span>Buttons
           </button>
-          <button id="toggle-width-button" class="menu-btn is-hidden">
+          <button
+            id="tab-profileSection"
+            class="menu-btn menu-tab-btn"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="profileSection"
+            data-tab-target="profileSection"
+          >
+            <span class="menu-btn-icon">👤</span>Profile
+          </button>
+          <button
+            id="tab-settingsBackupPanel"
+            class="menu-btn menu-tab-btn"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="settingsBackupPanel"
+            data-tab-target="settingsBackupPanel"
+          >
+            <span class="menu-btn-icon">⚙️</span>Settings
+          </button>
+          <button
+            id="tab-modulesSection"
+            class="menu-btn menu-tab-btn"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="modulesSection"
+            data-tab-target="modulesSection"
+          >
+            <span class="menu-btn-icon">🧩</span>Modules
+          </button>
+          <button
+            id="tab-helpSection"
+            class="menu-btn menu-tab-btn"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="helpSection"
+            data-tab-target="helpSection"
+          >
+            <span class="menu-btn-icon">❓</span>Help
+          </button>
+          <button
+            id="tab-advancedSection"
+            class="menu-btn menu-tab-btn"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="advancedSection"
+            data-tab-target="advancedSection"
+          >
+            <span class="menu-btn-icon">🔧</span>Advanced
+          </button>
+          <button
+            id="tab-themeSection"
+            class="menu-btn menu-tab-btn"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="themeSection"
+            data-tab-target="themeSection"
+          >
+            <span class="menu-btn-icon">🎨</span>Theme
+          </button>
+          <button
+            id="tab-consoleSection"
+            class="menu-btn menu-tab-btn"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="consoleSection"
+            data-tab-target="consoleSection"
+          >
+            <span class="menu-btn-icon">🖥️</span>Console
+          </button>
+          <button id="open-in-tab-button" class="menu-btn menu-action-btn" type="button">
+            <span class="menu-btn-icon">↗️</span>Open me in Tab
+          </button>
+          <button id="toggle-width-button" class="menu-btn menu-action-btn is-hidden" type="button">
             <span class="menu-btn-icon">↔️</span>Wider
           </button>
         </nav>
-        <div id="version" class="small-hoovering-text menu-version">Version 0.0.6.1</div>
+        <div id="version" class="small-hoovering-text menu-version">Version<br>0.0.6.2</div>
       </section>
       
       <!-- Button Configuration via button cards (buttons have their UI - each on card that is added dynamically) -->
-      <section class="section" id="buttonConfigurationSection">
-        <h2 title="Here, each 'card' represents a button that will be injected into the chat interface and the text it will paste.">Button Configuration</h2>
+      <section
+        class="section tab-panel"
+        id="buttonConfigurationSection"
+        role="tabpanel"
+        aria-labelledby="tab-buttonConfigurationSection"
+      >
+        <div class="section-heading-row">
+          <h2 title="Here, each 'card' represents a button that will be injected into the chat interface and the text it will paste.">Button Configuration</h2>
+          <p id="buttonConfigProfileLabel" class="section-profile-label">Current profile: <span id="buttonConfigProfileName"></span></p>
+        </div>
         <div class="add-button-group">
           <div class="row">
             <input
@@ -129,7 +204,12 @@
         </div>
       </section>
       <!-- Profile Section -->
-      <section class="section profile-section" id="profileSection">
+      <section
+        class="section profile-section tab-panel"
+        id="profileSection"
+        role="tabpanel"
+        aria-labelledby="tab-profileSection"
+      >
         <h2 title="The profile is containing set of buttons inside it. Profile changing allows you to use different sets of buttons for different tasks">Profile</h2>
         <div class="row">
           <label
@@ -145,6 +225,7 @@
           >
             <option value="default">Default Profile</option>
           </select>
+          <span id="currentProfileNameStatic" class="profile-name-static is-hidden" aria-live="polite"></span>
           <button id="addProfile" title="Create a new, empty profile.">
             Add Profile
           </button>
@@ -215,10 +296,81 @@
         <button id="cancelCopyProfile" class="danger">Cancel</button>
         </div>
 
-        
+        <!-- Backup Section -->
+        <section
+          class="section mt-16"
+          id="backupSection"
+        >
+          <h2>Backup &amp; Restore</h2>
+          <div class="row backup-options-row">
+            <div class="backup-option-field">
+              <label for="backupExportScope">What to export</label>
+              <select id="backupExportScope" title="Choose how much data to include in the backup file.">
+                <option value="currentProfile">Just current profile: current selection</option>
+                <option value="allProfiles">All profiles</option>
+                <option value="allProfilesAndAppSettings">All profiles and app settings</option>
+              </select>
+            </div>
+          </div>
+          <div class="text-inside-container mb-16">
+            <p>
+              Backups are exported and imported as JSON files.
+            </p>
+          </div>
+          <div class="row">
+            <button
+              id="exportProfile"
+              title="Download a JSON backup file using the selected scope."
+            >
+              Export Backup
+            </button>
+            <button
+              id="importProfile"
+              title="Import a JSON backup file."
+            >
+              Import Backup
+            </button>
+            <!-- Hidden file input for importing profile -->
+            <input
+              type="file"
+              id="importFileInput"
+              accept=".json,application/json"
+              class="visually-hidden"
+              title="Import profile file"
+              aria-label="Import profile file"
+            />
+          </div>
+          <!-- Confirmation Div -->
+            <div
+              id="confirmationDiv"
+              class="dialog dialog-confirmation is-hidden"
+            >
+            <p>
+              File loaded successfully, but a profile with the same name already
+              exists in the system. Do you want to overwrite the existing profile?
+            </p>
+            <button id="confirmOverwrite">Yes</button>
+            <button id="cancelOverwrite">No</button>
+          </div>
+          <!-- Error Message Div -->
+            <div id="errorDiv" class="dialog dialog-error is-hidden">
+            <p>
+              Error loading file. Please ensure the file contains a valid JSON backup.
+            </p>
+          </div>
+        </section>
       </section>
       <!-- ===== Settings  ===== -->
-      <section class="section" id="settingsSection">
+      <div
+        class="tab-panel"
+        id="settingsBackupPanel"
+        role="tabpanel"
+        aria-labelledby="tab-settingsBackupPanel"
+      >
+      <section
+        class="section"
+        id="settingsSection"
+      >
         <h2>Settings</h2>
         <div class="row settings-linked-row">
           <label
@@ -485,61 +637,27 @@
         </div>
       </section>
 
-      <!-- Backup Section -->
-      <section class="section" id="backupSection">
-        <h2>Backup &amp; Restore</h2>
-        <div class="row">
-          <button
-            id="exportProfile"
-            title="Download the current profile's settings as a JSON backup file. You can then import this file to another computer or restore in case of data loss."
-          >
-            Export Profile
-          </button>
-          <button
-            id="importProfile"
-            title="Import a profile's settings from a JSON backup file."
-          >
-            Import Profile
-          </button>
-          <!-- Hidden file input for importing profile -->
-          <input
-            type="file"
-            id="importFileInput"
-            accept="application/json"
-            class="visually-hidden"
-            title="Import profile file"
-            aria-label="Import profile file"
-          />
-        </div>
-        <!-- Confirmation Div -->
-          <div
-            id="confirmationDiv"
-            class="dialog dialog-confirmation is-hidden"
-          >
-          <p>
-            File loaded successfully, but a profile with the same name already
-            exists in the system. Do you want to overwrite the existing profile?
-          </p>
-          <button id="confirmOverwrite">Yes</button>
-          <button id="cancelOverwrite">No</button>
-        </div>
-        <!-- Error Message Div -->
-          <div id="errorDiv" class="dialog dialog-error is-hidden">
-          <p>
-            Error loading file. Please ensure the file is a valid JSON profile.
-          </p>
-        </div>
-      </section>
+      </div>
 
       <!-- Console -->
-      <section class="section">
+      <section
+        class="section tab-panel"
+        id="consoleSection"
+        role="tabpanel"
+        aria-labelledby="tab-consoleSection"
+      >
         <h2>Console</h2>
         <div id="console" class="console"></div>
       </section>
 
       <!-- ===== Modules Section ===== -->
       <!-- This is a top-level collapsible container. The .collapsible class enables the expand/collapse behavior via popup-page-collapsible.js -->
-      <section class="section collapsible" id="modulesSection">
+      <section
+        class="section collapsible tab-panel"
+        id="modulesSection"
+        role="tabpanel"
+        aria-labelledby="tab-modulesSection"
+      >
         <div class="section-header">
           <h2>
             Modules
@@ -1250,7 +1368,12 @@
       </section>
 
       <!-- Help Section -->
-      <section class="section" id="helpSection">
+      <section
+        class="section tab-panel"
+        id="helpSection"
+        role="tabpanel"
+        aria-labelledby="tab-helpSection"
+      >
         <h2>Help</h2>
         <div class="text-inside-container">
           <p>Some information:</p>
@@ -1359,6 +1482,11 @@
               >
             </li>
             <li>
+              <a href="https://github.com/MaxITService/AIVORelay"
+                >Check out my speech-to-text app for Windows: AivoRelay</a
+              >
+            </li>
+            <li>
               Introducing changes faster than once in second causes saving
               issues
             </li>
@@ -1372,7 +1500,12 @@
       </section>
 
       <!-- ===== Advanced Selector Configuration ===== -->
-      <section class="section collapsible" id="advancedSection">
+      <section
+        class="section collapsible tab-panel"
+        id="advancedSection"
+        role="tabpanel"
+        aria-labelledby="tab-advancedSection"
+      >
         <div class="section-header">
           <h2>
             Advanced Selector Configuration
@@ -1612,7 +1745,12 @@
       <!-- ===== End Advanced Selector Configuration ===== -->
 
       <!-- =====  Theme Section (Dark Theme Toggle) ===== -->
-      <section class="section" id="themeSection">
+      <section
+        class="section tab-panel"
+        id="themeSection"
+        role="tabpanel"
+        aria-labelledby="tab-themeSection"
+      >
         <h2>Theme</h2>
         <!-- iPhone-style toggle switch -->
         <div class="toggle-container">
@@ -1647,6 +1785,7 @@
     <script src="/common-ui-elements/onclick-smooth-scroll-highlight.js"></script>
     <!-- Menu navigation script for 3D tilt and ripple effects -->
     <script src="/popup-page-scripts/menu.js"></script>
+    <script src="/popup-page-scripts/popup-page-tabs.js"></script>
     <!-- NEW SCRIPT: Centralized handler for all collapsible sections -->
     <script src="/popup-page-scripts/popup-page-collapsible.js"></script>
     <script src="/popup-page-scripts/popup-page-modal.js"></script>

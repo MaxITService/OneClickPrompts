@@ -118,6 +118,7 @@ button.danger:hover {
     transition: background-color var(--transition-duration) ease;
     overflow-y: auto;
     overflow-x: hidden;
+    scrollbar-gutter: stable;
     flex: 1 1 auto;
     scroll-behavior: smooth;
     transform-style: preserve-3d;
@@ -297,6 +298,18 @@ button.danger:hover {
     /* Center hotkey text */
     width: 100%;
     /* Ensure the text centers within the full width */
+}
+
+/* Subtle divider between auto-send row and the hotkey hint.
+   Only rendered when both elements are present (set in JS). */
+.button-item .meta-separator {
+    width: 60%;
+    height: 1px;
+    background-color: var(--border-color, #d0d0d0);
+    opacity: 0.55;
+    border-radius: 1px;
+    align-self: center;
+    margin: 1px 0;
 }
 
 /* ------------------------------------------------------------------------- */

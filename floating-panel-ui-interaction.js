@@ -71,14 +71,26 @@ window.MaxExtensionFloatingPanel.togglePanel = async function (event) {
             if (typeof this.ensurePanelWithinViewport === 'function') {
                 requestAnimationFrame(() => this.ensurePanelWithinViewport());
             }
+            if (typeof this.syncQueueModeUiFromConfig === 'function') {
+                this.syncQueueModeUiFromConfig();
+            }
 
         } else {
             logConCgp('[floating-panel] Toggling panel OFF. Re-initializing extension for inline buttons.');
 
             // When closing panel, disable and reset the queue.
             if (window.globalMaxExtensionConfig) {
+                const queueModeInput = this.queueModeToggle?.querySelector('input');
                 window.globalMaxExtensionConfig.enableQueueMode = false;
-                if (typeof this.saveCurrentProfileConfig === 'function') {
+                try {
+                    localStorage.setItem('enableQueueMode', 'false');
+                } catch (_) { }
+
+                // Reuse the existing toggle callback so the hidden panel does not keep a stale checked UI state.
+                if (queueModeInput) {
+                    queueModeInput.checked = false;
+                    queueModeInput.dispatchEvent(new Event('change', { bubbles: true }));
+                } else if (typeof this.saveCurrentProfileConfig === 'function') {
                     this.saveCurrentProfileConfig();
                 }
             }

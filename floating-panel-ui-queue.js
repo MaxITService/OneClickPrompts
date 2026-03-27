@@ -1259,6 +1259,27 @@ window.MaxExtensionFloatingPanel.markQueueFinished = function () {
     this.updateQueueFinishedIndicator?.();
 };
 
+window.MaxExtensionFloatingPanel.syncQueueModeUiFromConfig = function () {
+    const queueEnabled = Boolean(window.globalMaxExtensionConfig?.enableQueueMode);
+    const inputEl = this.queueModeToggle?.querySelector('input');
+    if (inputEl) {
+        inputEl.checked = queueEnabled;
+    }
+
+    if (typeof this.renderQueueDisplay === 'function') {
+        this.renderQueueDisplay();
+    }
+    if (typeof this.updateQueueControlsState === 'function') {
+        this.updateQueueControlsState();
+    }
+    if (typeof this.updateQueueTogglePlacement === 'function') {
+        this.updateQueueTogglePlacement();
+    }
+    if (typeof this.updateManualQueueAvailability === 'function') {
+        this.updateManualQueueAvailability(queueEnabled);
+    }
+};
+
 /**
  * Renders the queue display area with the current items in the queue.
  */

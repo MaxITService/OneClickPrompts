@@ -93,6 +93,10 @@ Ultra-premium menu buttons featuring:
     perspective: 1200px;
 }
 
+.menu-tabs {
+    justify-content: flex-start;
+}
+
 /* ------------------------------------------------------------------------- */
 /* Base Button - Liquid Glass                                                */
 /* ------------------------------------------------------------------------- */
@@ -149,6 +153,61 @@ Ultra-premium menu buttons featuring:
         0 4px 20px rgba(122, 92, 200, 0.05),
         inset 0 1px 0 rgba(255, 255, 255, 0.9),
         inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+}
+
+.menu-action-btn {
+    padding-inline: 20px;
+}
+
+.menu-tab-btn {
+    flex: 0 0 auto;
+}
+
+.menu-tab-btn[aria-selected="false"] {
+    opacity: 0.92;
+}
+
+.menu-tab-btn.is-active,
+.menu-tab-btn[aria-selected="true"] {
+    color: #ffffff;
+    border-color: rgba(122, 92, 200, 0.5);
+    background: linear-gradient(135deg,
+            rgba(122, 92, 200, 0.96) 0%,
+            rgba(155, 126, 217, 0.94) 50%,
+            rgba(107, 74, 189, 0.98) 100%);
+    box-shadow:
+        0 8px 28px rgba(122, 92, 200, 0.22),
+        0 12px 36px rgba(122, 92, 200, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.menu-tab-btn.is-active::before,
+.menu-tab-btn[aria-selected="true"]::before {
+    opacity: 0.55;
+    filter: blur(10px);
+}
+
+.menu-tab-btn.is-active::after,
+.menu-tab-btn[aria-selected="true"]::after {
+    opacity: 0.65;
+}
+
+.menu-tab-btn.is-active .glow-ring,
+.menu-tab-btn[aria-selected="true"] .glow-ring {
+    opacity: 1;
+}
+
+.menu-tab-btn.is-active .menu-btn-icon,
+.menu-tab-btn[aria-selected="true"] .menu-btn-icon {
+    filter: drop-shadow(0 2px 5px rgba(255, 255, 255, 0.24));
+}
+
+.menu-tab-btn.is-active:hover,
+.menu-tab-btn[aria-selected="true"]:hover {
+    box-shadow:
+        0 10px 32px rgba(122, 92, 200, 0.28),
+        0 16px 48px rgba(122, 92, 200, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.32);
 }
 
 /* Index for staggered animations */
@@ -489,6 +548,35 @@ body.dark-theme .menu-btn {
         0 8px 30px rgba(122, 92, 200, 0.1),
         inset 0 1px 0 rgba(255, 255, 255, 0.08),
         inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+}
+
+body.dark-theme .menu-tab-btn.is-active,
+body.dark-theme .menu-tab-btn[aria-selected="true"] {
+    color: #f8f5ff;
+    border-color: rgba(182, 153, 255, 0.5);
+    background: linear-gradient(135deg,
+            rgba(88, 62, 152, 0.96) 0%,
+            rgba(116, 86, 193, 0.94) 55%,
+            rgba(74, 52, 136, 0.98) 100%);
+    box-shadow:
+        0 10px 28px rgba(77, 53, 138, 0.38),
+        0 14px 42px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+body.dark-theme .menu-tab-btn.is-active .menu-btn-icon,
+body.dark-theme .menu-tab-btn[aria-selected="true"] .menu-btn-icon {
+    filter: drop-shadow(0 2px 6px rgba(232, 232, 240, 0.25));
+}
+
+@media (max-width: 560px) {
+    .menu-action-btn {
+        width: auto;
+    }
+
+    .menu-tabs {
+        justify-content: center;
+    }
 }
 
 body.dark-theme .menu-btn::before {

@@ -126,6 +126,7 @@ Key areas:
     color: #cccccc;
     max-height: 150px;
     overflow-y: auto;
+    scrollbar-gutter: stable;
 }
 
 .console div {
@@ -796,6 +797,7 @@ Key areas:
     max-height: 200px;
     overflow-y: auto;
     overflow-x: hidden;
+    scrollbar-gutter: stable;
     background-color: #fff;
     /* Light mode background */
 }

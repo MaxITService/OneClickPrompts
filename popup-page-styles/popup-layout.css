@@ -140,6 +140,13 @@ select:focus {
     font-weight: 500;
 }
 
+/* Plain-text profile name shown in place of the dropdown during add/copy mode */
+.profile-name-static {
+    align-self: center;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
 /* ------------------------------------------------------------------------- */
 /* Section Divider                                                          */
 /* ------------------------------------------------------------------------- */
@@ -158,6 +165,26 @@ select:focus {
 .queue-setting-row {
     align-items: center;
     gap: 12px;
+}
+
+.backup-options-row {
+    align-items: flex-end;
+    gap: 16px;
+}
+
+.backup-option-field {
+    display: flex;
+    flex: 1 1 260px;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.backup-option-field label {
+    font-weight: 600;
+}
+
+.backup-option-field select {
+    width: 100%;
 }
 
 #queueRandomizePercent {

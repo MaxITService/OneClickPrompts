@@ -9,7 +9,7 @@ Extracted from config.js to improve maintainability.
 import { logConfigurationRelatedStuff, handleStorageError, loadDefaultConfig } from './service-worker-config-helpers.js';
 
 // Function to normalize profile configuration with default values
-function normalizeProfileConfig(profile, profileName) {
+export function normalizeProfileConfig(profile, profileName) {
     // Ensure the profile has a 'customButtons' property
     if (!profile.customButtons) {
         profile.customButtons = [];
