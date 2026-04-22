@@ -23,6 +23,108 @@ async function processChatGPTCustomSendButtonClick(event, customText, autoSend) 
         return;
     }
 
+    const getComposerRoot = () => editorArea?.closest?.('form[data-type="unified-composer"], form') || document;
+
+    const getCurrentChatGPTActionButton = () => {
+        const root = getComposerRoot();
+        const candidates = Array.from(root.querySelectorAll('button#composer-submit-button, button[data-testid="send-button"], button[data-testid="stop-button"], button[aria-label]'));
+        return candidates.find((candidate) => {
+            if (!window.ButtonsClickingShared?.isVisibleInteractiveElement?.(candidate)) return false;
+            return candidate.id === 'composer-submit-button'
+                || candidate.getAttribute('data-testid') === 'send-button'
+                || candidate.getAttribute('data-testid') === 'stop-button';
+        }) || null;
+    };
+
+    const isChatGPTStopButtonLike = (btn) => {
+        if (!btn) return false;
+        const label = (
+            (btn.getAttribute('aria-label') || '') +
+            ' ' +
+            (btn.getAttribute('data-testid') || '') +
+            ' ' +
+            (btn.innerText || '')
+        ).toLowerCase();
+        return label.includes('stop streaming')
+            || label.includes('stop generating')
+            || label.includes('stop');
+    };
+
+    const isChatGPTSendButtonLike = (btn) => {
+        if (!btn) return false;
+        if (isChatGPTStopButtonLike(btn)) return false;
+        const label = (
+            (btn.getAttribute('aria-label') || '') +
+            ' ' +
+            (btn.getAttribute('data-testid') || '') +
+            ' ' +
+            (btn.innerText || '')
+        ).toLowerCase();
+        return label.includes('send prompt')
+            || label.includes('send message')
+            || label.includes('send');
+    };
+
+    const findChatGPTStopButton = () => {
+        const root = getComposerRoot();
+        const selectorCandidates = [
+            'button#composer-submit-button[data-testid="stop-button"]',
+            'button[data-testid="stop-button"]',
+            'button[aria-label="Stop streaming"]',
+            'button[aria-label="Stop generating"]',
+            'button[aria-label^="Stop" i]'
+        ];
+
+        const fromSelectors = selectorCandidates.flatMap((selector) => {
+            try {
+                return Array.from(root.querySelectorAll(selector));
+            } catch (_) {
+                return [];
+            }
+        });
+
+        return fromSelectors.find((candidate) => {
+            if (!window.ButtonsClickingShared?.isVisibleInteractiveElement?.(candidate)) return false;
+            return isChatGPTStopButtonLike(candidate);
+        }) || null;
+    };
+
+    const findChatGPTSendButton = async () => {
+        const root = getComposerRoot();
+        const selectorCandidates = [
+            'button#composer-submit-button[data-testid="send-button"]',
+            'button[data-testid="send-button"]',
+            'button[aria-label="Send prompt"]',
+            'button[aria-label="Send message"]',
+            'button[aria-label^="Send" i]',
+            'button[type="submit"]'
+        ];
+
+        const fromSelectors = selectorCandidates.flatMap((selector) => {
+            try {
+                return Array.from(root.querySelectorAll(selector));
+            } catch (_) {
+                return [];
+            }
+        });
+
+        const liveSend = fromSelectors.find((candidate) => {
+            if (!window.ButtonsClickingShared?.isVisibleInteractiveElement?.(candidate)) return false;
+            if (candidate.disabled || candidate.getAttribute('aria-disabled') === 'true') return false;
+            return isChatGPTSendButtonLike(candidate);
+        });
+
+        if (liveSend) {
+            return liveSend;
+        }
+
+        const guardBtn = await window.OneClickPromptsSelectorGuard.findSendButton();
+        if (!guardBtn || isChatGPTStopButtonLike(guardBtn)) {
+            return null;
+        }
+        return guardBtn;
+    };
+
     // ----------------------------
     // Helper Functions (Modernized)
     // ----------------------------
@@ -151,13 +253,15 @@ async function processChatGPTCustomSendButtonClick(event, customText, autoSend) 
     const startAutoSend = (_, editor) => {
         logConCgp('[auto-send] startAutoSend called.');
         return ButtonsClickingShared.performAutoSend({
+            findButton: findChatGPTSendButton,
+            findStopButton: findChatGPTStopButton,
             preClickValidation: () => {
                 const currentText = editor.innerText.trim();
                 logConCgp('[auto-send] Current text in editor:', currentText);
                 return currentText.length > 0;
             },
             isBusy: (btn) => {
-                const busy = ButtonsClickingShared.isBusyStopButton(btn);
+                const busy = isChatGPTStopButtonLike(btn) || ButtonsClickingShared.isBusyStopButton(btn);
                 if (busy) {
                     const detector = window.OneClickPromptsSelectorAutoDetector;
                     const sendState = detector?.state?.sendButton;
@@ -165,7 +269,19 @@ async function processChatGPTCustomSendButtonClick(event, customText, autoSend) 
                 }
                 return busy;
             },
-            clickAction: (btn) => MaxExtensionUtils.simulateClick(btn)
+            stopConfirmationDelay: 180,
+            clickAction: (btn) => {
+                const currentActionButton = getCurrentChatGPTActionButton();
+                const clickTarget = isChatGPTSendButtonLike(currentActionButton) ? currentActionButton : btn;
+
+                if (!clickTarget || isChatGPTStopButtonLike(clickTarget)) {
+                    logConCgp('[auto-send][ChatGPT] Click skipped because the action button is already in stop state.', clickTarget);
+                    return false;
+                }
+
+                MaxExtensionUtils.simulateClick(clickTarget);
+                return true;
+            }
         }).then((result) => {
             if (result.status !== 'sent' && result.status !== 'blocked_by_stop') {
                 if (result.status === 'not_found' && result.reason !== 'post-stop-missing-send') {

@@ -360,6 +360,8 @@ class InjectionTargetsOnWebsite {
                     'main.flex.flex-col.items-center'
                 ],
                 sendButtons: [
+                    'button#composer-submit-button[data-testid="send-button"]',
+                    'button[aria-label="Send prompt"]',
                     'button[aria-label="Send message"]', // new main send button
                     'button[data-testid="send-button"]', // legacy/testid fallback
                     'button[type="submit"]', // generic fallback
@@ -375,7 +377,9 @@ class InjectionTargetsOnWebsite {
                 threadRoot: '#thread',
                 buttonsContainerId: 'chatgpt-custom-buttons-container',
                 stopButtons: [
+                    'button#composer-submit-button[data-testid="stop-button"]',
                     'button[data-testid="stop-button"]',
+                    'button[aria-label="Stop streaming"]',
                     'button[aria-label="Stop generating"]'
                 ]
             },

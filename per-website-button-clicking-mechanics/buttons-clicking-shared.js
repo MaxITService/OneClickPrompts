@@ -2,6 +2,15 @@
 'use strict';
 
 window.ButtonsClickingShared = {
+    isVisibleInteractiveElement: (el) => {
+        if (!el) return false;
+        if (!el.isConnected) return false;
+        if (el.offsetParent === null) return false;
+        const style = window.getComputedStyle(el);
+        if (!style) return false;
+        return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+    },
+
     /**
      * Checks if a button is in a "Stop" or "Busy" state.
      * @param {HTMLElement} btn
@@ -88,6 +97,7 @@ window.ButtonsClickingShared = {
                 isEnabled = (btn) => !btn.disabled && btn.getAttribute('aria-disabled') !== 'true',
                 preClickValidation = () => true,
                 clickAction = (btn) => window.MaxExtensionUtils.simulateClick(btn),
+                stopConfirmationDelay = 0,
                 interval = 100,
                 maxAttempts = 50
             } = config;
@@ -114,6 +124,15 @@ window.ButtonsClickingShared = {
                 // A. Check for Stop Button FIRST (immediate "AI is still typing" detection)
                 const stopBtn = window.ButtonsClickingShared.findStopButton(findStopButton);
                 if (stopBtn) {
+                    if (stopConfirmationDelay > 0) {
+                        await new Promise((resolve) => setTimeout(resolve, stopConfirmationDelay));
+                        const confirmedStopBtn = window.ButtonsClickingShared.findStopButton(findStopButton);
+                        if (!confirmedStopBtn || !isBusy(confirmedStopBtn)) {
+                            return;
+                        }
+                        handleStopButtonFound(confirmedStopBtn);
+                        return;
+                    }
                     // AI is mid-generation - enter watcher immediately
                     handleStopButtonFound(stopBtn);
                     return;
@@ -148,7 +167,10 @@ window.ButtonsClickingShared = {
 
                     if (buttonReady) {
                         if (preClickValidation(btn)) {
-                            clickAction(btn);
+                            const clicked = await clickAction(btn);
+                            if (clicked === false) {
+                                return;
+                            }
                             finish({ status: 'sent', button: btn });
                         } else if (attempts >= maxAttempts) {
                             finish({ status: 'failed', reason: 'validation_failed' });
@@ -211,8 +233,8 @@ window.ButtonsClickingShared = {
                         const immediateAttempt = async () => {
                             const retryBtn = await findButton();
                             if (retryBtn && !isBusy(retryBtn) && isEnabled(retryBtn) && preClickValidation(retryBtn)) {
-                                clickAction(retryBtn);
-                                return true;
+                                const clicked = await clickAction(retryBtn);
+                                return clicked !== false;
                             }
                             return false;
                         };
@@ -239,15 +261,19 @@ window.ButtonsClickingShared = {
                                         finish({ status: 'blocked_by_stop', reason: 'still_busy_after_transition' });
                                     }
                                 } else {
-                                    clearInterval(postStopPoller);
-                                    clickAction(retryBtn);
-                                    finish({ status: 'sent', button: retryBtn });
+                                    const clicked = await clickAction(retryBtn);
+                                    if (clicked !== false) {
+                                        clearInterval(postStopPoller);
+                                        finish({ status: 'sent', button: retryBtn });
+                                    }
                                 }
                             } else if (retryBtn && isEnabled(retryBtn) && !isBusy(retryBtn) && postStopAttempts >= postStopMaxAttempts - 5) {
                                 // Fallback: if validation keeps failing but the button is present/enabled, attempt a send near the end.
-                                clearInterval(postStopPoller);
-                                clickAction(retryBtn);
-                                finish({ status: 'sent', button: retryBtn, reason: 'validation_bypassed_post_stop' });
+                                const clicked = await clickAction(retryBtn);
+                                if (clicked !== false) {
+                                    clearInterval(postStopPoller);
+                                    finish({ status: 'sent', button: retryBtn, reason: 'validation_bypassed_post_stop' });
+                                }
                             } else {
                                 if (postStopAttempts >= postStopMaxAttempts) {
                                     clearInterval(postStopPoller);
