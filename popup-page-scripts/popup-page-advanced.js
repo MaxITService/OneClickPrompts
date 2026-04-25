@@ -4,39 +4,8 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-    const advancedSection = document.getElementById('advancedSection');
-    const advancedHelpSection = document.getElementById('advancedHelpSection');
-
     // This script only needs to handle logic specific to the advanced settings.
-    // The general collapsible behavior is now managed by popup-page-collapsible.js.
-
-    // --- Collapsible Dependency Logic ---
-    // We have a special case: if the main "Advanced" section is collapsed, the
-    // inner "Help" section should also be forced into a collapsed state.
-    // A MutationObserver handles this dependency cleanly.
-    if (advancedSection && advancedHelpSection) {
-        const helpToggleIcon = advancedHelpSection.querySelector('.toggle-icon');
-
-        const parentObserver = new MutationObserver(() => {
-            // Check if the parent is collapsed while the child is expanded.
-            if (!advancedSection.classList.contains('expanded') && advancedHelpSection.classList.contains('expanded')) {
-                // Force the child to collapse.
-                advancedHelpSection.classList.remove('expanded');
-
-                // Manually reset the icon rotation, as this change is programmatic
-                // and won't trigger the click listener in the central script.
-                if (helpToggleIcon) {
-                    helpToggleIcon.style.transform = 'rotate(0deg)';
-                }
-            }
-        });
-
-        parentObserver.observe(advancedSection, {
-            attributes: true,
-            attributeFilter: ['class']
-        });
-    }
-
+    // Nested collapsible behavior, such as Advanced Help, is managed by popup-page-collapsible.js.
 
     const websiteSelect = document.getElementById('selectorWebsiteSelect');
     const selectorConfig = document.getElementById('selectorConfig');
@@ -131,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // After programmatic value set, resize to content.
             if (typeof resizeVerticalTextarea === 'function') {
-                // If hidden (collapsed), defer until visible via rAF to let layout settle
+                // If hidden behind an inactive tab, defer until visible via rAF to let layout settle
                 scheduleSelectorConfigRefit();
             }
         } catch (error) {
@@ -329,37 +298,8 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('Resizer function not found. Ensure popup-page-customButtons.js is loaded first.');
     }
 
-    // Observe Advanced section expand/collapse to handle hidden measurement issues
-    if (advancedSection && selectorConfig) {
-        const onExpanded = () => {
-            // Wait for paint so display: block takes effect, then measure
-            scheduleSelectorConfigRefit();
-        };
-        const onCollapsed = () => {
-            // Drop stale inline height so next expand re-measures from CSS baseline
-            selectorConfig.style.height = 'auto';
-        };
-
-        const mo = new MutationObserver((mutations) => {
-            for (const m of mutations) {
-                if (m.type === 'attributes' && m.attributeName === 'class') {
-                    const isExpanded = advancedSection.classList.contains('expanded');
-                    if (isExpanded) {
-                        onExpanded();
-                    } else {
-                        onCollapsed();
-                    }
-                }
-            }
-        });
-        mo.observe(advancedSection, { attributes: true, attributeFilter: ['class'] });
-    }
-
     document.addEventListener('ocp:tab-changed', (event) => {
         if (event.detail?.panelId !== 'advancedSection') {
-            return;
-        }
-        if (!advancedSection?.classList.contains('expanded')) {
             return;
         }
 
