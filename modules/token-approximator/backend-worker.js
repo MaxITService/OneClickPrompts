@@ -56,7 +56,7 @@
         /* ignore metadata lookup issues */
       }
 
-      return { ok: true, estimates: result, modelUsed: modelId };
+      return { ok: true, estimates: result, modelUsed: modelId, requestId: data.requestId ?? null };
     } catch (err) {
       return {
         ok: false,
@@ -147,7 +147,8 @@ ${factoryListCode}
           return {
             ok: true,
             estimates,
-            modelUsed: (model.getMetadata && model.getMetadata().id) || modelId
+            modelUsed: (model.getMetadata && model.getMetadata().id) || modelId,
+            requestId: data.requestId ?? null
           };
         }
         self.onmessage = (event) => {
@@ -155,7 +156,7 @@ ${factoryListCode}
             self.postMessage(run(event.data));
           } catch (err) {
             const message = err && err.message ? err.message : String(err);
-            self.postMessage({ ok: false, error: message });
+            self.postMessage({ ok: false, error: message, requestId: event.data?.requestId ?? null });
           }
         };
       })();
@@ -170,4 +171,3 @@ ${factoryListCode}
     runEstimation
   });
 })();
-

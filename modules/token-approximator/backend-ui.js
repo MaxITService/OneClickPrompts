@@ -118,7 +118,21 @@
     return `${k}k`;
   }
 
+  function getCountingMethodLabel(settings) {
+    const requestedId = settings?.countingMethod || window.OCP_TOKEN_MODEL_DEFAULT_ID || 'ultralight-state-machine';
+    const helpers = window.OCPTokenApproxHelpers || null;
+    const catalog = helpers?.getCatalog?.() || window.OCP_TOKEN_MODEL_CATALOG || null;
+    const resolvedId = helpers?.resolveModelId?.(requestedId) ||
+      catalog?.legacyMethodMap?.[requestedId] ||
+      requestedId;
+    const metadata = catalog?.getModelMetadata?.(resolvedId) ||
+      catalog?.metadataById?.[resolvedId] ||
+      null;
+    return metadata?.shortName || metadata?.name || resolvedId || requestedId;
+  }
+
   function buildTooltip(kind, status, settings) {
+    const site = window.InjectionTargetsOnWebsite?.activeSite || '';
     const prefix =
       kind === 'thread'
         ? (settings.threadMode === 'ignoreEditors'
@@ -128,18 +142,24 @@
 
     let postfix = '';
     switch (status) {
-      case 'loading': postfix = 'calculating.'; break;
+      case 'loading': postfix = 'calculating'; break;
+      case 'warming': postfix = 'warming ChatGPT cache - scroll slowly through the thread'; break;
       case 'fresh': postfix = 'updated just now'; break;
       case 'stale': postfix = 'stale - click to re-estimate'; break;
       case 'paused': postfix = 'paused while tab inactive'; break;
       default: postfix = ''; break;
     }
 
-    const cta = kind === 'thread'
-      ? '  Click to re-estimate now.'
-      : '  Click to re-estimate.';
+    const cta = kind === 'thread' && site === 'ChatGPT'
+      ? ' Click to scan the loaded ChatGPT thread and re-estimate.'
+      : (kind === 'thread' ? ' Click to re-estimate now.' : ' Click to re-estimate.');
 
-    return `${prefix} - ${postfix}${cta}`;
+    const virtualizedHint = kind === 'thread' && site === 'ChatGPT'
+      ? ' ChatGPT may unload older messages; scroll through the thread to let OneClickPrompts cache and count more of it.'
+      : '';
+    const method = ` Method: ${getCountingMethodLabel(settings)}.`;
+
+    return `${prefix} - ${postfix}.${method}${cta}${virtualizedHint}`;
   }
 
   function setTooltip(el, kind, status, settings) {
@@ -147,6 +167,12 @@
     const next = buildTooltip(kind, status, settings);
     if (el.__tooltipText !== next) {
       el.title = next;
+      el.setAttribute('data-ocp-tooltip', next);
+      try {
+        window.OCPTooltip?.updateText?.(el, next);
+      } catch {
+        /* noop */
+      }
       el.__tooltipText = next;
       el.__tooltipStatus = status;
     }
@@ -192,4 +218,3 @@
     markPaused
   });
 })();
-

@@ -340,7 +340,20 @@
     : fallbackFormatTokens;
 
   // ---- Tooltip helpers (stable prefix + state postfix; no "T:" in tooltip) ----
+  function fallbackGetCountingMethodLabel(settings) {
+    const requestedId = settings?.countingMethod || window.OCP_TOKEN_MODEL_DEFAULT_ID || 'ultralight-state-machine';
+    const catalog = helpers?.getCatalog?.() || window.OCP_TOKEN_MODEL_CATALOG || null;
+    const resolvedId = helpers?.resolveModelId?.(requestedId) ||
+      catalog?.legacyMethodMap?.[requestedId] ||
+      requestedId;
+    const metadata = catalog?.getModelMetadata?.(resolvedId) ||
+      catalog?.metadataById?.[resolvedId] ||
+      null;
+    return metadata?.shortName || metadata?.name || resolvedId || requestedId;
+  }
+
   function fallbackBuildTooltip(kind, status, settings) {
+    const site = window.InjectionTargetsOnWebsite?.activeSite || '';
     // Descriptive prefix
     const prefix =
       kind === 'thread'
@@ -352,21 +365,32 @@
     // State postfix
     let postfix = '';
     switch (status) {
-      case 'loading': postfix = 'calculating…'; break;
+      case 'loading': postfix = 'calculating'; break;
+      case 'warming': postfix = 'warming ChatGPT cache - scroll slowly through the thread'; break;
       case 'fresh': postfix = 'updated just now'; break;
       case 'stale': postfix = 'stale — click to re-estimate'; break;
       case 'paused': postfix = 'paused while tab inactive'; break;
       default: postfix = ''; break;
     }
     // CTA: always present on thread; also helpful on editor
-    const cta = kind === 'thread' ? ' • Click to re-estimate now.' : ' • Click to re-estimate.';
-    return `${prefix} — ${postfix}${cta}`;
+    const cta = kind === 'thread' && site === 'ChatGPT'
+      ? ' Click to scan the loaded ChatGPT thread and re-estimate.'
+      : (kind === 'thread' ? ' Click to re-estimate now.' : ' Click to re-estimate.');
+    const virtualizedHint = kind === 'thread' && site === 'ChatGPT'
+      ? ' ChatGPT may unload older messages; scroll through the thread to let OneClickPrompts cache and count more of it.'
+      : '';
+    const method = ` Method: ${fallbackGetCountingMethodLabel(settings)}.`;
+    return `${prefix} - ${postfix}.${method}${cta}${virtualizedHint}`;
   }
 
   function fallbackSetTooltip(el, kind, status, settings) {
     const next = buildTooltip(kind, status, settings);
     if (el.__tooltipText !== next) {
       el.title = next;
+      el.setAttribute('data-ocp-tooltip', next);
+      try {
+        window.OCPTooltip?.updateText?.(el, next);
+      } catch { }
       el.__tooltipText = next;
       el.__tooltipStatus = status;
     }
@@ -449,7 +473,7 @@
       for (const key of Object.keys(texts || {})) {
         out[key] = model.estimate(texts[key] || '', scale);
       }
-      return { ok: true, estimates: out, modelUsed: model.getMetadata().id };
+      return { ok: true, estimates: out, modelUsed: model.getMetadata().id, requestId: data.requestId ?? null };
     } catch (err) {
       return { ok: false, error: (err && err.message) || String(err) };
     }
@@ -553,11 +577,11 @@
         const model = registry.getModel(modelId) || registry.getDefaultModel();
         const out = {};
         for (const key of Object.keys(texts || {})) { out[key] = model.estimate(texts[key] || '', scale); }
-        return { ok: true, estimates: out, modelUsed: model.getMetadata().id };
+        return { ok: true, estimates: out, modelUsed: model.getMetadata().id, requestId: data.requestId ?? null };
       }
 
       self.onmessage = (e) => {
-        try { self.postMessage(runEstimation(e.data)); } catch (err) { self.postMessage({ ok: false, error: (err && err.message) || String(err) }); }
+        try { self.postMessage(runEstimation(e.data)); } catch (err) { self.postMessage({ ok: false, error: (err && err.message) || String(err), requestId: e.data?.requestId ?? null }); }
       };
     `;
     const blob = new Blob([workerCode], { type: 'application/javascript' });
@@ -571,6 +595,8 @@
 
   // ---- Snapshot helpers (keep DOM work light; heavy regex goes to worker) ----
   const EDITOR_SELECTOR = '[contenteditable="true"],textarea,input:not([type="hidden"])';
+  const CHATGPT_LARGE_THREAD_SCROLL_PX = 20000;
+  const chatGptThreadModule = window.OCPTokenApproxChatGptThread || null;
 
   function isVisible(el) {
     if (!el || !el.isConnected) return false;
@@ -587,10 +613,73 @@
     return document.querySelector(threadSelector);
   }
 
+  function getChatGptThreadText() {
+    if (!chatGptThreadModule || typeof chatGptThreadModule.captureFromDom !== 'function') return '';
+    return chatGptThreadModule.captureFromDom().text || '';
+  }
+
+  function shouldDeferThreadEstimate() {
+    return Site === 'ChatGPT' &&
+      chatGptThreadModule &&
+      typeof chatGptThreadModule.shouldDeferEstimate === 'function' &&
+      chatGptThreadModule.shouldDeferEstimate();
+  }
+
+  function shouldWarmUpChatGptThread() {
+    if (Site !== 'ChatGPT' || !chatGptThreadModule) return false;
+    try {
+      if (typeof chatGptThreadModule.captureFromDom === 'function') {
+        chatGptThreadModule.captureFromDom();
+      }
+      const cacheState = typeof chatGptThreadModule.getState === 'function'
+        ? chatGptThreadModule.getState()
+        : null;
+      if (cacheState?.warmupActive) return true;
+      const maxScrollTop = Math.max(
+        Number(cacheState?.maxScrollTop) || 0,
+        Number(cacheState?.scroller?.maxScrollTop) || 0
+      );
+      if (maxScrollTop >= CHATGPT_LARGE_THREAD_SCROLL_PX) return true;
+      if (typeof chatGptThreadModule.shouldWarmUpByScrolling === 'function') {
+        return chatGptThreadModule.shouldWarmUpByScrolling();
+      }
+      return typeof chatGptThreadModule.shouldDeferEstimate === 'function' &&
+        chatGptThreadModule.shouldDeferEstimate();
+    } catch {
+      return false;
+    }
+  }
+
+  function warmUpChatGptThread(threadChip, threadScheduler, settingsForTooltip) {
+    if (Site !== 'ChatGPT' ||
+      !chatGptThreadModule ||
+      typeof chatGptThreadModule.warmUpByScrolling !== 'function') {
+      threadScheduler.forceNow();
+      return;
+    }
+
+    try {
+      threadChip.querySelector('.val').textContent = 'scan';
+      setTooltip(threadChip, 'thread', 'warming', settingsForTooltip);
+      chatGptThreadModule.warmUpByScrolling()
+        .finally(() => threadScheduler.forceNow());
+    } catch (err) {
+      log(`ChatGPT thread warm-up failed: ${err.message}`);
+      threadScheduler.forceNow();
+    }
+  }
+
   function getThreadText(excludeEditors = false) {
     // Special handling for DeepSeek using custom heuristics
     if (Site === 'DeepSeek' && window.OCPDeepSeekHeuristics && typeof window.OCPDeepSeekHeuristics.getThreadText === 'function') {
       return window.OCPDeepSeekHeuristics.getThreadText();
+    }
+
+    // ChatGPT's updated layout can make #thread.innerText report only the currently
+    // active/painted slice. Message nodes still expose the full mounted dialogue.
+    if (Site === 'ChatGPT') {
+      const messageText = getChatGptThreadText();
+      if (messageText) return messageText;
     }
 
     const root = getThreadRoot();
@@ -765,6 +854,7 @@
     // Completely separate thread and editor estimation to prevent coupling issues
 
     let sharedThreadWorker = null;
+    let threadRequestSeq = 0;
     function estimateThreadTokens(deadline) {
       return new Promise((resolve) => {
         // Skip if thread mode is hide or if no thread selector
@@ -782,6 +872,7 @@
         if (!wrap) return resolve();
         const threadChip = wrap.querySelector('.ocp-tokapprox-chip[data-kind="thread"]');
         if (!threadChip) return resolve();
+        const requestId = ++threadRequestSeq;
 
         // Reuse dedicated worker for thread estimation
         if (!sharedThreadWorker) sharedThreadWorker = createEstimatorWorker();
@@ -794,7 +885,10 @@
             const currentThreadChip = currentWrap.querySelector('.ocp-tokapprox-chip[data-kind="thread"]');
             if (!currentThreadChip) return resolve();
 
-            const { ok, estimates, modelUsed, error } = ev.data || {};
+            const { ok, estimates, modelUsed, error, requestId: responseRequestId } = ev.data || {};
+            if (responseRequestId !== requestId) {
+              return;
+            }
 
             if (!ok) {
               log(`Thread estimation failed: ${error || 'Unknown error'}`);
@@ -853,7 +947,20 @@
             return resolve();
           }
 
+          if (shouldDeferThreadEstimate()) {
+            const cacheState = chatGptThreadModule?.getState?.();
+            threadChip.querySelector('.val').textContent = cacheState?.warmupActive ? 'scan' : '-------';
+            setTooltip(threadChip, 'thread', 'warming', effectiveSettings);
+            try {
+              if (cacheState?.lastChangedAt && Date.now() - cacheState.lastChangedAt < 2200) {
+                setTimeout(() => threadScheduler.markDirty(), 2200);
+              }
+            } catch { /* noop */ }
+            return resolve();
+          }
+
           threadWorker.postMessage({
+            requestId,
             texts: { threadText },
             scale: settings.calibration,
             countingMethod: settings.countingMethod
@@ -968,7 +1075,7 @@
 
     // INDEPENDENT SCHEDULERS - Thread and Editor are now completely separate
     const threadScheduler = makeScheduler({
-      minCooldown: 15000,
+      minCooldown: Site === 'ChatGPT' ? 2500 : 15000,
       runFn: (deadline) => estimateThreadTokens(deadline)
     });
 
@@ -1019,6 +1126,15 @@
       (scrollTarget === window ? window : scrollTarget).addEventListener('scroll', () => {
         threadScheduler.markDirty();
       }, { passive: true });
+    }
+
+    if (Site === 'ChatGPT' && chatGptThreadModule && typeof chatGptThreadModule.installCaptureListeners === 'function') {
+      chatGptThreadModule.installCaptureListeners({
+        threadScheduler,
+        effectiveSettings,
+        threadSelector: THREAD_SELECTOR,
+        debounce
+      });
     }
 
     // Editors lifecycle is completely independent from thread
@@ -1096,7 +1212,15 @@
         if (el.dataset.kind === 'thread' && effectiveSettings.threadMode !== 'hide') {
           if (THREAD_SELECTOR) {
             markLoading(el, 'thread', effectiveSettings);
-            threadScheduler.forceNow();
+            if (Site === 'ChatGPT' &&
+              chatGptThreadModule &&
+              typeof chatGptThreadModule.warmUpByScrolling === 'function') {
+              warmUpChatGptThread(el, threadScheduler, effectiveSettings);
+            } else if (shouldWarmUpChatGptThread()) {
+              warmUpChatGptThread(el, threadScheduler, effectiveSettings);
+            } else {
+              threadScheduler.forceNow();
+            }
           } else {
             // If there's no thread selector, just show a message
             el.querySelector('.val').textContent = '---';

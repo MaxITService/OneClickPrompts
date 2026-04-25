@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "OneClickPrompts",
   "description": "One Click Prompts for AI chat interfaces",
-  "version": "0.0.6.3",
+  "version": "0.0.6.4",
   "icons": {
     "16": "icon16.png",
     "32": "icon32.png",
@@ -69,6 +69,7 @@
         "/modules/token-approximator/backend-settings.js",
         "/modules/token-approximator/backend-ui.js",
         "/modules/token-approximator/backend-worker.js",
+        "/modules/token-approximator/backend-chatgpt-thread-cache.js",
         "/modules/deepseek-heuristics.js",
         "/modules/backend-tokenApproximator.js",
         "common-ui-elements/ocp_toast.js",
