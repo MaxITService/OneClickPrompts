@@ -173,7 +173,7 @@ window.OneClickPromptsSelectorAutoDetector = {
 
         if (window.showToast) {
             if (type !== 'container') {
-                window.showToast(`OneClickPrompts: ${typeName} not found. ${statusSuffix}`, toastType);
+                this.showRecoveryToast(type, `OneClickPrompts: ${typeName} not found. ${statusSuffix}`, toastType);
             }
         } else {
             logConCgp(`[SelectorAutoDetector] ${typeName} not found. ${statusSuffix}`);
@@ -234,7 +234,7 @@ window.OneClickPromptsSelectorAutoDetector = {
                     offered = await this.offerToSaveSelector(type, result);
                 }
                 if (!offered && window.showToast) {
-                    window.showToast(`OneClickPrompts: Found the ${typeName}.`, 'success');
+                    this.showRecoveryToast(type, `OneClickPrompts: Found the ${typeName}.`, 'success');
                 }
                 s.failures = 0;
                 if (type === 'stopButton') {
@@ -252,7 +252,7 @@ window.OneClickPromptsSelectorAutoDetector = {
                 }
             } else {
                 logConCgp(`[SelectorAutoDetector] Heuristics failed to find ${type}.`);
-                if (window.showToast) window.showToast(`OneClickPrompts: Could not find ${typeName}. Please report this issue.`, 'error');
+                this.showRecoveryToast(type, `OneClickPrompts: Could not find ${typeName}. Please report this issue.`, 'error');
             }
         }
 
@@ -282,6 +282,91 @@ window.OneClickPromptsSelectorAutoDetector = {
         }
     },
 
+    getSettingsForSave: function (overrides = {}) {
+        return {
+            enableEditorHeuristics: this.settings.enableEditorHeuristics === true,
+            enableSendButtonHeuristics: this.settings.enableSendButtonHeuristics === true,
+            enableStopButtonHeuristics: this.settings.enableStopButtonHeuristics === true,
+            enableContainerHeuristics: this.settings.enableContainerHeuristics === true,
+            notifyContainerMissing: this.settings.notifyContainerMissing === true,
+            autoFallbackToFloatingPanel: this.settings.autoFallbackToFloatingPanel !== false,
+            ...overrides
+        };
+    },
+
+    getHeuristicsSettingKey: function (type) {
+        if (type === 'editor') return 'enableEditorHeuristics';
+        if (type === 'sendButton') return 'enableSendButtonHeuristics';
+        if (type === 'stopButton') return 'enableStopButtonHeuristics';
+        if (type === 'container') return 'enableContainerHeuristics';
+        return null;
+    },
+
+    isAutodetectEnabledForType: function (type) {
+        const settingKey = this.getHeuristicsSettingKey(type);
+        return !!settingKey && this.settings[settingKey] === true;
+    },
+
+    disableAutodetectForType: async function (type) {
+        const settingKey = this.getHeuristicsSettingKey(type);
+        if (!settingKey || !chrome?.runtime?.sendMessage) {
+            return false;
+        }
+
+        const settings = this.getSettingsForSave({ [settingKey]: false });
+        await chrome.runtime.sendMessage({
+            type: 'saveSelectorAutoDetectorSettings',
+            settings
+        });
+        this.settings = { ...settings, loaded: true };
+        return true;
+    },
+
+    getDisableAutodetectToastButton: function (type) {
+        const detector = this;
+        return {
+            text: 'Disable autodetect',
+            title: 'Disable autodetect: You can enable it back in settings',
+            className: 'toast-action-secondary',
+            onClick: async () => {
+                try {
+                    const disabled = await detector.disableAutodetectForType(type);
+                    if (disabled) {
+                        detector.__toast('Disable autodetect: You can enable it back in settings', 'info', 3500);
+                        return true;
+                    }
+                } catch (error) {
+                    logConCgp('[SelectorAutoDetector] Failed to disable autodetect from recovery toast.', { type, error });
+                }
+                detector.__toast('Could not disable autodetect here. Try Settings.', 'error', 3000);
+                return false;
+            }
+        };
+    },
+
+    showRecoveryToast: function (type, message, toastType = 'info', options = 3000) {
+        if (typeof window.showToast !== 'function') {
+            logConCgp(`[SelectorAutoDetector] ${message}`);
+            return false;
+        }
+
+        const normalized = typeof options === 'number' ? { duration: options } : (options || {});
+        const customButtons = Array.isArray(normalized.customButtons)
+            ? [...normalized.customButtons]
+            : [];
+
+        if (this.isAutodetectEnabledForType(type)) {
+            customButtons.push(this.getDisableAutodetectToastButton(type));
+        }
+
+        const toastOptions = customButtons.length > 0
+            ? { ...normalized, customButtons }
+            : normalized;
+
+        window.showToast(message, toastType, toastOptions);
+        return true;
+    },
+
     ensureSelectorSaver: async function () {
         if (window.OCPSelectorPersistence) {
             return window.OCPSelectorPersistence;
@@ -307,9 +392,7 @@ window.OneClickPromptsSelectorAutoDetector = {
 
         if (!window.MaxExtensionFloatingPanel || typeof window.MaxExtensionFloatingPanel.createFloatingPanel !== 'function') {
             logConCgp('[SelectorAutoDetector] Floating panel module not available.');
-            if (window.showToast) {
-                window.showToast('OneClickPrompts: Could not find suitable container and floating panel is not available.', 'error', 5000);
-            }
+            this.showRecoveryToast('container', 'OneClickPrompts: Could not find suitable container and floating panel is not available.', 'error', 5000);
             return;
         }
 
@@ -342,9 +425,7 @@ window.OneClickPromptsSelectorAutoDetector = {
                     window.MaxExtensionFloatingPanel.debouncedSavePanelSettings?.();
                 }
 
-                if (window.showToast) {
-                    window.showToast('OneClickPrompts: Using floating panel (no container found).', 'info', 4000);
-                }
+                this.showRecoveryToast('container', 'OneClickPrompts: Using floating panel (no container found).', 'info', 4000);
 
                 logConCgp('[SelectorAutoDetector] Floating panel fallback activated successfully.');
             } else {
@@ -352,9 +433,7 @@ window.OneClickPromptsSelectorAutoDetector = {
             }
         } catch (err) {
             logConCgp('[SelectorAutoDetector] Error creating floating panel fallback:', err);
-            if (window.showToast) {
-                window.showToast('OneClickPrompts: Error activating floating panel.', 'error');
-            }
+            this.showRecoveryToast('container', 'OneClickPrompts: Error activating floating panel.', 'error');
         }
     },
 
@@ -969,6 +1048,9 @@ window.OneClickPromptsSelectorAutoDetector = {
                     }
                 },
                 {
+                    ...detector.getDisableAutodetectToastButton(type)
+                },
+                {
                     text: 'Forward ➡️',
                     title: 'Next candidate',
                     onClick: () => { detector.__stepCandidate(session, 1); return false; }
@@ -1034,23 +1116,31 @@ window.OneClickPromptsSelectorAutoDetector = {
         window.showToast(`OneClickPrompts: Found a ${typeName}. Save it to Custom selectors?`, 'success', {
             duration: 15000,
             tooltip,
-            actionTooltip: tooltip,
-            actionLabel: 'Save selector',
-            onAction: async () => {
-                const result = await saver.saveSelectorFromElement({
-                    site,
-                    type,
-                    element,
-                    selectorOverride: selector
-                });
-                if (result?.ok) {
-                    logConCgp('[SelectorAutoDetector] Selector saved via toast action.', { type, selector: result.selector, site: result.site });
-                    window.showToast('Selector saved to Custom selectors.', 'success', 2500);
-                } else {
-                    logConCgp('[SelectorAutoDetector] Selector save failed.', { type, selector, site, reason: result?.reason });
-                    window.showToast('Could not save selector. Try Advanced settings.', 'error', 2500);
+            customButtons: [
+                {
+                    text: 'Save selector',
+                    title: tooltip,
+                    className: 'toast-action-primary',
+                    onClick: async () => {
+                        const result = await saver.saveSelectorFromElement({
+                            site,
+                            type,
+                            element,
+                            selectorOverride: selector
+                        });
+                        if (result?.ok) {
+                            logConCgp('[SelectorAutoDetector] Selector saved via toast action.', { type, selector: result.selector, site: result.site });
+                            window.showToast('Selector saved to Custom selectors.', 'success', 2500);
+                        } else {
+                            logConCgp('[SelectorAutoDetector] Selector save failed.', { type, selector, site, reason: result?.reason });
+                            window.showToast('Could not save selector. Try Advanced settings.', 'error', 2500);
+                        }
+                    }
+                },
+                {
+                    ...this.getDisableAutodetectToastButton(type)
                 }
-            }
+            ]
         });
         return true;
     }

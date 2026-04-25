@@ -25,6 +25,32 @@ window.MaxExtensionContainerMover = {
         } catch (_) { /* ignore */ }
     },
 
+    __disableContainerAutodetect: async function () {
+        const detector = window.OneClickPromptsSelectorAutoDetector;
+        if (detector && typeof detector.disableAutodetectForType === 'function') {
+            return await detector.disableAutodetectForType('container');
+        }
+
+        if (!chrome?.runtime?.sendMessage) {
+            return false;
+        }
+
+        const response = await chrome.runtime.sendMessage({ type: 'getSelectorAutoDetectorSettings' });
+        const current = response?.settings || {};
+        await chrome.runtime.sendMessage({
+            type: 'saveSelectorAutoDetectorSettings',
+            settings: {
+                enableEditorHeuristics: current.enableEditorHeuristics === true,
+                enableSendButtonHeuristics: current.enableSendButtonHeuristics === true,
+                enableStopButtonHeuristics: current.enableStopButtonHeuristics === true,
+                enableContainerHeuristics: false,
+                notifyContainerMissing: current.notifyContainerMissing === true,
+                autoFallbackToFloatingPanel: current.autoFallbackToFloatingPanel !== false
+            }
+        });
+        return true;
+    },
+
     __clearHighlight: function () {
         if (!this.__highlightedElement) return;
         try {
@@ -750,6 +776,29 @@ window.MaxExtensionContainerMover = {
             }
         ];
 
+        const canDisableContainerAutodetect = window.OneClickPromptsSelectorAutoDetector?.isAutodetectEnabledForType?.('container') === true;
+
+        if (mode === 'auto-recovery' && canDisableContainerAutodetect) {
+            customButtons.push({
+                text: 'Disable autodetect',
+                title: 'Disable autodetect: You can enable it back in settings',
+                className: 'toast-action-secondary',
+                onClick: async () => {
+                    try {
+                        const disabled = await mover.__disableContainerAutodetect();
+                        if (disabled) {
+                            mover.__toast('Disable autodetect: You can enable it back in settings', 'info', 3500);
+                            return true;
+                        }
+                    } catch (error) {
+                        logConCgp('[ContainerMover] Failed to disable container autodetect from toast.', error);
+                    }
+                    mover.__toast('Could not disable autodetect here. Try Settings.', 'error', 3000);
+                    return false;
+                }
+            });
+        }
+
         if (mode === 'auto-recovery') {
             customButtons.push({
                 text: '🎈 Floating Panel',
@@ -760,7 +809,9 @@ window.MaxExtensionContainerMover = {
         }
 
         const message = mode === 'auto-recovery'
-            ? 'We found an alternative spot for your buttons. Use Pick to choose a better spot, then Save if you like it.'
+            ? canDisableContainerAutodetect
+                ? 'We found an alternative spot for your buttons. Use Pick to choose a better spot, then Save if you like it. Disable autodetect: You can enable it back in settings.'
+                : 'We found an alternative spot for your buttons. Use Pick to choose a better spot, then Save if you like it.'
             : 'Move Buttons Container: click Pick, then click a spot on the page. Save when happy.';
 
         this.__toast(message, 'info', {

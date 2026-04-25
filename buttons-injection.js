@@ -71,11 +71,12 @@ async function triggerAutomaticFloatingPanelFallback(reason = 'container_not_fou
 
     const notifyEnabled = window.OneClickPromptsSelectorAutoDetector?.settings?.notifyContainerMissing === true;
     if (notifyEnabled && typeof window.showToast === 'function') {
-        window.showToast(
-            'OneClickPrompts: Extension cannot inject buttons here, so extension opened Floating Panel.',
-            'error',
-            10000
-        );
+        const message = 'OneClickPrompts: Extension cannot inject buttons here, so extension opened Floating Panel.';
+        if (typeof window.OneClickPromptsSelectorAutoDetector?.showRecoveryToast === 'function') {
+            window.OneClickPromptsSelectorAutoDetector.showRecoveryToast('container', message, 'error', 10000);
+        } else {
+            window.showToast(message, 'error', 10000);
+        }
     }
 
     logConCgp('[button-injection] Floating fallback panel activated after inline search timeout.', { reason });
