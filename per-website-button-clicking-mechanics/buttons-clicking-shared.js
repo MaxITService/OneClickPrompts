@@ -103,6 +103,7 @@ window.ButtonsClickingShared = {
             } = config;
 
             let attempts = 0;
+            let stopHandlingStarted = false;
 
             // Helper to finalize and clean up
             const finish = (result) => {
@@ -121,13 +122,20 @@ window.ButtonsClickingShared = {
             };
 
             window.sharedAutoSendInterval = setInterval(async () => {
+                if (stopHandlingStarted) {
+                    return;
+                }
+
                 // A. Check for Stop Button FIRST (immediate "AI is still typing" detection)
                 const stopBtn = window.ButtonsClickingShared.findStopButton(findStopButton);
                 if (stopBtn) {
+                    stopHandlingStarted = true;
+
                     if (stopConfirmationDelay > 0) {
                         await new Promise((resolve) => setTimeout(resolve, stopConfirmationDelay));
                         const confirmedStopBtn = window.ButtonsClickingShared.findStopButton(findStopButton);
                         if (!confirmedStopBtn || !isBusy(confirmedStopBtn)) {
+                            stopHandlingStarted = false;
                             return;
                         }
                         handleStopButtonFound(confirmedStopBtn);
@@ -148,6 +156,9 @@ window.ButtonsClickingShared = {
 
                 // B. No stop button visible - now look for Send Button
                 const btn = await findButton();
+                if (stopHandlingStarted) {
+                    return;
+                }
 
                 if (btn) {
                     const awaitingUserAfterFind = !!window.OneClickPromptsSelectorAutoDetector?.state?.sendButton?.autoSendAwaitingUser;
@@ -158,6 +169,7 @@ window.ButtonsClickingShared = {
                     // Double-check: the found button might be in busy/stop state
                     // (some sites reuse the same element for send/stop)
                     if (isBusy(btn)) {
+                        stopHandlingStarted = true;
                         handleStopButtonFound(btn);
                         return;
                     }
