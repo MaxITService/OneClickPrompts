@@ -32,6 +32,9 @@
   const LARGE_THREAD_SCROLL_PX = 20000;
   const RECENT_CAPTURE_MS = 1700;
   const INITIAL_UNKNOWN_SCROLL_DEFER_MS = 9500;
+  const LARGE_THREAD_AUTO_DEFER_MS = 11000;
+  const POST_WARMUP_SETTLE_DEFER_MS = 2600;
+  const WARMUP_RETRY_COOLDOWN_MS = 30000;
   const DEFAULT_WARMUP_BUDGET_MS = 8000;
   const DEFAULT_WARMUP_WAIT_MS = 90;
 
@@ -375,21 +378,27 @@
   function shouldDeferEstimate() {
     recordScrollPosition();
 
+    const now = Date.now();
     const chars = getCachedCharCount();
     const metrics = getScrollerMetrics();
     const maxScrollTop = Math.max(state.maxScrollTop, metrics.maxScrollTop);
     const visitedBuckets = state.visitedBuckets.size;
-    const recentlyChanged = Date.now() - state.lastChangedAt < RECENT_CAPTURE_MS;
+    const recentlyChanged = now - state.lastChangedAt < RECENT_CAPTURE_MS;
+    const startupGraceActive = now - state.startedAt < LARGE_THREAD_AUTO_DEFER_MS;
+    const postWarmupGraceActive = state.lastWarmupAt > 0 &&
+      now - state.lastWarmupAt < POST_WARMUP_SETTLE_DEFER_MS;
+    const canStillImproveByWaiting = startupGraceActive || postWarmupGraceActive;
 
     if (state.warmupActive) return true;
-    if (recentlyChanged) return true;
+    if (recentlyChanged && canStillImproveByWaiting) return true;
     if (maxScrollTop < LARGE_THREAD_SCROLL_PX &&
       chars > 8000 &&
       chars < 90000 &&
-      Date.now() - state.startedAt < INITIAL_UNKNOWN_SCROLL_DEFER_MS) {
+      now - state.startedAt < INITIAL_UNKNOWN_SCROLL_DEFER_MS) {
       return true;
     }
     if (maxScrollTop < LARGE_THREAD_SCROLL_PX) return false;
+    if (!canStillImproveByWaiting) return false;
 
     const mountedMessageCount = document.querySelectorAll(MESSAGE_SELECTOR).length;
     if (mountedMessageCount > 0 && mountedMessageCount < 12 && chars < 25000) return true;
@@ -403,11 +412,13 @@
 
   function shouldWarmUpByScrolling() {
     captureFromDom();
+    const now = Date.now();
     const chars = getCachedCharCount();
     const metrics = getScrollerMetrics();
     const maxScrollTop = Math.max(state.maxScrollTop, metrics.maxScrollTop);
     if (state.warmupActive) return true;
     if (maxScrollTop < LARGE_THREAD_SCROLL_PX) return false;
+    if (state.lastWarmupAt > 0 && now - state.lastWarmupAt < WARMUP_RETRY_COOLDOWN_MS) return false;
     if (chars < 90000) return true;
     if (state.visitedBuckets.size < 7 && chars < 90000) return true;
     return false;

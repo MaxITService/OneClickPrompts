@@ -213,6 +213,21 @@
   }
   .ocp-tokapprox-chip .lbl{opacity:.8;margin-right:4px}
   .ocp-tokapprox-chip .val{letter-spacing:.2px}
+  @keyframes ocpTokApproxSpin{to{transform:rotate(1turn)}}
+  .ocp-tokapprox-chip.ocp-tokapprox-loading .val{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:32px;height:12px;letter-spacing:0;font-size:0;vertical-align:-2px
+  }
+  .ocp-tokapprox-chip.ocp-tokapprox-loading .val::before{
+    content:"";box-sizing:border-box;width:10px;height:10px;
+    border:2px solid currentColor;border-right-color:transparent;border-radius:50%;
+    animation:ocpTokApproxSpin .75s linear infinite;opacity:.85
+  }
+  @media (prefers-reduced-motion: reduce){
+    .ocp-tokapprox-chip.ocp-tokapprox-loading .val::before{
+      animation:none;border-right-color:currentColor;opacity:.55
+    }
+  }
   .ocp-tokapprox-hidden{display:none !important}
   `;
 
@@ -367,6 +382,7 @@
     switch (status) {
       case 'loading': postfix = 'calculating'; break;
       case 'warming': postfix = 'warming ChatGPT cache - scroll slowly through the thread'; break;
+      case 'partial': postfix = 'partial - loaded messages only'; break;
       case 'fresh': postfix = 'updated just now'; break;
       case 'stale': postfix = 'stale — click to re-estimate'; break;
       case 'paused': postfix = 'paused while tab inactive'; break;
@@ -384,6 +400,8 @@
   }
 
   function fallbackSetTooltip(el, kind, status, settings) {
+    if (!el) return;
+    fallbackSetLoadingVisual(el, status === 'loading');
     const next = buildTooltip(kind, status, settings);
     if (el.__tooltipText !== next) {
       el.title = next;
@@ -394,6 +412,17 @@
       el.__tooltipText = next;
       el.__tooltipStatus = status;
     }
+  }
+
+  function fallbackSetLoadingVisual(el, isLoading) {
+    if (!el) return;
+    el.classList.toggle('ocp-tokapprox-loading', isLoading);
+    if (isLoading) {
+      el.setAttribute('aria-busy', 'true');
+      el.setAttribute('aria-live', 'polite');
+      return;
+    }
+    el.removeAttribute('aria-busy');
   }
 
   const buildTooltip = (uiModule && typeof uiModule.buildTooltip === 'function')
@@ -423,7 +452,10 @@
   }
 
   function fallbackMarkLoading(el, kind, settings) {
-    // No class toggling; keep tooltip update
+    if (el?.__staleTimer) {
+      clearTimeout(el.__staleTimer);
+      el.__staleTimer = null;
+    }
     setTooltip(el, kind, 'loading', settings);
   }
 
@@ -631,6 +663,9 @@
       if (typeof chatGptThreadModule.captureFromDom === 'function') {
         chatGptThreadModule.captureFromDom();
       }
+      if (typeof chatGptThreadModule.shouldWarmUpByScrolling === 'function') {
+        return chatGptThreadModule.shouldWarmUpByScrolling();
+      }
       const cacheState = typeof chatGptThreadModule.getState === 'function'
         ? chatGptThreadModule.getState()
         : null;
@@ -640,9 +675,6 @@
         Number(cacheState?.scroller?.maxScrollTop) || 0
       );
       if (maxScrollTop >= CHATGPT_LARGE_THREAD_SCROLL_PX) return true;
-      if (typeof chatGptThreadModule.shouldWarmUpByScrolling === 'function') {
-        return chatGptThreadModule.shouldWarmUpByScrolling();
-      }
       return typeof chatGptThreadModule.shouldDeferEstimate === 'function' &&
         chatGptThreadModule.shouldDeferEstimate();
     } catch {
@@ -667,6 +699,39 @@
       log(`ChatGPT thread warm-up failed: ${err.message}`);
       threadScheduler.forceNow();
     }
+  }
+
+  function isChatGptThreadEstimatePartial() {
+    if (Site !== 'ChatGPT' || !chatGptThreadModule || typeof chatGptThreadModule.getState !== 'function') {
+      return false;
+    }
+    try {
+      const cacheState = chatGptThreadModule.getState();
+      if (cacheState?.warmupActive) return false;
+      const maxScrollTop = Math.max(
+        Number(cacheState?.maxScrollTop) || 0,
+        Number(cacheState?.scroller?.maxScrollTop) || 0
+      );
+      if (maxScrollTop < CHATGPT_LARGE_THREAD_SCROLL_PX) return false;
+      const chars = Number(cacheState?.chars) || 0;
+      const visitedBuckets = Number(cacheState?.visitedBuckets) || 0;
+      const minCharsForLargeThread = Math.min(90000, Math.max(22000, Math.round(maxScrollTop * 0.9)));
+      return chars < minCharsForLargeThread || (visitedBuckets < 7 && chars < 90000);
+    } catch {
+      return false;
+    }
+  }
+
+  function markThreadEstimateDone(el, settingsForTooltip) {
+    if (isChatGptThreadEstimatePartial()) {
+      if (el.__staleTimer) {
+        clearTimeout(el.__staleTimer);
+        el.__staleTimer = null;
+      }
+      setTooltip(el, 'thread', 'partial', settingsForTooltip);
+      return;
+    }
+    markFreshThenStale(el, 'thread', settingsForTooltip);
   }
 
   function getThreadText(excludeEditors = false) {
@@ -855,6 +920,21 @@
 
     let sharedThreadWorker = null;
     let threadRequestSeq = 0;
+    let threadDeferRetryTimer = null;
+    function scheduleThreadDeferRetry(delayMs = 1200) {
+      if (threadDeferRetryTimer) clearTimeout(threadDeferRetryTimer);
+      threadDeferRetryTimer = setTimeout(() => {
+        threadDeferRetryTimer = null;
+        threadScheduler.markDirty();
+      }, delayMs);
+    }
+
+    function clearThreadDeferRetry() {
+      if (!threadDeferRetryTimer) return;
+      clearTimeout(threadDeferRetryTimer);
+      threadDeferRetryTimer = null;
+    }
+
     function estimateThreadTokens(deadline) {
       return new Promise((resolve) => {
         // Skip if thread mode is hide or if no thread selector
@@ -893,6 +973,7 @@
             if (!ok) {
               log(`Thread estimation failed: ${error || 'Unknown error'}`);
               currentThreadChip.querySelector('.val').textContent = '-------';
+              clearThreadDeferRetry();
               setTooltip(currentThreadChip, 'thread', 'error', effectiveSettings);
               return resolve();
             }
@@ -900,6 +981,7 @@
             if (!estimates || !estimates.threadText) {
               log('Thread estimation returned no data');
               currentThreadChip.querySelector('.val').textContent = '-------';
+              clearThreadDeferRetry();
               setTooltip(currentThreadChip, 'thread', 'error', effectiveSettings);
               return resolve();
             }
@@ -907,7 +989,8 @@
             // log(`Thread estimation success: ${modelUsed}`);
             const tokens = estimates.threadText;
             currentThreadChip.querySelector('.val').textContent = formatTokens(tokens);
-            markFreshThenStale(currentThreadChip, 'thread', effectiveSettings);
+            clearThreadDeferRetry();
+            markThreadEstimateDone(currentThreadChip, effectiveSettings);
 
           } catch (err) {
             log(`Thread estimation error: ${err.message}`);
@@ -919,6 +1002,12 @@
 
         threadWorker.onerror = () => {
           log('Thread worker error');
+          clearThreadDeferRetry();
+          const currentThreadChip = document.querySelector('.ocp-tokapprox-chip[data-kind="thread"]');
+          if (currentThreadChip) {
+            currentThreadChip.querySelector('.val').textContent = '-------';
+            setTooltip(currentThreadChip, 'thread', 'error', effectiveSettings);
+          }
           threadWorker.terminate();
           sharedThreadWorker = null;
           resolve();
@@ -942,6 +1031,7 @@
           if (!threadText) {
             log('No thread text found');
             threadChip.querySelector('.val').textContent = '-------';
+            clearThreadDeferRetry();
             setTooltip(threadChip, 'thread', 'error', effectiveSettings);
             // Do not terminate shared worker
             return resolve();
@@ -949,8 +1039,13 @@
 
           if (shouldDeferThreadEstimate()) {
             const cacheState = chatGptThreadModule?.getState?.();
-            threadChip.querySelector('.val').textContent = cacheState?.warmupActive ? 'scan' : '-------';
-            setTooltip(threadChip, 'thread', 'warming', effectiveSettings);
+            if (cacheState?.warmupActive) {
+              threadChip.querySelector('.val').textContent = 'scan';
+              setTooltip(threadChip, 'thread', 'warming', effectiveSettings);
+            } else {
+              markLoading(threadChip, 'thread', effectiveSettings);
+              scheduleThreadDeferRetry();
+            }
             try {
               if (cacheState?.lastChangedAt && Date.now() - cacheState.lastChangedAt < 2200) {
                 setTimeout(() => threadScheduler.markDirty(), 2200);
@@ -969,6 +1064,7 @@
         } catch (err) {
           log(`Thread text extraction failed: ${err.message}`);
           threadChip.querySelector('.val').textContent = '-------';
+          clearThreadDeferRetry();
           setTooltip(threadChip, 'thread', 'error', effectiveSettings);
           // Do not terminate shared worker
           resolve();
@@ -1037,6 +1133,11 @@
 
         editorWorker.onerror = () => {
           log('Editor worker error');
+          const currentEditorChip = document.querySelector('.ocp-tokapprox-chip[data-kind="editor"]');
+          if (currentEditorChip) {
+            currentEditorChip.querySelector('.val').textContent = '-------';
+            setTooltip(currentEditorChip, 'editor', 'error', effectiveSettings);
+          }
           editorWorker.terminate();
           sharedEditorWorker = null;
           resolve();
@@ -1212,11 +1313,7 @@
         if (el.dataset.kind === 'thread' && effectiveSettings.threadMode !== 'hide') {
           if (THREAD_SELECTOR) {
             markLoading(el, 'thread', effectiveSettings);
-            if (Site === 'ChatGPT' &&
-              chatGptThreadModule &&
-              typeof chatGptThreadModule.warmUpByScrolling === 'function') {
-              warmUpChatGptThread(el, threadScheduler, effectiveSettings);
-            } else if (shouldWarmUpChatGptThread()) {
+            if (shouldWarmUpChatGptThread()) {
               warmUpChatGptThread(el, threadScheduler, effectiveSettings);
             } else {
               threadScheduler.forceNow();

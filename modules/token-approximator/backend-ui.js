@@ -21,6 +21,21 @@
   }
   .ocp-tokapprox-chip .lbl{opacity:.8;margin-right:4px}
   .ocp-tokapprox-chip .val{letter-spacing:.2px}
+  @keyframes ocpTokApproxSpin{to{transform:rotate(1turn)}}
+  .ocp-tokapprox-chip.ocp-tokapprox-loading .val{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:32px;height:12px;letter-spacing:0;font-size:0;vertical-align:-2px
+  }
+  .ocp-tokapprox-chip.ocp-tokapprox-loading .val::before{
+    content:"";box-sizing:border-box;width:10px;height:10px;
+    border:2px solid currentColor;border-right-color:transparent;border-radius:50%;
+    animation:ocpTokApproxSpin .75s linear infinite;opacity:.85
+  }
+  @media (prefers-reduced-motion: reduce){
+    .ocp-tokapprox-chip.ocp-tokapprox-loading .val::before{
+      animation:none;border-right-color:currentColor;opacity:.55
+    }
+  }
   .ocp-tokapprox-hidden{display:none !important}
   `;
 
@@ -144,6 +159,7 @@
     switch (status) {
       case 'loading': postfix = 'calculating'; break;
       case 'warming': postfix = 'warming ChatGPT cache - scroll slowly through the thread'; break;
+      case 'partial': postfix = 'partial - loaded messages only'; break;
       case 'fresh': postfix = 'updated just now'; break;
       case 'stale': postfix = 'stale - click to re-estimate'; break;
       case 'paused': postfix = 'paused while tab inactive'; break;
@@ -164,6 +180,7 @@
 
   function setTooltip(el, kind, status, settings) {
     if (!el) return;
+    setLoadingVisual(el, status === 'loading');
     const next = buildTooltip(kind, status, settings);
     if (el.__tooltipText !== next) {
       el.title = next;
@@ -176,6 +193,16 @@
       el.__tooltipText = next;
       el.__tooltipStatus = status;
     }
+  }
+
+  function setLoadingVisual(el, isLoading) {
+    el.classList.toggle('ocp-tokapprox-loading', isLoading);
+    if (isLoading) {
+      el.setAttribute('aria-busy', 'true');
+      el.setAttribute('aria-live', 'polite');
+      return;
+    }
+    el.removeAttribute('aria-busy');
   }
 
   function markFreshThenStale(el, kind, settings) {
@@ -194,6 +221,10 @@
 
   function markLoading(el, kind, settings) {
     if (!el) return;
+    if (el.__staleTimer) {
+      clearTimeout(el.__staleTimer);
+      el.__staleTimer = null;
+    }
     setTooltip(el, kind, 'loading', settings);
   }
 
