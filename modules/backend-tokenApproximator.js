@@ -1013,9 +1013,6 @@
           resolve();
         };
 
-        // Set loading state
-        markLoading(threadChip, 'thread', effectiveSettings);
-
         try {
           // Get thread text with error isolation
           const rootTxt = getThreadText(effectiveSettings.threadMode === 'ignoreEditors');
@@ -1053,6 +1050,9 @@
             } catch { /* noop */ }
             return resolve();
           }
+
+          // Set loading state only after confirming there is thread text to process.
+          markLoading(threadChip, 'thread', effectiveSettings);
 
           threadWorker.postMessage({
             requestId,
@@ -1143,9 +1143,6 @@
           resolve();
         };
 
-        // Set loading state
-        markLoading(editorChip, 'editor', effectiveSettings);
-
         try {
           // Get editor text - completely independent of thread
           const edTxt = editorsText();
@@ -1157,6 +1154,9 @@
             // Do not terminate shared worker
             return resolve();
           }
+
+          // Set loading state only when there is actual text to estimate.
+          markLoading(editorChip, 'editor', effectiveSettings);
 
           editorWorker.postMessage({
             texts: { editorText: edTxt },
