@@ -232,22 +232,33 @@ try {
                     # Update popup.html
                     if (Test-Path $popupPath) {
                         $popupContent = Get-Content $popupPath -Raw
-                        # Escape dots for regex matching of the literal version string
-                        $escapedCurrentVersion = $currentVersion.Replace('.', '\.')
-                        # Match "Version X.X.X.X"
-                        $popupVersionPattern = "Version\s+$escapedCurrentVersion"
-                        
+                        $popupVersionPattern = '(<div\b[^>]*\bid=(["''])version\2[^>]*>\s*Version\s*(?:<br\s*/?>|\s+)\s*)(\d+\.\d+\.\d+\.\d+)(\s*</div>)'
+
                         if ($popupContent -match $popupVersionPattern) {
-                            $popupContent = $popupContent -replace $popupVersionPattern, "Version $newVersion"
+                            $popupVersion = $matches[3]
+                            if ($popupVersion -ne $currentVersion) {
+                                Write-Warning "popup.html version was $popupVersion, expected $currentVersion. Syncing it to $newVersion."
+                            }
+                            $popupContent = [regex]::Replace(
+                                $popupContent,
+                                $popupVersionPattern,
+                                [System.Text.RegularExpressions.MatchEvaluator] {
+                                    param($match)
+                                    return "$($match.Groups[1].Value)$newVersion$($match.Groups[4].Value)"
+                                },
+                                1
+                            )
                             $popupContent | Set-Content $popupPath -NoNewline
                             Write-Host "Updated popup.html to $newVersion"
                         }
                         else {
                             Write-Host "CRITICAL ERROR: Could not find 'Version $currentVersion' in popup.html" -ForegroundColor Red -BackgroundColor Black
+                            throw "Could not update popup.html version"
                         }
                     }
                     else {
                         Write-Host "CRITICAL ERROR: popup.html not found at $popupPath" -ForegroundColor Red -BackgroundColor Black
+                        throw "popup.html not found"
                     }
                 }
                 else {
