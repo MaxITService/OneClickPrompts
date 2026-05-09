@@ -212,11 +212,13 @@
     box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);
   }
   .ocp-tokapprox-chip .lbl{opacity:.8;margin-right:4px}
-  .ocp-tokapprox-chip .val{letter-spacing:.2px}
+  .ocp-tokapprox-chip .val{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:40px;height:12px;letter-spacing:.2px;font-variant-numeric:tabular-nums
+  }
   @keyframes ocpTokApproxSpin{to{transform:rotate(1turn)}}
   .ocp-tokapprox-chip.ocp-tokapprox-loading .val{
-    display:inline-flex;align-items:center;justify-content:center;
-    width:32px;height:12px;letter-spacing:0;font-size:0;vertical-align:-2px
+    letter-spacing:0;font-size:0;vertical-align:-2px
   }
   .ocp-tokapprox-chip.ocp-tokapprox-loading .val::before{
     content:"";box-sizing:border-box;width:10px;height:10px;
