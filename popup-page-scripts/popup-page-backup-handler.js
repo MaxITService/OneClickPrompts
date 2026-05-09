@@ -168,6 +168,31 @@ async function confirmProfileOverwrite(collisions) {
     return window.confirm(message);
 }
 
+function backupPayloadIncludesAppSettings(rawPayload) {
+    if (!rawPayload || typeof rawPayload !== 'object') {
+        return false;
+    }
+
+    const appSettings = rawPayload.appSettings;
+    return !!appSettings
+        && typeof appSettings === 'object'
+        && !Array.isArray(appSettings)
+        && Object.keys(appSettings).length > 0;
+}
+
+async function confirmAppSettingsImport(rawPayload) {
+    if (!backupPayloadIncludesAppSettings(rawPayload)) {
+        return true;
+    }
+
+    const message = 'This backup includes app settings. Importing them will replace global settings. Continue?';
+    if (window.OCPModal && typeof window.OCPModal.confirm === 'function') {
+        return await window.OCPModal.confirm(message, 'Import App Settings', 'error');
+    }
+
+    return window.confirm(message);
+}
+
 async function refreshPopupAfterImport(result) {
     refreshBackupScopeLabels(result.currentProfile || getCurrentProfileNameForBackupUi());
     await loadProfiles();
@@ -240,6 +265,12 @@ async function handleImportProfile(event) {
         const existingProfiles = Array.isArray(existingProfilesResponse?.profiles) ? existingProfilesResponse.profiles : [];
         const collisions = incomingProfileNames.filter((profileName) => existingProfiles.includes(profileName));
         const overwriteExisting = await confirmProfileOverwrite(collisions);
+        const shouldImportAppSettings = await confirmAppSettingsImport(parsedPayload);
+        if (!shouldImportAppSettings) {
+            logToGUIConsole('Backup import cancelled before app settings were applied.');
+            showToast('Backup import cancelled.', 'info');
+            return;
+        }
 
         const importResponse = await sendRuntimeMessage({
             type: 'applyBackupPayload',
