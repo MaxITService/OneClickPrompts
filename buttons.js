@@ -349,6 +349,157 @@ window.MaxExtensionButtons = {
     },
 
     /**
+     * Copies the last ChatGPT assistant response. It prefers ChatGPT's native copy
+     * button so copied formatting matches ChatGPT behavior, with a direct text
+     * clipboard fallback if that button is unavailable.
+     * @param {Event} event
+     * @returns {Promise<Object>}
+     */
+    copyLastChatGPTResponse: async function (event) {
+        if (event && typeof event.preventDefault === 'function') {
+            event.preventDefault();
+        }
+        if (event && typeof event.stopPropagation === 'function') {
+            event.stopPropagation();
+        }
+
+        const activeSite = window?.InjectionTargetsOnWebsite?.activeSite;
+        if (activeSite !== 'ChatGPT') {
+            this.__toast('Copy last response is only active on ChatGPT.', 'info');
+            return { status: 'failed', reason: 'wrong_site' };
+        }
+
+        const messageRoot = this.__findLastChatGPTAssistantMessage();
+        if (!messageRoot) {
+            this.__toast('Could not find the last ChatGPT response.', 'error');
+            logConCgp('[buttons][ChatGPT-copy] Last assistant response not found.');
+            return { status: 'failed', reason: 'response_not_found' };
+        }
+
+        const nativeCopyButton = this.__findChatGPTResponseCopyButton(messageRoot);
+        if (nativeCopyButton) {
+            nativeCopyButton.click();
+            this.__toast('Copied last ChatGPT response.', 'success');
+            logConCgp('[buttons][ChatGPT-copy] Clicked native ChatGPT copy button.');
+            return { status: 'success', copiedVia: 'native_copy_button' };
+        }
+
+        const responseText = this.__extractChatGPTResponseText(messageRoot);
+        if (!responseText.trim()) {
+            this.__toast('Found the response, but it looked empty.', 'warning');
+            logConCgp('[buttons][ChatGPT-copy] Response text extraction returned empty text.');
+            return { status: 'failed', reason: 'empty_response' };
+        }
+
+        try {
+            await this.__writeTextToClipboard(responseText);
+            this.__toast('Copied last ChatGPT response.', 'success');
+            logConCgp('[buttons][ChatGPT-copy] Copied response text with fallback clipboard path.');
+            return { status: 'success', copiedVia: 'text_fallback' };
+        } catch (error) {
+            this.__toast('Could not copy the last ChatGPT response.', 'error');
+            logConCgp('[buttons][ChatGPT-copy] Clipboard write failed:', error?.message || error);
+            return { status: 'failed', reason: 'clipboard_failed' };
+        }
+    },
+
+    __findLastChatGPTAssistantMessage: function () {
+        const roleNodes = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'))
+            .filter((node) => this.__isUsableChatGPTNode(node));
+
+        if (roleNodes.length > 0) {
+            return this.__getChatGPTMessageRoot(roleNodes[roleNodes.length - 1]);
+        }
+
+        const turnNodes = Array.from(document.querySelectorAll('article, [data-testid^="conversation-turn"], [data-testid*="conversation-turn"]'))
+            .filter((node) => this.__isUsableChatGPTNode(node))
+            .filter((node) => {
+                const text = [
+                    node.getAttribute('data-message-author-role'),
+                    node.getAttribute('data-testid'),
+                    node.getAttribute('aria-label')
+                ].join(' ').toLowerCase();
+                return text.includes('assistant') || !!node.querySelector('.markdown');
+            });
+
+        return turnNodes.length > 0 ? turnNodes[turnNodes.length - 1] : null;
+    },
+
+    __getChatGPTMessageRoot: function (node) {
+        return node.closest('article, [data-testid^="conversation-turn"], [data-testid*="conversation-turn"]') || node;
+    },
+
+    __findChatGPTResponseCopyButton: function (messageRoot) {
+        const copyButtons = Array.from(messageRoot.querySelectorAll('button'))
+            .filter((button) => this.__isUsableChatGPTNode(button))
+            .filter((button) => !button.disabled)
+            .filter((button) => !button.closest('pre, code'))
+            .filter((button) => {
+                const label = [
+                    button.getAttribute('aria-label'),
+                    button.getAttribute('title'),
+                    button.getAttribute('data-testid'),
+                    button.textContent
+                ].join(' ').toLowerCase();
+
+                if (!label.includes('copy')) return false;
+                return !label.includes('copy code');
+            });
+
+        return copyButtons.length > 0 ? copyButtons[copyButtons.length - 1] : null;
+    },
+
+    __extractChatGPTResponseText: function (messageRoot) {
+        const contentNode =
+            messageRoot.querySelector('[data-message-author-role="assistant"] .markdown')
+            || messageRoot.querySelector('.markdown')
+            || messageRoot.querySelector('[data-message-author-role="assistant"]')
+            || messageRoot;
+
+        const clone = contentNode.cloneNode(true);
+        clone.querySelectorAll('button, input, textarea, select, svg, [role="toolbar"], [data-testid*="copy" i], .sr-only')
+            .forEach((node) => node.remove());
+
+        return (clone.innerText || clone.textContent || '').trim();
+    },
+
+    __writeTextToClipboard: async function (text) {
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function' && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+            return;
+        }
+
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.setAttribute('readonly', '');
+        textarea.style.cssText = 'position: fixed; top: -1000px; left: -1000px; opacity: 0;';
+        document.body.appendChild(textarea);
+        textarea.select();
+
+        try {
+            const copied = document.execCommand('copy');
+            if (!copied) {
+                throw new Error('document.execCommand("copy") returned false');
+            }
+        } finally {
+            textarea.remove();
+        }
+    },
+
+    __isUsableChatGPTNode: function (node) {
+        if (!node || !(node instanceof Element)) return false;
+        if (node.closest('#toastContainer, #max-extension-floating-panel, [id$="-custom-buttons-container"]')) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+    },
+
+    __toast: function (message, type = 'info') {
+        if (typeof window.showToast === 'function') {
+            window.showToast(message, type);
+        }
+    },
+
+    /**
      * Determines the appropriate shortcut key for a button based on its index, skipping separator buttons.
      * @param {number} offset - A number to offset the calculated shortcut index.
      * @param {number} buttonIndex - The index of the button in the custom buttons array.

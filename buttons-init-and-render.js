@@ -86,6 +86,7 @@ window.MaxExtensionButtonsInit = {
      */
     generateAndAppendAllButtons: async function (container, isPanel) {
         const SETTINGS_BUTTON_MAGIC_TEXT = '%OCP_APP_SETTINGS_SYSTEM_BUTTON%';
+        const COPY_LAST_CHATGPT_RESPONSE_BUTTON_MAGIC_TEXT = '%OCP_COPY_LAST_CHATGPT_RESPONSE_SYSTEM_BUTTON%';
         // --- Create a unified list of all buttons to be rendered ---
         const allButtonDefs = [];
         let nonSeparatorCount = 0;
@@ -195,6 +196,31 @@ window.MaxExtensionButtonsInit = {
                         chrome.runtime.sendMessage({ type: 'openSettingsPage' });
                     };
                     buttonElement = MaxExtensionButtons.createCustomSendButton(settingsButtonConfig, index, settingsClickHandler, shortcutKey);
+                } else if (def.config.text === COPY_LAST_CHATGPT_RESPONSE_BUTTON_MAGIC_TEXT) {
+                    const isChatGPT = window?.InjectionTargetsOnWebsite?.activeSite === 'ChatGPT';
+                    const copyLastResponseButtonConfig = {
+                        ...def.config,
+                        text: 'Copy last ChatGPT response',
+                        tooltip: isChatGPT
+                            ? 'Copy the last ChatGPT response exactly. Uses ChatGPT native copy when available.'
+                            : 'Only active on ChatGPT.'
+                    };
+                    const copyLastResponseClickHandler = (event) => {
+                        if (window.MaxExtensionButtons && typeof window.MaxExtensionButtons.copyLastChatGPTResponse === 'function') {
+                            window.MaxExtensionButtons.copyLastChatGPTResponse(event);
+                        }
+                    };
+                    buttonElement = MaxExtensionButtons.createCustomSendButton(
+                        copyLastResponseButtonConfig,
+                        index,
+                        copyLastResponseClickHandler,
+                        isChatGPT ? shortcutKey : null
+                    );
+                    if (!isChatGPT) {
+                        buttonElement.disabled = true;
+                        buttonElement.style.cursor = 'not-allowed';
+                        buttonElement.style.opacity = '0.45';
+                    }
                 } else {
                     buttonElement = MaxExtensionButtons.createCustomSendButton(def.config, index, processCustomSendButtonClick, shortcutKey);
                 }

@@ -14,6 +14,7 @@
 // Special constants
 // -------------------------
 const SETTINGS_BUTTON_MAGIC_TEXT = '%OCP_APP_SETTINGS_SYSTEM_BUTTON%';
+const COPY_LAST_CHATGPT_RESPONSE_BUTTON_MAGIC_TEXT = '%OCP_COPY_LAST_CHATGPT_RESPONSE_SYSTEM_BUTTON%';
 const DELETE_UNDO_DURATION_MS = 2000;
 
 // Tracks buttons that are waiting out their undo window before deletion.
@@ -63,12 +64,21 @@ function createButtonCardElement(button, index, crossChatSettings = null) {
         `;
     } else {
         const isSettingsButton = (button.text === SETTINGS_BUTTON_MAGIC_TEXT);
+        const isCopyLastChatGPTResponseButton = (button.text === COPY_LAST_CHATGPT_RESPONSE_BUTTON_MAGIC_TEXT);
+        const isSystemButton = isSettingsButton || isCopyLastChatGPTResponseButton;
 
-        const textElementHTML = isSettingsButton
-            ? `<div class="text-input" title="This button opens the extension settings - this exact page you are seeing right now - in a new tab. Alternatively, Shift-click opens menu, that allows to move location, where buttons are injected. You can move it or remove it.">${'Open app settings | Shift-Click this button to move location where buttons are injected'}</div>`
+        const systemButtonText = isSettingsButton
+            ? 'Open app settings | Shift-Click this button to move location where buttons are injected'
+            : 'Copy last ChatGPT response | Only active on ChatGPT';
+        const systemButtonTitle = isSettingsButton
+            ? 'This button opens the extension settings - this exact page you are seeing right now - in a new tab. Alternatively, Shift-click opens menu, that allows to move location, where buttons are injected. You can move it or remove it.'
+            : 'This button copies exactly the last ChatGPT response. It only works on ChatGPT pages and uses ChatGPT native copy when available. You can move it or remove it.';
+
+        const textElementHTML = isSystemButton
+            ? `<div class="text-input" title="${systemButtonTitle}">${systemButtonText}</div>`
             : `<textarea class="text-input" rows="1">${button.text}</textarea>`;
 
-        const autoSendHTML = !isSettingsButton
+        const autoSendHTML = !isSystemButton
             ? `<div class="autosend-line"><label class="checkbox-row"><input type="checkbox" class="autosend-toggle" ${button.autoSend ? 'checked' : ''}><span>Auto-send</span></label></div>`
             : '';
 
@@ -115,6 +125,9 @@ function createButtonCardElement(button, index, crossChatSettings = null) {
 
         if (isSettingsButton) {
             buttonItem.setAttribute('data-system', 'settings');
+            buttonItem.classList.add('settings-button-card');
+        } else if (isCopyLastChatGPTResponseButton) {
+            buttonItem.setAttribute('data-system', 'copy-last-chatgpt-response');
             buttonItem.classList.add('settings-button-card');
         }
     }
@@ -413,6 +426,32 @@ async function addSettingsButton(event) {
     updatebuttonCardsList();
     logToGUIConsole('Added Settings system button');
     showToast('Settings Button added', 'success');
+    if (event) showMouseEffect(event);
+}
+
+/**
+ * Adds the special ChatGPT copy-last-response system button. The click behavior
+ * is handled at injection time. The text is a reserved magic constant and is
+ * not editable in the UI. Users may change the icon; autoSend is not applicable.
+ * @param {MouseEvent} [event]
+ */
+async function addCopyLastChatGPTResponseButton(event) {
+    const icon = document.getElementById('buttonIcon').value || '📋';
+    const text = COPY_LAST_CHATGPT_RESPONSE_BUTTON_MAGIC_TEXT;
+    const autoSend = false;
+
+    // Prevent duplicates
+    const exists = (currentProfile.customButtons || []).some(b => b && !b.separator && b.text === text);
+    if (exists) {
+        showToast('Copy Last ChatGPT Response Button already exists in this profile.', 'info');
+        return;
+    }
+
+    currentProfile.customButtons.push({ icon, text, autoSend });
+    await saveCurrentProfile();
+    updatebuttonCardsList();
+    logToGUIConsole('Added Copy Last ChatGPT Response system button');
+    showToast('Copy Last ChatGPT Response Button added', 'success');
     if (event) showMouseEffect(event);
 }
 

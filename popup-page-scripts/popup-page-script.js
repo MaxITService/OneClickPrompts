@@ -623,6 +623,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     }
+    const addCopyLastChatGPTResponseBtnEl = document.getElementById('addCopyLastChatGPTResponseButton');
+    if (addCopyLastChatGPTResponseBtnEl) {
+        addCopyLastChatGPTResponseBtnEl.addEventListener('click', (e) => addCopyLastChatGPTResponseButton(e));
+    }
 
     // Settings
     document.getElementById('autoSendToggle').addEventListener('change', updateGlobalSettings);
