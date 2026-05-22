@@ -41,8 +41,9 @@ window.MaxExtensionFloatingPanel.initializeQueueDragAndDrop = function () {
     this.queueDndState.boundPointerCancel = (event) => this.handleQueuePointerCancel(event);
 };
 
-window.MaxExtensionFloatingPanel.decorateQueueItemForDrag = function (element, item, index) {
+window.MaxExtensionFloatingPanel.decorateQueueItemForDrag = function (element, item, index, displayArea = this.queueDisplayArea) {
     if (!this.queueDndState) return;
+    if (displayArea !== this.queueDisplayArea) return;
     element.addEventListener('pointerdown', (event) => this.handleQueuePointerDown(event, item, index, element));
 };
 

@@ -1429,7 +1429,7 @@ window.MaxExtensionFloatingPanel.renderQueueDisplayInto = function (displayArea)
         });
 
         if (typeof this.decorateQueueItemForDrag === 'function') {
-            this.decorateQueueItemForDrag(queuedItemElement, item, index);
+            this.decorateQueueItemForDrag(queuedItemElement, item, index, displayArea);
         }
 
         fragment.appendChild(queuedItemElement);
