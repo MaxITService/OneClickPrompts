@@ -87,6 +87,7 @@ window.MaxExtensionButtonsInit = {
     generateAndAppendAllButtons: async function (container, isPanel) {
         const SETTINGS_BUTTON_MAGIC_TEXT = '%OCP_APP_SETTINGS_SYSTEM_BUTTON%';
         const COPY_LAST_CHATGPT_RESPONSE_BUTTON_MAGIC_TEXT = '%OCP_COPY_LAST_CHATGPT_RESPONSE_SYSTEM_BUTTON%';
+        const QUEUE_CURRENT_EDITOR_BUTTON_MAGIC_TEXT = '%OCP_QUEUE_CURRENT_EDITOR_SYSTEM_BUTTON%';
         // --- Create a unified list of all buttons to be rendered ---
         const allButtonDefs = [];
         let nonSeparatorCount = 0;
@@ -236,6 +237,18 @@ window.MaxExtensionButtonsInit = {
                         buttonElement.style.cursor = 'not-allowed';
                         buttonElement.style.opacity = '0.45';
                     }
+                } else if (def.config.text === QUEUE_CURRENT_EDITOR_BUTTON_MAGIC_TEXT) {
+                    const queueButtonConfig = {
+                        ...def.config,
+                        text: 'Queue current editor text',
+                        tooltip: 'Queue the current editor text and send it after the configured queue delay. The editor is cleared so you can write the next queued item.'
+                    };
+                    const queueClickHandler = (event) => {
+                        if (window.MaxExtensionButtons && typeof window.MaxExtensionButtons.queueCurrentEditorText === 'function') {
+                            window.MaxExtensionButtons.queueCurrentEditorText(event);
+                        }
+                    };
+                    buttonElement = MaxExtensionButtons.createCustomSendButton(queueButtonConfig, index, queueClickHandler, shortcutKey);
                 } else {
                     buttonElement = MaxExtensionButtons.createCustomSendButton(def.config, index, processCustomSendButtonClick, shortcutKey);
                 }
@@ -261,6 +274,10 @@ window.MaxExtensionButtonsInit = {
 
         // --- Add toggles at the very end, always after everything else ---
         this.generateAndAppendToggles(container);
+
+        if (!isPanel && window.MaxExtensionFloatingPanel && typeof window.MaxExtensionFloatingPanel.ensureInlineQueueControls === 'function') {
+            window.MaxExtensionFloatingPanel.ensureInlineQueueControls(container);
+        }
     },
 
     /**

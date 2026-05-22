@@ -415,6 +415,148 @@ window.MaxExtensionButtons = {
         }
     },
 
+    /**
+     * Queues the current editor text, clears the editor for the next item, and
+     * starts the existing queue engine with the configured initial delay.
+     * @param {Event} event
+     * @returns {Promise<Object>}
+     */
+    queueCurrentEditorText: async function (event) {
+        if (event && typeof event.preventDefault === 'function') {
+            event.preventDefault();
+        }
+        if (event && typeof event.stopPropagation === 'function') {
+            event.stopPropagation();
+        }
+
+        const editor = this.__findActiveEditor();
+        if (!editor) {
+            this.__toast('Could not find the chat editor.', 'error');
+            logConCgp('[buttons][queue] Editor not found.');
+            return { status: 'failed', reason: 'editor_not_found' };
+        }
+
+        const text = this.__readEditorText(editor).trim();
+        if (!text) {
+            this.__toast('Nothing to queue. Type text in the editor first.', 'warning');
+            return { status: 'failed', reason: 'empty_editor' };
+        }
+
+        const queue = window.MaxExtensionFloatingPanel;
+        if (!queue || typeof queue.addToQueue !== 'function' || typeof queue.startQueue !== 'function') {
+            this.__toast('Queue engine is not ready on this page.', 'error');
+            return { status: 'failed', reason: 'queue_unavailable' };
+        }
+
+        if (!window.globalMaxExtensionConfig) {
+            window.globalMaxExtensionConfig = {};
+        }
+        window.globalMaxExtensionConfig.enableQueueMode = true;
+        if (typeof queue.syncQueueModeUiFromConfig === 'function') {
+            queue.syncQueueModeUiFromConfig();
+        }
+        if (typeof queue.saveCurrentProfileConfig === 'function') {
+            queue.saveCurrentProfileConfig();
+        }
+
+        const container = event?.target?.closest?.('[id$="-custom-buttons-container"]');
+        if (container && typeof queue.ensureInlineQueueControls === 'function') {
+            queue.ensureInlineQueueControls(container);
+        }
+
+        const queuedItem = queue.addToQueue({
+            icon: event?.target?.innerHTML || '⏳',
+            text,
+            autoSend: true,
+            source: 'editor-queue-button'
+        });
+        if (!queuedItem) {
+            this.__toast('Queue is full or unavailable. Editor text was not cleared.', 'error');
+            return { status: 'failed', reason: 'queue_add_failed' };
+        }
+
+        queue.lastQueuedEditorText = text;
+        queue.queuedEditorTextCache = Array.isArray(queue.queuedEditorTextCache)
+            ? queue.queuedEditorTextCache
+            : [];
+        queue.queuedEditorTextCache.push({
+            text,
+            timestamp: Date.now()
+        });
+
+        const cleared = this.__clearEditor(editor);
+        if (!cleared) {
+            this.__toast('Queued, but could not clear the editor.', 'warning');
+        }
+
+        queue.startQueue({ waitBeforeFirstSend: true });
+        const count = Array.isArray(queue.promptQueue) ? queue.promptQueue.length : 0;
+        this.__toast(`Queued. ${count} item${count === 1 ? '' : 's'} waiting.`, 'success');
+        return { status: 'queued', count };
+    },
+
+    __findActiveEditor: function () {
+        const editorSelectors = window?.InjectionTargetsOnWebsite?.selectors?.editors;
+        return (Array.isArray(editorSelectors) ? editorSelectors : [])
+            .map((selector) => {
+                try {
+                    return document.querySelector(selector);
+                } catch (_) {
+                    return null;
+                }
+            })
+            .find((el) => el);
+    },
+
+    __readEditorText: function (editor) {
+        if (!editor) return '';
+        if ('value' in editor) return editor.value || '';
+        return editor.innerText || editor.textContent || '';
+    },
+
+    __clearEditor: function (editor) {
+        try {
+            editor.focus();
+            if ('value' in editor) {
+                editor.value = '';
+                editor.dispatchEvent(new Event('input', { bubbles: true }));
+                editor.dispatchEvent(new Event('change', { bubbles: true }));
+                return true;
+            }
+
+            if (editor.isContentEditable || editor.getAttribute('contenteditable') === 'true') {
+                const selection = window.getSelection();
+                const range = document.createRange();
+                range.selectNodeContents(editor);
+                selection.removeAllRanges();
+                selection.addRange(range);
+
+                let deleted = false;
+                try {
+                    deleted = document.execCommand('delete', false);
+                } catch (_) {
+                    deleted = false;
+                }
+
+                if (!deleted) {
+                    editor.innerHTML = '<p><br></p>';
+                }
+
+                editor.dispatchEvent(new Event('input', { bubbles: true }));
+                editor.dispatchEvent(new Event('change', { bubbles: true }));
+                selection.removeAllRanges();
+                return true;
+            }
+
+            editor.textContent = '';
+            editor.dispatchEvent(new Event('input', { bubbles: true }));
+            return true;
+        } catch (error) {
+            logConCgp('[buttons][queue] Editor clear failed:', error?.message || error);
+            return false;
+        }
+    },
+
     __findLastChatGPTAssistantMessage: function () {
         const roleNodes = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'))
             .filter((node) => this.__isUsableChatGPTNode(node));

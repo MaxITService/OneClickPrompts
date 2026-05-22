@@ -627,6 +627,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (addCopyLastChatGPTResponseBtnEl) {
         addCopyLastChatGPTResponseBtnEl.addEventListener('click', (e) => addCopyLastChatGPTResponseButton(e));
     }
+    const addQueueCurrentEditorBtnEl = document.getElementById('addQueueCurrentEditorButton');
+    if (addQueueCurrentEditorBtnEl) {
+        addQueueCurrentEditorBtnEl.addEventListener('click', (e) => addQueueCurrentEditorButton(e));
+    }
 
     // Settings
     document.getElementById('autoSendToggle').addEventListener('change', updateGlobalSettings);

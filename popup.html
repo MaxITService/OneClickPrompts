@@ -204,6 +204,12 @@
             >
               Add Copy Last ChatGPT Response Button 📋
             </button>
+           <button
+              id="addQueueCurrentEditorButton"
+              title="Add a special Queue button (default icon ⏳) that queues the current editor text and sends it after the configured queue delay."
+            >
+              Add Queue Button ⏳
+            </button>
         </div>
         <div id="buttonCardsList" data-draggable="true">
           <!-- Button cards added dynamically here -->
@@ -1382,6 +1388,7 @@
             skillful enough in JS to make sure all updates will go without
             problems
           </p>
+          <h3>Setup & Safety</h3>
           <ul>
             <li>
               <a href="#" id="openWelcomePage"
@@ -1389,47 +1396,107 @@
               >
             </li>
             <li>
-              Pressing "Shift" while pressing a key or button changes its
-              autosend behavior! Works both with clicks and keyboard shortcuts!
+              <strong>Backups:</strong> Export profiles you care about before
+              updates or experiments. Browser extension storage can be fragile,
+              and backups are the fastest way to recover your buttons.
             </li>
             <li>
-              <strong>Move Buttons Container:</strong> If buttons are in a weird place, you can move them!
-              Hold Shift and click the Settings button (⚙️) to enter "Move Mode", then use the arrows to
-              reposition them.
+              <strong>Profiles:</strong> Use profiles for different workflows.
+              You can copy a profile before trying big changes.
             </li>
             <li>
-              <strong>Add Settings button:</strong> You can add Settings button (⚙️) - by pressing the <a href="#addSettingsButton" id="jumpToAddSettingsButton">"Add Settings button"</a> -in the "Button Configuration" at top of place where button cards displayed. 
-            </li>            
-            <li>Keyboard shortcuts can be enabled in Settings section</li>
+              Introducing changes faster than once in second causes saving
+              issues.
+            </li>
+          </ul>
+
+          <h3>Buttons & Hotkeys</h3>
+          <ul>
             <li>
-              <strong>Queue Feature:</strong> Use the floating panel (click the
-              '🔼' button on the chat page) to access the new Queue feature. It
-              allows you to send multiple prompts sequentially with a
-              configurable delay. Be sure to use it responsibly and in
+              <strong>Autosend override:</strong> Pressing "Shift" while
+              pressing a key or button changes its autosend behavior! Works
+              both with clicks and keyboard shortcuts!
+            </li>
+            <li>
+              <strong>Keyboard shortcuts:</strong> Keyboard shortcuts can be
+              enabled in Settings section. Default shortcuts still show as
+              Alt+1 through Alt+0 so you can see that hotkeying is possible.
+            </li>
+            <li>
+              <strong>Editable hotkeys:</strong> Click the shortcut chip on a
+              button card to open the hotkey picker. It records Chrome-safe
+              shortcuts, validates reserved combinations, and warns before
+              moving a shortcut away from another button.
+            </li>
+            <li>
+              <strong>Add Settings button:</strong> You can add Settings button
+              (⚙️) by pressing the
+              <a href="#addSettingsButton" id="jumpToAddSettingsButton"
+                >"Add Settings button"</a
+              >
+              in Button Configuration. Shift-click that button on a chat page to
+              move where OneClickPrompts injects its buttons.
+            </li>
+            <li>
+              <strong>Copy Last ChatGPT Response button:</strong> Add this
+              special button from Button Configuration. It works only on ChatGPT
+              and tries ChatGPT's native Copy action first so formatting is as
+              exact as ChatGPT provides.
+            </li>
+            <li>
+              <strong>Move Buttons Container:</strong> If buttons are in a weird
+              place, hold Shift and click the Settings button (⚙️) to enter Move
+              Mode, then use the arrows to reposition them.
+            </li>
+          </ul>
+
+          <h3>Floating Panel & Queue</h3>
+          <ul>
+            <li>
+              <strong>Floating panel:</strong> Click the 🔼 button on the chat
+              page to open the draggable floating panel. It can hold prompt
+              buttons, profile switching, and queue controls.
+            </li>
+            <li>
+              <strong>Floating panel scale:</strong> Use the ⤢ control in the
+              floating panel header to scale the panel from compact to larger UI.
+              Scale is saved with the floating panel settings for that site.
+            </li>
+            <li>
+              <strong>Queue Feature:</strong> Queue sends multiple prompts
+              sequentially with a configurable delay. Configure delay and random
+              offset in Floating Window Settings. Use it responsibly and in
               accordance with the website's Terms of Service.
             </li>
             <li>
-              <strong>Cross-Chat Prompt Sharing:</strong> A new module that lets
-              you copy (adds button 📋) a prompt from one AI chat and paste it
-              (📥) into another. Just as usual buttons, allows autosend. Does
-              not uses clipboard. A Enable it in the "Modules" section above to
-              get started.
+              <strong>Queue Button:</strong> Add the special Queue button (⏳)
+              from Button Configuration. It queues the current editor text,
+              clears the editor so you can write the next item, and sends after
+              the configured queue delay.
             </li>
             <li>
-              <strong>Inline Profile Selector:</strong> Enable it in the Modules
-              section by toggling “Show profile selector in button row”. Choose
-              placement (before or after custom buttons). The selector will
-              appear among the buttons, allowing you to switch the current
-              profile quickly.
+              <strong>Queue controls in chat:</strong> When the Queue button
+              adds items, a small tab-like queue control appears at the bottom
+              of the injected button row. It mirrors the floating panel queue:
+              play/pause, skip, reset, progress, and queued items all operate on
+              the same shared queue.
+            </li>
+          </ul>
+
+          <h3>Modules & Troubleshooting</h3>
+          <ul>
+            <li>
+              <strong>Cross-Chat Prompt Sharing:</strong> Enable it in Modules
+              to add 📋 and 📥 buttons. It lets you copy a prompt from one AI
+              chat and paste it into another without using the system clipboard.
+            </li>
+            <li>
+              <strong>Inline Profile Selector:</strong> Enable it in Modules by
+              toggling “Show profile selector in button row”. Choose placement
+              before or after custom buttons, then switch profiles directly from
+              the button row.
             </li>
             <li>In case of a problem: first step is to reload your browser.</li>
-            <li>
-              In case something stopped working completely: The websites often
-              change their structure. My extension therefore addresses elements
-              that are not longer present. Therefore, when I notice this, I need
-              to make an update, and then it takes time for Google to approve
-              it.
-            </li>
             <li>
               If buttons or auto-clicking stop working, go to Settings and open
               "Advanced Selector Configuration". Turn on heuristics for the
@@ -1438,39 +1505,33 @@
               clicks should happen, even if the website changed its structure.
             </li>
             <li>
+              In case something stopped working completely: websites often
+              change their structure. The extension may need selector updates,
+              and then it can take time for Google to approve a new version.
+            </li>
+            <li>
               In case something is not working: try to use English version of
               the websites. LLMs do not care about language, so you can use any
               language you want in chat, while keeping interface language
-              English. I only test on English languages of webpages, because I
-              have to work and have no spare time.
+              English. I only test on English interfaces.
             </li>
             <li>
-              If buttons disappear, first step is to refresh the page, then 
-              try go to advanced selector configurtion, and press button "reset ALL Websites' Selectors".
-              If you are using floaating window, try to  "Reset Floating Window Settings for all pages" up here in
-              this popup. You can open an issue on Github:
-              <a
-                href="https://github.com/MaxITService/OneClickPrompts/issues"
+              If buttons disappear, first refresh the page, then try Advanced
+              Selector Configuration and press "reset ALL Websites' Selectors".
+              If you are using floating window, also try "Reset Floating Window
+              Settings for all pages". You can open an issue on Github:
+              <a href="https://github.com/MaxITService/OneClickPrompts/issues"
+                >Issues page</a
               >
-                Issues page</a
-              >
-              Or email me at forpphotos@gmail.com
+              or email me at forpphotos@gmail.com.
             </li>
             <li>
-              In case absolutely nothing works, do the following:
-              <ul>
-                <li>Export all the profiles you need to JSON files</li>
-                <li>Uninstall extension</li>
-                <li>
-                  Install extension again and test if it's working with default
-                  profiles
-                </li>
-                <li>Import your saved profiles and test again</li>
-              </ul>
+              If absolutely nothing works: export needed profiles, uninstall the
+              extension, install it again, test with default profiles, then
+              import your saved profiles and test again.
             </li>
             <li>
-              <a
-                href="https://github.com/MaxITService/OneClickPrompts"
+              <a href="https://github.com/MaxITService/OneClickPrompts"
                 >Github: you can provide code you want to see in app here.</a
               >
             </li>
@@ -1486,11 +1547,13 @@
               >
             </li>
             <li>
-              Introducing changes faster than once in second causes saving
-              issues
-            </li>
-            <li>
-              You may also read my article <a href="https://medium.com/@maxim.fomins/ai-for-complete-beginners-guide-llms-f19c4b8a8a79">"AI for complete beginners"</a> - but if you are using my extension, you probably already know everything from it - but maybe you know someone who would benefit more from it.
+              You may also read my article
+              <a href="https://medium.com/@maxim.fomins/ai-for-complete-beginners-guide-llms-f19c4b8a8a79"
+                >"AI for complete beginners"</a
+              >
+              - but if you are using my extension, you probably already know
+              everything from it - but maybe you know someone who would benefit
+              more from it.
             </li>
           </ul>
                       <br> If you like this app, please rate it ⭐⭐⭐⭐⭐ on <a href="https://chromewebstore.google.com/detail/oneclickprompts/iiofmimaakhhoiablomgcjpilebnndbf">Chrome Web Store</a>!

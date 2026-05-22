@@ -133,6 +133,104 @@
     width: 100%;
 }
 
+.max-extension-inline-queue-controls {
+    display: none;
+    width: 100%;
+    margin-top: 4px;
+    border-top: 1px solid rgba(128, 128, 128, 0.35);
+    padding-top: 6px;
+    color: inherit;
+    font-family: inherit;
+}
+
+.max-extension-inline-queue-controls.is-active {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.max-extension-inline-queue-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-start;
+    border: 1px solid rgba(128, 128, 128, 0.45);
+    border-radius: 6px 6px 0 0;
+    padding: 3px 8px;
+    font-size: 12px;
+    background: rgba(60, 60, 60, 0.08);
+}
+
+.max-extension-inline-queue-count {
+    min-width: 18px;
+    border-radius: 999px;
+    padding: 1px 5px;
+    text-align: center;
+    background: rgba(122, 92, 200, 0.18);
+    font-weight: 700;
+}
+
+.max-extension-inline-queue-delay {
+    opacity: 0.72;
+}
+
+.max-extension-inline-queue-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px;
+}
+
+.max-extension-inline-queue-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-height: 28px;
+}
+
+.max-extension-inline-queue-actions {
+    display: inline-flex;
+    gap: 4px;
+}
+
+.max-extension-inline-queue-actions button,
+.max-extension-inline-queue-items .max-extension-queued-item {
+    border: 1px solid rgba(128, 128, 128, 0.35);
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 5px 7px;
+}
+
+.max-extension-inline-queue-actions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.max-extension-inline-queue-status {
+    grid-column: 1 / -1;
+    display: none;
+    font-size: 11px;
+}
+
+.max-extension-inline-queue-progress-container {
+    grid-column: 1 / -1;
+    display: none;
+    height: 3px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(128, 128, 128, 0.22);
+}
+
+.max-extension-inline-queue-progress-bar {
+    width: 0%;
+    height: 100%;
+    background: rgba(122, 92, 200, 0.8);
+}
+
 /* Container for the footer controls */
 #max-extension-panel-footer-controls {
     position: absolute;

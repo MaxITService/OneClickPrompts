@@ -15,6 +15,7 @@
 // -------------------------
 const SETTINGS_BUTTON_MAGIC_TEXT = '%OCP_APP_SETTINGS_SYSTEM_BUTTON%';
 const COPY_LAST_CHATGPT_RESPONSE_BUTTON_MAGIC_TEXT = '%OCP_COPY_LAST_CHATGPT_RESPONSE_SYSTEM_BUTTON%';
+const QUEUE_CURRENT_EDITOR_BUTTON_MAGIC_TEXT = '%OCP_QUEUE_CURRENT_EDITOR_SYSTEM_BUTTON%';
 const DELETE_UNDO_DURATION_MS = 2000;
 
 // Tracks buttons that are waiting out their undo window before deletion.
@@ -74,14 +75,12 @@ function createButtonCardElement(button, index, crossChatSettings = null) {
     } else {
         const isSettingsButton = (button.text === SETTINGS_BUTTON_MAGIC_TEXT);
         const isCopyLastChatGPTResponseButton = (button.text === COPY_LAST_CHATGPT_RESPONSE_BUTTON_MAGIC_TEXT);
-        const isSystemButton = isSettingsButton || isCopyLastChatGPTResponseButton;
+        const isQueueCurrentEditorButton = (button.text === QUEUE_CURRENT_EDITOR_BUTTON_MAGIC_TEXT);
+        const isSystemButton = isSettingsButton || isCopyLastChatGPTResponseButton || isQueueCurrentEditorButton;
 
-        const systemButtonText = isSettingsButton
-            ? 'Open app settings | Shift-Click this button to move location where buttons are injected'
-            : 'Copy last ChatGPT response | Only active on ChatGPT';
-        const systemButtonTitle = isSettingsButton
-            ? 'This button opens the extension settings - this exact page you are seeing right now - in a new tab. Alternatively, Shift-click opens menu, that allows to move location, where buttons are injected. You can move it or remove it.'
-            : 'This button copies exactly the last ChatGPT response. It only works on ChatGPT pages and uses ChatGPT native copy when available. You can move it or remove it.';
+        const systemButtonMeta = getSystemButtonMeta(button.text);
+        const systemButtonText = systemButtonMeta.text;
+        const systemButtonTitle = systemButtonMeta.title;
 
         const textElementHTML = isSystemButton
             ? `<div class="text-input" title="${systemButtonTitle}">${systemButtonText}</div>`
@@ -134,6 +133,9 @@ function createButtonCardElement(button, index, crossChatSettings = null) {
             buttonItem.classList.add('settings-button-card');
         } else if (isCopyLastChatGPTResponseButton) {
             buttonItem.setAttribute('data-system', 'copy-last-chatgpt-response');
+            buttonItem.classList.add('settings-button-card');
+        } else if (isQueueCurrentEditorButton) {
+            buttonItem.setAttribute('data-system', 'queue-current-editor');
             buttonItem.classList.add('settings-button-card');
         }
     }
@@ -462,6 +464,55 @@ async function addCopyLastChatGPTResponseButton(event) {
 }
 
 /**
+ * Adds the special Queue system button. The click behavior is handled at
+ * injection time. Users may change the icon; autoSend is not applicable.
+ * @param {MouseEvent} [event]
+ */
+async function addQueueCurrentEditorButton(event) {
+    const icon = document.getElementById('buttonIcon').value || '⏳';
+    const text = QUEUE_CURRENT_EDITOR_BUTTON_MAGIC_TEXT;
+    const autoSend = false;
+
+    const exists = (currentProfile.customButtons || []).some(b => b && !b.separator && b.text === text);
+    if (exists) {
+        showToast('Queue Button already exists in this profile.', 'info');
+        return;
+    }
+
+    currentProfile.customButtons.push({ icon, text, autoSend });
+    await saveCurrentProfile();
+    updatebuttonCardsList();
+    logToGUIConsole('Added Queue system button');
+    showToast('Queue Button added', 'success');
+    if (event) showMouseEffect(event);
+}
+
+function getSystemButtonMeta(text) {
+    if (text === SETTINGS_BUTTON_MAGIC_TEXT) {
+        return {
+            text: 'Open app settings | Shift-Click this button to move location where buttons are injected',
+            title: 'This button opens the extension settings - this exact page you are seeing right now - in a new tab. Alternatively, Shift-click opens menu, that allows to move location, where buttons are injected. You can move it or remove it.'
+        };
+    }
+
+    if (text === COPY_LAST_CHATGPT_RESPONSE_BUTTON_MAGIC_TEXT) {
+        return {
+            text: 'Copy last ChatGPT response | Only active on ChatGPT',
+            title: 'This button copies exactly the last ChatGPT response. It only works on ChatGPT pages and uses ChatGPT native copy when available. You can move it or remove it.'
+        };
+    }
+
+    if (text === QUEUE_CURRENT_EDITOR_BUTTON_MAGIC_TEXT) {
+        return {
+            text: 'Queue current editor text | Sends after configured delay',
+            title: 'This button queues the current editor text, clears the editor so you can write the next item, and sends queued items after the delay configured in Floating Window Settings.'
+        };
+    }
+
+    return { text: '', title: '' };
+}
+
+/**
  * Gets the effective hotkey label shown in the popup.
  * Explicit per-button hotkeys win; otherwise the legacy Alt+1..0 position hint is shown.
  * @param {Object} button
@@ -565,6 +616,7 @@ function describeButtonForConflict(button, index) {
     const text = button?.text || `button ${index + 1}`;
     if (text === SETTINGS_BUTTON_MAGIC_TEXT) return `${icon}Settings button`;
     if (text === COPY_LAST_CHATGPT_RESPONSE_BUTTON_MAGIC_TEXT) return `${icon}Copy last ChatGPT response button`;
+    if (text === QUEUE_CURRENT_EDITOR_BUTTON_MAGIC_TEXT) return `${icon}Queue button`;
     return `${icon}${text.length > 60 ? `${text.slice(0, 57)}...` : text}`;
 }
 

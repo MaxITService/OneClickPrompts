@@ -1280,17 +1280,135 @@ window.MaxExtensionFloatingPanel.syncQueueModeUiFromConfig = function () {
     }
 };
 
-/**
- * Renders the queue display area with the current items in the queue.
- */
-window.MaxExtensionFloatingPanel.renderQueueDisplay = function () {
-    if (!this.queueDisplayArea) return;
+window.MaxExtensionFloatingPanel.ensureInlineQueueControls = function (container) {
+    if (!container) return null;
 
-    if (typeof this.captureQueuePreRender === 'function') {
-        this.captureQueuePreRender();
+    const existing = container.querySelector(':scope > .max-extension-inline-queue-controls');
+    if (existing) {
+        this.bindInlineQueueControls(existing);
+        this.updateInlineQueueControlsVisibility?.();
+        return existing;
     }
 
-    this.queueDisplayArea.innerHTML = ''; // Clear previous items
+    const wrapper = document.createElement('div');
+    wrapper.className = 'max-extension-inline-queue-controls';
+    wrapper.innerHTML = `
+        <div class="max-extension-inline-queue-tab">
+            <span class="max-extension-inline-queue-title">Queue</span>
+            <span class="max-extension-inline-queue-count">0</span>
+            <span class="max-extension-inline-queue-delay"></span>
+        </div>
+        <div class="max-extension-inline-queue-body">
+            <div class="max-extension-inline-queue-items" title="Queued prompts. Click an item to remove it."></div>
+            <div class="max-extension-inline-queue-actions">
+                <button type="button" class="max-extension-inline-queue-play" title="Start or pause queue">▶️</button>
+                <button type="button" class="max-extension-inline-queue-skip" title="Send next queued prompt now">⏭️</button>
+                <button type="button" class="max-extension-inline-queue-reset" title="Clear queue">🔄</button>
+            </div>
+            <div class="max-extension-inline-queue-status"></div>
+            <div class="max-extension-inline-queue-progress-container">
+                <div class="max-extension-inline-queue-progress-bar"></div>
+            </div>
+        </div>
+    `;
+
+    container.appendChild(wrapper);
+    this.bindInlineQueueControls(wrapper);
+    this.updateInlineQueueControlsVisibility?.();
+    return wrapper;
+};
+
+window.MaxExtensionFloatingPanel.bindInlineQueueControls = function (wrapper) {
+    if (!wrapper) return;
+
+    this.inlineQueueControls = {
+        wrapper,
+        queueDisplayArea: wrapper.querySelector('.max-extension-inline-queue-items'),
+        playQueueButton: wrapper.querySelector('.max-extension-inline-queue-play'),
+        skipQueueButton: wrapper.querySelector('.max-extension-inline-queue-skip'),
+        resetQueueButton: wrapper.querySelector('.max-extension-inline-queue-reset'),
+        queueStatusLabel: wrapper.querySelector('.max-extension-inline-queue-status'),
+        queueProgressContainer: wrapper.querySelector('.max-extension-inline-queue-progress-container'),
+        queueProgressBar: wrapper.querySelector('.max-extension-inline-queue-progress-bar'),
+        queueCountElement: wrapper.querySelector('.max-extension-inline-queue-count'),
+        queueDelayElement: wrapper.querySelector('.max-extension-inline-queue-delay')
+    };
+
+    if (wrapper.__ocpInlineQueueBound) return;
+    wrapper.__ocpInlineQueueBound = true;
+
+    this.inlineQueueControls.playQueueButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        if (this.isQueueRunning) {
+            this.pauseQueue();
+            return;
+        }
+        const waitBeforeFirstSend = event.ctrlKey || this.remainingTimeOnPause > 0;
+        this.startQueue({ waitBeforeFirstSend });
+    });
+
+    this.inlineQueueControls.skipQueueButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        this.skipToNextQueueItem();
+    });
+
+    this.inlineQueueControls.resetQueueButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        this.resetQueue();
+    });
+};
+
+window.MaxExtensionFloatingPanel.getQueueDisplayAreas = function () {
+    return [
+        this.queueDisplayArea,
+        this.inlineQueueControls?.queueDisplayArea
+    ].filter((element, index, list) => element && list.indexOf(element) === index);
+};
+
+window.MaxExtensionFloatingPanel.getQueueProgressBars = function () {
+    return [
+        this.queueProgressBar,
+        this.inlineQueueControls?.queueProgressBar
+    ].filter((element, index, list) => element && list.indexOf(element) === index);
+};
+
+window.MaxExtensionFloatingPanel.getQueueProgressContainers = function () {
+    return [
+        this.queueProgressContainer,
+        this.inlineQueueControls?.queueProgressContainer
+    ].filter((element, index, list) => element && list.indexOf(element) === index);
+};
+
+window.MaxExtensionFloatingPanel.getQueueControlButtons = function () {
+    return {
+        play: [this.playQueueButton, this.inlineQueueControls?.playQueueButton].filter((element, index, list) => element && list.indexOf(element) === index),
+        skip: [this.skipQueueButton, this.inlineQueueControls?.skipQueueButton].filter((element, index, list) => element && list.indexOf(element) === index),
+        reset: [this.resetQueueButton, this.inlineQueueControls?.resetQueueButton].filter((element, index, list) => element && list.indexOf(element) === index)
+    };
+};
+
+window.MaxExtensionFloatingPanel.updateInlineQueueControlsVisibility = function () {
+    const wrapper = this.inlineQueueControls?.wrapper;
+    if (!wrapper) return;
+
+    const hasItems = Array.isArray(this.promptQueue) && this.promptQueue.length > 0;
+    const isPaused = Number(this.remainingTimeOnPause) > 0;
+    const shouldShow = hasItems || this.isQueueRunning || isPaused;
+    wrapper.classList.toggle('is-active', shouldShow);
+
+    if (this.inlineQueueControls.queueCountElement) {
+        this.inlineQueueControls.queueCountElement.textContent = String(this.promptQueue?.length || 0);
+    }
+
+    if (this.inlineQueueControls.queueDelayElement && typeof this.getQueueBaseDelayMs === 'function') {
+        const unit = (window.globalMaxExtensionConfig?.queueDelayUnit === 'sec') ? 'sec' : 'min';
+        this.inlineQueueControls.queueDelayElement.textContent = this.formatQueueDelayForUnit(this.getQueueBaseDelayMs(), unit);
+    }
+};
+
+window.MaxExtensionFloatingPanel.renderQueueDisplayInto = function (displayArea) {
+    if (!displayArea) return;
+    displayArea.innerHTML = '';
     const fragment = document.createDocumentFragment();
 
     this.promptQueue.forEach((item, index) => {
@@ -1317,23 +1435,56 @@ window.MaxExtensionFloatingPanel.renderQueueDisplay = function () {
         fragment.appendChild(queuedItemElement);
     });
 
-    this.queueDisplayArea.appendChild(fragment);
+    displayArea.appendChild(fragment);
     if (this.promptQueue.length > 0) {
-        this.queueDisplayArea.style.display = 'flex';
+        displayArea.style.display = 'flex';
     } else if (window.globalMaxExtensionConfig?.enableQueueMode) {
-        this.queueDisplayArea.style.display = 'none';
+        displayArea.style.display = 'none';
     }
+};
+
+/**
+ * Renders the queue display area with the current items in the queue.
+ */
+window.MaxExtensionFloatingPanel.renderQueueDisplay = function () {
+    const displayAreas = typeof this.getQueueDisplayAreas === 'function'
+        ? this.getQueueDisplayAreas()
+        : [this.queueDisplayArea].filter(Boolean);
+
+    if (displayAreas.length === 0) {
+        this.updateInlineQueueControlsVisibility?.();
+        return;
+    }
+
+    if (typeof this.captureQueuePreRender === 'function') {
+        this.captureQueuePreRender();
+    }
+
+    displayAreas.forEach((displayArea) => this.renderQueueDisplayInto(displayArea));
 
     if (typeof this.applyQueuePostRenderEffects === 'function') {
         this.applyQueuePostRenderEffects();
     }
+
+    this.updateInlineQueueControlsVisibility?.();
 };
 
 /**
  * Updates the state (icon, disabled status) of the queue control buttons.
  */
 window.MaxExtensionFloatingPanel.updateQueueControlsState = function () {
-    if (!this.playQueueButton || !this.resetQueueButton) return;
+    const buttons = typeof this.getQueueControlButtons === 'function'
+        ? this.getQueueControlButtons()
+        : {
+            play: [this.playQueueButton].filter(Boolean),
+            skip: [this.skipQueueButton].filter(Boolean),
+            reset: [this.resetQueueButton].filter(Boolean)
+        };
+
+    if (buttons.play.length === 0 || buttons.reset.length === 0) {
+        this.updateInlineQueueControlsVisibility?.();
+        return;
+    }
 
     const hasItems = this.promptQueue.length > 0;
     const isPaused = this.remainingTimeOnPause > 0;
@@ -1342,37 +1493,41 @@ window.MaxExtensionFloatingPanel.updateQueueControlsState = function () {
     // If queue mode is OFF, disable controls regardless of items, and hide progress bar.
     if (!queueEnabled) {
         logConCgp('[floating-panel-queue] updateQueueControlsState: Queue mode is OFF, skipping tooltip update.');
-        this.playQueueButton.innerHTML = '▶️';
+        buttons.play.forEach((playButton) => { playButton.innerHTML = '▶️'; });
         const disabledTooltip = 'Enable Queue Mode to start.';
-        this.playQueueButton.title = disabledTooltip;
-        this.playQueueButton.disabled = true;
+        buttons.play.forEach((playButton) => {
+            playButton.title = disabledTooltip;
+            playButton.disabled = true;
+        });
 
         // Force tooltip update if OCPTooltip is available
         if (window.OCPTooltip) {
-            window.OCPTooltip.updateText(this.playQueueButton, disabledTooltip);
+            buttons.play.forEach((playButton) => window.OCPTooltip.updateText(playButton, disabledTooltip));
         }
 
-        if (this.skipQueueButton) {
-            this.skipQueueButton.disabled = true;
-            this.skipQueueButton.title = 'Enable Queue Mode to skip.';
-        }
+        buttons.skip.forEach((skipButton) => {
+            skipButton.disabled = true;
+            skipButton.title = 'Enable Queue Mode to skip.';
+        });
 
-        this.resetQueueButton.disabled = true;
+        buttons.reset.forEach((resetButton) => {
+            resetButton.disabled = true;
+        });
 
-        if (this.queueProgressContainer) {
-            this.queueProgressContainer.style.display = 'none';
-        }
+        this.getQueueProgressContainers?.().forEach((container) => {
+            container.style.display = 'none';
+        });
         return;
     }
 
     // Play/Pause Button
     let tooltipText = '';
     if (this.isQueueRunning) {
-        this.playQueueButton.innerHTML = '⏸️'; // Pause icon
+        buttons.play.forEach((playButton) => { playButton.innerHTML = '⏸️'; }); // Pause icon
         tooltipText = 'Pause the queue.';
-        this.playQueueButton.disabled = false;
+        buttons.play.forEach((playButton) => { playButton.disabled = false; });
     } else {
-        this.playQueueButton.innerHTML = '▶️'; // Play icon
+        buttons.play.forEach((playButton) => { playButton.innerHTML = '▶️'; }); // Play icon
 
         // Dynamic tooltip based on queue state and manual mode
         logConCgp('[floating-panel-queue] updateQueueControlsState: hasItems=', hasItems, 'isPaused=', isPaused, 'manualQueueExpanded=', this.manualQueueExpanded);
@@ -1389,33 +1544,41 @@ window.MaxExtensionFloatingPanel.updateQueueControlsState = function () {
             tooltipText = 'Start sending the queued prompts. Ctrl+Click waits the configured delay before the first send.';
         }
 
-        this.playQueueButton.disabled = !hasItems && !isPaused && !this.manualQueueExpanded; // Keep enabled if manual mode is on for shift-click
+        buttons.play.forEach((playButton) => {
+            playButton.disabled = !hasItems && !isPaused && !this.manualQueueExpanded; // Keep enabled if manual mode is on for shift-click
+        });
     }
 
     // Set title attribute and force tooltip update
-    this.playQueueButton.title = tooltipText;
+    buttons.play.forEach((playButton) => {
+        playButton.title = tooltipText;
+    });
     if (window.OCPTooltip) {
-        window.OCPTooltip.updateText(this.playQueueButton, tooltipText);
+        buttons.play.forEach((playButton) => window.OCPTooltip.updateText(playButton, tooltipText));
     }
 
-    if (this.skipQueueButton) {
+    buttons.skip.forEach((skipButton) => {
         if (!hasItems) {
-            this.skipQueueButton.disabled = true;
-            this.skipQueueButton.title = 'No queued prompts to skip.';
+            skipButton.disabled = true;
+            skipButton.title = 'No queued prompts to skip.';
         } else {
-            this.skipQueueButton.disabled = false;
-            this.skipQueueButton.title = this.isQueueRunning
+            skipButton.disabled = false;
+            skipButton.title = this.isQueueRunning
                 ? 'Skip to the next queued prompt immediately.'
                 : 'Send the next queued prompt immediately.';
         }
-    }
+    });
 
     // Reset Button
-    this.resetQueueButton.disabled = !hasItems && !this.isQueueRunning && !isPaused;
+    buttons.reset.forEach((resetButton) => {
+        resetButton.disabled = !hasItems && !this.isQueueRunning && !isPaused;
+    });
 
     // Hide progress bar if queue is empty and not running
-    if (this.queueProgressContainer && !this.isQueueRunning && !hasItems) {
-        this.queueProgressContainer.style.display = 'none';
+    if (!this.isQueueRunning && !hasItems) {
+        this.getQueueProgressContainers?.().forEach((container) => {
+            container.style.display = 'none';
+        });
     }
 
     if (typeof this.updateRandomDelayBadge === 'function') {
@@ -1425,6 +1588,8 @@ window.MaxExtensionFloatingPanel.updateQueueControlsState = function () {
     if (typeof this.updateQueueAutomationButtons === 'function') {
         this.updateQueueAutomationButtons();
     }
+
+    this.updateInlineQueueControlsVisibility?.();
 };
 
 /**
@@ -1587,34 +1752,42 @@ window.MaxExtensionFloatingPanel.updateRandomDelayBadge = function () {
  * @param {string} [tooltip=''] - Optional tooltip text for hover explanation.
  */
 window.MaxExtensionFloatingPanel.setQueueStatus = function (text, type = 'info', tooltip = '') {
-    if (!this.queueStatusLabel) return;
+    const statusLabels = [
+        this.queueStatusLabel,
+        this.inlineQueueControls?.queueStatusLabel
+    ].filter((element, index, list) => element && list.indexOf(element) === index);
+    if (statusLabels.length === 0) return;
 
     if (!text) {
-        this.queueStatusLabel.textContent = '';
-        this.queueStatusLabel.style.display = 'none';
+        statusLabels.forEach((statusLabel) => {
+            statusLabel.textContent = '';
+            statusLabel.style.display = 'none';
+        });
         return;
     }
 
-    this.queueStatusLabel.textContent = text;
-    this.queueStatusLabel.style.display = 'block';
-
-    // Simple styling reset
-    this.queueStatusLabel.style.color = '';
-
-    if (type === 'error') {
-        this.queueStatusLabel.style.color = '#ef4444'; // Red
-    } else if (type === 'success') {
-        this.queueStatusLabel.style.color = '#22c55e'; // Green
-    } else {
-        this.queueStatusLabel.style.color = 'var(--text-secondary, #888)'; // Muted
-    }
-
-    // Update tooltip using the shared system if available
     const finalTooltip = tooltip || text;
-    if (window.OCPTooltip) {
-        // Use attach to forcefully update the text and ensure listeners are bound
-        window.OCPTooltip.attach(this.queueStatusLabel, finalTooltip);
-    } else {
-        this.queueStatusLabel.title = finalTooltip;
-    }
+    statusLabels.forEach((statusLabel) => {
+        statusLabel.textContent = text;
+        statusLabel.style.display = 'block';
+
+        // Simple styling reset
+        statusLabel.style.color = '';
+
+        if (type === 'error') {
+            statusLabel.style.color = '#ef4444'; // Red
+        } else if (type === 'success') {
+            statusLabel.style.color = '#22c55e'; // Green
+        } else {
+            statusLabel.style.color = 'var(--text-secondary, #888)'; // Muted
+        }
+
+        // Update tooltip using the shared system if available
+        if (window.OCPTooltip) {
+            // Use attach to forcefully update the text and ensure listeners are bound
+            window.OCPTooltip.attach(statusLabel, finalTooltip);
+        } else {
+            statusLabel.title = finalTooltip;
+        }
+    });
 };

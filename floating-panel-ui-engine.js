@@ -34,18 +34,21 @@ window.MaxExtensionFloatingPanel.addToQueue = function (buttonConfig) {
     // Prevent adding if queue mode is disabled
     if (!window.globalMaxExtensionConfig?.enableQueueMode) {
         logConCgp('[queue-engine] Queue mode is disabled. Ignoring addToQueue.');
-        return;
+        return null;
     }
 
     if (this.promptQueue.length >= this.QUEUE_MAX_SIZE) {
         logConCgp('[queue-engine] Queue is full. Cannot add more prompts.');
-        if (this.queueDisplayArea) {
-            this.queueDisplayArea.style.borderColor = 'red';
+        const displayAreas = typeof this.getQueueDisplayAreas === 'function'
+            ? this.getQueueDisplayAreas()
+            : [this.queueDisplayArea].filter(Boolean);
+        displayAreas.forEach((displayArea) => {
+            displayArea.style.borderColor = 'red';
             setTimeout(() => {
-                this.queueDisplayArea.style.borderColor = '';
+                displayArea.style.borderColor = '';
             }, 500);
-        }
-        return;
+        });
+        return null;
     }
 
     if (!Number.isFinite(this.nextQueueItemId)) {
@@ -65,6 +68,7 @@ window.MaxExtensionFloatingPanel.addToQueue = function (buttonConfig) {
     logConCgp('[queue-engine] Added to queue:', queueEntry.text);
     this.renderQueueDisplay();
     this.updateQueueControlsState();
+    return queueEntry;
 };
 
 /**
@@ -187,14 +191,17 @@ window.MaxExtensionFloatingPanel.scheduleQueueDispatchDelay = function (delayMs,
         logConCgp(`[queue-engine] Waiting for ${totalStr} before ${logContext}.`);
     }
 
-    if (this.queueProgressBar) {
-        this.queueProgressBar.style.transition = 'none';
-        this.queueProgressBar.style.width = '0%';
+    const progressBars = typeof this.getQueueProgressBars === 'function'
+        ? this.getQueueProgressBars()
+        : [this.queueProgressBar].filter(Boolean);
+    progressBars.forEach((progressBar) => {
+        progressBar.style.transition = 'none';
+        progressBar.style.width = '0%';
         setTimeout(() => {
-            this.queueProgressBar.style.transition = `width ${delayMs / 1000}s linear`;
-            this.queueProgressBar.style.width = '100%';
+            progressBar.style.transition = `width ${delayMs / 1000}s linear`;
+            progressBar.style.width = '100%';
         }, 20);
-    }
+    });
 
     this.timerStartTime = Date.now();
     this.currentTimerDelay = delayMs;
@@ -232,10 +239,13 @@ window.MaxExtensionFloatingPanel.skipToNextQueueItem = function () {
         this.isQueueRunning = true;
     }
 
-    if (this.queueProgressBar) {
-        this.queueProgressBar.style.transition = 'none';
-        this.queueProgressBar.style.width = '100%';
-    }
+    const progressBars = typeof this.getQueueProgressBars === 'function'
+        ? this.getQueueProgressBars()
+        : [this.queueProgressBar].filter(Boolean);
+    progressBars.forEach((progressBar) => {
+        progressBar.style.transition = 'none';
+        progressBar.style.width = '100%';
+    });
 
     logConCgp('[queue-engine] Skip requested. Sending next queued prompt immediately.');
     void this.processNextQueueItem();
@@ -276,10 +286,13 @@ window.MaxExtensionFloatingPanel.seekQueueTimerToRatio = function (ratio) {
 
         if (remaining <= 20) {
             // Treat as an immediate skip when user selects the end of the bar.
-            if (this.queueProgressBar) {
-                this.queueProgressBar.style.transition = 'none';
-                this.queueProgressBar.style.width = '100%';
-            }
+            const progressBars = typeof this.getQueueProgressBars === 'function'
+                ? this.getQueueProgressBars()
+                : [this.queueProgressBar].filter(Boolean);
+            progressBars.forEach((progressBar) => {
+                progressBar.style.transition = 'none';
+                progressBar.style.width = '100%';
+            });
             logConCgp('[queue-engine] Seek reached the end of the interval. Dispatching next item.');
             this.remainingTimeOnPause = 0;
             this.queueTimerId = null;
@@ -294,13 +307,16 @@ window.MaxExtensionFloatingPanel.seekQueueTimerToRatio = function (ratio) {
             void this.processNextQueueItem();
         }, remaining);
 
-        if (this.queueProgressBar) {
-            this.queueProgressBar.style.transition = 'none';
-            this.queueProgressBar.style.width = `${clampedRatio * 100}%`;
-            void this.queueProgressBar.offsetWidth;
-            this.queueProgressBar.style.transition = `width ${remaining / 1000}s linear`;
-            this.queueProgressBar.style.width = '100%';
-        }
+        const progressBars = typeof this.getQueueProgressBars === 'function'
+            ? this.getQueueProgressBars()
+            : [this.queueProgressBar].filter(Boolean);
+        progressBars.forEach((progressBar) => {
+            progressBar.style.transition = 'none';
+            progressBar.style.width = `${clampedRatio * 100}%`;
+            void progressBar.offsetWidth;
+            progressBar.style.transition = `width ${remaining / 1000}s linear`;
+            progressBar.style.width = '100%';
+        });
 
         const remainingStr = this.formatQueueDelayForUnit(remaining, unit);
         logConCgp(`[queue-engine] Seeked queue timer to ${(clampedRatio * 100).toFixed(0)}% (${remainingStr} remaining).`);
@@ -310,10 +326,13 @@ window.MaxExtensionFloatingPanel.seekQueueTimerToRatio = function (ratio) {
     } else if (!this.isQueueRunning && this.remainingTimeOnPause > 0) {
         this.remainingTimeOnPause = remaining;
 
-        if (this.queueProgressBar) {
-            this.queueProgressBar.style.transition = 'none';
-            this.queueProgressBar.style.width = `${clampedRatio * 100}%`;
-        }
+        const progressBars = typeof this.getQueueProgressBars === 'function'
+            ? this.getQueueProgressBars()
+            : [this.queueProgressBar].filter(Boolean);
+        progressBars.forEach((progressBar) => {
+            progressBar.style.transition = 'none';
+            progressBar.style.width = `${clampedRatio * 100}%`;
+        });
 
         const remainingStr = this.formatQueueDelayForUnit(remaining, unit);
         logConCgp(`[queue-engine] Adjusted paused queue timer to ${(clampedRatio * 100).toFixed(0)}% (${remainingStr} remaining).`);
@@ -350,9 +369,12 @@ window.MaxExtensionFloatingPanel.startQueue = function (options = {}) {
     this.isQueueRunning = true;
     this.updateQueueControlsState();
 
-    if (this.queueProgressContainer) {
-        this.queueProgressContainer.style.display = 'block';
-    }
+    const progressContainers = typeof this.getQueueProgressContainers === 'function'
+        ? this.getQueueProgressContainers()
+        : [this.queueProgressContainer].filter(Boolean);
+    progressContainers.forEach((container) => {
+        container.style.display = 'block';
+    });
 
     // If we have remaining time, we are resuming a paused timer.
     if (this.remainingTimeOnPause > 0) {
@@ -365,13 +387,16 @@ window.MaxExtensionFloatingPanel.startQueue = function (options = {}) {
         this.timerStartTime = Date.now() - elapsedTimeBeforePause;
 
         // Resume progress bar animation from paused state.
-        if (this.queueProgressBar) {
-            this.queueProgressBar.style.transition = 'none';
-            this.queueProgressBar.style.width = `${progressPercentage}%`;
-            void this.queueProgressBar.offsetWidth; // Force reflow
-            this.queueProgressBar.style.transition = `width ${this.remainingTimeOnPause / 1000}s linear`;
-            this.queueProgressBar.style.width = '100%';
-        }
+        const progressBars = typeof this.getQueueProgressBars === 'function'
+            ? this.getQueueProgressBars()
+            : [this.queueProgressBar].filter(Boolean);
+        progressBars.forEach((progressBar) => {
+            progressBar.style.transition = 'none';
+            progressBar.style.width = `${progressPercentage}%`;
+            void progressBar.offsetWidth; // Force reflow
+            progressBar.style.transition = `width ${this.remainingTimeOnPause / 1000}s linear`;
+            progressBar.style.width = '100%';
+        });
 
         this.queueTimerId = setTimeout(() => {
             this.remainingTimeOnPause = 0; // Clear remainder
@@ -412,11 +437,14 @@ window.MaxExtensionFloatingPanel.pauseQueue = function () {
     }
 
     // Freeze the progress bar at its current position.
-    if (this.queueProgressBar) {
-        const computedWidth = window.getComputedStyle(this.queueProgressBar).width;
-        this.queueProgressBar.style.transition = 'none';
-        this.queueProgressBar.style.width = computedWidth;
-    }
+    const progressBars = typeof this.getQueueProgressBars === 'function'
+        ? this.getQueueProgressBars()
+        : [this.queueProgressBar].filter(Boolean);
+    progressBars.forEach((progressBar) => {
+        const computedWidth = window.getComputedStyle(progressBar).width;
+        progressBar.style.transition = 'none';
+        progressBar.style.width = computedWidth;
+    });
 
     this.updateQueueControlsState();
 };
@@ -437,13 +465,19 @@ window.MaxExtensionFloatingPanel.resetQueue = function () {
     logConCgp('[queue-engine] Queue reset.');
 
     // Hide and reset progress bar to 0%.
-    if (this.queueProgressBar) {
-        this.queueProgressBar.style.transition = 'none';
-        this.queueProgressBar.style.width = '0%';
-    }
-    if (this.queueProgressContainer) {
-        this.queueProgressContainer.style.display = 'none';
-    }
+    const resetProgressBars = typeof this.getQueueProgressBars === 'function'
+        ? this.getQueueProgressBars()
+        : [this.queueProgressBar].filter(Boolean);
+    resetProgressBars.forEach((progressBar) => {
+        progressBar.style.transition = 'none';
+        progressBar.style.width = '0%';
+    });
+    const resetProgressContainers = typeof this.getQueueProgressContainers === 'function'
+        ? this.getQueueProgressContainers()
+        : [this.queueProgressContainer].filter(Boolean);
+    resetProgressContainers.forEach((container) => {
+        container.style.display = 'none';
+    });
 
     this.renderQueueDisplay();
     this.updateQueueControlsState();
@@ -488,15 +522,18 @@ window.MaxExtensionFloatingPanel.recalculateRunningTimer = function () {
             void this.processNextQueueItem();
         }, newRemainingTime);
 
-        // Update progress bar instantly to new percentage.
-        if (this.queueProgressBar) {
-            const newProgressPercentage = (elapsedTime / newTotalDelayMs) * 100;
-            this.queueProgressBar.style.transition = 'none';
-            this.queueProgressBar.style.width = `${newProgressPercentage}%`;
-            void this.queueProgressBar.offsetWidth;
-            this.queueProgressBar.style.transition = `width ${newRemainingTime / 1000}s linear`;
-            this.queueProgressBar.style.width = '100%';
-        }
+        // Update progress bars instantly to new percentage.
+        const progressBars = typeof this.getQueueProgressBars === 'function'
+            ? this.getQueueProgressBars()
+            : [this.queueProgressBar].filter(Boolean);
+        const newProgressPercentage = (elapsedTime / newTotalDelayMs) * 100;
+        progressBars.forEach((progressBar) => {
+            progressBar.style.transition = 'none';
+            progressBar.style.width = `${newProgressPercentage}%`;
+            void progressBar.offsetWidth;
+            progressBar.style.transition = `width ${newRemainingTime / 1000}s linear`;
+            progressBar.style.width = '100%';
+        });
     }
 };
 
@@ -914,20 +951,31 @@ window.MaxExtensionFloatingPanel.processNextQueueItem = async function () {
         this.scheduleQueueDispatchDelay(delayMs, { logContext: 'the next item' });
     } else {
         logConCgp('[queue-engine] All items have been sent.');
-        if (this.queueProgressBar) {
-            this.queueProgressBar.style.transition = 'none';
-            this.queueProgressBar.style.width = '100%';
-        }
+        const progressBars = typeof this.getQueueProgressBars === 'function'
+            ? this.getQueueProgressBars()
+            : [this.queueProgressBar].filter(Boolean);
+        progressBars.forEach((progressBar) => {
+            progressBar.style.transition = 'none';
+            progressBar.style.width = '100%';
+        });
         this.pauseQueue();
         if (typeof this.markQueueFinished === 'function') {
             this.markQueueFinished();
         }
         setTimeout(() => {
-            if (this.queueProgressContainer && !this.isQueueRunning) {
-                this.queueProgressContainer.style.display = 'none';
-                if (this.queueProgressBar) {
-                    this.queueProgressBar.style.width = '0%';
-                }
+            if (!this.isQueueRunning) {
+                const progressContainers = typeof this.getQueueProgressContainers === 'function'
+                    ? this.getQueueProgressContainers()
+                    : [this.queueProgressContainer].filter(Boolean);
+                const progressBarsAfterFinish = typeof this.getQueueProgressBars === 'function'
+                    ? this.getQueueProgressBars()
+                    : [this.queueProgressBar].filter(Boolean);
+                progressContainers.forEach((container) => {
+                    container.style.display = 'none';
+                });
+                progressBarsAfterFinish.forEach((progressBar) => {
+                    progressBar.style.width = '0%';
+                });
             }
         }, 1000);
     }
