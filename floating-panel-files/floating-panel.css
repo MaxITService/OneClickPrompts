@@ -81,8 +81,9 @@
     z-index: 2147483647;
 }
 
-/* Transparency (opacity) button */
-#max-extension-panel-transparency-btn {
+/* Header option buttons */
+#max-extension-panel-transparency-btn,
+#max-extension-panel-scale-btn {
     background: none;
     border: none;
     font-size: 14px;
@@ -94,6 +95,7 @@
 
 /* Popover container for transparency slider */
 #max-extension-transparency-popover,
+#max-extension-scale-popover,
 #max-extension-random-percent-popover {
     position: absolute;
     /* Positioned relative to header-controls overlay */
@@ -120,6 +122,10 @@
 }
 
 #max-extension-transparency-slider {
+    width: 100%;
+}
+
+#max-extension-scale-slider {
     width: 100%;
 }
 

@@ -56,6 +56,10 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
         const transparencyPopover = document.getElementById('max-extension-transparency-popover');
         const transparencySlider = document.getElementById('max-extension-transparency-slider');
         const transparencyValue = document.getElementById('max-extension-transparency-value');
+        const scaleButton = document.getElementById('max-extension-panel-scale-btn');
+        const scalePopover = document.getElementById('max-extension-scale-popover');
+        const scaleSlider = document.getElementById('max-extension-scale-slider');
+        const scaleValue = document.getElementById('max-extension-scale-value');
         const collapseFooterButton = document.getElementById('max-extension-panel-collapse-footer-btn');
         const profileSwitcherContainer = document.getElementById('max-extension-profile-switcher');
 
@@ -92,8 +96,13 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
         // --- Transparency controls ---
         const clampPercent = (p) => Math.min(100, Math.max(0, Math.round(p)));
         const clampOpacity = (o) => Math.min(1, Math.max(0, o));
+        const clampScalePercent = (p) => Math.min(150, Math.max(70, Math.round(p / 5) * 5));
+        const clampPanelScale = (s) => Math.min(1.5, Math.max(0.7, s));
         const updateTransparencyLabel = (p) => {
             if (transparencyValue) transparencyValue.textContent = `${p}%`;
+        };
+        const updateScaleLabel = (p) => {
+            if (scaleValue) scaleValue.textContent = `${p}%`;
         };
 
         this._rememberPopoverOrigin = (popover) => {
@@ -275,6 +284,83 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
             transparencySlider.addEventListener('click', (event) => event.stopPropagation());
         }
 
+        const applyScalePercent = (percent) => {
+            const clampedPercent = clampScalePercent(percent);
+            if (scaleSlider && String(scaleSlider.value) !== String(clampedPercent)) {
+                scaleSlider.value = clampedPercent;
+            }
+            updateScaleLabel(clampedPercent);
+            if (!this.currentPanelSettings) this.currentPanelSettings = { ...this.defaultPanelSettings };
+            this.currentPanelSettings.scale = clampPanelScale(clampedPercent / 100);
+            this.updatePanelFromSettings();
+            this.debouncedSavePanelSettings();
+        };
+
+        const getCurrentScalePercent = () => {
+            let currentScale = this.currentPanelSettings?.scale;
+            if (typeof currentScale !== 'number' || Number.isNaN(currentScale)) {
+                currentScale = this.defaultPanelSettings.scale;
+            }
+            return clampScalePercent(clampPanelScale(currentScale) * 100);
+        };
+
+        if (scaleButton && scalePopover && scaleSlider) {
+            const initialPercent = getCurrentScalePercent();
+            scaleSlider.value = initialPercent;
+            updateScaleLabel(initialPercent);
+
+            const openScalePopover = () => {
+                const currentPercent = getCurrentScalePercent();
+                scaleSlider.value = currentPercent;
+                updateScaleLabel(currentPercent);
+                scalePopover.style.display = 'block';
+                if (typeof this.positionFloatingPopover === 'function') {
+                    this.positionFloatingPopover(scalePopover, scaleButton, { offsetY: 6, align: 'right' });
+                }
+            };
+
+            const closeScalePopover = () => {
+                scalePopover.style.display = 'none';
+                if (typeof this.restorePopoverToOriginalParent === 'function') {
+                    this.restorePopoverToOriginalParent(scalePopover);
+                }
+            };
+            this.closeScalePopover = closeScalePopover;
+
+            scaleButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isVisible = scalePopover.style.display === 'block';
+                if (isVisible) {
+                    closeScalePopover();
+                } else {
+                    openScalePopover();
+                }
+            });
+
+            const outsideScaleClickHandler = (e) => {
+                if (!scalePopover || scalePopover.style.display !== 'block') return;
+                const withinPopover = scalePopover.contains(e.target);
+                const onButton = scaleButton.contains(e.target);
+                if (!withinPopover && !onButton) {
+                    closeScalePopover();
+                }
+            };
+            document.addEventListener('mousedown', outsideScaleClickHandler, true);
+
+            const scaleEscHandler = (e) => {
+                if (e.key === 'Escape' && scalePopover.style.display === 'block') {
+                    closeScalePopover();
+                }
+            };
+            document.addEventListener('keydown', scaleEscHandler, true);
+
+            scaleSlider.addEventListener('input', (e) => {
+                applyScalePercent(Number(e.target.value));
+            });
+            scaleSlider.addEventListener('mousedown', (event) => event.stopPropagation());
+            scaleSlider.addEventListener('click', (event) => event.stopPropagation());
+        }
+
         this.makeDraggable(panel, panelHeader);
         this.makeDraggable(panel, profileSwitcherContainer);
 
@@ -404,8 +490,9 @@ window.MaxExtensionFloatingPanel.makeDraggable = function (element, handle) {
         const viewportHeight = window.innerHeight;
 
         // Get panel dimensions
-        const panelWidth = element.offsetWidth;
-        const panelHeight = element.offsetHeight;
+        const panelScale = typeof this.getPanelScale === 'function' ? this.getPanelScale() : 1;
+        const panelWidth = element.offsetWidth * panelScale;
+        const panelHeight = element.offsetHeight * panelScale;
 
         // Constrain the horizontal position (left)
         newLeft = Math.max(0, newLeft);
@@ -456,8 +543,9 @@ window.MaxExtensionFloatingPanel.positionPanelAtCursor = function (event) {
 window.MaxExtensionFloatingPanel.positionPanelBottomRight = function () {
     if (!this.panelElement) return;
     const margin = 20;
-    const panelWidth = this.panelElement.offsetWidth || this.currentPanelSettings.width || 300;
-    const panelHeight = this.panelElement.offsetHeight || this.currentPanelSettings.height || 400;
+    const panelScale = typeof this.getPanelScale === 'function' ? this.getPanelScale() : 1;
+    const panelWidth = (this.panelElement.offsetWidth || this.currentPanelSettings.width || 300) * panelScale;
+    const panelHeight = (this.panelElement.offsetHeight || this.currentPanelSettings.height || 400) * panelScale;
     let newLeft = Math.max(window.innerWidth - panelWidth - margin, 0);
     let newTop = Math.max(window.innerHeight - panelHeight - margin, 0);
     this.panelElement.style.left = `${newLeft}px`;
@@ -466,8 +554,9 @@ window.MaxExtensionFloatingPanel.positionPanelBottomRight = function () {
     this.currentPanelSettings.posY = parseInt(newTop);
     this.debouncedSavePanelSettings?.();
     requestAnimationFrame(() => {
-        const adjustedLeft = Math.max(window.innerWidth - this.panelElement.offsetWidth - margin, 0);
-        const adjustedTop = Math.max(window.innerHeight - this.panelElement.offsetHeight - margin, 0);
+        const adjustedScale = typeof this.getPanelScale === 'function' ? this.getPanelScale() : 1;
+        const adjustedLeft = Math.max(window.innerWidth - (this.panelElement.offsetWidth * adjustedScale) - margin, 0);
+        const adjustedTop = Math.max(window.innerHeight - (this.panelElement.offsetHeight * adjustedScale) - margin, 0);
         this.panelElement.style.left = `${adjustedLeft}px`;
         this.panelElement.style.top = `${adjustedTop}px`;
         this.currentPanelSettings.posX = parseInt(adjustedLeft);
@@ -482,7 +571,8 @@ window.MaxExtensionFloatingPanel.positionPanelBottomRight = function () {
 window.MaxExtensionFloatingPanel.positionPanelTopRight = function () {
     if (!this.panelElement) return;
     const margin = 20;
-    const panelWidth = this.panelElement.offsetWidth || this.currentPanelSettings.width || 300;
+    const panelScale = typeof this.getPanelScale === 'function' ? this.getPanelScale() : 1;
+    const panelWidth = (this.panelElement.offsetWidth || this.currentPanelSettings.width || 300) * panelScale;
     // top-right = x near right edge, y near top
     let newLeft = Math.max(window.innerWidth - panelWidth - margin, 0);
     let newTop = margin;
@@ -493,7 +583,8 @@ window.MaxExtensionFloatingPanel.positionPanelTopRight = function () {
     this.debouncedSavePanelSettings?.();
     // second pass after layout settles
     requestAnimationFrame(() => {
-        const adjustedLeft = Math.max(window.innerWidth - this.panelElement.offsetWidth - margin, 0);
+        const adjustedScale = typeof this.getPanelScale === 'function' ? this.getPanelScale() : 1;
+        const adjustedLeft = Math.max(window.innerWidth - (this.panelElement.offsetWidth * adjustedScale) - margin, 0);
         const adjustedTop = margin;
         this.panelElement.style.left = `${adjustedLeft}px`;
         this.panelElement.style.top = `${adjustedTop}px`;
@@ -538,8 +629,9 @@ window.MaxExtensionFloatingPanel.ensurePanelWithinViewport = function () {
     const viewportHeight = window.innerHeight;
 
     // Prefer actual rendered size; fall back to settings if not measured yet
-    const panelWidth = this.panelElement.offsetWidth || this.currentPanelSettings?.width || 300;
-    const panelHeight = this.panelElement.offsetHeight || this.currentPanelSettings?.height || 400;
+    const panelScale = typeof this.getPanelScale === 'function' ? this.getPanelScale() : 1;
+    const panelWidth = (this.panelElement.offsetWidth || this.currentPanelSettings?.width || 300) * panelScale;
+    const panelHeight = (this.panelElement.offsetHeight || this.currentPanelSettings?.height || 400) * panelScale;
 
     // Read the intended position (style wins; then settings)
     let left = parseInt(this.panelElement.style.left, 10);

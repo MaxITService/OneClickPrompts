@@ -242,14 +242,17 @@ window.MaxExtensionFloatingPanel.applyFooterCollapsedState = function (isCollaps
  */
 window.MaxExtensionFloatingPanel.updatePanelFromSettings = function () {
     if (!this.panelElement) return;
+    const panelScale = this.getPanelScale();
     // size
     this.panelElement.style.width = `${this.currentPanelSettings.width}px`;
     this.panelElement.style.height = `${this.currentPanelSettings.height}px`;
+    this.panelElement.style.transformOrigin = 'top left';
+    this.panelElement.style.transform = panelScale === 1 ? '' : `scale(${panelScale})`;
     // validate position
     let intendedLeft = this.currentPanelSettings.posX;
     let intendedTop = this.currentPanelSettings.posY;
-    const panelWidth = this.currentPanelSettings.width;
-    const panelHeight = this.currentPanelSettings.height;
+    const panelWidth = this.currentPanelSettings.width * panelScale;
+    const panelHeight = this.currentPanelSettings.height * panelScale;
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     const positionIsValid =
@@ -321,4 +324,22 @@ window.MaxExtensionFloatingPanel.updatePanelFromSettings = function () {
     if (transparencyValue) {
         transparencyValue.textContent = `${transparencyPercent}%`;
     }
+
+    const scaleSlider = document.getElementById('max-extension-scale-slider');
+    const scaleValue = document.getElementById('max-extension-scale-value');
+    const scalePercent = Math.round(panelScale * 100);
+    if (scaleSlider && String(scaleSlider.value) !== String(scalePercent)) {
+        scaleSlider.value = scalePercent;
+    }
+    if (scaleValue) {
+        scaleValue.textContent = `${scalePercent}%`;
+    }
+};
+
+window.MaxExtensionFloatingPanel.getPanelScale = function () {
+    let panelScale = this.currentPanelSettings?.scale;
+    if (typeof panelScale !== 'number' || Number.isNaN(panelScale)) {
+        panelScale = this.defaultPanelSettings.scale;
+    }
+    return Math.min(1.5, Math.max(0.7, panelScale));
 };
