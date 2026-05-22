@@ -587,3 +587,261 @@ class InjectionTargetsOnWebsite {
 
 // Instantiate and expose the InjectionTargetsOnWebsite globally
 window.InjectionTargetsOnWebsite = new InjectionTargetsOnWebsite();
+
+/**
+ * Shared hotkey helpers for popup capture and injected-page dispatch.
+ * The stored shape is intentionally small and serializable in profile JSON:
+ * { combo: "ctrl+shift+keyk", label: "Ctrl+Shift+K", code: "KeyK", ...modifiers }
+ */
+window.MaxExtensionHotkeys = {
+    modifierKeys: new Set(['Control', 'Shift', 'Alt', 'Meta']),
+
+    chromeReservedCombos: new Set([
+        'ctrl+keyd',
+        'ctrl+keyf',
+        'ctrl+keyh',
+        'ctrl+keyj',
+        'ctrl+keyl',
+        'ctrl+keyn',
+        'ctrl+keyo',
+        'ctrl+keyp',
+        'ctrl+keyr',
+        'ctrl+keys',
+        'ctrl+keyt',
+        'ctrl+keyu',
+        'ctrl+keyw',
+        'ctrl+digit1',
+        'ctrl+digit2',
+        'ctrl+digit3',
+        'ctrl+digit4',
+        'ctrl+digit5',
+        'ctrl+digit6',
+        'ctrl+digit7',
+        'ctrl+digit8',
+        'ctrl+digit9',
+        'ctrl+shift+keyi',
+        'ctrl+shift+keyj',
+        'ctrl+shift+keyn',
+        'ctrl+shift+keyt',
+        'alt+arrowleft',
+        'alt+arrowright',
+        'alt+f4',
+        'meta+keyd',
+        'meta+keyl',
+        'meta+keyr',
+        'meta+keyt',
+        'meta+keyw'
+    ]),
+
+    normalizeStoredHotkey(hotkey) {
+        if (!hotkey || typeof hotkey !== 'object' || typeof hotkey.combo !== 'string') {
+            return null;
+        }
+        return {
+            combo: hotkey.combo,
+            label: hotkey.label || this.labelFromCombo(hotkey.combo),
+            code: hotkey.code || '',
+            key: hotkey.key || '',
+            altKey: !!hotkey.altKey,
+            ctrlKey: !!hotkey.ctrlKey,
+            shiftKey: !!hotkey.shiftKey,
+            metaKey: !!hotkey.metaKey
+        };
+    },
+
+    fromLegacyShortcutKey(shortcutKey) {
+        const number = Number(shortcutKey);
+        if (!Number.isInteger(number) || number < 1 || number > 10) {
+            return null;
+        }
+        const digit = number === 10 ? 0 : number;
+        return {
+            combo: `alt+digit${digit}`,
+            label: `Alt+${digit}`,
+            code: `Digit${digit}`,
+            key: String(digit),
+            altKey: true,
+            ctrlKey: false,
+            shiftKey: false,
+            metaKey: false,
+            isDefault: true
+        };
+    },
+
+    fromKeyboardEvent(event) {
+        if (!event || this.modifierKeys.has(event.key)) {
+            return {
+                hotkey: null,
+                valid: false,
+                reason: 'Press a normal key together with Ctrl, Alt, or Cmd/Win.'
+            };
+        }
+
+        const code = this.normalizeCode(event);
+        if (!code) {
+            return {
+                hotkey: null,
+                valid: false,
+                reason: 'That key cannot be used as a shortcut.'
+            };
+        }
+
+        const hotkey = {
+            combo: this.buildCombo({
+                code,
+                altKey: event.altKey,
+                ctrlKey: event.ctrlKey,
+                shiftKey: event.shiftKey,
+                metaKey: event.metaKey
+            }),
+            label: this.buildLabel({
+                code,
+                altKey: event.altKey,
+                ctrlKey: event.ctrlKey,
+                shiftKey: event.shiftKey,
+                metaKey: event.metaKey
+            }),
+            code,
+            key: event.key,
+            altKey: event.altKey,
+            ctrlKey: event.ctrlKey,
+            shiftKey: event.shiftKey,
+            metaKey: event.metaKey
+        };
+
+        const validation = this.validate(hotkey);
+        return { hotkey, ...validation };
+    },
+
+    normalizeCode(event) {
+        const code = event.code || '';
+        if (/^(Key[A-Z]|Digit[0-9]|Numpad[0-9]|F([1-9]|1[0-9]|2[0-4]))$/.test(code)) {
+            return code.toLowerCase();
+        }
+
+        const namedCodes = new Set([
+            'ArrowUp',
+            'ArrowDown',
+            'ArrowLeft',
+            'ArrowRight',
+            'Home',
+            'End',
+            'PageUp',
+            'PageDown',
+            'Insert',
+            'Delete',
+            'Backspace',
+            'Enter',
+            'Space',
+            'Tab',
+            'Minus',
+            'Equal',
+            'BracketLeft',
+            'BracketRight',
+            'Backslash',
+            'Semicolon',
+            'Quote',
+            'Comma',
+            'Period',
+            'Slash',
+            'Backquote'
+        ]);
+
+        if (namedCodes.has(code)) {
+            return code.toLowerCase();
+        }
+
+        return '';
+    },
+
+    validate(hotkey) {
+        const normalized = this.normalizeStoredHotkey(hotkey);
+        if (!normalized) {
+            return { valid: false, reason: 'Press a shortcut first.' };
+        }
+
+        if (!normalized.ctrlKey && !normalized.altKey && !normalized.metaKey) {
+            return {
+                valid: false,
+                reason: 'Chrome page shortcuts need Ctrl, Alt, or Cmd/Win plus a normal key.'
+            };
+        }
+
+        if (this.chromeReservedCombos.has(normalized.combo)) {
+            return {
+                valid: false,
+                reason: 'Chrome already uses that shortcut. Choose another one.'
+            };
+        }
+
+        return { valid: true, reason: '' };
+    },
+
+    buildCombo({ code, altKey, ctrlKey, shiftKey, metaKey }) {
+        const parts = [];
+        if (ctrlKey) parts.push('ctrl');
+        if (altKey) parts.push('alt');
+        if (shiftKey) parts.push('shift');
+        if (metaKey) parts.push('meta');
+        parts.push(String(code || '').toLowerCase());
+        return parts.join('+');
+    },
+
+    buildLabel({ code, altKey, ctrlKey, shiftKey, metaKey }) {
+        const parts = [];
+        if (ctrlKey) parts.push('Ctrl');
+        if (altKey) parts.push('Alt');
+        if (shiftKey) parts.push('Shift');
+        if (metaKey) parts.push('Cmd/Win');
+        parts.push(this.codeToLabel(code));
+        return parts.join('+');
+    },
+
+    codeToLabel(code) {
+        const normalized = String(code || '').toLowerCase();
+        if (normalized.startsWith('key')) return normalized.slice(3).toUpperCase();
+        if (normalized.startsWith('digit')) return normalized.slice(5);
+        if (normalized.startsWith('numpad')) return `Num ${normalized.slice(6)}`;
+        if (/^f([1-9]|1[0-9]|2[0-4])$/.test(normalized)) return normalized.toUpperCase();
+
+        const labels = {
+            arrowup: 'Up',
+            arrowdown: 'Down',
+            arrowleft: 'Left',
+            arrowright: 'Right',
+            pageup: 'PageUp',
+            pagedown: 'PageDown',
+            space: 'Space',
+            bracketleft: '[',
+            bracketright: ']',
+            backslash: '\\',
+            semicolon: ';',
+            quote: "'",
+            comma: ',',
+            period: '.',
+            slash: '/',
+            backquote: '`',
+            minus: '-',
+            equal: '='
+        };
+
+        return labels[normalized] || normalized;
+    },
+
+    labelFromCombo(combo) {
+        const parts = String(combo || '').split('+');
+        const code = parts[parts.length - 1] || '';
+        const modifiers = {
+            ctrlKey: parts.includes('ctrl'),
+            altKey: parts.includes('alt'),
+            shiftKey: parts.includes('shift'),
+            metaKey: parts.includes('meta')
+        };
+        return this.buildLabel({ code, ...modifiers });
+    },
+
+    eventMatchesHotkey(event, hotkey) {
+        const parsed = this.fromKeyboardEvent(event);
+        return !!parsed.valid && parsed.hotkey.combo === hotkey.combo;
+    }
+};

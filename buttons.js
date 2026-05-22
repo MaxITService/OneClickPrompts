@@ -213,9 +213,12 @@ window.MaxExtensionButtons = {
 
         let shortcutDescription = '';
         if (shortcutKey) {
+            const fallbackHotkey = window.MaxExtensionHotkeys?.fromLegacyShortcutKey(shortcutKey);
             buttonElement.dataset.shortcutKey = shortcutKey.toString();
-            const displayKey = shortcutKey === 10 ? 0 : shortcutKey;
-            shortcutDescription = ` <span class="ocp-tooltip__system-msg"><i><b>(Shortcut: Alt+${displayKey})</b></i></span>`;
+            if (fallbackHotkey) {
+                buttonElement.dataset.hotkeyCombo = fallbackHotkey.combo;
+                shortcutDescription = ` <span class="ocp-tooltip__system-msg"><i><b>(Shortcut: ${fallbackHotkey.label})</b></i></span>`;
+            }
         }
 
         const updateTooltip = (text) => {
@@ -313,8 +316,17 @@ window.MaxExtensionButtons = {
             assignedShortcutKey = this.determineShortcutKeyForButtonIndex(buttonIndex, 0); // Pass 0 as offset for old logic
         }
 
-        if (assignedShortcutKey !== null) {
+        const explicitHotkey = window.MaxExtensionHotkeys?.normalizeStoredHotkey(buttonConfig.hotkey);
+        const fallbackHotkey = explicitHotkey
+            ? null
+            : window.MaxExtensionHotkeys?.fromLegacyShortcutKey(assignedShortcutKey);
+        const effectiveHotkey = explicitHotkey || fallbackHotkey;
+
+        if (assignedShortcutKey !== null && !explicitHotkey) {
             customButtonElement.dataset.shortcutKey = assignedShortcutKey.toString();
+        }
+        if (effectiveHotkey) {
+            customButtonElement.dataset.hotkeyCombo = effectiveHotkey.combo;
         }
 
         // Prepare tooltip parts: append (Auto-sends) if autoSend behavior is enabled
@@ -324,8 +336,8 @@ window.MaxExtensionButtons = {
             ? ' <span class="ocp-tooltip__system-msg"><i><b>(Auto-sends)</b></i></span>'
             : '';
 
-        const shortcutDescription = assignedShortcutKey !== null
-            ? ` <span class="ocp-tooltip__system-msg"><i><b>(Shortcut: Alt+${assignedShortcutKey === 10 ? 0 : assignedShortcutKey})</b></i></span>`
+        const shortcutDescription = effectiveHotkey
+            ? ` <span class="ocp-tooltip__system-msg"><i><b>(Shortcut: ${effectiveHotkey.label})</b></i></span>`
             : '';
 
         // Set the tooltip (title attribute) combining the button text (or a custom tooltip) with auto-send and shortcut info

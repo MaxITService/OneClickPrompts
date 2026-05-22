@@ -371,8 +371,23 @@ async function commenceExtensionInitialization(configurationObject) {
  */
 function manageKeyboardShortcutEvents(event) {
     if (!globalMaxExtensionConfig.enableShortcuts) return;
+    if (event.defaultPrevented) return;
 
-    // We check for Alt key, but not Ctrl or Meta (Cmd/Win). The 'code' property is layout-independent.
+    const parsedHotkey = window.MaxExtensionHotkeys?.fromKeyboardEvent(event);
+    if (parsedHotkey?.valid) {
+        const combo = parsedHotkey.hotkey.combo;
+        const selector = `button[data-hotkey-combo="${CSS.escape(combo)}"]`;
+        const targetButton = document.querySelector(selector);
+
+        if (targetButton) {
+            event.preventDefault();
+            const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true, view: window, shiftKey: event.shiftKey });
+            targetButton.dispatchEvent(clickEvent);
+            return;
+        }
+    }
+
+    // Legacy Alt+1..0 fallback for old rendered buttons without data-hotkey-combo.
     if (event.altKey && !event.ctrlKey && !event.metaKey && event.code.startsWith('Digit')) {
         let pressedKey = parseInt(event.code.replace('Digit', ''), 10);
         // Map Alt+0 to shortcut key 10.

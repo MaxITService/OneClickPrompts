@@ -21,6 +21,15 @@ const DELETE_UNDO_DURATION_MS = 2000;
 // Keyed by the button object reference so reorders/edits keep the link intact.
 const pendingButtonDeletions = new Map();
 
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 /**
  * Gets the Cross-Chat module settings.
  * @returns {Promise<Object>} - The Cross-Chat module settings.
@@ -85,26 +94,23 @@ function createButtonCardElement(button, index, crossChatSettings = null) {
         // Calculate hotkey with consideration for CrossChat buttons and separators
         let hotkeyHintHTML = '';
         if (!button.separator) {
-            // Calculate how many non-separator buttons are before this one
-            let nonSeparatorButtonsCount = 0;
-            for (let i = 0; i < index; i++) {
-                if (!currentProfile.customButtons[i].separator) {
-                    nonSeparatorButtonsCount++;
-                }
-            }
-
-            // Apply the shift if CrossChat buttons are placed before
-            let shift = 0;
-            if (crossChatSettings && crossChatSettings.enabled && crossChatSettings.placement === 'before' && !crossChatSettings.hideStandardButtons) {
-                shift = 2;
-            }
-            const hotkeyIndex = nonSeparatorButtonsCount + shift;
-
-            // Only show hotkey if it's within the 1-0 range (Alt+1 to Alt+0)
-            if (hotkeyIndex < 10) {
-                const displayKey = hotkeyIndex === 9 ? 0 : hotkeyIndex + 1;
-                hotkeyHintHTML = `<div class="shortcut-line"><span class="shortcut-indicator">[Alt+${displayKey}]</span></div>`;
-            }
+            const hotkeyInfo = getButtonHotkeyInfo(button, index, crossChatSettings);
+            const hotkeyClass = hotkeyInfo.isCustom ? ' shortcut-picker-button-custom' : '';
+            const hotkeyTitle = hotkeyInfo.isCustom
+                ? `Custom shortcut: ${hotkeyInfo.label}. Click to change.`
+                : hotkeyInfo.hotkey
+                    ? `Default shortcut: ${hotkeyInfo.label}. Click to customize.`
+                    : 'Click to set a custom shortcut.';
+            const safeHotkeyLabel = escapeHtml(hotkeyInfo.label);
+            hotkeyHintHTML = `
+                <div class="shortcut-line">
+                    <button
+                        type="button"
+                        class="shortcut-picker-button${hotkeyClass}"
+                        data-hotkey-picker="true"
+                        title="${escapeHtml(hotkeyTitle)}"
+                    >${safeHotkeyLabel}</button>
+                </div>`;
         }
 
         const metaSeparatorHTML = (autoSendHTML && hotkeyHintHTML)
@@ -453,6 +459,270 @@ async function addCopyLastChatGPTResponseButton(event) {
     logToGUIConsole('Added Copy Last ChatGPT Response system button');
     showToast('Copy Last ChatGPT Response Button added', 'success');
     if (event) showMouseEffect(event);
+}
+
+/**
+ * Gets the effective hotkey label shown in the popup.
+ * Explicit per-button hotkeys win; otherwise the legacy Alt+1..0 position hint is shown.
+ * @param {Object} button
+ * @param {number} index
+ * @param {Object|null} crossChatSettings
+ * @returns {{hotkey: Object|null, label: string, isCustom: boolean}}
+ */
+function getButtonHotkeyInfo(button, index, crossChatSettings) {
+    const explicitHotkey = window.MaxExtensionHotkeys?.normalizeStoredHotkey(button.hotkey);
+    if (explicitHotkey) {
+        return { hotkey: explicitHotkey, label: explicitHotkey.label, isCustom: true };
+    }
+
+    const fallbackIndex = getLegacyShortcutKeyForButtonIndex(index, crossChatSettings);
+    const fallbackHotkey = window.MaxExtensionHotkeys?.fromLegacyShortcutKey(fallbackIndex);
+    if (fallbackHotkey && isComboUsedByExplicitHotkey(fallbackHotkey.combo, index)) {
+        return { hotkey: null, label: 'Set hotkey', isCustom: false };
+    }
+    if (fallbackHotkey) {
+        return { hotkey: fallbackHotkey, label: fallbackHotkey.label, isCustom: false };
+    }
+
+    return { hotkey: null, label: 'Set hotkey', isCustom: false };
+}
+
+/**
+ * Reproduces runtime legacy shortcut numbering for popup display.
+ * @param {number} index
+ * @param {Object|null} crossChatSettings
+ * @returns {number|null}
+ */
+function getLegacyShortcutKeyForButtonIndex(index, crossChatSettings) {
+    let nonSeparatorButtonsCount = 0;
+    for (let i = 0; i < index; i++) {
+        if (!currentProfile.customButtons[i].separator) {
+            nonSeparatorButtonsCount++;
+        }
+    }
+
+    let shift = 0;
+    if (crossChatSettings && crossChatSettings.enabled && crossChatSettings.placement === 'before' && !crossChatSettings.hideStandardButtons) {
+        shift = 2;
+    }
+
+    const hotkeyIndex = nonSeparatorButtonsCount + shift;
+    if (hotkeyIndex < 10) {
+        return hotkeyIndex + 1;
+    }
+    return null;
+}
+
+function findExplicitHotkeyConflict(combo, exceptIndex) {
+    return currentProfile.customButtons.findIndex((button, index) => {
+        if (index === exceptIndex || !button || button.separator) return false;
+        const hotkey = window.MaxExtensionHotkeys?.normalizeStoredHotkey(button.hotkey);
+        return hotkey?.combo === combo;
+    });
+}
+
+function isComboUsedByExplicitHotkey(combo, exceptIndex) {
+    return findExplicitHotkeyConflict(combo, exceptIndex) !== -1;
+}
+
+function findGeneratedHotkeyConflict(combo, exceptIndex, crossChatSettings) {
+    const crossChatButtonsBefore =
+        crossChatSettings
+        && crossChatSettings.enabled
+        && crossChatSettings.placement === 'before'
+        && !crossChatSettings.hideStandardButtons;
+
+    if (crossChatButtonsBefore) {
+        const copyHotkey = window.MaxExtensionHotkeys?.fromLegacyShortcutKey(1);
+        const pasteHotkey = window.MaxExtensionHotkeys?.fromLegacyShortcutKey(2);
+        if (copyHotkey?.combo === combo) {
+            return { type: 'generated', label: 'Cross-Chat Copy button' };
+        }
+        if (pasteHotkey?.combo === combo) {
+            return { type: 'generated', label: 'Cross-Chat Paste button' };
+        }
+    }
+
+    for (let index = 0; index < currentProfile.customButtons.length; index++) {
+        if (index === exceptIndex) continue;
+        const button = currentProfile.customButtons[index];
+        if (!button || button.separator || window.MaxExtensionHotkeys?.normalizeStoredHotkey(button.hotkey)) continue;
+        const fallbackIndex = getLegacyShortcutKeyForButtonIndex(index, crossChatSettings);
+        const fallbackHotkey = window.MaxExtensionHotkeys?.fromLegacyShortcutKey(fallbackIndex);
+        if (fallbackHotkey?.combo === combo) {
+            return {
+                type: 'generated',
+                label: describeButtonForConflict(button, index)
+            };
+        }
+    }
+
+    return null;
+}
+
+function describeButtonForConflict(button, index) {
+    const icon = button?.icon ? `${button.icon} ` : '';
+    const text = button?.text || `button ${index + 1}`;
+    if (text === SETTINGS_BUTTON_MAGIC_TEXT) return `${icon}Settings button`;
+    if (text === COPY_LAST_CHATGPT_RESPONSE_BUTTON_MAGIC_TEXT) return `${icon}Copy last ChatGPT response button`;
+    return `${icon}${text.length > 60 ? `${text.slice(0, 57)}...` : text}`;
+}
+
+async function saveHotkeyForButton(index, hotkey) {
+    if (!currentProfile?.customButtons?.[index]) return false;
+
+    if (!hotkey) {
+        delete currentProfile.customButtons[index].hotkey;
+        await saveCurrentProfile();
+        await updatebuttonCardsList(false);
+        logToGUIConsole(`Cleared shortcut for button at index ${index}`);
+        showToast('Shortcut cleared.', 'success');
+        return true;
+    }
+
+    const validation = window.MaxExtensionHotkeys?.validate(hotkey);
+    if (!validation?.valid) {
+        showToast(validation?.reason || 'Invalid shortcut.', 'error');
+        return false;
+    }
+
+    const conflictIndex = findExplicitHotkeyConflict(hotkey.combo, index);
+    if (conflictIndex !== -1) {
+        const conflictButton = currentProfile.customButtons[conflictIndex];
+        const confirmed = await window.OCPModal.show({
+            title: 'Shortcut conflict',
+            text: `${hotkey.label} is already assigned to ${describeButtonForConflict(conflictButton, conflictIndex)}. Move it to this button instead?`,
+            confirmText: 'Move shortcut',
+            cancelText: 'Cancel',
+            type: 'confirm'
+        });
+
+        if (!confirmed) {
+            return false;
+        }
+
+        delete conflictButton.hotkey;
+    }
+
+    const crossChatSettings = await getCrossChatSettings();
+    const generatedConflict = findGeneratedHotkeyConflict(hotkey.combo, index, crossChatSettings);
+    if (generatedConflict) {
+        const confirmed = await window.OCPModal.show({
+            title: 'Generated shortcut conflict',
+            text: `${hotkey.label} is currently generated for ${generatedConflict.label}. Use it here and disable that generated shortcut?`,
+            confirmText: 'Use here',
+            cancelText: 'Cancel',
+            type: 'confirm'
+        });
+
+        if (!confirmed) {
+            return false;
+        }
+    }
+
+    currentProfile.customButtons[index].hotkey = hotkey;
+    await saveCurrentProfile();
+    await updatebuttonCardsList(false);
+    logToGUIConsole(`Saved shortcut ${hotkey.label} for button at index ${index}`);
+    showToast(`Shortcut saved: ${hotkey.label}`, 'success');
+    return true;
+}
+
+function openHotkeyPicker(buttonItem) {
+    const index = parseInt(buttonItem?.dataset.index, 10);
+    if (Number.isNaN(index) || !currentProfile?.customButtons?.[index]) return;
+
+    const button = currentProfile.customButtons[index];
+    let pendingHotkey = window.MaxExtensionHotkeys?.normalizeStoredHotkey(button.hotkey);
+    let validationMessage = pendingHotkey ? '' : 'Press Ctrl, Alt, or Cmd/Win plus a key.';
+
+    const overlay = document.createElement('div');
+    overlay.className = 'hotkey-picker-overlay';
+    overlay.innerHTML = `
+        <div class="hotkey-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="hotkeyPickerTitle">
+            <h3 id="hotkeyPickerTitle">Choose Shortcut</h3>
+            <div class="hotkey-picker-target">${escapeHtml(describeButtonForConflict(button, index))}</div>
+            <div class="hotkey-capture-box" tabindex="0">
+                <span class="hotkey-capture-value">${escapeHtml(pendingHotkey?.label || 'Press shortcut')}</span>
+            </div>
+            <p class="hotkey-picker-message">${escapeHtml(validationMessage)}</p>
+            <div class="hotkey-picker-actions">
+                <button type="button" class="hotkey-picker-clear">Clear</button>
+                <button type="button" class="hotkey-picker-cancel">Cancel</button>
+                <button type="button" class="hotkey-picker-save" ${pendingHotkey ? '' : 'disabled'}>Save</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const dialog = overlay.querySelector('.hotkey-picker-dialog');
+    const captureBox = overlay.querySelector('.hotkey-capture-box');
+    const valueEl = overlay.querySelector('.hotkey-capture-value');
+    const messageEl = overlay.querySelector('.hotkey-picker-message');
+    const saveButton = overlay.querySelector('.hotkey-picker-save');
+    const clearButton = overlay.querySelector('.hotkey-picker-clear');
+    const cancelButton = overlay.querySelector('.hotkey-picker-cancel');
+
+    const close = () => {
+        document.removeEventListener('keydown', onKeyDown, true);
+        overlay.remove();
+    };
+
+    const updatePendingHotkey = (result) => {
+        pendingHotkey = result.hotkey;
+        valueEl.textContent = result.hotkey?.label || 'Press shortcut';
+        messageEl.textContent = result.reason || 'Shortcut looks good.';
+        messageEl.classList.toggle('hotkey-picker-error', !result.valid);
+        saveButton.disabled = !result.valid;
+    };
+
+    const onKeyDown = (event) => {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            close();
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        updatePendingHotkey(window.MaxExtensionHotkeys.fromKeyboardEvent(event));
+    };
+
+    document.addEventListener('keydown', onKeyDown, true);
+
+    saveButton.addEventListener('click', async () => {
+        if (!pendingHotkey) return;
+        document.removeEventListener('keydown', onKeyDown, true);
+        const saved = await saveHotkeyForButton(index, pendingHotkey);
+        if (saved) {
+            close();
+        } else {
+            document.addEventListener('keydown', onKeyDown, true);
+            captureBox.focus();
+        }
+    });
+    clearButton.addEventListener('click', async () => {
+        document.removeEventListener('keydown', onKeyDown, true);
+        const saved = await saveHotkeyForButton(index, null);
+        if (saved) {
+            close();
+        } else {
+            document.addEventListener('keydown', onKeyDown, true);
+            captureBox.focus();
+        }
+    });
+    cancelButton.addEventListener('click', close);
+    overlay.addEventListener('mousedown', (event) => {
+        if (!dialog.contains(event.target)) {
+            close();
+        }
+    });
+
+    requestAnimationFrame(() => {
+        overlay.classList.add('is-visible');
+        captureBox.focus();
+    });
 }
 
 

@@ -682,6 +682,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.classList.contains('delete-button')) {
             const buttonItem = e.target.closest('.button-item');
             startUndoableDeletion(buttonItem);
+            return;
+        }
+
+        const shortcutButton = e.target.closest('.shortcut-picker-button');
+        if (shortcutButton) {
+            const buttonItem = shortcutButton.closest('.button-item');
+            openHotkeyPicker(buttonItem);
         }
     });
 

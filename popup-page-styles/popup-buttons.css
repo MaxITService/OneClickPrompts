@@ -300,6 +300,121 @@ button.danger:hover {
     /* Ensure the text centers within the full width */
 }
 
+.button-item .shortcut-picker-button {
+    border: 1px solid var(--border-color, #d0d0d0);
+    border-radius: 4px;
+    background: var(--button-secondary-bg, transparent);
+    color: var(--text-muted, #666);
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+    line-height: 1.2;
+    padding: 3px 7px;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.button-item .shortcut-picker-button:hover {
+    color: var(--text-color, #333);
+    border-color: var(--primary-color, #7a5cc8);
+}
+
+.button-item .shortcut-picker-button-custom {
+    color: var(--primary-color, #7a5cc8);
+    font-weight: 600;
+}
+
+.hotkey-picker-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.48);
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity 180ms ease;
+}
+
+.hotkey-picker-overlay.is-visible {
+    opacity: 1;
+}
+
+.hotkey-picker-dialog {
+    width: min(420px, 100%);
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 8px;
+    background: var(--bg-color, #fff);
+    color: var(--text-color, #333);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
+    padding: 20px;
+    text-align: center;
+}
+
+.hotkey-picker-dialog h3 {
+    margin: 0 0 10px;
+    color: var(--primary-color, #7a5cc8);
+}
+
+.hotkey-picker-target {
+    margin-bottom: 14px;
+    color: var(--text-muted, #666);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.hotkey-capture-box {
+    border: 1px dashed var(--primary-color, #7a5cc8);
+    border-radius: 6px;
+    padding: 18px 12px;
+    outline: none;
+    background: rgba(122, 92, 200, 0.08);
+}
+
+.hotkey-capture-value {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.hotkey-picker-message {
+    min-height: 20px;
+    margin: 12px 0 16px;
+    color: var(--text-muted, #666);
+    font-size: 13px;
+}
+
+.hotkey-picker-error {
+    color: var(--danger-color, #dc3545);
+}
+
+.hotkey-picker-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.hotkey-picker-actions button {
+    border-radius: 6px;
+    border: 1px solid var(--border-color, #ccc);
+    padding: 8px 14px;
+    cursor: pointer;
+}
+
+.hotkey-picker-save {
+    background: var(--primary-color, #7a5cc8);
+    border-color: var(--primary-color, #7a5cc8);
+    color: #fff;
+}
+
+.hotkey-picker-save:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
 /* Subtle divider between auto-send row and the hotkey hint.
    Only rendered when both elements are present (set in JS). */
 .button-item .meta-separator {

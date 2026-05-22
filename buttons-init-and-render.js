@@ -98,6 +98,12 @@ window.MaxExtensionButtonsInit = {
             return;
         }
 
+        const explicitHotkeyCombos = new Set(
+            globalMaxExtensionConfig.customButtons
+                .map(config => window.MaxExtensionHotkeys?.normalizeStoredHotkey(config?.hotkey)?.combo)
+                .filter(Boolean)
+        );
+
         const crossChatConfig = window.globalCrossChatConfig || {};
         const crossChatEnabled = !!crossChatConfig.enabled;
         const hideStandardCrossChatButtons = !!crossChatConfig.hideStandardButtons;
@@ -169,6 +175,15 @@ window.MaxExtensionButtonsInit = {
             let shortcutKey = null;
             if (globalMaxExtensionConfig.enableShortcuts && nonSeparatorCount < 10) {
                 shortcutKey = nonSeparatorCount + 1;
+            }
+            const explicitHotkey = def.type === 'custom'
+                ? window.MaxExtensionHotkeys?.normalizeStoredHotkey(def.config?.hotkey)
+                : null;
+            const fallbackHotkey = explicitHotkey
+                ? null
+                : window.MaxExtensionHotkeys?.fromLegacyShortcutKey(shortcutKey);
+            if (!explicitHotkey && fallbackHotkey && explicitHotkeyCombos.has(fallbackHotkey.combo)) {
+                shortcutKey = null;
             }
 
             let buttonElement;
