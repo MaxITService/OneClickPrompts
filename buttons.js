@@ -301,10 +301,10 @@ window.MaxExtensionButtons = {
      * @param {Object} buttonConfig - The configuration object for the custom button.
      * @param {number} buttonIndex - The index of the button in the custom buttons array.
      * @param {Function} onClickHandler - The function to handle the button's click event.
-     * @param {number|null} [overrideShortcutKey=null] - An optional shortcut key to override the default calculation.
+     * @param {number|null|undefined} [overrideShortcutKey] - Optional shortcut key. Use null to suppress legacy fallback.
      * @returns {HTMLButtonElement} - The newly created custom send button element.
      */
-    createCustomSendButton: function (buttonConfig, buttonIndex, onClickHandler, overrideShortcutKey = null) {
+    createCustomSendButton: function (buttonConfig, buttonIndex, onClickHandler, overrideShortcutKey = undefined) {
         const customButtonElement = document.createElement('button');
         customButtonElement.type = 'button'; // Prevent form being defaut type, that is "submit".
         customButtonElement.innerHTML = buttonConfig.icon;
@@ -312,7 +312,7 @@ window.MaxExtensionButtons = {
 
         // Assign keyboard shortcuts to the first 10 non-separator buttons if shortcuts are enabled
         let assignedShortcutKey = overrideShortcutKey;
-        if (assignedShortcutKey === null && globalMaxExtensionConfig.enableShortcuts) {
+        if (assignedShortcutKey === undefined && globalMaxExtensionConfig.enableShortcuts) {
             assignedShortcutKey = this.determineShortcutKeyForButtonIndex(buttonIndex, 0); // Pass 0 as offset for old logic
         }
 
@@ -322,7 +322,7 @@ window.MaxExtensionButtons = {
             : window.MaxExtensionHotkeys?.fromLegacyShortcutKey(assignedShortcutKey);
         const effectiveHotkey = explicitHotkey || fallbackHotkey;
 
-        if (assignedShortcutKey !== null && !explicitHotkey) {
+        if (assignedShortcutKey !== null && assignedShortcutKey !== undefined && !explicitHotkey) {
             customButtonElement.dataset.shortcutKey = assignedShortcutKey.toString();
         }
         if (effectiveHotkey) {
