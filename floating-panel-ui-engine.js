@@ -871,6 +871,24 @@ window.MaxExtensionFloatingPanel.processNextQueueItem = async function () {
     this.renderQueueDisplay();
     logConCgp('[queue-engine] Sending item:', item.text);
 
+    const restoreUnsentItem = () => {
+        if (!Array.isArray(this.promptQueue)) {
+            this.promptQueue = [];
+        }
+        const alreadyQueued = this.promptQueue.some((entry) => (
+            entry === item || (item.queueId && entry?.queueId === item.queueId)
+        ));
+        if (!alreadyQueued) {
+            this.promptQueue.unshift(item);
+        }
+        if (typeof this.renderQueueDisplay === 'function') {
+            this.renderQueueDisplay();
+        }
+        if (typeof this.updateQueueControlsState === 'function') {
+            this.updateQueueControlsState();
+        }
+    };
+
     // Clear any stale autosend interval from a previous run to avoid collisions on "first send".
     if (window.autoSendInterval) {
         try { clearInterval(window.autoSendInterval); } catch (_) { }
@@ -898,6 +916,7 @@ window.MaxExtensionFloatingPanel.processNextQueueItem = async function () {
         if (sendResult) {
             if (sendResult.status === 'blocked_by_stop') {
                 logConCgp('[queue-engine] Queue paused: blocked by stop button/AI typing.');
+                restoreUnsentItem();
                 if (typeof this.setQueueStatus === 'function') {
                     this.setQueueStatus(
                         'Waiting for AI...',
@@ -910,6 +929,7 @@ window.MaxExtensionFloatingPanel.processNextQueueItem = async function () {
                 return;
             } else if (sendResult.status === 'not_found' || sendResult.status === 'failed') {
                 logConCgp('[queue-engine] Queue paused: Send failed or button not found.');
+                restoreUnsentItem();
                 if (typeof this.setQueueStatus === 'function') {
                     let failMsg = 'Send Failed';
                     let failTooltip = 'Unable to find the send button. Please check if the AI is still generating or if the page layout has changed.';
@@ -938,6 +958,7 @@ window.MaxExtensionFloatingPanel.processNextQueueItem = async function () {
 
     } catch (err) {
         logConCgp('[queue-engine] Error while dispatching queued click:', err?.message || err);
+        restoreUnsentItem();
         if (typeof this.setQueueStatus === 'function') {
             this.setQueueStatus('Error: ' + (err?.message || 'Dispatch failed'), 'error');
         }
