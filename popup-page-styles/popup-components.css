@@ -1089,7 +1089,7 @@ body.dark-theme .help-donate-button {
 .side-donate-creeper--left {
     left: var(--side-donate-edge-offset);
     animation-name: sideDonateCrawl, sideDonateCreepInLeft;
-    animation-duration: 56s, 4500ms;
+    animation-duration: 56s, 9000ms;
     animation-timing-function: ease-in-out, cubic-bezier(0.22, 1, 0.36, 1);
     animation-iteration-count: infinite, 1;
     animation-direction: alternate, normal;
@@ -1099,7 +1099,7 @@ body.dark-theme .help-donate-button {
 .side-donate-creeper--right {
     right: var(--side-donate-edge-offset);
     animation-name: sideDonateCrawl, sideDonateCreepInRight;
-    animation-duration: 56s, 4500ms;
+    animation-duration: 56s, 9000ms;
     animation-timing-function: ease-in-out, cubic-bezier(0.22, 1, 0.36, 1);
     animation-iteration-count: infinite, 1;
     animation-direction: alternate, normal;
@@ -1389,12 +1389,12 @@ body.dark-theme .side-donate-creeper__close {
         transform: translateX(-150%);
     }
 
-    20% {
+    12% {
         opacity: 1;
         transform: translateX(-60%);
     }
 
-    35% {
+    20% {
         opacity: 1;
         transform: translateX(-60%);
     }
@@ -1404,7 +1404,7 @@ body.dark-theme .side-donate-creeper__close {
         transform: translateX(-120%);
     }
 
-    62% {
+    58% {
         opacity: 0.7;
         transform: translateX(-120%);
     }
@@ -1421,12 +1421,12 @@ body.dark-theme .side-donate-creeper__close {
         transform: translateX(150%);
     }
 
-    20% {
+    12% {
         opacity: 1;
         transform: translateX(60%);
     }
 
-    35% {
+    20% {
         opacity: 1;
         transform: translateX(60%);
     }
@@ -1436,7 +1436,7 @@ body.dark-theme .side-donate-creeper__close {
         transform: translateX(120%);
     }
 
-    62% {
+    58% {
         opacity: 0.7;
         transform: translateX(120%);
     }
