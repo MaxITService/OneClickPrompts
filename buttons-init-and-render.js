@@ -75,6 +75,7 @@ window.MaxExtensionButtonEditMode = {
                 button.style.transform = '';
                 button.style.transition = '';
                 button.style.zIndex = '';
+                button.style.visibility = '';
                 if (button.__ocpEditPointerDown) {
                     button.removeEventListener('pointerdown', button.__ocpEditPointerDown);
                     delete button.__ocpEditPointerDown;
@@ -85,6 +86,15 @@ window.MaxExtensionButtonEditMode = {
         }
         if (this.clickBlocker && container) {
             container.removeEventListener('click', this.clickBlocker, true);
+        }
+        if (this.__boundMove) document.removeEventListener('pointermove', this.__boundMove);
+        if (this.__boundUp) {
+            document.removeEventListener('pointerup', this.__boundUp);
+            document.removeEventListener('pointercancel', this.__boundUp);
+        }
+        if (this.pointerState?.ghost) {
+            this.pointerState.ghost.remove();
+            if (this.pointerState.button) this.pointerState.button.style.visibility = '';
         }
         this.active = false;
         this.container = null;
@@ -204,6 +214,8 @@ window.MaxExtensionButtonEditMode = {
         const index = Number(button.dataset.ocpButtonEditIndex);
         if (!Number.isInteger(index)) return;
 
+        // Capture initial rect so the button can follow the cursor from the grab point
+        const rect = button.getBoundingClientRect();
         this.pointerState = {
             button,
             pointerId: event.pointerId,
@@ -212,12 +224,20 @@ window.MaxExtensionButtonEditMode = {
             lastX: event.clientX,
             lastY: event.clientY,
             dragging: false,
-            originalIndex: index
+            originalIndex: index,
+            offsetX: event.clientX - rect.left,
+            offsetY: event.clientY - rect.top,
+            origWidth: rect.width,
+            origHeight: rect.height,
+            ghost: null
         };
-        button.setPointerCapture?.(event.pointerId);
-        button.addEventListener('pointermove', this.__boundMove || (this.__boundMove = (moveEvent) => this.handlePointerMove(moveEvent)));
-        button.addEventListener('pointerup', this.__boundUp || (this.__boundUp = (upEvent) => this.handlePointerUp(upEvent)));
-        button.addEventListener('pointercancel', this.__boundUp);
+
+        // Use document-level listeners so events are never lost (no setPointerCapture needed)
+        if (!this.__boundMove) this.__boundMove = (e) => this.handlePointerMove(e);
+        if (!this.__boundUp) this.__boundUp = (e) => this.handlePointerUp(e);
+        document.addEventListener('pointermove', this.__boundMove);
+        document.addEventListener('pointerup', this.__boundUp);
+        document.addEventListener('pointercancel', this.__boundUp);
     },
 
     handlePointerMove(event) {
@@ -231,9 +251,47 @@ window.MaxExtensionButtonEditMode = {
         if (!state.dragging) {
             state.dragging = true;
             state.button.classList.add('ocp-button-edit-dragging');
+            // SCALING NOTE: The buttons container may have a CSS transform applied
+            // by MaxExtensionUiScale (e.g. transform:scale(...)). When any ancestor
+            // has a transform, `position:fixed` becomes relative to that ancestor
+            // instead of the viewport, while event.clientX/Y remain in viewport
+            // coords — causing a position mismatch (button flies off-screen).
+            // Solution: append the ghost to document.body which has no transforms,
+            // so `position:fixed` + `left/top` work in true viewport coordinates.
+            // The original button stays hidden in-flow so DOM reordering works
+            // naturally and siblings reflow correctly for FLIP animations.
+            const ghost = state.button.cloneNode(true);
+            ghost.querySelectorAll('.ocp-button-delete-x').forEach(n => n.remove());
+            const btnRect = state.button.getBoundingClientRect();
+            ghost.style.cssText = `
+                position: fixed;
+                left: ${btnRect.left}px;
+                top: ${btnRect.top}px;
+                width: ${state.origWidth}px;
+                height: ${state.origHeight}px;
+                margin: 0;
+                pointer-events: none;
+                z-index: 2147483647;
+                opacity: 0.82;
+                cursor: grabbing;
+                animation: none;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+                border-radius: 6px;
+            `;
+            document.body.appendChild(ghost);
+            state.ghost = ghost;
+            state.button.style.visibility = 'hidden';
         }
 
         event.preventDefault();
+        // Ghost positioning uses viewport coords (event.clientX/Y) directly.
+        // getBoundingClientRect() also returns viewport coords, so offsetX/Y
+        // (computed from the initial rect) are consistent regardless of scaling.
+        state.ghost.style.left = `${event.clientX - state.offsetX}px`;
+        state.ghost.style.top = `${event.clientY - state.offsetY}px`;
+        // moveDraggedButton uses clientX/Y to compare against sibling rects
+        // (also viewport coords via getBoundingClientRect), so scaling is
+        // transparent — no manual scale compensation needed.
         this.moveDraggedButton(event.clientX, event.clientY, state.button);
     },
 
@@ -241,15 +299,20 @@ window.MaxExtensionButtonEditMode = {
         const state = this.pointerState;
         if (!state || state.pointerId !== event.pointerId) return;
         const button = state.button;
-        button.releasePointerCapture?.(event.pointerId);
-        button.removeEventListener('pointermove', this.__boundMove);
-        button.removeEventListener('pointerup', this.__boundUp);
-        button.removeEventListener('pointercancel', this.__boundUp);
+
+        document.removeEventListener('pointermove', this.__boundMove);
+        document.removeEventListener('pointerup', this.__boundUp);
+        document.removeEventListener('pointercancel', this.__boundUp);
 
         if (state.dragging) {
             event.preventDefault();
             event.stopPropagation();
+            if (state.ghost) state.ghost.remove();
             button.classList.remove('ocp-button-edit-dragging');
+            // Clear any residual FLIP animation before restoring visibility
+            button.style.transform = '';
+            button.style.transition = '';
+            button.style.visibility = '';
             button.__ocpSuppressNextClick = true;
             setTimeout(() => { button.__ocpSuppressNextClick = false; }, 0);
             this.saveOrderFromDom();
@@ -259,6 +322,10 @@ window.MaxExtensionButtonEditMode = {
     },
 
     moveDraggedButton(clientX, clientY, draggedButton) {
+        // Throttle: let the previous FLIP animation finish before starting a new reorder
+        const now = performance.now();
+        if (this._lastReorderTime && now - this._lastReorderTime < 200) return;
+
         const siblings = this.getEditableButtons().filter(button => button !== draggedButton);
         let target = null;
         let insertAfter = false;
@@ -277,6 +344,12 @@ window.MaxExtensionButtonEditMode = {
         });
 
         if (!target) return;
+
+        // Skip if the button is already in the correct position (no DOM change needed)
+        if (insertAfter && target.nextElementSibling === draggedButton) return;
+        if (!insertAfter && draggedButton.nextElementSibling === target) return;
+
+        this._lastReorderTime = now;
         const beforeRects = this.captureRects();
         if (insertAfter) {
             target.after(draggedButton);
