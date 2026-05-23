@@ -912,9 +912,9 @@ Key areas:
     text-decoration: none;
     transform: translateY(0) scale(1);
     transition:
-        transform 180ms ease,
-        box-shadow 180ms ease,
-        filter 180ms ease;
+        transform 340ms cubic-bezier(0.34, 1.56, 0.64, 1),
+        box-shadow 260ms ease,
+        filter 220ms ease;
     animation: helpDonateFloat 3.8s ease-in-out infinite;
 }
 
@@ -947,18 +947,21 @@ Key areas:
 .help-donate-button:focus-visible {
     color: #271600;
     text-decoration: none;
-    filter: saturate(1.08) brightness(1.04);
+    filter: saturate(1.14) brightness(1.06);
     box-shadow:
-        0 16px 34px rgba(255, 138, 91, 0.36),
-        0 7px 0 rgba(98, 65, 20, 0.22);
-    transform: translateY(-3px) scale(1.015);
+        0 20px 40px rgba(255, 138, 91, 0.38),
+        0 8px 0 rgba(98, 65, 20, 0.24);
+    transform: translateY(-7px) scale(1.03);
 }
 
 .help-donate-button:active {
     box-shadow:
-        0 7px 18px rgba(255, 138, 91, 0.25),
-        0 2px 0 rgba(98, 65, 20, 0.22);
-    transform: translateY(2px) scale(0.995);
+        0 4px 12px rgba(255, 138, 91, 0.25),
+        0 1px 0 rgba(98, 65, 20, 0.22);
+    transform: translateY(3px) scale(0.98);
+    transition:
+        transform 100ms ease,
+        box-shadow 100ms ease;
 }
 
 .help-donate-button__spark,
@@ -999,10 +1002,16 @@ Key areas:
 }
 
 body.dark-theme .help-donate-button {
+    color: #271600;
     border-color: rgba(255, 209, 92, 0.76);
     box-shadow:
         0 14px 30px rgba(255, 177, 72, 0.22),
         0 5px 0 rgba(0, 0, 0, 0.34);
+}
+
+body.dark-theme .help-donate-button:hover,
+body.dark-theme .help-donate-button:focus-visible {
+    color: #271600;
 }
 
 @keyframes helpDonateFloat {
