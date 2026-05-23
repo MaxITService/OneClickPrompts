@@ -431,26 +431,35 @@ window.MaxExtensionButtons = {
 
         // Shift + click on Queue button opens slider + entry flyout over cursor to edit delay in seconds
         if (event && event.shiftKey) {
-            this.__showDelayFlyout(event);
+            try {
+                window.MaxExtensionButtons.__showDelayFlyout(event);
+            } catch (err) {
+                logConCgp('[buttons][queue] Error showing delay flyout:', err?.message || err);
+                if (typeof window.showToast === 'function') {
+                    window.showToast('Could not open queue delay settings.', 'error');
+                }
+            }
             return { status: 'flyout_opened' };
         }
 
         const queue = window.MaxExtensionFloatingPanel;
 
-        // Apply custom defaultDelaySeconds if provided on regular click
+        // Apply custom defaultDelaySeconds if provided on regular click and no config exists yet
         if (defaultDelaySeconds !== undefined && defaultDelaySeconds !== null) {
             const parsedDelay = parseInt(defaultDelaySeconds, 10);
             if (Number.isFinite(parsedDelay) && parsedDelay > 0) {
                 if (!window.globalMaxExtensionConfig) {
                     window.globalMaxExtensionConfig = {};
                 }
-                window.globalMaxExtensionConfig.queueDelaySeconds = parsedDelay;
-                window.globalMaxExtensionConfig.queueDelayUnit = 'sec';
-                if (queue && typeof queue.recalculateRunningTimer === 'function') {
-                    queue.recalculateRunningTimer();
-                }
-                if (queue && typeof queue.syncQueueModeUiFromConfig === 'function') {
-                    queue.syncQueueModeUiFromConfig();
+                if (window.globalMaxExtensionConfig.queueDelaySeconds === undefined) {
+                    window.globalMaxExtensionConfig.queueDelaySeconds = parsedDelay;
+                    window.globalMaxExtensionConfig.queueDelayUnit = 'sec';
+                    if (queue && typeof queue.recalculateRunningTimer === 'function') {
+                        queue.recalculateRunningTimer();
+                    }
+                    if (queue && typeof queue.syncQueueModeUiFromConfig === 'function') {
+                        queue.syncQueueModeUiFromConfig();
+                    }
                 }
             }
         }
@@ -773,9 +782,12 @@ window.MaxExtensionButtons = {
     },
 
     __showDelayFlyout: function (event) {
-        // Remove any existing flyout
+        // Remove any existing flyout and clean up its listeners
         const existing = document.getElementById('ocp-queue-delay-flyout');
         if (existing) {
+            if (typeof existing.__ocp_cleanup === 'function') {
+                existing.__ocp_cleanup();
+            }
             existing.remove();
         }
 
@@ -925,6 +937,12 @@ window.MaxExtensionButtons = {
             setTimeout(() => {
                 flyout.remove();
             }, 150);
+            document.removeEventListener('mousedown', onOutsideClick, true);
+            document.removeEventListener('keydown', onKeyDown, true);
+        };
+
+        // Attach a cleanup helper to the DOM node so we can clean up if destroyed from outside
+        flyout.__ocp_cleanup = () => {
             document.removeEventListener('mousedown', onOutsideClick, true);
             document.removeEventListener('keydown', onKeyDown, true);
         };
