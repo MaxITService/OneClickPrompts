@@ -154,18 +154,16 @@ function initSideDonateCreeper() {
 
     let dismissed = false;
 
-    function setOpen(isOpen) {
-        creeper.classList.toggle('is-open', isOpen);
-        creeper.classList.toggle('is-paused', isOpen);
-        trigger.setAttribute('aria-expanded', String(isOpen));
-        tooltip.setAttribute('aria-hidden', String(!isOpen));
+    function setTooltipVisible(isVisible) {
+        trigger.setAttribute('aria-expanded', String(isVisible));
+        tooltip.setAttribute('aria-hidden', String(!isVisible));
     }
 
     function syncForActiveTab(panelId) {
         const shouldShow = panelId === 'buttonConfigurationSection' && !dismissed;
         creeper.classList.toggle('is-hidden', !shouldShow);
         if (!shouldShow) {
-            setOpen(false);
+            setTooltipVisible(false);
         }
     }
 
@@ -173,8 +171,8 @@ function initSideDonateCreeper() {
         const side = Math.random() < 0.5 ? 'left' : 'right';
         const viewportHeight = Math.max(window.innerHeight || 0, 420);
         const safeTop = 88;
-        const safeBottom = 168;
-        const buttonHeight = 126;
+        const safeBottom = 118;
+        const buttonHeight = 68;
         const minY = safeTop;
         const maxY = Math.max(minY + 80, viewportHeight - safeBottom - buttonHeight);
         const startY = Math.round(minY + Math.random() * Math.max(1, maxY - minY));
@@ -192,13 +190,13 @@ function initSideDonateCreeper() {
 
     trigger.addEventListener('click', (event) => {
         event.stopPropagation();
-        setOpen(!creeper.classList.contains('is-open'));
+        chrome.tabs.create({ url: donateUrl });
     });
 
     closeButton.addEventListener('click', (event) => {
         event.stopPropagation();
         dismissed = true;
-        setOpen(false);
+        setTooltipVisible(false);
         creeper.classList.add('is-dismissed');
     });
 
@@ -207,11 +205,23 @@ function initSideDonateCreeper() {
         chrome.tabs.create({ url: donateUrl });
     });
 
-    document.addEventListener('click', (event) => {
-        if (!creeper.classList.contains('is-open') || creeper.contains(event.target)) {
+    creeper.addEventListener('mouseenter', () => {
+        setTooltipVisible(true);
+    });
+
+    creeper.addEventListener('mouseleave', () => {
+        setTooltipVisible(false);
+    });
+
+    creeper.addEventListener('focusin', () => {
+        setTooltipVisible(true);
+    });
+
+    creeper.addEventListener('focusout', (event) => {
+        if (event.relatedTarget && creeper.contains(event.relatedTarget)) {
             return;
         }
-        setOpen(false);
+        setTooltipVisible(false);
     });
 
     document.addEventListener('ocp:tab-changed', (event) => {

@@ -185,6 +185,90 @@ Key areas:
 }
 
 /* ------------------------------------------------------------------------- */
+/* Interface Scale Setting                                                   */
+/* ------------------------------------------------------------------------- */
+.ui-scale-setting {
+    display: grid;
+    grid-template-columns: minmax(190px, 1fr) minmax(190px, 260px);
+    gap: 14px;
+    align-items: center;
+    margin: 14px 0;
+}
+
+.ui-scale-setting__control {
+    display: grid;
+    gap: 8px;
+}
+
+.ui-scale-setting__control label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-weight: 700;
+}
+
+.ui-scale-setting__control input[type="range"] {
+    width: 100%;
+}
+
+.ui-scale-preview {
+    --ocp-preview-scale: 1;
+    display: grid;
+    gap: 8px;
+    justify-items: start;
+    min-height: 92px;
+    padding: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--manual-bg);
+}
+
+.ui-scale-preview__panel,
+.ui-scale-preview__row {
+    transform: scale(var(--ocp-preview-scale));
+    transform-origin: top left;
+}
+
+.ui-scale-preview__panel {
+    width: 150px;
+    overflow: hidden;
+    border: 1px solid rgba(90, 90, 90, 0.35);
+    border-radius: 6px;
+    background: rgba(50, 50, 50, 0.9);
+}
+
+.ui-scale-preview__header {
+    height: 12px;
+    background: rgba(40, 40, 40, 0.95);
+}
+
+.ui-scale-preview__buttons,
+.ui-scale-preview__row {
+    display: flex;
+    gap: 5px;
+    padding: 7px;
+}
+
+.ui-scale-preview button {
+    min-width: 32px;
+    min-height: 24px;
+    padding: 3px 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-color);
+    color: var(--text-color);
+    font: inherit;
+}
+
+@media (max-width: 620px) {
+    .ui-scale-setting {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ------------------------------------------------------------------------- */
 /* Export and Import Buttons                                                 */
 /* ------------------------------------------------------------------------- */
 /* Removed redundant ID-specific styles for #exportProfile and #importProfile
@@ -927,11 +1011,14 @@ body.dark-theme .help-donate-button {
     --side-donate-y-start: 140px;
     --side-donate-y-end: 360px;
     --side-donate-edge-offset: 10px;
+    --side-donate-idle-bg: color-mix(in srgb, var(--bg-color, #f9f9f9) 76%, #8f8f8f 24%);
+    --side-donate-idle-border: color-mix(in srgb, var(--border-color, #ccc) 68%, #777 32%);
+    --side-donate-idle-text: color-mix(in srgb, var(--text-color, #333) 68%, #777 32%);
     position: fixed;
     top: var(--side-donate-y-start);
     z-index: 80;
-    width: 42px;
-    height: 126px;
+    width: 26px;
+    height: 68px;
     pointer-events: none;
     animation: sideDonateCrawl 28s ease-in-out infinite alternate;
 }
@@ -972,30 +1059,31 @@ body.dark-theme .help-donate-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    width: 42px;
-    height: 126px;
-    padding: 12px 7px;
-    border: 1px solid rgba(255, 209, 92, 0.9);
-    border-radius: 8px;
-    background:
-        linear-gradient(135deg, rgba(255, 249, 190, 0.96), rgba(255, 182, 86, 0.98) 52%, rgba(91, 209, 138, 0.92)),
-        #ffd15c;
-    box-shadow:
-        0 10px 22px rgba(255, 138, 91, 0.28),
-        0 2px 0 rgba(98, 65, 20, 0.2);
-    color: #271600;
+    gap: 4px;
+    width: 26px;
+    height: 68px;
+    padding: 8px 3px;
+    border: 1px solid var(--side-donate-idle-border);
+    border-radius: 7px;
+    background: var(--side-donate-idle-bg);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    color: var(--side-donate-idle-text);
     cursor: pointer;
-    font-size: 13px;
+    font-size: 8px;
     font-weight: 800;
     line-height: 1;
-    overflow: hidden;
+    opacity: 0.8;
+    overflow: visible;
     pointer-events: auto;
     text-transform: uppercase;
     transform-origin: 50% 50%;
     transition:
+        background 180ms ease,
+        border-color 180ms ease,
         box-shadow 180ms ease,
+        color 180ms ease,
         filter 180ms ease,
+        opacity 180ms ease,
         transform 180ms ease;
     writing-mode: vertical-rl;
     animation: sideDonateWobble 6.5s ease-in-out infinite;
@@ -1012,35 +1100,71 @@ body.dark-theme .help-donate-button {
 .side-donate-creeper__button::before {
     content: "";
     position: absolute;
-    inset: -28% -80%;
+    inset: -22px -30px;
+    background:
+        radial-gradient(circle at 20% 18%, rgba(255, 229, 102, 0.96) 0 2px, transparent 3px),
+        radial-gradient(circle at 78% 24%, rgba(255, 255, 255, 0.95) 0 2px, transparent 3px),
+        radial-gradient(circle at 62% 76%, rgba(189, 150, 255, 0.96) 0 2px, transparent 3px),
+        radial-gradient(circle at 28% 82%, rgba(91, 209, 138, 0.92) 0 2px, transparent 3px);
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.72);
+}
+
+.side-donate-creeper__button::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 5px;
     background: linear-gradient(
-        105deg,
-        transparent 34%,
-        rgba(255, 255, 255, 0.72) 48%,
-        transparent 62%
+        145deg,
+        rgba(255, 255, 255, 0.32),
+        transparent 42%,
+        rgba(255, 255, 255, 0.18)
     );
-    transform: translateY(-55%);
-    animation: sideDonateShine 5.8s ease-in-out infinite;
+    opacity: 0.2;
+    pointer-events: none;
 }
 
 .side-donate-creeper__button:hover,
 .side-donate-creeper__button:focus-visible {
-    filter: saturate(1.08) brightness(1.04);
+    border-color: color-mix(in srgb, var(--primary-color, #7a5cc8) 72%, #ffffff 28%);
+    background:
+        linear-gradient(
+            145deg,
+            color-mix(in srgb, var(--primary-color, #7a5cc8) 84%, #ffffff 16%),
+            color-mix(in srgb, var(--primary-color, #7a5cc8) 64%, #5bd18a 36%)
+        );
+    color: #ffffff;
+    filter: saturate(1.18) brightness(1.08);
+    opacity: 1;
     box-shadow:
-        0 12px 26px rgba(255, 138, 91, 0.34),
-        0 3px 0 rgba(98, 65, 20, 0.18);
+        0 0 0 3px color-mix(in srgb, var(--primary-color, #7a5cc8) 20%, transparent),
+        0 10px 24px color-mix(in srgb, var(--primary-color, #7a5cc8) 34%, transparent),
+        0 2px 0 rgba(31, 22, 8, 0.18);
+}
+
+.side-donate-creeper__button:hover::before,
+.side-donate-creeper__button:focus-visible::before {
+    animation: sideDonateSparks 920ms ease-in-out infinite;
+    opacity: 1;
+}
+
+.side-donate-creeper__button:hover::after,
+.side-donate-creeper__button:focus-visible::after {
+    opacity: 0.48;
 }
 
 .side-donate-creeper--left .side-donate-creeper__button:hover,
-.side-donate-creeper--left .side-donate-creeper__button:focus-visible,
-.side-donate-creeper--left.is-open .side-donate-creeper__button {
-    transform: rotate(180deg) translateX(-2px);
+.side-donate-creeper--left .side-donate-creeper__button:focus-visible {
+    animation: sideDonateMagnetLeft 720ms ease-in-out infinite alternate;
+    transform: rotate(180deg);
 }
 
 .side-donate-creeper--right .side-donate-creeper__button:hover,
-.side-donate-creeper--right .side-donate-creeper__button:focus-visible,
-.side-donate-creeper--right.is-open .side-donate-creeper__button {
-    transform: translateX(-2px);
+.side-donate-creeper--right .side-donate-creeper__button:focus-visible {
+    animation: sideDonateMagnetRight 720ms ease-in-out infinite alternate;
+    transform: rotate(0deg);
 }
 
 .side-donate-creeper__tooltip {
@@ -1073,7 +1197,8 @@ body.dark-theme .help-donate-button {
     right: calc(100% + 10px);
 }
 
-.side-donate-creeper.is-open .side-donate-creeper__tooltip {
+.side-donate-creeper:hover .side-donate-creeper__tooltip,
+.side-donate-creeper:focus-within .side-donate-creeper__tooltip {
     opacity: 1;
     pointer-events: auto;
     transform: translateY(-50%) scale(1);
@@ -1111,9 +1236,10 @@ body.dark-theme .help-donate-button {
 }
 
 body.dark-theme .side-donate-creeper__button {
-    box-shadow:
-        0 12px 28px rgba(255, 177, 72, 0.2),
-        0 2px 0 rgba(0, 0, 0, 0.36);
+    --side-donate-idle-bg: color-mix(in srgb, var(--bg-color, #222) 72%, #777 28%);
+    --side-donate-idle-border: color-mix(in srgb, var(--border-color, #444) 64%, #999 36%);
+    --side-donate-idle-text: color-mix(in srgb, var(--text-color, #eee) 72%, #888 28%);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
 }
 
 body.dark-theme .side-donate-creeper__tooltip {
@@ -1183,15 +1309,39 @@ body.dark-theme .side-donate-creeper__close {
     }
 }
 
-@keyframes sideDonateShine {
-    0%,
-    58% {
-        transform: translateY(-58%);
+@keyframes sideDonateMagnetLeft {
+    0% {
+        translate: 0 0;
     }
 
-    82%,
     100% {
-        transform: translateY(62%);
+        translate: 7px -1px;
+    }
+}
+
+@keyframes sideDonateMagnetRight {
+    0% {
+        translate: 0 0;
+    }
+
+    100% {
+        translate: -7px -1px;
+    }
+}
+
+@keyframes sideDonateSparks {
+    0% {
+        opacity: 0;
+        transform: scale(0.58) rotate(0deg);
+    }
+
+    35% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+        transform: scale(1.22) rotate(18deg);
     }
 }
 
