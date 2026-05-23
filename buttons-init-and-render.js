@@ -60,7 +60,7 @@ window.MaxExtensionButtonEditMode = {
         this.origin = origin || (container.closest('#max-extension-floating-panel') ? 'panel' : 'inline');
         container.classList.add('ocp-button-edit-mode');
         this.decorateContainer(container);
-        this.__toast('Button edit mode: drag buttons to reorder, click × to delete. Click Settings to exit.', 'info', 4500);
+        this.__toast('Button edit mode: drag buttons or separators to reorder, click × to delete. Click Settings to exit.', 'info', 4500);
     },
 
     exit() {
@@ -131,7 +131,7 @@ window.MaxExtensionButtonEditMode = {
         deleteButton.tabIndex = 0;
         deleteButton.className = 'ocp-button-delete-x';
         deleteButton.textContent = '×';
-        deleteButton.title = 'Delete this button';
+        deleteButton.title = 'Delete this button or separator';
         deleteButton.addEventListener('click', (event) => {
             event.preventDefault();
             event.stopPropagation();
@@ -265,17 +265,11 @@ window.MaxExtensionButtonEditMode = {
         this.playFlip(beforeRects);
     },
 
-    getNonSeparatorSlots() {
+    getEditableSlots() {
         const buttons = Array.isArray(window.globalMaxExtensionConfig?.customButtons)
             ? window.globalMaxExtensionConfig.customButtons
             : [];
-        const slots = [];
-        buttons.forEach((button, index) => {
-            if (!button?.separator) {
-                slots.push(index);
-            }
-        });
-        return slots;
+        return buttons.map((_, index) => index);
     },
 
     async saveOrderFromDom() {
@@ -284,7 +278,7 @@ window.MaxExtensionButtonEditMode = {
         const order = this.getEditableButtons()
             .map(button => Number(button.dataset.ocpButtonEditIndex))
             .filter(Number.isInteger);
-        const slots = this.getNonSeparatorSlots();
+        const slots = this.getEditableSlots();
         if (order.length !== slots.length) return;
 
         const previous = [...config.customButtons];
@@ -490,6 +484,11 @@ window.MaxExtensionButtonsInit = {
             // Handle separators from custom buttons
             if (def.type === 'custom' && def.config.separator) {
                 const separatorElement = MaxExtensionUtils.createSeparator();
+                if (Number.isInteger(def.profileIndex)) {
+                    separatorElement.dataset.ocpButtonEditIndex = String(def.profileIndex);
+                    separatorElement.dataset.ocpButtonEditKind = 'separator';
+                    separatorElement.title = 'Separator. Ctrl+Shift-click Settings to reorder or delete.';
+                }
                 container.appendChild(separatorElement);
                 logConCgp('[init] Separator element has been created and appended.');
                 return; // Skip to next item

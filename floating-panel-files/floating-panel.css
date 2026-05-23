@@ -991,6 +991,17 @@
     animation-delay: -320ms;
 }
 
+[id$="-custom-buttons-container"].ocp-button-edit-mode [data-ocp-button-edit-kind="separator"] {
+    min-width: 18px;
+    width: 18px;
+    height: 28px;
+    margin: 0 8px;
+    border: 1px dashed rgba(122, 92, 200, 0.5);
+    background-clip: content-box;
+    box-sizing: border-box;
+    cursor: grab;
+}
+
 [id$="-custom-buttons-container"].ocp-button-edit-mode .ocp-button-edit-dragging {
     animation: none;
     cursor: grabbing;
