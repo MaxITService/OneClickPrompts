@@ -1123,6 +1123,15 @@ body.dark-theme .help-donate-button:focus-visible {
     animation-fill-mode: none, both;
 }
 
+/* On hover during peek-a-boo entrance, drop the entrance animation
+   and smoothly transition into the fully visible crawling state. */
+.side-donate-creeper--left.is-hover-arriving,
+.side-donate-creeper--right.is-hover-arriving {
+    animation-name: sideDonateCrawl !important;
+    transition: transform 800ms cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 400ms ease;
+}
+
 .side-donate-creeper--left.is-exiting {
     animation-name: sideDonateCrawl, sideDonateCreepOutLeft !important;
     animation-duration: 56s, 2000ms !important;

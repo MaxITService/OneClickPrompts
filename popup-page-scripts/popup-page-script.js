@@ -298,6 +298,7 @@ function initSideDonateCreeper() {
     let dismissed = false;
     let exitTimerId = null;
     let lastInteractionEnd = 0;
+    let entranceComplete = false;
 
     function setTooltipVisible(isVisible) {
         trigger.setAttribute('aria-expanded', String(isVisible));
@@ -369,6 +370,12 @@ function initSideDonateCreeper() {
         creeper.classList.toggle('side-donate-creeper--right', side === 'right');
         creeper.style.setProperty('--side-donate-y-start', `${startY}px`);
         creeper.style.setProperty('--side-donate-y-end', `${endY}px`);
+
+        // Reset hover-arrive state so the next entrance animation can play
+        creeper.classList.remove('is-hover-arriving');
+        creeper.style.removeProperty('transform');
+        creeper.style.removeProperty('opacity');
+        entranceComplete = false;
     }
 
     placeQuietlyOnSide();
@@ -378,6 +385,7 @@ function initSideDonateCreeper() {
     creeper.addEventListener('animationend', (event) => {
         if (event.target !== creeper) return;
         if (event.animationName === 'sideDonateCreepInLeft' || event.animationName === 'sideDonateCreepInRight') {
+            entranceComplete = true;
             trigger.classList.add('is-squishing');
             trigger.addEventListener('animationend', () => {
                 trigger.classList.remove('is-squishing');
@@ -408,6 +416,37 @@ function initSideDonateCreeper() {
 
     creeper.addEventListener('mouseenter', () => {
         setTooltipVisible(true);
+
+        // If the peek-a-boo entrance is still playing, smoothly
+        // transition into the fully visible crawling state instead
+        // of freezing mid-peek.
+        if (!entranceComplete) {
+            entranceComplete = true;
+
+            // Capture the current mid-peek position (animation is
+            // paused by the :hover CSS rule so getComputedStyle is
+            // stable).
+            const cs = getComputedStyle(creeper);
+            creeper.style.transform = cs.transform;
+            creeper.style.opacity = cs.opacity;
+
+            // Drop the entrance animation; keep only the vertical crawl.
+            creeper.classList.add('is-hover-arriving');
+            void creeper.offsetWidth; // force reflow
+
+            // Transition to fully visible
+            creeper.style.transform = 'translateX(0)';
+            creeper.style.opacity = '1';
+
+            // Clean up inline overrides once the transition lands.
+            const onArrived = (e) => {
+                if (e.target !== creeper || e.propertyName !== 'transform') return;
+                creeper.style.removeProperty('transform');
+                creeper.style.removeProperty('opacity');
+                creeper.removeEventListener('transitionend', onArrived);
+            };
+            creeper.addEventListener('transitionend', onArrived);
+        }
     });
 
     creeper.addEventListener('mouseleave', () => {
