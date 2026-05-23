@@ -1089,7 +1089,7 @@ body.dark-theme .help-donate-button {
 .side-donate-creeper--left {
     left: var(--side-donate-edge-offset);
     animation-name: sideDonateCrawl, sideDonateCreepInLeft;
-    animation-duration: 28s, 3200ms;
+    animation-duration: 28s, 4500ms;
     animation-timing-function: ease-in-out, cubic-bezier(0.22, 1, 0.36, 1);
     animation-iteration-count: infinite, 1;
     animation-direction: alternate, normal;
@@ -1099,7 +1099,7 @@ body.dark-theme .help-donate-button {
 .side-donate-creeper--right {
     right: var(--side-donate-edge-offset);
     animation-name: sideDonateCrawl, sideDonateCreepInRight;
-    animation-duration: 28s, 3200ms;
+    animation-duration: 28s, 4500ms;
     animation-timing-function: ease-in-out, cubic-bezier(0.22, 1, 0.36, 1);
     animation-iteration-count: infinite, 1;
     animation-direction: alternate, normal;
@@ -1159,12 +1159,12 @@ body.dark-theme .help-donate-button {
 
 .side-donate-creeper--left .side-donate-creeper__button {
     transform: rotate(180deg);
-    animation: sideDonateWobble 6.5s ease-in-out infinite, sideDonateSpinInLeft 3200ms cubic-bezier(0.22, 1, 0.36, 1) 1 normal both;
+    animation: sideDonateWobble 6.5s ease-in-out infinite;
 }
 
 .side-donate-creeper--right .side-donate-creeper__button {
     transform: rotate(0deg);
-    animation: sideDonateWobble 6.5s ease-in-out infinite, sideDonateSpinInRight 3200ms cubic-bezier(0.22, 1, 0.36, 1) 1 normal both;
+    animation: sideDonateWobble 6.5s ease-in-out infinite;
 }
 
 .side-donate-creeper__button::before {
@@ -1327,20 +1327,86 @@ body.dark-theme .side-donate-creeper__close {
     color: #ffe8aa;
 }
 
+/* Coffee drip trail — faint drops below the creeper as it crawls */
+.side-donate-creeper::after {
+    content: "";
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    width: 22px;
+    height: 48px;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at 35% 10%, #6F4E37 0 2.5px, transparent 3px),
+        radial-gradient(circle at 65% 42%, #6F4E37 0 2px, transparent 2.5px),
+        radial-gradient(circle at 42% 78%, #6F4E37 0 1.5px, transparent 2px);
+    opacity: 0;
+    transform: translateX(-50%);
+    animation: sideDonateDrip 2.5s ease-in infinite;
+}
+
+.side-donate-creeper.is-hidden::after,
+.side-donate-creeper.is-dismissed::after,
+.side-donate-creeper.is-exiting::after {
+    animation: none;
+    opacity: 0;
+}
+
+/* Squash-and-stretch on click or landing */
+.side-donate-creeper__button.is-squishing {
+    animation: sideDonateSquish 400ms ease-out 1 normal both !important;
+}
+
+/* Tipsy crawl — gentle horizontal sway as it moves vertically */
 @keyframes sideDonateCrawl {
     0% {
         top: var(--side-donate-y-start);
+        translate: 0 0;
+    }
+
+    25% {
+        translate: 4px 0;
+    }
+
+    50% {
+        translate: -3px 0;
+    }
+
+    75% {
+        translate: 2px 0;
     }
 
     100% {
         top: var(--side-donate-y-end);
+        translate: 0 0;
     }
 }
 
+/* Peek-a-boo entrance — peeks in, ducks back shyly, then commits */
 @keyframes sideDonateCreepInLeft {
     0% {
         opacity: 0;
         transform: translateX(-150%);
+    }
+
+    20% {
+        opacity: 1;
+        transform: translateX(-60%);
+    }
+
+    35% {
+        opacity: 1;
+        transform: translateX(-60%);
+    }
+
+    50% {
+        opacity: 0.7;
+        transform: translateX(-120%);
+    }
+
+    62% {
+        opacity: 0.7;
+        transform: translateX(-120%);
     }
 
     100% {
@@ -1353,6 +1419,26 @@ body.dark-theme .side-donate-creeper__close {
     0% {
         opacity: 0;
         transform: translateX(150%);
+    }
+
+    20% {
+        opacity: 1;
+        transform: translateX(60%);
+    }
+
+    35% {
+        opacity: 1;
+        transform: translateX(60%);
+    }
+
+    50% {
+        opacity: 0.7;
+        transform: translateX(120%);
+    }
+
+    62% {
+        opacity: 0.7;
+        transform: translateX(120%);
     }
 
     100% {
@@ -1383,23 +1469,6 @@ body.dark-theme .side-donate-creeper__close {
     }
 }
 
-@keyframes sideDonateSpinInLeft {
-    0% {
-        transform: rotate(0deg);
-    }
-    100% {
-        transform: rotate(180deg);
-    }
-}
-
-@keyframes sideDonateSpinInRight {
-    0% {
-        transform: rotate(-180deg);
-    }
-    100% {
-        transform: rotate(0deg);
-    }
-}
 
 @keyframes sideDonateWobble {
     0%,
@@ -1456,10 +1525,50 @@ body.dark-theme .side-donate-creeper__close {
     }
 }
 
+@keyframes sideDonateDrip {
+    0% {
+        opacity: 0;
+        transform: translateX(-50%) translateY(0);
+    }
+
+    15% {
+        opacity: 0.32;
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateX(-50%) translateY(38px) scale(0.5);
+    }
+}
+
+@keyframes sideDonateSquish {
+    0% {
+        scale: 1 1;
+    }
+
+    30% {
+        scale: 1.18 0.82;
+    }
+
+    55% {
+        scale: 0.92 1.12;
+    }
+
+    75% {
+        scale: 1.04 0.96;
+    }
+
+    100% {
+        scale: 1 1;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .side-donate-creeper,
+    .side-donate-creeper::after,
     .side-donate-creeper__button,
-    .side-donate-creeper__button::before {
+    .side-donate-creeper__button::before,
+    .side-donate-creeper__button.is-squishing {
         animation: none;
     }
 }

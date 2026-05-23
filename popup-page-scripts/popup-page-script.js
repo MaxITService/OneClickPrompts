@@ -366,9 +366,29 @@ function initSideDonateCreeper() {
     placeQuietlyOnSide();
     syncForActiveTab(document.querySelector('.tab-panel.is-active')?.id);
 
+    // Squash-and-stretch on entrance landing
+    creeper.addEventListener('animationend', (event) => {
+        if (event.target !== creeper) return;
+        if (event.animationName === 'sideDonateCreepInLeft' || event.animationName === 'sideDonateCreepInRight') {
+            trigger.classList.add('is-squishing');
+            trigger.addEventListener('animationend', () => {
+                trigger.classList.remove('is-squishing');
+            }, { once: true });
+        }
+    });
+
     trigger.addEventListener('click', (event) => {
         event.stopPropagation();
-        chrome.tabs.create({ url: donateUrl });
+        trigger.classList.add('is-squishing');
+        // Fallback in case animationend never fires
+        const fallback = setTimeout(() => {
+            chrome.tabs.create({ url: donateUrl });
+        }, 500);
+        trigger.addEventListener('animationend', () => {
+            clearTimeout(fallback);
+            trigger.classList.remove('is-squishing');
+            chrome.tabs.create({ url: donateUrl });
+        }, { once: true });
     });
 
     openButton.addEventListener('click', (event) => {
