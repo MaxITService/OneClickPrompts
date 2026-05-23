@@ -166,18 +166,29 @@ window.MaxExtensionButtonEditMode = {
         if (!container) return;
         container.querySelectorAll('[data-ocp-settings-button="true"]').forEach(button => {
             if (!button.dataset.ocpSettingsDefaultTitle) {
-                button.dataset.ocpSettingsDefaultTitle = button.getAttribute('title') || '';
+                button.dataset.ocpSettingsDefaultTitle = button.getAttribute('data-ocp-tooltip') || button.getAttribute('title') || '';
             }
             if (isEditing) {
-                const exitTitle = 'Exit button edit mode. Drag buttons or separators to reorder them, or click × to delete one.';
-                button.setAttribute('title', exitTitle);
-                button.setAttribute('aria-label', exitTitle);
+                this.setSettingsButtonTooltip(
+                    button,
+                    'Settings button\n• Click: exit individual button edit mode.\n• Drag buttons or separators: reorder them relative to each other.\n• Click ×: delete a button or separator.'
+                );
             } else {
                 const defaultTitle = button.dataset.ocpSettingsDefaultTitle || 'Open extension settings';
-                button.setAttribute('title', defaultTitle);
-                button.setAttribute('aria-label', defaultTitle);
+                this.setSettingsButtonTooltip(button, defaultTitle);
             }
         });
+    },
+
+    setSettingsButtonTooltip(button, text) {
+        if (!button) return;
+        button.setAttribute('data-ocp-tooltip', text);
+        button.setAttribute('aria-label', text);
+        if (button.hasAttribute('data-ocp-tooltip-attached')) {
+            button.removeAttribute('title');
+        } else {
+            button.setAttribute('title', text);
+        }
     },
 
     getEditableButtons() {
@@ -610,7 +621,14 @@ window.MaxExtensionButtonsInit = {
             } else { // 'custom' button type
                 if (def.config.text === SETTINGS_BUTTON_MAGIC_TEXT) {
                     // Special handling for the settings button.
-                    const settingsButtonConfig = { ...def.config, text: 'Settings', tooltip: 'Click to open extension settings in a new tab. Shift+Click to move the buttons container (Pick or use arrows + Save). Ctrl+Shift+Click edits buttons in-place.' };
+                    const settingsButtonTooltip = [
+                        'Settings button',
+                        '• Click: open OneClickPrompts settings in a new tab.',
+                        '• Shift-click: move the whole place where OneClickPrompts injects all buttons.',
+                        '• Ctrl+Shift-click: edit individual buttons and separators, then drag them relative to each other.',
+                        '• While editing: click Settings again to exit edit mode.'
+                    ].join('\n');
+                    const settingsButtonConfig = { ...def.config, text: 'Settings', tooltip: settingsButtonTooltip };
                     const settingsClickHandler = (event) => {
                         if (event?.currentTarget?.__ocpSuppressNextClick) {
                             event.preventDefault();
@@ -655,8 +673,8 @@ window.MaxExtensionButtonsInit = {
                     };
                     buttonElement = MaxExtensionButtons.createCustomSendButton(settingsButtonConfig, index, settingsClickHandler, shortcutKey);
                     buttonElement.dataset.ocpSettingsButton = 'true';
-                    buttonElement.dataset.ocpSettingsDefaultTitle = buttonElement.getAttribute('title') || '';
-                    buttonElement.setAttribute('aria-label', buttonElement.dataset.ocpSettingsDefaultTitle);
+                    buttonElement.dataset.ocpSettingsDefaultTitle = settingsButtonTooltip;
+                    window.MaxExtensionButtonEditMode?.setSettingsButtonTooltip(buttonElement, settingsButtonTooltip);
                 } else if (def.config.text === COPY_LAST_CHATGPT_RESPONSE_BUTTON_MAGIC_TEXT) {
                     const isChatGPT = window?.InjectionTargetsOnWebsite?.activeSite === 'ChatGPT';
                     const copyLastResponseButtonConfig = {
