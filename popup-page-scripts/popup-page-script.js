@@ -322,7 +322,7 @@ function initSideDonateCreeper() {
         // 2-second grace period after last hover/focus interaction
         const elapsed = Date.now() - lastInteractionEnd;
         if (elapsed < 2000) {
-            exitTimerId = setTimeout(triggerExitSequence, 2000 - elapsed);
+            exitTimerId = setTimeout(scheduleNextExit, 2000 - elapsed);
             return;
         }
 
