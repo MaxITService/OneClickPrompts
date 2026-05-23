@@ -366,6 +366,77 @@ async function applyBackupPayload(rawPayload, options = {}) {
     };
 }
 
+async function createCustomButtonFromEditorText(payload = {}) {
+    const rawText = typeof payload.text === 'string' ? payload.text.trim() : '';
+    if (!rawText) {
+        return { success: false, reason: 'empty_text' };
+    }
+
+    const current = await chrome.storage.local.get(['currentProfile']);
+    const profileName = sanitizeProfileName(current.currentProfile) || 'Default';
+    const loadedProfile = await loadProfileConfig(profileName);
+    if (!loadedProfile) {
+        return { success: false, reason: 'profile_not_found' };
+    }
+
+    const profile = normalizeProfileConfig(deepCloneSafeJson(loadedProfile), profileName);
+    const button = {
+        icon: '+',
+        text: rawText,
+        autoSend: payload.autoSend !== false
+    };
+
+    profile.customButtons.push(button);
+    const buttonIndex = profile.customButtons.length - 1;
+    const success = await saveProfileConfig(profileName, profile);
+    return {
+        success,
+        profileName,
+        buttonIndex,
+        button
+    };
+}
+
+async function updateCustomButtonFromEditorOptions(payload = {}) {
+    const profileName = sanitizeProfileName(payload.profileName);
+    const text = typeof payload.text === 'string' ? payload.text : '';
+    const requestedIndex = Number(payload.buttonIndex);
+
+    if (!profileName || !text) {
+        return { success: false, reason: 'invalid_request' };
+    }
+
+    const loadedProfile = await loadProfileConfig(profileName);
+    if (!loadedProfile) {
+        return { success: false, reason: 'profile_not_found' };
+    }
+
+    const profile = normalizeProfileConfig(deepCloneSafeJson(loadedProfile), profileName);
+    let buttonIndex = Number.isInteger(requestedIndex) ? requestedIndex : -1;
+    let button = profile.customButtons[buttonIndex];
+    if (!button || button.separator || button.text !== text) {
+        buttonIndex = profile.customButtons.findLastIndex((candidate) => (
+            candidate && !candidate.separator && candidate.text === text
+        ));
+        button = profile.customButtons[buttonIndex];
+    }
+
+    if (!button) {
+        return { success: false, reason: 'button_not_found' };
+    }
+
+    if (typeof payload.autoSend === 'boolean') {
+        button.autoSend = payload.autoSend;
+    }
+    if (typeof payload.icon === 'string') {
+        const icon = payload.icon.trim();
+        button.icon = icon || '+';
+    }
+
+    const success = await saveProfileConfig(profileName, profile);
+    return { success, profileName, buttonIndex, button };
+}
+
 // Main message handler function
 export function handleMessage(request, sender, sendResponse) {
     switch (request.type) {
@@ -391,6 +462,27 @@ export function handleMessage(request, sender, sendResponse) {
                 // Echo the origin back to the initiator for clarity.
                 sendResponse({ config, origin: request.origin || null });
                 logConfigurationRelatedStuff('Profile switch request processed');
+            });
+            return true;
+
+        case 'createCustomButtonFromEditorText':
+            createCustomButtonFromEditorText(request).then(result => {
+                sendResponse(result);
+                logConfigurationRelatedStuff('Create button from editor request processed');
+            }).catch(error => {
+                handleStorageError(error);
+                sendResponse({ success: false, error: error.message });
+            });
+            return true;
+
+        case 'updateCustomButtonFromEditorOptions':
+        case 'updateCustomButtonAutoSend':
+            updateCustomButtonFromEditorOptions(request).then(result => {
+                sendResponse(result);
+                logConfigurationRelatedStuff('Update custom button from editor options request processed');
+            }).catch(error => {
+                handleStorageError(error);
+                sendResponse({ success: false, error: error.message });
             });
             return true;
 

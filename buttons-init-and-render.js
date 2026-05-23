@@ -94,6 +94,7 @@ window.MaxExtensionButtonsInit = {
         const SETTINGS_BUTTON_MAGIC_TEXT = '%OCP_APP_SETTINGS_SYSTEM_BUTTON%';
         const COPY_LAST_CHATGPT_RESPONSE_BUTTON_MAGIC_TEXT = '%OCP_COPY_LAST_CHATGPT_RESPONSE_SYSTEM_BUTTON%';
         const QUEUE_CURRENT_EDITOR_BUTTON_MAGIC_TEXT = '%OCP_QUEUE_CURRENT_EDITOR_SYSTEM_BUTTON%';
+        const CREATE_BUTTON_FROM_EDITOR_MAGIC_TEXT = '%OCP_CREATE_BUTTON_FROM_EDITOR_SYSTEM_BUTTON%';
         // --- Create a unified list of all buttons to be rendered ---
         const allButtonDefs = [];
         let nonSeparatorCount = 0;
@@ -256,6 +257,18 @@ window.MaxExtensionButtonsInit = {
                     };
                     buttonElement = MaxExtensionButtons.createCustomSendButton(queueButtonConfig, index, queueClickHandler, shortcutKey);
                     buttonElement.classList.add('ocp-queue-system-button');
+                } else if (def.config.text === CREATE_BUTTON_FROM_EDITOR_MAGIC_TEXT) {
+                    const createButtonConfig = {
+                        ...def.config,
+                        text: 'Create button from current editor text',
+                        tooltip: 'Create a normal prompt button from the current editor text in the active profile.'
+                    };
+                    const createClickHandler = (event) => {
+                        if (window.MaxExtensionButtons && typeof window.MaxExtensionButtons.createButtonFromEditorText === 'function') {
+                            window.MaxExtensionButtons.createButtonFromEditorText(event);
+                        }
+                    };
+                    buttonElement = MaxExtensionButtons.createCustomSendButton(createButtonConfig, index, createClickHandler, shortcutKey);
                 } else {
                     buttonElement = MaxExtensionButtons.createCustomSendButton(def.config, index, processCustomSendButtonClick, shortcutKey);
                 }

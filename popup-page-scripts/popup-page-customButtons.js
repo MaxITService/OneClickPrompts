@@ -16,6 +16,7 @@
 const SETTINGS_BUTTON_MAGIC_TEXT = '%OCP_APP_SETTINGS_SYSTEM_BUTTON%';
 const COPY_LAST_CHATGPT_RESPONSE_BUTTON_MAGIC_TEXT = '%OCP_COPY_LAST_CHATGPT_RESPONSE_SYSTEM_BUTTON%';
 const QUEUE_CURRENT_EDITOR_BUTTON_MAGIC_TEXT = '%OCP_QUEUE_CURRENT_EDITOR_SYSTEM_BUTTON%';
+const CREATE_BUTTON_FROM_EDITOR_MAGIC_TEXT = '%OCP_CREATE_BUTTON_FROM_EDITOR_SYSTEM_BUTTON%';
 const DELETE_UNDO_DURATION_MS = 2000;
 
 // Tracks buttons that are waiting out their undo window before deletion.
@@ -76,7 +77,8 @@ function createButtonCardElement(button, index, crossChatSettings = null) {
         const isSettingsButton = (button.text === SETTINGS_BUTTON_MAGIC_TEXT);
         const isCopyLastChatGPTResponseButton = (button.text === COPY_LAST_CHATGPT_RESPONSE_BUTTON_MAGIC_TEXT);
         const isQueueCurrentEditorButton = (button.text === QUEUE_CURRENT_EDITOR_BUTTON_MAGIC_TEXT);
-        const isSystemButton = isSettingsButton || isCopyLastChatGPTResponseButton || isQueueCurrentEditorButton;
+        const isCreateButtonFromEditorButton = (button.text === CREATE_BUTTON_FROM_EDITOR_MAGIC_TEXT);
+        const isSystemButton = isSettingsButton || isCopyLastChatGPTResponseButton || isQueueCurrentEditorButton || isCreateButtonFromEditorButton;
 
         const systemButtonMeta = getSystemButtonMeta(button.text);
         const systemButtonText = systemButtonMeta.text;
@@ -141,6 +143,9 @@ function createButtonCardElement(button, index, crossChatSettings = null) {
             buttonItem.classList.add('settings-button-card');
         } else if (isQueueCurrentEditorButton) {
             buttonItem.setAttribute('data-system', 'queue-current-editor');
+            buttonItem.classList.add('settings-button-card');
+        } else if (isCreateButtonFromEditorButton) {
+            buttonItem.setAttribute('data-system', 'create-button-from-editor');
             buttonItem.classList.add('settings-button-card');
         }
     }
@@ -493,6 +498,30 @@ async function addQueueCurrentEditorButton(event) {
     if (event) showMouseEffect(event);
 }
 
+/**
+ * Adds the special + system button. Runtime click reads the current editor text
+ * and creates a normal custom button from it in the active profile.
+ * @param {MouseEvent} [event]
+ */
+async function addCreateButtonFromEditorButton(event) {
+    const icon = document.getElementById('buttonIcon').value || '+';
+    const text = CREATE_BUTTON_FROM_EDITOR_MAGIC_TEXT;
+    const autoSend = false;
+
+    const exists = (currentProfile.customButtons || []).some(b => b && !b.separator && b.text === text);
+    if (exists) {
+        showToast('+ Button already exists in this profile.', 'info');
+        return;
+    }
+
+    currentProfile.customButtons.push({ icon, text, autoSend });
+    await saveCurrentProfile();
+    updatebuttonCardsList();
+    logToGUIConsole('Added + system button');
+    showToast('+ Button added', 'success');
+    if (event) showMouseEffect(event);
+}
+
 function getSystemButtonMeta(text) {
     if (text === SETTINGS_BUTTON_MAGIC_TEXT) {
         return {
@@ -512,6 +541,13 @@ function getSystemButtonMeta(text) {
         return {
             text: 'Queue current editor text | Sends after configured delay',
             title: 'This button queues the current editor text, clears the editor so you can write the next item, and sends queued items after the delay configured in Floating Window Settings.'
+        };
+    }
+
+    if (text === CREATE_BUTTON_FROM_EDITOR_MAGIC_TEXT) {
+        return {
+            text: 'Create button from current editor text',
+            title: 'This button reads the current chat editor text and creates a new normal prompt button from it in the active profile. It does not clear the editor.'
         };
     }
 

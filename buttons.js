@@ -520,6 +520,258 @@ window.MaxExtensionButtons = {
         return { status: 'queued', count };
     },
 
+    /**
+     * Creates a normal custom prompt button from the current editor text.
+     * The editor is intentionally left unchanged.
+     * @param {Event} event
+     * @returns {Promise<Object>}
+     */
+    createButtonFromEditorText: async function (event) {
+        if (event && typeof event.preventDefault === 'function') {
+            event.preventDefault();
+        }
+        if (event && typeof event.stopPropagation === 'function') {
+            event.stopPropagation();
+        }
+
+        const editor = this.__findActiveEditor();
+        if (!editor) {
+            this.__toast('Could not find the chat editor.', 'error');
+            logConCgp('[buttons][create] Editor not found.');
+            return { status: 'failed', reason: 'editor_not_found' };
+        }
+
+        const text = this.__readEditorText(editor).trim();
+        if (!text) {
+            this.__toast('Nothing to turn into a button. Type text in the editor first.', 'warning');
+            return { status: 'failed', reason: 'empty_editor' };
+        }
+
+        try {
+            const response = await chrome.runtime.sendMessage({
+                type: 'createCustomButtonFromEditorText',
+                text,
+                autoSend: true
+            });
+
+            if (!response?.success) {
+                const reason = response?.reason || response?.error || 'unknown';
+                this.__toast('Could not create button from editor text.', 'error');
+                logConCgp('[buttons][create] Create button request failed:', reason);
+                return { status: 'failed', reason };
+            }
+
+            this.__toast('Button created from editor text.', 'success');
+            this.__showCreatedButtonFlyout(event, response);
+            return { status: 'created', ...response };
+        } catch (error) {
+            this.__toast('Could not create button from editor text.', 'error');
+            logConCgp('[buttons][create] Create button request error:', error?.message || error);
+            return { status: 'failed', reason: 'message_error' };
+        }
+    },
+
+    __showCreatedButtonFlyout: function (event, created) {
+        const existing = document.getElementById('ocp-create-button-flyout');
+        if (existing) {
+            if (typeof existing.__ocp_cleanup === 'function') {
+                existing.__ocp_cleanup();
+            }
+            existing.remove();
+        }
+
+        const flyout = document.createElement('div');
+        flyout.id = 'ocp-create-button-flyout';
+        flyout.style.cssText = `
+            position: fixed;
+            z-index: 2147483647;
+            width: 260px;
+            padding: 12px;
+            display: grid;
+            gap: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 12px;
+            background: rgba(25, 25, 25, 0.82);
+            backdrop-filter: blur(12px) saturate(180%);
+            -webkit-backdrop-filter: blur(12px) saturate(180%);
+            box-shadow: 0 10px 34px rgba(0, 0, 0, 0.34);
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-size: 13px;
+            pointer-events: auto;
+            opacity: 0;
+            transform: scale(0.96);
+            transition: opacity 150ms ease, transform 150ms ease;
+        `;
+
+        const header = document.createElement('div');
+        header.style.cssText = 'display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 700;';
+
+        const title = document.createElement('span');
+        title.textContent = '+ Button created';
+
+        const closeButton = document.createElement('button');
+        closeButton.type = 'button';
+        closeButton.textContent = '×';
+        closeButton.setAttribute('aria-label', 'Close');
+        closeButton.style.cssText = `
+            width: 26px;
+            height: 26px;
+            border: 0;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+        `;
+
+        header.append(title, closeButton);
+
+        const preview = document.createElement('div');
+        preview.textContent = created?.button?.text || '';
+        preview.style.cssText = `
+            max-height: 72px;
+            overflow: hidden;
+            padding: 8px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.84);
+            line-height: 1.3;
+        `;
+
+        const iconLabel = document.createElement('label');
+        iconLabel.style.cssText = 'display: flex; align-items: center; justify-content: space-between; gap: 10px;';
+
+        const iconText = document.createElement('span');
+        iconText.textContent = 'Icon';
+
+        const iconInput = document.createElement('input');
+        iconInput.type = 'text';
+        iconInput.value = created?.button?.icon || '+';
+        iconInput.setAttribute('aria-label', 'New button icon');
+        iconInput.style.cssText = `
+            width: 72px;
+            min-height: 28px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 18px;
+            text-align: center;
+            outline: none;
+        `;
+
+        iconLabel.append(iconText, iconInput);
+
+        const toggleLabel = document.createElement('label');
+        toggleLabel.style.cssText = 'display: flex; align-items: center; justify-content: space-between; gap: 10px;';
+
+        const toggleText = document.createElement('span');
+        toggleText.textContent = 'Auto-send';
+
+        const toggle = document.createElement('input');
+        toggle.type = 'checkbox';
+        toggle.checked = created?.button?.autoSend !== false;
+        toggle.style.cssText = 'width: 18px; height: 18px; accent-color: #10a37f;';
+
+        toggleLabel.append(toggleText, toggle);
+        flyout.append(header, preview, iconLabel, toggleLabel);
+        document.body.appendChild(flyout);
+
+        const rect = event?.target?.getBoundingClientRect?.();
+        let x = rect ? rect.left : (event?.clientX || 24);
+        let y = rect ? rect.bottom + 8 : (event?.clientY || 24);
+        x = Math.max(10, Math.min(window.innerWidth - 280, x));
+        y = Math.max(10, Math.min(window.innerHeight - 170, y));
+        flyout.style.left = `${Math.round(x)}px`;
+        flyout.style.top = `${Math.round(y)}px`;
+
+        const closeFlyout = () => {
+            flyout.style.opacity = '0';
+            flyout.style.transform = 'scale(0.96)';
+            setTimeout(() => flyout.remove(), 150);
+            document.removeEventListener('keydown', onKeyDown, true);
+        };
+
+        flyout.__ocp_cleanup = () => {
+            document.removeEventListener('keydown', onKeyDown, true);
+        };
+
+        const onKeyDown = (keyEvent) => {
+            if (keyEvent.key === 'Escape') {
+                closeFlyout();
+            }
+        };
+
+        let iconSaveTimer = null;
+        const saveCreatedButtonOptions = async (options = {}) => {
+            const response = await chrome.runtime.sendMessage({
+                type: 'updateCustomButtonFromEditorOptions',
+                profileName: created.profileName,
+                buttonIndex: created.buttonIndex,
+                text: created?.button?.text || '',
+                autoSend: toggle.checked,
+                icon: iconInput.value,
+                ...options
+            });
+            if (!response?.success) {
+                throw new Error(response?.reason || response?.error || 'update_failed');
+            }
+            created.button = response.button || {
+                ...created.button,
+                autoSend: toggle.checked,
+                icon: iconInput.value.trim() || '+'
+            };
+            created.buttonIndex = response.buttonIndex ?? created.buttonIndex;
+            if (iconInput.value !== created.button.icon) {
+                iconInput.value = created.button.icon;
+            }
+            return response;
+        };
+
+        iconInput.addEventListener('input', () => {
+            clearTimeout(iconSaveTimer);
+            iconSaveTimer = setTimeout(async () => {
+                try {
+                    await saveCreatedButtonOptions();
+                } catch (error) {
+                    this.__toast('Could not update icon for the new button.', 'error');
+                    logConCgp('[buttons][create] Icon update failed:', error?.message || error);
+                }
+            }, 250);
+        });
+
+        iconInput.addEventListener('change', async () => {
+            clearTimeout(iconSaveTimer);
+            try {
+                await saveCreatedButtonOptions();
+            } catch (error) {
+                this.__toast('Could not update icon for the new button.', 'error');
+                logConCgp('[buttons][create] Icon update failed:', error?.message || error);
+            }
+        });
+
+        toggle.addEventListener('change', async () => {
+            try {
+                await saveCreatedButtonOptions({ autoSend: toggle.checked });
+                this.__toast(toggle.checked ? 'New button will auto-send.' : 'New button will not auto-send.', 'success');
+            } catch (error) {
+                toggle.checked = !toggle.checked;
+                this.__toast('Could not update Auto-send for the new button.', 'error');
+                logConCgp('[buttons][create] Auto-send update failed:', error?.message || error);
+            }
+        });
+
+        closeButton.addEventListener('click', closeFlyout);
+        document.addEventListener('keydown', onKeyDown, true);
+
+        requestAnimationFrame(() => {
+            flyout.style.opacity = '1';
+            flyout.style.transform = 'scale(1)';
+        });
+    },
+
     __showDelayFlyout: function (event) {
         // Remove any existing flyout
         const existing = document.getElementById('ocp-queue-delay-flyout');

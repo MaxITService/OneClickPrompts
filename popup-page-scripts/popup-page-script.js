@@ -969,6 +969,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (addQueueCurrentEditorBtnEl) {
         addQueueCurrentEditorBtnEl.addEventListener('click', (e) => addQueueCurrentEditorButton(e));
     }
+    const addCreateButtonFromEditorBtnEl = document.getElementById('addCreateButtonFromEditorButton');
+    if (addCreateButtonFromEditorBtnEl) {
+        addCreateButtonFromEditorBtnEl.addEventListener('click', (e) => addCreateButtonFromEditorButton(e));
+    }
 
     // Settings
     document.getElementById('autoSendToggle').addEventListener('change', updateGlobalSettings);
