@@ -255,6 +255,7 @@ window.MaxExtensionButtonsInit = {
                         }
                     };
                     buttonElement = MaxExtensionButtons.createCustomSendButton(queueButtonConfig, index, queueClickHandler, shortcutKey);
+                    buttonElement.classList.add('ocp-queue-system-button');
                 } else {
                     buttonElement = MaxExtensionButtons.createCustomSendButton(def.config, index, processCustomSendButtonClick, shortcutKey);
                 }

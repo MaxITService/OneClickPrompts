@@ -237,6 +237,11 @@ window.MaxExtensionFloatingPanel.skipToNextQueueItem = function () {
     this.remainingTimeOnPause = 0;
     if (!this.isQueueRunning) {
         this.isQueueRunning = true;
+        try {
+            document.body.classList.add('ocp-queue-ticking');
+        } catch (e) {
+            logConCgp('[queue-engine] Failed to add ocp-queue-ticking class:', e);
+        }
     }
 
     const progressBars = typeof this.getQueueProgressBars === 'function'
@@ -367,6 +372,11 @@ window.MaxExtensionFloatingPanel.startQueue = function (options = {}) {
         return;
     }
     this.isQueueRunning = true;
+    try {
+        document.body.classList.add('ocp-queue-ticking');
+    } catch (e) {
+        logConCgp('[queue-engine] Failed to add ocp-queue-ticking class:', e);
+    }
     this.updateQueueControlsState();
 
     const progressContainers = typeof this.getQueueProgressContainers === 'function'
@@ -421,6 +431,11 @@ window.MaxExtensionFloatingPanel.startQueue = function (options = {}) {
  */
 window.MaxExtensionFloatingPanel.pauseQueue = function () {
     this.isQueueRunning = false;
+    try {
+        document.body.classList.remove('ocp-queue-ticking');
+    } catch (e) {
+        logConCgp('[queue-engine] Failed to remove ocp-queue-ticking class:', e);
+    }
 
     if (this.queueTimerId) {
         clearTimeout(this.queueTimerId);

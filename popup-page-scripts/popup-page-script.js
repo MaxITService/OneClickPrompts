@@ -335,7 +335,7 @@ function initSideDonateCreeper() {
             creeper.classList.remove('is-exiting');
             void creeper.offsetWidth;
             // Exit timer will start when the new entrance animation completes
-        }, 6000);
+        }, 9000);
     }
 
     function syncForActiveTab(panelId) {

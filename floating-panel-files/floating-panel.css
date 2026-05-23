@@ -973,3 +973,18 @@
     background-color: rgba(231, 76, 60, 0.3);
     box-shadow: 0 0 6px rgba(231, 76, 60, 0.4);
 }
+
+/* Animation for queue ticking emoji rotation */
+@keyframes ocp-emoji-slow-rotate {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+body.ocp-queue-ticking .ocp-queue-system-button {
+    animation: ocp-emoji-slow-rotate 12s linear infinite !important;
+    display: inline-block !important; /* Ensure transform applies correctly */
+}
