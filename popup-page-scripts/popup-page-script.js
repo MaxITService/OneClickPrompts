@@ -383,7 +383,7 @@ function initSideDonateCreeper() {
         // Fallback in case animationend never fires
         const fallback = setTimeout(() => {
             chrome.tabs.create({ url: donateUrl });
-        }, 500);
+        }, 1400);
         trigger.addEventListener('animationend', () => {
             clearTimeout(fallback);
             trigger.classList.remove('is-squishing');
