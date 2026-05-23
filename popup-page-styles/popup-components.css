@@ -1072,7 +1072,7 @@ body.dark-theme .help-donate-button {
     width: 26px;
     height: 68px;
     pointer-events: none;
-    animation: sideDonateCrawl 28s ease-in-out infinite alternate;
+    animation: sideDonateCrawl 56s ease-in-out infinite alternate;
 }
 
 .side-donate-creeper.is-hidden,
@@ -1089,7 +1089,7 @@ body.dark-theme .help-donate-button {
 .side-donate-creeper--left {
     left: var(--side-donate-edge-offset);
     animation-name: sideDonateCrawl, sideDonateCreepInLeft;
-    animation-duration: 28s, 4500ms;
+    animation-duration: 56s, 4500ms;
     animation-timing-function: ease-in-out, cubic-bezier(0.22, 1, 0.36, 1);
     animation-iteration-count: infinite, 1;
     animation-direction: alternate, normal;
@@ -1099,7 +1099,7 @@ body.dark-theme .help-donate-button {
 .side-donate-creeper--right {
     right: var(--side-donate-edge-offset);
     animation-name: sideDonateCrawl, sideDonateCreepInRight;
-    animation-duration: 28s, 4500ms;
+    animation-duration: 56s, 4500ms;
     animation-timing-function: ease-in-out, cubic-bezier(0.22, 1, 0.36, 1);
     animation-iteration-count: infinite, 1;
     animation-direction: alternate, normal;
@@ -1108,7 +1108,7 @@ body.dark-theme .help-donate-button {
 
 .side-donate-creeper--left.is-exiting {
     animation-name: sideDonateCrawl, sideDonateCreepOutLeft !important;
-    animation-duration: 28s, 2000ms !important;
+    animation-duration: 56s, 2000ms !important;
     animation-timing-function: ease-in-out, cubic-bezier(0.22, 1, 0.36, 1) !important;
     animation-iteration-count: infinite, 1 !important;
     animation-fill-mode: none, both !important;
@@ -1116,7 +1116,7 @@ body.dark-theme .help-donate-button {
 
 .side-donate-creeper--right.is-exiting {
     animation-name: sideDonateCrawl, sideDonateCreepOutRight !important;
-    animation-duration: 28s, 2000ms !important;
+    animation-duration: 56s, 2000ms !important;
     animation-timing-function: ease-in-out, cubic-bezier(0.22, 1, 0.36, 1) !important;
     animation-iteration-count: infinite, 1 !important;
     animation-fill-mode: none, both !important;
