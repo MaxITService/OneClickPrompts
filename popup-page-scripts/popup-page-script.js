@@ -358,7 +358,7 @@ function initSideDonateCreeper() {
         const viewportHeight = Math.max(window.innerHeight || 0, 420);
         const safeTop = 88;
         const safeBottom = 118;
-        const buttonHeight = 55;
+        const buttonHeight = 68;
         const minY = safeTop;
         const maxY = Math.max(minY + 80, viewportHeight - safeBottom - buttonHeight);
         const startY = Math.round(minY + Math.random() * Math.max(1, maxY - minY));

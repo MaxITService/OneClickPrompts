@@ -1087,7 +1087,7 @@ body.dark-theme .help-donate-button:focus-visible {
     top: var(--side-donate-y-start);
     z-index: 80;
     width: 21px;
-    height: 55px;
+    height: 68px;
     pointer-events: none;
     animation: sideDonateCrawl 56s ease-in-out infinite alternate;
 }
@@ -1146,8 +1146,8 @@ body.dark-theme .help-donate-button:focus-visible {
     justify-content: center;
     gap: 2px;
     width: 21px;
-    height: 55px;
-    padding: 5px 2px;
+    height: 68px;
+    padding: 7px 2px;
     border: 1px solid var(--side-donate-idle-border);
     border-radius: 7px;
     background: var(--side-donate-idle-bg);
