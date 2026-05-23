@@ -21,6 +21,7 @@
         transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     transform: translateY(4px);
     font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --ocp-tooltip-scale: 1;
 }
 
 .ocp-tooltip.ocp-tooltip--visible {
@@ -34,10 +35,10 @@
    ───────────────────────────────────────────────────────────────────────────── */
 .ocp-tooltip__panel {
     position: relative;
-    padding: 10px 14px;
-    max-width: 320px;
-    min-width: 60px;
-    font-size: 12px;
+    padding: calc(10px * var(--ocp-tooltip-scale)) calc(14px * var(--ocp-tooltip-scale));
+    max-width: calc(320px * var(--ocp-tooltip-scale));
+    min-width: calc(60px * var(--ocp-tooltip-scale));
+    font-size: calc(12px * var(--ocp-tooltip-scale));
     line-height: 1.5;
     color: rgba(255, 255, 255, 0.95);
 
@@ -50,7 +51,7 @@
     -webkit-backdrop-filter: blur(12.8px) saturate(144%);
 
     /* Clipped rectangle (notched corners) using clip-path */
-    --notch-size: 6px;
+    --notch-size: calc(6px * var(--ocp-tooltip-scale));
     clip-path: polygon(var(--notch-size) 0,
             /* Top left notch start */
             calc(100% - var(--notch-size)) 0,
@@ -126,8 +127,8 @@
    ───────────────────────────────────────────────────────────────────────────── */
 .ocp-tooltip__arrow {
     position: absolute;
-    width: 12px;
-    height: 12px;
+    width: calc(12px * var(--ocp-tooltip-scale));
+    height: calc(12px * var(--ocp-tooltip-scale));
     background: linear-gradient(135deg,
             rgba(30, 30, 40, 0.60) 0%,
             rgba(40, 40, 50, 0.56) 100%);
@@ -137,7 +138,7 @@
 
 /* Arrow positioned below tooltip (pointing down to target) */
 .ocp-tooltip--top .ocp-tooltip__arrow {
-    bottom: -6px;
+    bottom: calc(-6px * var(--ocp-tooltip-scale));
     left: var(--ocp-tooltip-arrow-left, 50%);
     transform: translateX(-50%) rotate(45deg);
     clip-path: polygon(100% 0, 100% 100%, 0 100%);
@@ -145,7 +146,7 @@
 
 /* Arrow positioned above tooltip (pointing up to target) */
 .ocp-tooltip--bottom .ocp-tooltip__arrow {
-    top: -6px;
+    top: calc(-6px * var(--ocp-tooltip-scale));
     left: var(--ocp-tooltip-arrow-left, 50%);
     transform: translateX(-50%) rotate(45deg);
     clip-path: polygon(0 0, 100% 0, 0 100%);
@@ -163,8 +164,8 @@
 
 .ocp-tooltip__footer {
     display: block;
-    margin-top: 8px;
-    padding-top: 6px;
+    margin-top: calc(8px * var(--ocp-tooltip-scale));
+    padding-top: calc(6px * var(--ocp-tooltip-scale));
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     font-size: 0.95em;
     opacity: 0.9;
@@ -173,7 +174,7 @@
 .ocp-tooltip__truncation-notice {
     opacity: 0.6;
     font-style: italic;
-    margin-bottom: 4px;
+    margin-bottom: calc(4px * var(--ocp-tooltip-scale));
 }
 
 /* Multiline tooltip with ellipsis for very long content */
@@ -233,20 +234,20 @@
    Compact Variant (for smaller triggers)
    ───────────────────────────────────────────────────────────────────────────── */
 .ocp-tooltip--compact .ocp-tooltip__panel {
-    padding: 6px 10px;
-    font-size: 11px;
-    --notch-size: 4px;
+    padding: calc(6px * var(--ocp-tooltip-scale)) calc(10px * var(--ocp-tooltip-scale));
+    font-size: calc(11px * var(--ocp-tooltip-scale));
+    --notch-size: calc(4px * var(--ocp-tooltip-scale));
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
    Adaptive Width Modifiers
    ───────────────────────────────────────────────────────────────────────────── */
 .ocp-tooltip--width-md .ocp-tooltip__panel {
-    max-width: 480px;
+    max-width: calc(480px * var(--ocp-tooltip-scale));
 }
 
 .ocp-tooltip--width-lg .ocp-tooltip__panel {
-    max-width: 800px;
+    max-width: calc(800px * var(--ocp-tooltip-scale));
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────

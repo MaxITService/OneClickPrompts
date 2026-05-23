@@ -414,6 +414,13 @@ const OCPTooltip = (() => {
         if (_currentTrigger === trigger && _tooltipEl?.classList.contains('ocp-tooltip--visible')) {
             const tooltip = _tooltipEl;
 
+            // Retrieve and set the active scale
+            let scale = 1;
+            if (window.MaxExtensionUiScale && typeof window.MaxExtensionUiScale.getFromConfig === 'function') {
+                scale = window.MaxExtensionUiScale.getFromConfig(window.globalMaxExtensionConfig);
+            }
+            tooltip.style.setProperty('--ocp-tooltip-scale', String(scale));
+
             // Measure/layout without flicker while we recompute width/line clamp/position
             const prevVisibility = tooltip.style.visibility;
             tooltip.style.visibility = 'hidden';
@@ -433,6 +440,14 @@ const OCPTooltip = (() => {
 
         // Case 2: New tooltip needed -> Create and populate
         const tooltip = createTooltipElement();
+
+        // Retrieve and set the active scale
+        let scale = 1;
+        if (window.MaxExtensionUiScale && typeof window.MaxExtensionUiScale.getFromConfig === 'function') {
+            scale = window.MaxExtensionUiScale.getFromConfig(window.globalMaxExtensionConfig);
+        }
+        tooltip.style.setProperty('--ocp-tooltip-scale', String(scale));
+
         parseAndApply(tooltip, text);
 
         // Apply global settings
@@ -600,6 +615,13 @@ const OCPTooltip = (() => {
 
         // If this element's tooltip is currently showing, update the visible tooltip
         if (_currentTrigger === element && _tooltipEl) {
+            // Retrieve and set the active scale
+            let scale = 1;
+            if (window.MaxExtensionUiScale && typeof window.MaxExtensionUiScale.getFromConfig === 'function') {
+                scale = window.MaxExtensionUiScale.getFromConfig(window.globalMaxExtensionConfig);
+            }
+            _tooltipEl.style.setProperty('--ocp-tooltip-scale', String(scale));
+
             const tempParser = document.createElement('div');
             tempParser.innerHTML = text;
 
