@@ -51,6 +51,9 @@ const hideOnPageFloatingPanelToggleEl = document.getElementById('hideOnPageFloat
 const uiScaleSliderEl = document.getElementById('uiScaleSlider');
 const uiScaleValueEl = document.getElementById('uiScaleValue');
 const uiScalePreviewEl = document.getElementById('uiScalePreview');
+const tooltipScaleSliderEl = document.getElementById('tooltipScaleSlider');
+const tooltipScaleValueEl = document.getElementById('tooltipScaleValue');
+const uiScaleLockBtnEl = document.getElementById('uiScaleLockBtn');
 
 // -------------------------
 // Debounced Save Function
@@ -105,7 +108,7 @@ function normalizeUiScale(value) {
     const numeric = Number(value);
     const base = Number.isFinite(numeric) ? numeric : 1;
     const stepped = Math.round(base / 0.05) * 0.05;
-    return Math.min(1.5, Math.max(0.7, Number(stepped.toFixed(2))));
+    return Math.min(2, Math.max(0.7, Number(stepped.toFixed(2))));
 }
 
 function getUiScaleFromSlider() {
@@ -113,44 +116,126 @@ function getUiScaleFromSlider() {
     return normalizeUiScale(Number(uiScaleSliderEl.value) / 100);
 }
 
-function updateUiScalePreview(scale) {
-    const normalized = normalizeUiScale(scale);
-    const percent = Math.round(normalized * 100);
+function getTooltipScaleFromSlider() {
+    if (!tooltipScaleSliderEl) return normalizeUiScale(currentProfile?.tooltipScale ?? currentProfile?.uiScale);
+    return normalizeUiScale(Number(tooltipScaleSliderEl.value) / 100);
+}
+
+function updateUiScalePreview() {
+    if (!currentProfile) return;
+
+    const uiScale = normalizeUiScale(currentProfile.uiScale);
+    const tooltipScale = normalizeUiScale(currentProfile.tooltipScale ?? currentProfile.uiScale);
+    const locked = currentProfile.lockSliders !== false;
+
+    // 1. Interface scale
+    const uiPercent = Math.round(uiScale * 100);
     if (uiScaleValueEl) {
-        uiScaleValueEl.textContent = `${percent}%`;
+        uiScaleValueEl.textContent = `${uiPercent}%`;
     }
-    if (uiScaleSliderEl && String(uiScaleSliderEl.value) !== String(percent)) {
-        uiScaleSliderEl.value = String(percent);
+    if (uiScaleSliderEl && String(uiScaleSliderEl.value) !== String(uiPercent)) {
+        uiScaleSliderEl.value = String(uiPercent);
     }
+
+    // 2. Tooltip scale
+    const ttPercent = Math.round(tooltipScale * 100);
+    if (tooltipScaleValueEl) {
+        tooltipScaleValueEl.textContent = `${ttPercent}%`;
+    }
+    if (tooltipScaleSliderEl && String(tooltipScaleSliderEl.value) !== String(ttPercent)) {
+        tooltipScaleSliderEl.value = String(ttPercent);
+    }
+
+    // 3. Lock button UI state
+    if (uiScaleLockBtnEl) {
+        uiScaleLockBtnEl.classList.toggle('is-unlocked', !locked);
+        const lockIcon = uiScaleLockBtnEl.querySelector('.lock-icon');
+        const lockText = uiScaleLockBtnEl.querySelector('.lock-text');
+        if (lockIcon) {
+            lockIcon.textContent = locked ? '🔗' : '🔓';
+        }
+        if (lockText) {
+            lockText.textContent = locked ? 'Sliders linked' : 'Sliders independent';
+        }
+    }
+
+    // 4. Live preview panel scale
     if (uiScalePreviewEl) {
-        uiScalePreviewEl.style.setProperty('--ocp-preview-scale', String(normalized));
+        uiScalePreviewEl.style.setProperty('--ocp-preview-scale', String(uiScale));
     }
 }
 
 function updateUiScaleSettingsUIFromProfile() {
-    const scale = normalizeUiScale(currentProfile?.uiScale);
     if (currentProfile) {
-        currentProfile.uiScale = scale;
+        currentProfile.uiScale = normalizeUiScale(currentProfile.uiScale);
+        currentProfile.tooltipScale = normalizeUiScale(currentProfile.tooltipScale ?? currentProfile.uiScale);
     }
-    updateUiScalePreview(scale);
+    updateUiScalePreview();
 }
 
 function handleUiScaleSliderInput() {
     if (!currentProfile) return;
-    currentProfile.uiScale = getUiScaleFromSlider();
-    updateUiScalePreview(currentProfile.uiScale);
+    const val = getUiScaleFromSlider();
+    currentProfile.uiScale = val;
+    if (currentProfile.lockSliders !== false) {
+        currentProfile.tooltipScale = val;
+    }
+    updateUiScalePreview();
     debouncedSaveCurrentProfile();
 }
 
 async function handleUiScaleSliderChange() {
     if (!currentProfile) return;
-    currentProfile.uiScale = getUiScaleFromSlider();
-    updateUiScalePreview(currentProfile.uiScale);
+    const val = getUiScaleFromSlider();
+    currentProfile.uiScale = val;
+    if (currentProfile.lockSliders !== false) {
+        currentProfile.tooltipScale = val;
+    }
+    updateUiScalePreview();
     if (saveTimeoutId !== null) {
         clearTimeout(saveTimeoutId);
         saveTimeoutId = null;
     }
     await saveCurrentProfile();
+}
+
+function handleTooltipScaleSliderInput() {
+    if (!currentProfile) return;
+    const val = getTooltipScaleFromSlider();
+    currentProfile.tooltipScale = val;
+    if (currentProfile.lockSliders !== false) {
+        currentProfile.uiScale = val;
+    }
+    updateUiScalePreview();
+    debouncedSaveCurrentProfile();
+}
+
+async function handleTooltipScaleSliderChange() {
+    if (!currentProfile) return;
+    const val = getTooltipScaleFromSlider();
+    currentProfile.tooltipScale = val;
+    if (currentProfile.lockSliders !== false) {
+        currentProfile.uiScale = val;
+    }
+    updateUiScalePreview();
+    if (saveTimeoutId !== null) {
+        clearTimeout(saveTimeoutId);
+        saveTimeoutId = null;
+    }
+    await saveCurrentProfile();
+}
+
+function handleUiScaleLockToggle() {
+    if (!currentProfile) return;
+    const nextLocked = !(currentProfile.lockSliders !== false);
+    currentProfile.lockSliders = nextLocked;
+
+    if (nextLocked) {
+        currentProfile.tooltipScale = currentProfile.uiScale;
+    }
+
+    updateUiScalePreview();
+    debouncedSaveCurrentProfile();
 }
 
 function setTooltipForElement(element, text) {
@@ -827,6 +912,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (uiScaleSliderEl) {
         uiScaleSliderEl.addEventListener('input', handleUiScaleSliderInput);
         uiScaleSliderEl.addEventListener('change', handleUiScaleSliderChange);
+    }
+    if (tooltipScaleSliderEl) {
+        tooltipScaleSliderEl.addEventListener('input', handleTooltipScaleSliderInput);
+        tooltipScaleSliderEl.addEventListener('change', handleTooltipScaleSliderChange);
+    }
+    if (uiScaleLockBtnEl) {
+        uiScaleLockBtnEl.addEventListener('click', handleUiScaleLockToggle);
     }
     reinforceAllCheckboxTooltips();
     // Some modules create checkbox rows dynamically. Keep tooltip wiring resilient.

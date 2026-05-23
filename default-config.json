@@ -7,6 +7,8 @@
   "hideOnPageHotkeysToggle": false,
   "hideOnPageFloatingPanelToggle": false,
   "uiScale": 1,
+  "tooltipScale": 1,
+  "lockSliders": true,
   "firstModificationDone": false,
   "enableQueueMode": false,
   "queueDelayMinutes": 5,

@@ -456,20 +456,50 @@
           </label>
         </div>
         <div class="ui-scale-setting text-inside-container">
-          <div class="ui-scale-setting__control">
-            <label for="uiScaleSlider">
-              Interface scale:
-              <strong id="uiScaleValue">100%</strong>
-            </label>
-            <input
-              id="uiScaleSlider"
-              type="range"
-              min="70"
-              max="150"
-              step="5"
-              value="100"
-              title="Scale both the floating panel and injected on-page button row for this profile."
-            />
+          <div class="ui-scale-setting__controls">
+            <div class="ui-scale-setting__control">
+              <label for="uiScaleSlider">
+                Interface scale:
+                <strong id="uiScaleValue">100%</strong>
+              </label>
+              <input
+                id="uiScaleSlider"
+                type="range"
+                min="70"
+                max="200"
+                step="5"
+                value="100"
+                title="Scale both the floating panel and injected on-page button row for this profile."
+              />
+            </div>
+
+            <div class="ui-scale-setting__lock-container">
+              <button
+                id="uiScaleLockBtn"
+                class="ui-scale-lock-btn"
+                type="button"
+                title="Link scales (Enabled by default). Adjusting one slider will adjust the other to the same value."
+              >
+                <span class="lock-icon">🔗</span>
+                <span class="lock-text">Sliders linked</span>
+              </button>
+            </div>
+
+            <div class="ui-scale-setting__control">
+              <label for="tooltipScaleSlider">
+                Tooltip scale:
+                <strong id="tooltipScaleValue">100%</strong>
+              </label>
+              <input
+                id="tooltipScaleSlider"
+                type="range"
+                min="70"
+                max="200"
+                step="5"
+                value="100"
+                title="Scale only the frosted glass tooltip texts for this profile."
+              />
+            </div>
           </div>
           <div
             id="uiScalePreview"

@@ -416,7 +416,9 @@ const OCPTooltip = (() => {
 
             // Retrieve and set the active scale
             let scale = 1;
-            if (window.MaxExtensionUiScale && typeof window.MaxExtensionUiScale.getFromConfig === 'function') {
+            if (window.MaxExtensionUiScale && typeof window.MaxExtensionUiScale.getTooltipFromConfig === 'function') {
+                scale = window.MaxExtensionUiScale.getTooltipFromConfig(window.globalMaxExtensionConfig);
+            } else if (window.MaxExtensionUiScale && typeof window.MaxExtensionUiScale.getFromConfig === 'function') {
                 scale = window.MaxExtensionUiScale.getFromConfig(window.globalMaxExtensionConfig);
             }
             tooltip.style.setProperty('--ocp-tooltip-scale', String(scale));
@@ -443,7 +445,9 @@ const OCPTooltip = (() => {
 
         // Retrieve and set the active scale
         let scale = 1;
-        if (window.MaxExtensionUiScale && typeof window.MaxExtensionUiScale.getFromConfig === 'function') {
+        if (window.MaxExtensionUiScale && typeof window.MaxExtensionUiScale.getTooltipFromConfig === 'function') {
+            scale = window.MaxExtensionUiScale.getTooltipFromConfig(window.globalMaxExtensionConfig);
+        } else if (window.MaxExtensionUiScale && typeof window.MaxExtensionUiScale.getFromConfig === 'function') {
             scale = window.MaxExtensionUiScale.getFromConfig(window.globalMaxExtensionConfig);
         }
         tooltip.style.setProperty('--ocp-tooltip-scale', String(scale));
@@ -617,7 +621,9 @@ const OCPTooltip = (() => {
         if (_currentTrigger === element && _tooltipEl) {
             // Retrieve and set the active scale
             let scale = 1;
-            if (window.MaxExtensionUiScale && typeof window.MaxExtensionUiScale.getFromConfig === 'function') {
+            if (window.MaxExtensionUiScale && typeof window.MaxExtensionUiScale.getTooltipFromConfig === 'function') {
+                scale = window.MaxExtensionUiScale.getTooltipFromConfig(window.globalMaxExtensionConfig);
+            } else if (window.MaxExtensionUiScale && typeof window.MaxExtensionUiScale.getFromConfig === 'function') {
                 scale = window.MaxExtensionUiScale.getFromConfig(window.globalMaxExtensionConfig);
             }
             _tooltipEl.style.setProperty('--ocp-tooltip-scale', String(scale));

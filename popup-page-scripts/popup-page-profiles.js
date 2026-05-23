@@ -15,6 +15,8 @@ const minimalDefaultConfig = {
     hideOnPageHotkeysToggle: false,
     hideOnPageFloatingPanelToggle: false,
     uiScale: 1,
+    tooltipScale: 1,
+    lockSliders: true,
     firstModificationDone: false,
     customButtons: [], // No buttons or separators
     queueRandomizeEnabled: false,

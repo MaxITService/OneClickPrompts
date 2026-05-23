@@ -62,7 +62,19 @@ export function normalizeProfileConfig(profile, profileName) {
         logConfigurationRelatedStuff(`Initialized missing 'uiScale' for profile: ${profileName}`);
     } else {
         const steppedUiScale = Math.round(uiScale / 0.05) * 0.05;
-        profile.uiScale = Math.min(1.5, Math.max(0.7, Number(steppedUiScale.toFixed(2))));
+        profile.uiScale = Math.min(2, Math.max(0.7, Number(steppedUiScale.toFixed(2))));
+    }
+    const tooltipScale = Number(profile.tooltipScale);
+    if (!Number.isFinite(tooltipScale)) {
+        profile.tooltipScale = profile.uiScale;
+        logConfigurationRelatedStuff(`Initialized missing 'tooltipScale' for profile: ${profileName}`);
+    } else {
+        const steppedTooltipScale = Math.round(tooltipScale / 0.05) * 0.05;
+        profile.tooltipScale = Math.min(2, Math.max(0.7, Number(steppedTooltipScale.toFixed(2))));
+    }
+    if (typeof profile.lockSliders === 'undefined') {
+        profile.lockSliders = true;
+        logConfigurationRelatedStuff(`Initialized missing 'lockSliders' for profile: ${profileName}`);
     }
     return profile;
 }

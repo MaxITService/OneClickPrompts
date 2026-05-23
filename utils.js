@@ -852,7 +852,7 @@ window.MaxExtensionHotkeys = {
  */
 window.MaxExtensionUiScale = {
     min: 0.7,
-    max: 1.5,
+    max: 2,
     step: 0.05,
 
     normalize(value, fallback = 1) {
@@ -864,6 +864,10 @@ window.MaxExtensionUiScale = {
 
     getFromConfig(config = window.globalMaxExtensionConfig) {
         return this.normalize(config?.uiScale, 1);
+    },
+
+    getTooltipFromConfig(config = window.globalMaxExtensionConfig) {
+        return this.normalize(config?.tooltipScale ?? config?.uiScale, 1);
     },
 
     toPercent(scale) {
