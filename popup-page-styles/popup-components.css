@@ -1053,6 +1053,22 @@ body.dark-theme .help-donate-button {
     animation-fill-mode: none, both;
 }
 
+.side-donate-creeper--left.is-exiting {
+    animation-name: sideDonateCrawl, sideDonateCreepOutLeft !important;
+    animation-duration: 28s, 800ms !important;
+    animation-timing-function: ease-in-out, cubic-bezier(0.22, 1, 0.36, 1) !important;
+    animation-iteration-count: infinite, 1 !important;
+    animation-fill-mode: none, both !important;
+}
+
+.side-donate-creeper--right.is-exiting {
+    animation-name: sideDonateCrawl, sideDonateCreepOutRight !important;
+    animation-duration: 28s, 800ms !important;
+    animation-timing-function: ease-in-out, cubic-bezier(0.22, 1, 0.36, 1) !important;
+    animation-iteration-count: infinite, 1 !important;
+    animation-fill-mode: none, both !important;
+}
+
 .side-donate-creeper__button {
     position: relative;
     display: inline-flex;
@@ -1288,6 +1304,28 @@ body.dark-theme .side-donate-creeper__close {
     100% {
         opacity: 1;
         transform: translateX(0);
+    }
+}
+
+@keyframes sideDonateCreepOutLeft {
+    0% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(-150%);
+    }
+}
+
+@keyframes sideDonateCreepOutRight {
+    0% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(150%);
     }
 }
 

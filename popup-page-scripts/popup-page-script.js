@@ -211,10 +211,37 @@ function initSideDonateCreeper() {
     }
 
     let dismissed = false;
+    let exitTimerId = null;
 
     function setTooltipVisible(isVisible) {
         trigger.setAttribute('aria-expanded', String(isVisible));
         tooltip.setAttribute('aria-hidden', String(!isVisible));
+    }
+
+    function scheduleNextExit() {
+        if (exitTimerId) {
+            clearTimeout(exitTimerId);
+        }
+        const delay = Math.round(4000 + Math.random() * 21000);
+        exitTimerId = setTimeout(triggerExitSequence, delay);
+    }
+
+    function triggerExitSequence() {
+        if (dismissed) return;
+        if (creeper.matches(':hover') || creeper.contains(document.activeElement)) {
+            scheduleNextExit();
+            return;
+        }
+
+        creeper.classList.add('is-exiting');
+
+        setTimeout(() => {
+            if (dismissed) return;
+            placeQuietlyOnSide();
+            creeper.classList.remove('is-exiting');
+            void creeper.offsetWidth;
+            scheduleNextExit();
+        }, 2000);
     }
 
     function syncForActiveTab(panelId) {
@@ -222,6 +249,14 @@ function initSideDonateCreeper() {
         creeper.classList.toggle('is-hidden', !shouldShow);
         if (!shouldShow) {
             setTooltipVisible(false);
+            if (exitTimerId) {
+                clearTimeout(exitTimerId);
+                exitTimerId = null;
+            }
+        } else {
+            if (!exitTimerId && !creeper.classList.contains('is-exiting')) {
+                scheduleNextExit();
+            }
         }
     }
 
