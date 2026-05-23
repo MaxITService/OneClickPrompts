@@ -140,6 +140,89 @@ function refreshOnPageControlVisibilityTooltips() {
     setTooltipForCheckboxControl('shortcutsToggle', hotkeysDefaultTitle);
 }
 
+function initSideDonateCreeper() {
+    const creeper = document.getElementById('sideDonateCreeper');
+    const trigger = document.getElementById('sideDonateButton');
+    const tooltip = document.getElementById('sideDonateTooltip');
+    const closeButton = document.getElementById('sideDonateClose');
+    const openButton = document.getElementById('sideDonateOpen');
+    const donateUrl = 'https://buymeacoffee.com/netstaff';
+
+    if (!creeper || !trigger || !tooltip || !closeButton || !openButton) {
+        return;
+    }
+
+    let dismissed = false;
+
+    function setOpen(isOpen) {
+        creeper.classList.toggle('is-open', isOpen);
+        creeper.classList.toggle('is-paused', isOpen);
+        trigger.setAttribute('aria-expanded', String(isOpen));
+        tooltip.setAttribute('aria-hidden', String(!isOpen));
+    }
+
+    function syncForActiveTab(panelId) {
+        const shouldShow = panelId === 'buttonConfigurationSection' && !dismissed;
+        creeper.classList.toggle('is-hidden', !shouldShow);
+        if (!shouldShow) {
+            setOpen(false);
+        }
+    }
+
+    function placeQuietlyOnSide() {
+        const side = Math.random() < 0.5 ? 'left' : 'right';
+        const viewportHeight = Math.max(window.innerHeight || 0, 420);
+        const safeTop = 88;
+        const safeBottom = 168;
+        const buttonHeight = 126;
+        const minY = safeTop;
+        const maxY = Math.max(minY + 80, viewportHeight - safeBottom - buttonHeight);
+        const startY = Math.round(minY + Math.random() * Math.max(1, maxY - minY));
+        const crawlRoom = Math.max(70, Math.min(170, maxY - minY));
+        const endY = Math.max(minY, Math.min(maxY, startY + (Math.random() < 0.5 ? -crawlRoom : crawlRoom)));
+
+        creeper.classList.toggle('side-donate-creeper--left', side === 'left');
+        creeper.classList.toggle('side-donate-creeper--right', side === 'right');
+        creeper.style.setProperty('--side-donate-y-start', `${startY}px`);
+        creeper.style.setProperty('--side-donate-y-end', `${endY}px`);
+    }
+
+    placeQuietlyOnSide();
+    syncForActiveTab(document.querySelector('.tab-panel.is-active')?.id);
+
+    trigger.addEventListener('click', (event) => {
+        event.stopPropagation();
+        setOpen(!creeper.classList.contains('is-open'));
+    });
+
+    closeButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        dismissed = true;
+        setOpen(false);
+        creeper.classList.add('is-dismissed');
+    });
+
+    openButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        chrome.tabs.create({ url: donateUrl });
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!creeper.classList.contains('is-open') || creeper.contains(event.target)) {
+            return;
+        }
+        setOpen(false);
+    });
+
+    document.addEventListener('ocp:tab-changed', (event) => {
+        syncForActiveTab(event.detail?.panelId);
+    });
+
+    window.addEventListener('resize', () => {
+        placeQuietlyOnSide();
+    });
+}
+
 async function getActiveTabHostname() {
     try {
         const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -719,6 +802,7 @@ document.addEventListener('DOMContentLoaded', () => {
     attachAutoSendToggleListeners();
     // Call the function for your specific textarea by ID
     textareaInputAreaResizerFun('buttonText');
+    initSideDonateCreeper();
 
     document.addEventListener('ocp:tab-changed', (event) => {
         if (event.detail?.panelId !== 'buttonConfigurationSection') {
