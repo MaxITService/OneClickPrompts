@@ -48,6 +48,7 @@ const queueRandomizePercentRow = document.getElementById('queueRandomizePercentR
 const hideOnPageAutoSendToggleEl = document.getElementById('hideOnPageAutoSendToggle');
 const hideOnPageHotkeysToggleEl = document.getElementById('hideOnPageHotkeysToggle');
 const hideOnPageFloatingPanelToggleEl = document.getElementById('hideOnPageFloatingPanelToggle');
+const disableBrowserConsoleLogsToggleEl = document.getElementById('disableBrowserConsoleLogsToggle');
 const uiScaleSliderEl = document.getElementById('uiScaleSlider');
 const uiScaleValueEl = document.getElementById('uiScaleValue');
 const uiScalePreviewEl = document.getElementById('uiScalePreview');
@@ -93,12 +94,21 @@ async function updateGlobalSettings() {
     currentProfile.hideOnPageAutoSendToggle = !!hideOnPageAutoSendToggleEl?.checked;
     currentProfile.hideOnPageHotkeysToggle = !!hideOnPageHotkeysToggleEl?.checked;
     currentProfile.hideOnPageFloatingPanelToggle = !!hideOnPageFloatingPanelToggleEl?.checked;
+    currentProfile.disableBrowserConsoleLogs = !!disableBrowserConsoleLogsToggleEl?.checked;
     currentProfile.uiScale = getUiScaleFromSlider();
+    syncBrowserConsoleLogPreference();
     await saveCurrentProfile();
     refreshOnPageControlVisibilityTooltips();
     await refreshFloatingToggleVisibilityWarningTooltip();
     logToGUIConsole('Updated global settings');
     showToast('Global settings updated', 'success');
+}
+
+function syncBrowserConsoleLogPreference() {
+    window.globalMaxExtensionConfig = {
+        ...(window.globalMaxExtensionConfig || {}),
+        disableBrowserConsoleLogs: !!currentProfile?.disableBrowserConsoleLogs
+    };
 }
 
 function normalizeUiScale(value) {
@@ -785,6 +795,10 @@ async function updateInterface(anchorElement = null) {
     if (hideOnPageFloatingPanelToggleEl) {
         hideOnPageFloatingPanelToggleEl.checked = Boolean(currentProfile.hideOnPageFloatingPanelToggle);
     }
+    if (disableBrowserConsoleLogsToggleEl) {
+        disableBrowserConsoleLogsToggleEl.checked = Boolean(currentProfile.disableBrowserConsoleLogs);
+    }
+    syncBrowserConsoleLogPreference();
     updateUiScaleSettingsUIFromProfile();
     refreshOnPageControlVisibilityTooltips();
     await refreshFloatingToggleVisibilityWarningTooltip();
@@ -985,6 +999,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (hideOnPageFloatingPanelToggleEl) {
         hideOnPageFloatingPanelToggleEl.addEventListener('change', updateGlobalSettings);
+    }
+    if (disableBrowserConsoleLogsToggleEl) {
+        disableBrowserConsoleLogsToggleEl.addEventListener('change', updateGlobalSettings);
     }
     if (uiScaleSliderEl) {
         uiScaleSliderEl.addEventListener('input', handleUiScaleSliderInput);

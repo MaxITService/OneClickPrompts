@@ -7,8 +7,13 @@
 
 'use strict';
 
+import { serviceWorkerConsoleLogsAreDisabled } from './service-worker-config-helpers.js';
+
 // Namespaced logging
 function logSS(message, ...args) {
+  if (serviceWorkerConsoleLogsAreDisabled()) {
+    return;
+  }
   console.log('[state-store]', message, ...args);
 }
 

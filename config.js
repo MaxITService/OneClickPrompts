@@ -84,6 +84,12 @@ import './context-menu.js'; // Side-effect: registers extension icon right-click
 // Note: StateStore is imported and used by service-worker-message-router.js, not directly here
 import { handleMessage } from './modules/service-worker-message-router.js'; // Routes all message types
 import { createDefaultProfile } from './modules/service-worker-profile-manager.js'; // Used on install
+import {
+    initializeServiceWorkerConsoleLogPreference,
+    serviceWorkerConsoleLogsAreDisabled
+} from './modules/service-worker-config-helpers.js';
+
+initializeServiceWorkerConsoleLogPreference();
 
 // ===== Service Worker Lifecycle =====
 
@@ -130,6 +136,9 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 // Logs all storage changes for debugging purposes
 // Helps track configuration updates across the extension
 chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (serviceWorkerConsoleLogsAreDisabled()) {
+        return;
+    }
     if (namespace === 'local') {
         for (let [key, { oldValue, newValue }] of Object.entries(changes)) {
             console.log(`[config] Storage key "${key}" changed:`, {

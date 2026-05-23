@@ -5,8 +5,46 @@ Extracted from config.js to improve maintainability.
 */
 'use strict';
 
+let serviceWorkerLogGateInitialized = false;
+let browserConsoleLogsDisabled = false;
+
+async function refreshServiceWorkerConsoleLogPreference() {
+    try {
+        const current = await chrome.storage.local.get(['currentProfile']);
+        const profileName = current.currentProfile || 'Default';
+        const profileKey = `profiles.${profileName}`;
+        const storedProfile = await chrome.storage.local.get([profileKey]);
+        browserConsoleLogsDisabled = !!storedProfile[profileKey]?.disableBrowserConsoleLogs;
+    } catch (_) {
+        browserConsoleLogsDisabled = false;
+    }
+}
+
+export function serviceWorkerConsoleLogsAreDisabled() {
+    return browserConsoleLogsDisabled;
+}
+
+export function initializeServiceWorkerConsoleLogPreference() {
+    if (serviceWorkerLogGateInitialized || typeof chrome === 'undefined' || !chrome.storage?.local) {
+        return;
+    }
+    serviceWorkerLogGateInitialized = true;
+    refreshServiceWorkerConsoleLogPreference();
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+        if (namespace !== 'local') {
+            return;
+        }
+        if (changes.currentProfile || Object.keys(changes).some(key => key.startsWith('profiles.'))) {
+            refreshServiceWorkerConsoleLogPreference();
+        }
+    });
+}
+
 // Function to handle logging with [config] prefix
 export function logConfigurationRelatedStuff(message, ...optionalParams) {
+    if (browserConsoleLogsDisabled) {
+        return;
+    }
     console.log(`[config] ${message}`, ...optionalParams);
 }
 

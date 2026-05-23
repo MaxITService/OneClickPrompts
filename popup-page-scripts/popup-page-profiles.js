@@ -14,6 +14,7 @@ const minimalDefaultConfig = {
     hideOnPageAutoSendToggle: false,
     hideOnPageHotkeysToggle: false,
     hideOnPageFloatingPanelToggle: false,
+    disableBrowserConsoleLogs: false,
     uiScale: 1,
     tooltipScale: 1,
     lockSliders: true,

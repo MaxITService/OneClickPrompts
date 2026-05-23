@@ -27,7 +27,42 @@
  * @param {string} message - The message to log.
  * @param  {...any} optionalParams - Additional parameters to log.
  */
+(function installBrowserConsoleLogGate() {
+    const root = globalThis;
+    if (!root || root.__OCPBrowserConsoleLogGateInstalled || !root.console) {
+        return;
+    }
+
+    const gatedMethods = ['log', 'info', 'debug', 'warn', 'error'];
+    const originalConsole = {};
+
+    function browserConsoleLogsAreDisabled() {
+        const config = root.globalMaxExtensionConfig;
+        return !!(config && config.disableBrowserConsoleLogs);
+    }
+
+    gatedMethods.forEach((methodName) => {
+        const originalMethod = root.console[methodName];
+        if (typeof originalMethod !== 'function') {
+            return;
+        }
+
+        originalConsole[methodName] = originalMethod.bind(root.console);
+        root.console[methodName] = (...args) => {
+            if (browserConsoleLogsAreDisabled()) {
+                return;
+            }
+            originalConsole[methodName](...args);
+        };
+    });
+
+    root.__OCPBrowserConsoleLogGateInstalled = true;
+    root.OCPBrowserConsoleLogGate = {
+        isDisabled: browserConsoleLogsAreDisabled,
+        originalConsole
+    };
+})();
+
 function logConCgp(message, ...optionalParams) {
     console.log(`[OneClickPrompts] ${message}`, ...optionalParams);
 }
-

@@ -56,6 +56,10 @@ export function normalizeProfileConfig(profile, profileName) {
         profile.hideOnPageFloatingPanelToggle = false;
         logConfigurationRelatedStuff(`Initialized missing 'hideOnPageFloatingPanelToggle' for profile: ${profileName}`);
     }
+    if (typeof profile.disableBrowserConsoleLogs === 'undefined') {
+        profile.disableBrowserConsoleLogs = false;
+        logConfigurationRelatedStuff(`Initialized missing 'disableBrowserConsoleLogs' for profile: ${profileName}`);
+    }
     const uiScale = Number(profile.uiScale);
     if (!Number.isFinite(uiScale)) {
         profile.uiScale = 1;
