@@ -33,6 +33,7 @@ window.MaxExtensionFloatingPanel.initializeQueueDragAndDrop = function () {
         dragStartPointer: null,
         containerRect: null,
         draggingDimensions: null,
+        dragScale: 1,
         pointerLast: null
     };
 
@@ -119,29 +120,31 @@ window.MaxExtensionFloatingPanel.restoreDragArtifactsAfterRender = function () {
     state.draggingElement = replacement;
     const containerRect = this.queueDisplayArea.getBoundingClientRect();
     const elementRect = replacement.getBoundingClientRect();
+    const dragScale = this.getQueueDragScale();
     state.containerRect = containerRect;
+    state.dragScale = dragScale;
     state.draggingDimensions = {
-        width: elementRect.width,
-        height: elementRect.height
+        width: elementRect.width / dragScale,
+        height: elementRect.height / dragScale
     };
 
     replacement.classList.add('max-extension-queued-item--dragging');
     replacement.style.position = 'absolute';
     replacement.style.zIndex = '3';
     replacement.style.pointerEvents = 'none';
-    replacement.style.left = `${elementRect.left - containerRect.left}px`;
-    replacement.style.top = `${elementRect.top - containerRect.top}px`;
-    replacement.style.width = `${elementRect.width}px`;
-    replacement.style.height = `${elementRect.height}px`;
+    replacement.style.left = `${(elementRect.left - containerRect.left) / dragScale}px`;
+    replacement.style.top = `${(elementRect.top - containerRect.top) / dragScale}px`;
+    replacement.style.width = `${state.draggingDimensions.width}px`;
+    replacement.style.height = `${state.draggingDimensions.height}px`;
     replacement.style.transform = 'translate(0, 0) scale(1.05)';
 
     if (!state.placeholderElement) {
         const placeholder = document.createElement('div');
         placeholder.className = 'max-extension-queued-item max-extension-queued-item--placeholder';
-        placeholder.style.width = `${elementRect.width}px`;
-        placeholder.style.height = `${elementRect.height}px`;
         state.placeholderElement = placeholder;
     }
+    state.placeholderElement.style.width = `${state.draggingDimensions.width}px`;
+    state.placeholderElement.style.height = `${state.draggingDimensions.height}px`;
 
     if (!this.queueDisplayArea.contains(state.placeholderElement)) {
         const siblings = Array.from(this.queueDisplayArea.children).filter((child) => child !== replacement);
@@ -250,6 +253,7 @@ window.MaxExtensionFloatingPanel.startQueueDrag = function (pendingDrag) {
 
     const containerRect = this.queueDisplayArea.getBoundingClientRect();
     const elementRect = element.getBoundingClientRect();
+    const dragScale = this.getQueueDragScale();
 
     state.isActive = true;
     state.pointerId = pendingDrag.pointerId;
@@ -261,9 +265,10 @@ window.MaxExtensionFloatingPanel.startQueueDrag = function (pendingDrag) {
         y: pendingDrag.latestY ?? pendingDrag.startY
     };
     state.containerRect = containerRect;
+    state.dragScale = dragScale;
     state.draggingDimensions = {
-        width: elementRect.width,
-        height: elementRect.height
+        width: elementRect.width / dragScale,
+        height: elementRect.height / dragScale
     };
     state.placeholderIndex = pendingDrag.index;
     state.pendingDrag = null;
@@ -274,8 +279,8 @@ window.MaxExtensionFloatingPanel.startQueueDrag = function (pendingDrag) {
 
     const placeholder = document.createElement('div');
     placeholder.className = 'max-extension-queued-item max-extension-queued-item--placeholder';
-    placeholder.style.width = `${elementRect.width}px`;
-    placeholder.style.height = `${elementRect.height}px`;
+    placeholder.style.width = `${state.draggingDimensions.width}px`;
+    placeholder.style.height = `${state.draggingDimensions.height}px`;
     state.placeholderElement = placeholder;
 
     this.queueDisplayArea.insertBefore(placeholder, element);
@@ -285,10 +290,10 @@ window.MaxExtensionFloatingPanel.startQueueDrag = function (pendingDrag) {
     element.style.position = 'absolute';
     element.style.zIndex = '3';
     element.style.pointerEvents = 'none';
-    element.style.left = `${elementRect.left - containerRect.left}px`;
-    element.style.top = `${elementRect.top - containerRect.top}px`;
-    element.style.width = `${elementRect.width}px`;
-    element.style.height = `${elementRect.height}px`;
+    element.style.left = `${(elementRect.left - containerRect.left) / dragScale}px`;
+    element.style.top = `${(elementRect.top - containerRect.top) / dragScale}px`;
+    element.style.width = `${state.draggingDimensions.width}px`;
+    element.style.height = `${state.draggingDimensions.height}px`;
     element.style.transform = 'translate(0, 0) scale(1.05)';
 
     this.queueDisplayArea.classList.add('max-extension-queue-drag-active');
@@ -300,9 +305,15 @@ window.MaxExtensionFloatingPanel.updateQueueDragPosition = function (event) {
 
     const dx = event.clientX - state.dragStartPointer.x;
     const dy = event.clientY - state.dragStartPointer.y;
-    state.draggingElement.style.transform = `translate(${dx}px, ${dy}px) scale(1.05)`;
+    const dragScale = state.dragScale || this.getQueueDragScale();
+    state.draggingElement.style.transform = `translate(${dx / dragScale}px, ${dy / dragScale}px) scale(1.05)`;
     state.pointerLast = { x: event.clientX, y: event.clientY };
     this.updateQueuePlaceholderPosition(event.clientX, event.clientY);
+};
+
+window.MaxExtensionFloatingPanel.getQueueDragScale = function () {
+    const scale = typeof this.getPanelScale === 'function' ? this.getPanelScale() : 1;
+    return Number.isFinite(scale) && scale > 0 ? scale : 1;
 };
 
 window.MaxExtensionFloatingPanel.updateQueuePlaceholderPosition = function (clientX, clientY) {
