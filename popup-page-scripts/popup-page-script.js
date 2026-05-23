@@ -338,7 +338,7 @@ function initSideDonateCreeper() {
     }
 
     function syncForActiveTab(panelId) {
-        const shouldShow = panelId === 'buttonConfigurationSection' && !dismissed;
+        const shouldShow = !dismissed;
         creeper.classList.toggle('is-hidden', !shouldShow);
         if (!shouldShow) {
             setTooltipVisible(false);
