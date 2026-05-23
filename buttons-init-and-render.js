@@ -34,6 +34,322 @@
 // Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS. This one too!
 'use strict';
 
+window.MaxExtensionButtonEditMode = {
+    active: false,
+    container: null,
+    origin: null,
+    clickBlocker: null,
+    pointerState: null,
+
+    toggle(container, origin) {
+        if (this.active && this.container === container) {
+            this.exit();
+            return;
+        }
+        this.enter(container, origin);
+    },
+
+    enter(container, origin) {
+        if (!container) return;
+        if (this.active) {
+            this.exit();
+        }
+
+        this.active = true;
+        this.container = container;
+        this.origin = origin || (container.closest('#max-extension-floating-panel') ? 'panel' : 'inline');
+        container.classList.add('ocp-button-edit-mode');
+        this.decorateContainer(container);
+        this.__toast('Button edit mode: drag buttons to reorder, click × to delete. Click Settings to exit.', 'info', 4500);
+    },
+
+    exit() {
+        if (!this.active) return;
+        const container = this.container;
+        if (container) {
+            container.classList.remove('ocp-button-edit-mode');
+            container.querySelectorAll('.ocp-button-delete-x').forEach(node => node.remove());
+            container.querySelectorAll('[data-ocp-button-edit-index]').forEach(button => {
+                button.classList.remove('ocp-button-edit-item', 'ocp-button-edit-dragging');
+                button.style.transform = '';
+                button.style.transition = '';
+                button.style.zIndex = '';
+                if (button.__ocpEditPointerDown) {
+                    button.removeEventListener('pointerdown', button.__ocpEditPointerDown);
+                    delete button.__ocpEditPointerDown;
+                }
+                delete button.dataset.ocpEditDecorated;
+            });
+        }
+        if (this.clickBlocker && container) {
+            container.removeEventListener('click', this.clickBlocker, true);
+        }
+        this.active = false;
+        this.container = null;
+        this.origin = null;
+        this.clickBlocker = null;
+        this.pointerState = null;
+    },
+
+    syncContainer(container, origin) {
+        if (!this.active) return;
+        if (this.origin && origin && this.origin !== origin) return;
+        this.container = container;
+        this.origin = origin || this.origin;
+        container.classList.add('ocp-button-edit-mode');
+        this.decorateContainer(container);
+    },
+
+    decorateContainer(container) {
+        if (!container) return;
+        container.querySelectorAll('[data-ocp-button-edit-index]').forEach(button => {
+            this.decorateButton(button);
+        });
+
+        if (!this.clickBlocker) {
+            this.clickBlocker = (event) => {
+                if (!this.active) return;
+                if (event.target?.closest?.('.ocp-button-delete-x')) return;
+                if (event.target?.closest?.('[data-ocp-settings-button="true"]')) return;
+                if (event.target?.closest?.('[data-ocp-button-edit-index]')) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+            };
+        }
+        container.removeEventListener('click', this.clickBlocker, true);
+        container.addEventListener('click', this.clickBlocker, true);
+    },
+
+    decorateButton(button) {
+        if (!button || button.dataset.ocpEditDecorated === 'true') return;
+        button.dataset.ocpEditDecorated = 'true';
+        button.classList.add('ocp-button-edit-item');
+
+        const deleteButton = document.createElement('span');
+        deleteButton.setAttribute('role', 'button');
+        deleteButton.tabIndex = 0;
+        deleteButton.className = 'ocp-button-delete-x';
+        deleteButton.textContent = '×';
+        deleteButton.title = 'Delete this button';
+        deleteButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            this.deleteButton(button);
+        });
+        deleteButton.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            event.stopPropagation();
+            this.deleteButton(button);
+        });
+        button.appendChild(deleteButton);
+
+        button.__ocpEditPointerDown = (event) => this.handlePointerDown(event, button);
+        button.addEventListener('pointerdown', button.__ocpEditPointerDown);
+    },
+
+    getEditableButtons() {
+        if (!this.container) return [];
+        return Array.from(this.container.querySelectorAll('[data-ocp-button-edit-index]'));
+    },
+
+    captureRects() {
+        return new Map(this.getEditableButtons().map(button => [button, button.getBoundingClientRect()]));
+    },
+
+    playFlip(beforeRects) {
+        this.getEditableButtons().forEach(button => {
+            const before = beforeRects.get(button);
+            if (!before) return;
+            const after = button.getBoundingClientRect();
+            const dx = before.left - after.left;
+            const dy = before.top - after.top;
+            if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
+            button.style.transition = 'none';
+            button.style.transform = `translate(${dx}px, ${dy}px)`;
+            requestAnimationFrame(() => {
+                button.style.transition = 'transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1)';
+                button.style.transform = '';
+            });
+        });
+    },
+
+    handlePointerDown(event, button) {
+        if (!this.active || event.button !== 0) return;
+        if (event.target?.closest?.('.ocp-button-delete-x')) return;
+        if (!button.dataset.ocpButtonEditIndex) return;
+
+        const index = Number(button.dataset.ocpButtonEditIndex);
+        if (!Number.isInteger(index)) return;
+
+        this.pointerState = {
+            button,
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            lastX: event.clientX,
+            lastY: event.clientY,
+            dragging: false,
+            originalIndex: index
+        };
+        button.setPointerCapture?.(event.pointerId);
+        button.addEventListener('pointermove', this.__boundMove || (this.__boundMove = (moveEvent) => this.handlePointerMove(moveEvent)));
+        button.addEventListener('pointerup', this.__boundUp || (this.__boundUp = (upEvent) => this.handlePointerUp(upEvent)));
+        button.addEventListener('pointercancel', this.__boundUp);
+    },
+
+    handlePointerMove(event) {
+        const state = this.pointerState;
+        if (!state || state.pointerId !== event.pointerId) return;
+        state.lastX = event.clientX;
+        state.lastY = event.clientY;
+        const distance = Math.hypot(event.clientX - state.startX, event.clientY - state.startY);
+        if (!state.dragging && distance < 5) return;
+
+        if (!state.dragging) {
+            state.dragging = true;
+            state.button.classList.add('ocp-button-edit-dragging');
+        }
+
+        event.preventDefault();
+        this.moveDraggedButton(event.clientX, event.clientY, state.button);
+    },
+
+    handlePointerUp(event) {
+        const state = this.pointerState;
+        if (!state || state.pointerId !== event.pointerId) return;
+        const button = state.button;
+        button.releasePointerCapture?.(event.pointerId);
+        button.removeEventListener('pointermove', this.__boundMove);
+        button.removeEventListener('pointerup', this.__boundUp);
+        button.removeEventListener('pointercancel', this.__boundUp);
+
+        if (state.dragging) {
+            event.preventDefault();
+            event.stopPropagation();
+            button.classList.remove('ocp-button-edit-dragging');
+            button.__ocpSuppressNextClick = true;
+            setTimeout(() => { button.__ocpSuppressNextClick = false; }, 0);
+            this.saveOrderFromDom();
+        }
+
+        this.pointerState = null;
+    },
+
+    moveDraggedButton(clientX, clientY, draggedButton) {
+        const siblings = this.getEditableButtons().filter(button => button !== draggedButton);
+        let target = null;
+        let insertAfter = false;
+        let bestDistance = Infinity;
+
+        siblings.forEach(button => {
+            const rect = button.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            const distance = Math.hypot(clientX - cx, clientY - cy);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                target = button;
+                insertAfter = clientY > cy || (Math.abs(clientY - cy) < rect.height / 2 && clientX > cx);
+            }
+        });
+
+        if (!target) return;
+        const beforeRects = this.captureRects();
+        if (insertAfter) {
+            target.after(draggedButton);
+        } else {
+            target.before(draggedButton);
+        }
+        this.playFlip(beforeRects);
+    },
+
+    getNonSeparatorSlots() {
+        const buttons = Array.isArray(window.globalMaxExtensionConfig?.customButtons)
+            ? window.globalMaxExtensionConfig.customButtons
+            : [];
+        const slots = [];
+        buttons.forEach((button, index) => {
+            if (!button?.separator) {
+                slots.push(index);
+            }
+        });
+        return slots;
+    },
+
+    async saveOrderFromDom() {
+        const config = window.globalMaxExtensionConfig;
+        if (!config || !Array.isArray(config.customButtons)) return;
+        const order = this.getEditableButtons()
+            .map(button => Number(button.dataset.ocpButtonEditIndex))
+            .filter(Number.isInteger);
+        const slots = this.getNonSeparatorSlots();
+        if (order.length !== slots.length) return;
+
+        const previous = [...config.customButtons];
+        const reordered = order.map(index => previous[index]).filter(Boolean);
+        slots.forEach((slot, offset) => {
+            config.customButtons[slot] = reordered[offset];
+        });
+        this.updateDomIndexesFromSlots(slots);
+        await this.saveCurrentProfileConfig();
+    },
+
+    updateDomIndexesFromSlots(slots) {
+        this.getEditableButtons().forEach((button, offset) => {
+            if (Number.isInteger(slots[offset])) {
+                button.dataset.ocpButtonEditIndex = String(slots[offset]);
+            }
+        });
+    },
+
+    async deleteButton(button) {
+        const index = Number(button?.dataset?.ocpButtonEditIndex);
+        const config = window.globalMaxExtensionConfig;
+        if (!Number.isInteger(index) || !Array.isArray(config?.customButtons) || !config.customButtons[index]) {
+            return;
+        }
+
+        const beforeRects = this.captureRects();
+        config.customButtons.splice(index, 1);
+        button.remove();
+        this.getEditableButtons().forEach(candidate => {
+            const current = Number(candidate.dataset.ocpButtonEditIndex);
+            if (Number.isInteger(current) && current > index) {
+                candidate.dataset.ocpButtonEditIndex = String(current - 1);
+            }
+        });
+        this.playFlip(beforeRects);
+        await this.saveCurrentProfileConfig();
+        this.__toast('Button deleted.', 'success', 1800);
+    },
+
+    async saveCurrentProfileConfig() {
+        try {
+            const { currentProfile } = await chrome.storage.local.get('currentProfile');
+            const profileName = currentProfile || window.globalMaxExtensionConfig?.PROFILE_NAME;
+            if (!profileName) {
+                throw new Error('Missing current profile name');
+            }
+            await chrome.runtime.sendMessage({
+                type: 'saveConfig',
+                profileName,
+                config: window.globalMaxExtensionConfig
+            });
+        } catch (error) {
+            this.__toast('Could not save button edit.', 'error');
+            logConCgp('[ButtonEditMode] Save failed:', error?.message || error);
+        }
+    },
+
+    __toast(message, type = 'info', options = 3000) {
+        if (typeof window.showToast === 'function') {
+            window.showToast(message, type, options);
+        }
+    }
+};
+
 /**
  * Namespace object containing initialization functions for custom buttons and toggles.
  */
@@ -138,8 +454,8 @@ window.MaxExtensionButtonsInit = {
         }
 
         // 2. Add standard custom buttons
-        globalMaxExtensionConfig.customButtons.forEach(config => {
-            allButtonDefs.push({ type: 'custom', config: config });
+        globalMaxExtensionConfig.customButtons.forEach((config, profileIndex) => {
+            allButtonDefs.push({ type: 'custom', config: config, profileIndex });
         });
 
         // 3. Add Cross-Chat buttons if they should be placed 'after'
@@ -201,8 +517,34 @@ window.MaxExtensionButtonsInit = {
             } else { // 'custom' button type
                 if (def.config.text === SETTINGS_BUTTON_MAGIC_TEXT) {
                     // Special handling for the settings button.
-                    const settingsButtonConfig = { ...def.config, text: 'Settings', tooltip: 'Click to open extension settings in a new tab. Shift+Click to move the buttons container (Pick or use arrows + Save).' };
+                    const settingsButtonConfig = { ...def.config, text: 'Settings', tooltip: 'Click to open extension settings in a new tab. Shift+Click to move the buttons container (Pick or use arrows + Save). Ctrl+Shift+Click edits buttons in-place.' };
                     const settingsClickHandler = (event) => {
+                        if (event?.currentTarget?.__ocpSuppressNextClick) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            event.currentTarget.__ocpSuppressNextClick = false;
+                            return;
+                        }
+
+                        const container = event?.target?.closest?.('[id$="-custom-buttons-container"]');
+                        const editOrigin = container?.closest?.('#max-extension-floating-panel') ? 'panel' : 'inline';
+
+                        if (window.MaxExtensionButtonEditMode?.active && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            window.MaxExtensionButtonEditMode.exit();
+                            return;
+                        }
+
+                        if (event && event.shiftKey && (event.ctrlKey || event.metaKey)) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            if (window.MaxExtensionButtonEditMode && typeof window.MaxExtensionButtonEditMode.toggle === 'function') {
+                                window.MaxExtensionButtonEditMode.toggle(container, editOrigin);
+                            }
+                            return;
+                        }
+
                         // Shift+Click: Move/Save Container Feature
                         if (event && event.shiftKey) {
                             if (window.MaxExtensionContainerMover && typeof window.MaxExtensionContainerMover.handleShiftClick === 'function') {
@@ -219,6 +561,7 @@ window.MaxExtensionButtonsInit = {
                         chrome.runtime.sendMessage({ type: 'openSettingsPage' });
                     };
                     buttonElement = MaxExtensionButtons.createCustomSendButton(settingsButtonConfig, index, settingsClickHandler, shortcutKey);
+                    buttonElement.dataset.ocpSettingsButton = 'true';
                 } else if (def.config.text === COPY_LAST_CHATGPT_RESPONSE_BUTTON_MAGIC_TEXT) {
                     const isChatGPT = window?.InjectionTargetsOnWebsite?.activeSite === 'ChatGPT';
                     const copyLastResponseButtonConfig = {
@@ -272,6 +615,10 @@ window.MaxExtensionButtonsInit = {
                 } else {
                     buttonElement = MaxExtensionButtons.createCustomSendButton(def.config, index, processCustomSendButtonClick, shortcutKey);
                 }
+
+                if (Number.isInteger(def.profileIndex) && buttonElement) {
+                    buttonElement.dataset.ocpButtonEditIndex = String(def.profileIndex);
+                }
             }
 
             container.appendChild(buttonElement);
@@ -298,6 +645,8 @@ window.MaxExtensionButtonsInit = {
         if (!isPanel && window.MaxExtensionFloatingPanel && typeof window.MaxExtensionFloatingPanel.ensureInlineQueueControls === 'function') {
             window.MaxExtensionFloatingPanel.ensureInlineQueueControls(container);
         }
+
+        window.MaxExtensionButtonEditMode?.syncContainer(container, isPanel ? 'panel' : 'inline');
     },
 
     /**

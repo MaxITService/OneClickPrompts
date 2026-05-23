@@ -974,6 +974,83 @@
     box-shadow: 0 0 6px rgba(231, 76, 60, 0.4);
 }
 
+/* In-place button edit mode entered from Ctrl+Shift+Click on the Settings button. */
+[id$="-custom-buttons-container"].ocp-button-edit-mode [data-ocp-button-edit-index] {
+    position: relative;
+    outline: 1px dashed rgba(122, 92, 200, 0.72);
+    border-radius: 6px;
+    animation: ocp-button-edit-shake 760ms ease-in-out infinite;
+    touch-action: none;
+}
+
+[id$="-custom-buttons-container"].ocp-button-edit-mode [data-ocp-button-edit-index]:nth-of-type(2n) {
+    animation-delay: -180ms;
+}
+
+[id$="-custom-buttons-container"].ocp-button-edit-mode [data-ocp-button-edit-index]:nth-of-type(3n) {
+    animation-delay: -320ms;
+}
+
+[id$="-custom-buttons-container"].ocp-button-edit-mode .ocp-button-edit-dragging {
+    animation: none;
+    cursor: grabbing;
+    opacity: 0.82;
+    z-index: 2147483647;
+}
+
+.ocp-button-delete-x {
+    position: absolute;
+    top: -7px;
+    right: -7px;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    min-height: 16px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    border-radius: 50%;
+    background: #d93025;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.ocp-button-delete-x:hover,
+.ocp-button-delete-x:focus-visible {
+    background: #ff4b3e;
+    transform: scale(1.08);
+}
+
+@keyframes ocp-button-edit-shake {
+    0%,
+    100% {
+        translate: 0 0;
+        rotate: -0.6deg;
+    }
+
+    25% {
+        translate: 0 -0.5px;
+        rotate: 0.8deg;
+    }
+
+    50% {
+        translate: 0.5px 0;
+        rotate: -0.2deg;
+    }
+
+    75% {
+        translate: -0.5px 0.5px;
+        rotate: 0.6deg;
+    }
+}
+
 /* Animation for queue ticking emoji rotation */
 @keyframes ocp-emoji-slow-rotate {
     0% {
