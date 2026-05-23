@@ -292,9 +292,9 @@ window.MaxExtensionButtonEditMode = {
                 opacity: 0.82;
                 cursor: grabbing;
                 animation: none;
-                outline: 2px solid #2dd4bf;
+                outline: 2px solid #8b5cf6;
                 outline-offset: 2px;
-                box-shadow: 0 8px 24px rgba(0,0,0,0.35), 0 0 0 4px rgba(45,212,191,0.2);
+                box-shadow: 0 8px 24px rgba(0,0,0,0.35), 0 0 0 4px rgba(139,92,246,0.22);
                 border-radius: 6px;
                 transform: scale(${state.visualScaleX}, ${state.visualScaleY});
                 transform-origin: 0 0;
