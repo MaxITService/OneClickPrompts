@@ -334,7 +334,7 @@ function initSideDonateCreeper() {
             placeQuietlyOnSide();
             creeper.classList.remove('is-exiting');
             void creeper.offsetWidth;
-            scheduleNextExit();
+            // Exit timer will start when the new entrance animation completes
         }, 2000);
     }
 
@@ -348,7 +348,7 @@ function initSideDonateCreeper() {
                 exitTimerId = null;
             }
         } else {
-            if (!exitTimerId && !creeper.classList.contains('is-exiting')) {
+            if (!exitTimerId && !creeper.classList.contains('is-exiting') && entranceComplete) {
                 scheduleNextExit();
             }
         }
@@ -386,6 +386,7 @@ function initSideDonateCreeper() {
         if (event.target !== creeper) return;
         if (event.animationName === 'sideDonateCreepInLeft' || event.animationName === 'sideDonateCreepInRight') {
             entranceComplete = true;
+            scheduleNextExit();
             trigger.classList.add('is-squishing');
             trigger.addEventListener('animationend', () => {
                 trigger.classList.remove('is-squishing');
@@ -422,6 +423,7 @@ function initSideDonateCreeper() {
         // of freezing mid-peek.
         if (!entranceComplete) {
             entranceComplete = true;
+            scheduleNextExit();
 
             // Capture the current mid-peek position (animation is
             // paused by the :hover CSS rule so getComputedStyle is
