@@ -60,6 +60,7 @@ window.MaxExtensionButtonEditMode = {
         this.origin = origin || (container.closest('#max-extension-floating-panel') ? 'panel' : 'inline');
         container.classList.add('ocp-button-edit-mode');
         this.decorateContainer(container);
+        this.updateSettingsButtonHint(container, true);
         this.__toast('Button edit mode: drag buttons or separators to reorder, click × to delete. Click Settings to exit.', 'info', 4500);
     },
 
@@ -80,6 +81,7 @@ window.MaxExtensionButtonEditMode = {
                 }
                 delete button.dataset.ocpEditDecorated;
             });
+            this.updateSettingsButtonHint(container, false);
         }
         if (this.clickBlocker && container) {
             container.removeEventListener('click', this.clickBlocker, true);
@@ -98,6 +100,7 @@ window.MaxExtensionButtonEditMode = {
         this.origin = origin || this.origin;
         container.classList.add('ocp-button-edit-mode');
         this.decorateContainer(container);
+        this.updateSettingsButtonHint(container, true);
     },
 
     decorateContainer(container) {
@@ -147,6 +150,24 @@ window.MaxExtensionButtonEditMode = {
 
         button.__ocpEditPointerDown = (event) => this.handlePointerDown(event, button);
         button.addEventListener('pointerdown', button.__ocpEditPointerDown);
+    },
+
+    updateSettingsButtonHint(container = this.container, isEditing = this.active) {
+        if (!container) return;
+        container.querySelectorAll('[data-ocp-settings-button="true"]').forEach(button => {
+            if (!button.dataset.ocpSettingsDefaultTitle) {
+                button.dataset.ocpSettingsDefaultTitle = button.getAttribute('title') || '';
+            }
+            if (isEditing) {
+                const exitTitle = 'Exit button edit mode. Drag buttons or separators to reorder them, or click × to delete one.';
+                button.setAttribute('title', exitTitle);
+                button.setAttribute('aria-label', exitTitle);
+            } else {
+                const defaultTitle = button.dataset.ocpSettingsDefaultTitle || 'Open extension settings';
+                button.setAttribute('title', defaultTitle);
+                button.setAttribute('aria-label', defaultTitle);
+            }
+        });
     },
 
     getEditableButtons() {
@@ -561,6 +582,8 @@ window.MaxExtensionButtonsInit = {
                     };
                     buttonElement = MaxExtensionButtons.createCustomSendButton(settingsButtonConfig, index, settingsClickHandler, shortcutKey);
                     buttonElement.dataset.ocpSettingsButton = 'true';
+                    buttonElement.dataset.ocpSettingsDefaultTitle = buttonElement.getAttribute('title') || '';
+                    buttonElement.setAttribute('aria-label', buttonElement.dataset.ocpSettingsDefaultTitle);
                 } else if (def.config.text === COPY_LAST_CHATGPT_RESPONSE_BUTTON_MAGIC_TEXT) {
                     const isChatGPT = window?.InjectionTargetsOnWebsite?.activeSite === 'ChatGPT';
                     const copyLastResponseButtonConfig = {
