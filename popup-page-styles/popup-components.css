@@ -1009,7 +1009,7 @@ body.dark-theme .help-donate-button {
 .side-donate-creeper {
     --side-donate-y-start: 140px;
     --side-donate-y-end: 360px;
-    --side-donate-edge-offset: 10px;
+    --side-donate-edge-offset: 0px;
     --side-donate-idle-bg: color-mix(in srgb, var(--bg-color, #f9f9f9) 76%, #8f8f8f 24%);
     --side-donate-idle-border: color-mix(in srgb, var(--border-color, #ccc) 68%, #777 32%);
     --side-donate-idle-text: color-mix(in srgb, var(--text-color, #333) 68%, #777 32%);
