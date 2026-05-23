@@ -1134,7 +1134,7 @@ body.dark-theme .help-donate-button:focus-visible {
 
 .side-donate-creeper--left.is-exiting {
     animation-name: sideDonateCrawl, sideDonateCreepOutLeft !important;
-    animation-duration: 56s, 2000ms !important;
+    animation-duration: 56s, 6000ms !important;
     animation-timing-function: ease-in-out, cubic-bezier(0.22, 1, 0.36, 1) !important;
     animation-iteration-count: infinite, 1 !important;
     animation-fill-mode: none, both !important;
@@ -1142,7 +1142,7 @@ body.dark-theme .help-donate-button:focus-visible {
 
 .side-donate-creeper--right.is-exiting {
     animation-name: sideDonateCrawl, sideDonateCreepOutRight !important;
-    animation-duration: 56s, 2000ms !important;
+    animation-duration: 56s, 6000ms !important;
     animation-timing-function: ease-in-out, cubic-bezier(0.22, 1, 0.36, 1) !important;
     animation-iteration-count: infinite, 1 !important;
     animation-fill-mode: none, both !important;
