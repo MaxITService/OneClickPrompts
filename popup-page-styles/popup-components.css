@@ -1386,25 +1386,23 @@ body.dark-theme .side-donate-creeper__close {
 /* Tipsy crawl — gentle horizontal sway as it moves vertically */
 @keyframes sideDonateCrawl {
     0% {
-        top: var(--side-donate-y-start);
         translate: 0 0;
     }
 
     25% {
-        translate: 4px 0;
+        translate: 4px calc((var(--side-donate-y-end) - var(--side-donate-y-start)) * 0.25);
     }
 
     50% {
-        translate: -3px 0;
+        translate: -3px calc((var(--side-donate-y-end) - var(--side-donate-y-start)) * 0.5);
     }
 
     75% {
-        translate: 2px 0;
+        translate: 2px calc((var(--side-donate-y-end) - var(--side-donate-y-start)) * 0.75);
     }
 
     100% {
-        top: var(--side-donate-y-end);
-        translate: 0 0;
+        translate: 0 calc(var(--side-donate-y-end) - var(--side-donate-y-start));
     }
 }
 
