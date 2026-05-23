@@ -368,3 +368,30 @@ body.dark-theme .expand-text {
 body.dark-theme .collapsible .section-header:hover .expand-text {
     color: var(--primary-color, #9a79d3);
 }
+
+/* Dark theme overrides for slider lock button */
+body.dark-theme .ui-scale-lock-btn {
+    border-color: var(--border-color);
+    background: linear-gradient(180deg, #33333b 0%, #2a2a30 100%);
+    color: var(--text-color);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+body.dark-theme .ui-scale-lock-btn:hover {
+    border-color: var(--primary-color);
+    background: linear-gradient(180deg, #444052 0%, #3a3648 100%);
+    box-shadow: 0 2px 8px rgba(154, 121, 211, 0.25);
+}
+
+body.dark-theme .ui-scale-lock-btn.is-unlocked {
+    border-color: #444;
+    opacity: 0.6;
+    background: linear-gradient(180deg, #2a2a2e 0%, #222226 100%);
+}
+
+body.dark-theme .ui-scale-lock-btn.is-unlocked:hover {
+    opacity: 1;
+    border-color: var(--danger-color);
+    background: linear-gradient(180deg, #4c2c2c 0%, #3f2222 100%);
+    box-shadow: 0 2px 8px rgba(209, 108, 108, 0.25);
+}
