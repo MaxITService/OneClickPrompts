@@ -142,6 +142,17 @@ function handleUiScaleSliderInput() {
     debouncedSaveCurrentProfile();
 }
 
+async function handleUiScaleSliderChange() {
+    if (!currentProfile) return;
+    currentProfile.uiScale = getUiScaleFromSlider();
+    updateUiScalePreview(currentProfile.uiScale);
+    if (saveTimeoutId !== null) {
+        clearTimeout(saveTimeoutId);
+        saveTimeoutId = null;
+    }
+    await saveCurrentProfile();
+}
+
 function setTooltipForElement(element, text) {
     if (!element) return;
     if (window.OCPTooltip) {
@@ -788,7 +799,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (uiScaleSliderEl) {
         uiScaleSliderEl.addEventListener('input', handleUiScaleSliderInput);
-        uiScaleSliderEl.addEventListener('change', handleUiScaleSliderInput);
+        uiScaleSliderEl.addEventListener('change', handleUiScaleSliderChange);
     }
     reinforceAllCheckboxTooltips();
     // Some modules create checkbox rows dynamically. Keep tooltip wiring resilient.
