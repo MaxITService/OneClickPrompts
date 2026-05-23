@@ -203,11 +203,10 @@ function initSideDonateCreeper() {
     const creeper = document.getElementById('sideDonateCreeper');
     const trigger = document.getElementById('sideDonateButton');
     const tooltip = document.getElementById('sideDonateTooltip');
-    const closeButton = document.getElementById('sideDonateClose');
     const openButton = document.getElementById('sideDonateOpen');
     const donateUrl = 'https://buymeacoffee.com/netstaff';
 
-    if (!creeper || !trigger || !tooltip || !closeButton || !openButton) {
+    if (!creeper || !trigger || !tooltip || !openButton) {
         return;
     }
 
@@ -250,13 +249,6 @@ function initSideDonateCreeper() {
     trigger.addEventListener('click', (event) => {
         event.stopPropagation();
         chrome.tabs.create({ url: donateUrl });
-    });
-
-    closeButton.addEventListener('click', (event) => {
-        event.stopPropagation();
-        dismissed = true;
-        setTooltipVisible(false);
-        creeper.classList.add('is-dismissed');
     });
 
     openButton.addEventListener('click', (event) => {
