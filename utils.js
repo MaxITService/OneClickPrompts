@@ -767,13 +767,6 @@ window.MaxExtensionHotkeys = {
             };
         }
 
-        if (this.chromeReservedCombos.has(normalized.combo)) {
-            return {
-                valid: false,
-                reason: 'Chrome already uses that shortcut. Choose another one.'
-            };
-        }
-
         return { valid: true, reason: '' };
     },
 

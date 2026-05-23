@@ -702,8 +702,20 @@ function openHotkeyPicker(buttonItem) {
             <div class="hotkey-picker-target">${escapeHtml(describeButtonForConflict(button, index))}</div>
             <div class="hotkey-capture-box" tabindex="0">
                 <span class="hotkey-capture-value">${escapeHtml(pendingHotkey?.label || 'Press shortcut')}</span>
+                <div class="hotkey-warning-message" style="display: none;">Are you sure?</div>
             </div>
             <p class="hotkey-picker-message">${escapeHtml(validationMessage)}</p>
+            
+            <div class="hotkey-picker-help">
+                <h4>💡 Supported Examples</h4>
+                <div class="hotkey-help-examples">
+                    <span><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></span>
+                    <span><kbd>Alt</kbd>+<kbd>Q</kbd></span>
+                    <span><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>H</kbd></span>
+                </div>
+                <p>Press your desired combination of modifier keys (<kbd>Ctrl</kbd>, <kbd>Alt</kbd>, <kbd>Shift</kbd>, or <kbd>Cmd/Win</kbd>) and a standard key to map it.</p>
+            </div>
+
             <div class="hotkey-picker-actions">
                 <button type="button" class="hotkey-picker-clear">Clear</button>
                 <button type="button" class="hotkey-picker-cancel">Cancel</button>
@@ -727,11 +739,46 @@ function openHotkeyPicker(buttonItem) {
         overlay.remove();
     };
 
+    const SYSTEM_EDITING_COMBOS = {
+        'ctrl+keyc': 'Copy',
+        'ctrl+keyv': 'Paste',
+        'ctrl+keyx': 'Cut',
+        'ctrl+keya': 'Select All',
+        'ctrl+keyz': 'Undo',
+        'ctrl+keyy': 'Redo'
+    };
+
     const updatePendingHotkey = (result) => {
         pendingHotkey = result.hotkey;
         valueEl.textContent = result.hotkey?.label || 'Press shortcut';
+        
+        let isConflict = false;
+        let conflictTitle = '';
+        if (result.valid && pendingHotkey?.combo) {
+            const combo = pendingHotkey.combo;
+            if (SYSTEM_EDITING_COMBOS[combo]) {
+                isConflict = true;
+                conflictTitle = `This combination conflicts with the standard system ${SYSTEM_EDITING_COMBOS[combo]} shortcut and will override standard browser editing functionality on chat pages.`;
+            } else if (window.MaxExtensionHotkeys?.chromeReservedCombos?.has(combo)) {
+                isConflict = true;
+                conflictTitle = `This combination is a Chrome reserved shortcut and may conflict with or override default browser functions.`;
+            }
+        }
+
+        const warningEl = overlay.querySelector('.hotkey-warning-message');
+        if (isConflict) {
+            captureBox.classList.add('hotkey-capture-box-conflict');
+            warningEl.style.display = 'block';
+            warningEl.setAttribute('title', conflictTitle);
+        } else {
+            captureBox.classList.remove('hotkey-capture-box-conflict');
+            warningEl.style.display = 'none';
+            warningEl.removeAttribute('title');
+        }
+
         messageEl.textContent = result.reason || 'Shortcut looks good.';
         messageEl.classList.toggle('hotkey-picker-error', !result.valid);
+
         saveButton.disabled = !result.valid;
     };
 
@@ -776,6 +823,10 @@ function openHotkeyPicker(buttonItem) {
             close();
         }
     });
+
+    if (pendingHotkey) {
+        updatePendingHotkey({ hotkey: pendingHotkey, valid: true, reason: '' });
+    }
 
     requestAnimationFrame(() => {
         overlay.classList.add('is-visible');

@@ -473,3 +473,89 @@ button.small {
     padding: 4px 8px;
     font-size: 12px;
 }
+
+/* Hotkey Picker Dialog Helper & Examples */
+.hotkey-picker-help {
+    margin: 16px 0;
+    padding: 12px;
+    border-radius: 6px;
+    background: rgba(122, 92, 200, 0.03);
+    border: 1px solid rgba(122, 92, 200, 0.1);
+    text-align: left;
+}
+
+.hotkey-picker-help h4 {
+    margin: 0 0 8px 0;
+    font-size: 12px;
+    color: var(--primary-color, #7a5cc8);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.hotkey-help-examples {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.hotkey-help-examples span {
+    font-size: 11px;
+    color: var(--text-muted, #666);
+    background: rgba(0, 0, 0, 0.03);
+    padding: 2px 4px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.hotkey-picker-help p {
+    margin: 0;
+    font-size: 11px;
+    color: var(--text-muted, #666);
+    line-height: 1.45;
+}
+
+kbd {
+    background-color: var(--bg-color, #fff);
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 4px;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+    color: var(--text-color, #333);
+    display: inline-block;
+    font-family: inherit;
+    font-size: 10px;
+    line-height: 1.2;
+    margin: 0 1px;
+    padding: 1px 4px;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+/* Hotkey Capture Box - Conflict Alert Styles */
+.hotkey-capture-box.hotkey-capture-box-conflict {
+    border-color: var(--danger-color, #dc3545) !important;
+    background: rgba(220, 53, 69, 0.04) !important;
+    animation: hotkey-shake 0.3s ease;
+}
+
+.hotkey-warning-message {
+    font-size: 11px;
+    color: var(--danger-color, #dc3545);
+    font-weight: 600;
+    margin-top: 5px;
+    cursor: help;
+    display: inline-block;
+    background: rgba(220, 53, 69, 0.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(220, 53, 69, 0.15);
+}
+
+@keyframes hotkey-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+}
