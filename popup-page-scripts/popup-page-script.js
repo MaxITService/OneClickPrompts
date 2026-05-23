@@ -48,6 +48,9 @@ const queueRandomizePercentRow = document.getElementById('queueRandomizePercentR
 const hideOnPageAutoSendToggleEl = document.getElementById('hideOnPageAutoSendToggle');
 const hideOnPageHotkeysToggleEl = document.getElementById('hideOnPageHotkeysToggle');
 const hideOnPageFloatingPanelToggleEl = document.getElementById('hideOnPageFloatingPanelToggle');
+const uiScaleSliderEl = document.getElementById('uiScaleSlider');
+const uiScaleValueEl = document.getElementById('uiScaleValue');
+const uiScalePreviewEl = document.getElementById('uiScalePreview');
 
 // -------------------------
 // Debounced Save Function
@@ -87,11 +90,56 @@ async function updateGlobalSettings() {
     currentProfile.hideOnPageAutoSendToggle = !!hideOnPageAutoSendToggleEl?.checked;
     currentProfile.hideOnPageHotkeysToggle = !!hideOnPageHotkeysToggleEl?.checked;
     currentProfile.hideOnPageFloatingPanelToggle = !!hideOnPageFloatingPanelToggleEl?.checked;
+    currentProfile.uiScale = getUiScaleFromSlider();
     await saveCurrentProfile();
     refreshOnPageControlVisibilityTooltips();
     await refreshFloatingToggleVisibilityWarningTooltip();
     logToGUIConsole('Updated global settings');
     showToast('Global settings updated', 'success');
+}
+
+function normalizeUiScale(value) {
+    if (window.MaxExtensionUiScale && typeof window.MaxExtensionUiScale.normalize === 'function') {
+        return window.MaxExtensionUiScale.normalize(value, 1);
+    }
+    const numeric = Number(value);
+    const base = Number.isFinite(numeric) ? numeric : 1;
+    const stepped = Math.round(base / 0.05) * 0.05;
+    return Math.min(1.5, Math.max(0.7, Number(stepped.toFixed(2))));
+}
+
+function getUiScaleFromSlider() {
+    if (!uiScaleSliderEl) return normalizeUiScale(currentProfile?.uiScale);
+    return normalizeUiScale(Number(uiScaleSliderEl.value) / 100);
+}
+
+function updateUiScalePreview(scale) {
+    const normalized = normalizeUiScale(scale);
+    const percent = Math.round(normalized * 100);
+    if (uiScaleValueEl) {
+        uiScaleValueEl.textContent = `${percent}%`;
+    }
+    if (uiScaleSliderEl && String(uiScaleSliderEl.value) !== String(percent)) {
+        uiScaleSliderEl.value = String(percent);
+    }
+    if (uiScalePreviewEl) {
+        uiScalePreviewEl.style.setProperty('--ocp-preview-scale', String(normalized));
+    }
+}
+
+function updateUiScaleSettingsUIFromProfile() {
+    const scale = normalizeUiScale(currentProfile?.uiScale);
+    if (currentProfile) {
+        currentProfile.uiScale = scale;
+    }
+    updateUiScalePreview(scale);
+}
+
+function handleUiScaleSliderInput() {
+    if (!currentProfile) return;
+    currentProfile.uiScale = getUiScaleFromSlider();
+    updateUiScalePreview(currentProfile.uiScale);
+    debouncedSaveCurrentProfile();
 }
 
 function setTooltipForElement(element, text) {
@@ -541,6 +589,7 @@ async function updateInterface(anchorElement = null) {
     if (hideOnPageFloatingPanelToggleEl) {
         hideOnPageFloatingPanelToggleEl.checked = Boolean(currentProfile.hideOnPageFloatingPanelToggle);
     }
+    updateUiScaleSettingsUIFromProfile();
     refreshOnPageControlVisibilityTooltips();
     await refreshFloatingToggleVisibilityWarningTooltip();
     reinforceAllCheckboxTooltips();
@@ -736,6 +785,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (hideOnPageFloatingPanelToggleEl) {
         hideOnPageFloatingPanelToggleEl.addEventListener('change', updateGlobalSettings);
+    }
+    if (uiScaleSliderEl) {
+        uiScaleSliderEl.addEventListener('input', handleUiScaleSliderInput);
+        uiScaleSliderEl.addEventListener('change', handleUiScaleSliderInput);
     }
     reinforceAllCheckboxTooltips();
     // Some modules create checkbox rows dynamically. Keep tooltip wiring resilient.

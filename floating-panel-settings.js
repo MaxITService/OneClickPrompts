@@ -53,7 +53,7 @@ window.MaxExtensionFloatingPanel.normalizePanelSettings = function (settings = {
     merged.posX = numberOrDefault(merged.posX, defaults.posX);
     merged.posY = numberOrDefault(merged.posY, defaults.posY);
     merged.opacity = Math.min(1, Math.max(0, numberOrDefault(merged.opacity, defaults.opacity)));
-    merged.scale = Math.min(1.5, Math.max(0.7, numberOrDefault(merged.scale, defaults.scale)));
+    delete merged.scale;
     merged.isVisible = boolOrDefault(merged.isVisible, defaults.isVisible);
     merged.isHeaderCollapsed = boolOrDefault(merged.isHeaderCollapsed, defaults.isHeaderCollapsed);
     merged.isFooterCollapsed = boolOrDefault(merged.isFooterCollapsed, defaults.isFooterCollapsed);

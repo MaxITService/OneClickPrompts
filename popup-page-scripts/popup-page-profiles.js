@@ -14,6 +14,7 @@ const minimalDefaultConfig = {
     hideOnPageAutoSendToggle: false,
     hideOnPageHotkeysToggle: false,
     hideOnPageFloatingPanelToggle: false,
+    uiScale: 1,
     firstModificationDone: false,
     customButtons: [], // No buttons or separators
     queueRandomizeEnabled: false,
@@ -224,4 +225,3 @@ async function deleteCurrentProfile() {
         logToGUIConsole(`Error deleting profile: ${error.message}`);
     }
 }
-

@@ -845,3 +845,43 @@ window.MaxExtensionHotkeys = {
         return !!parsed.valid && parsed.hotkey.combo === hotkey.combo;
     }
 };
+
+/**
+ * Shared UI scale helpers for popup settings and injected UI.
+ * The source of truth is the active profile's `uiScale` value.
+ */
+window.MaxExtensionUiScale = {
+    min: 0.7,
+    max: 1.5,
+    step: 0.05,
+
+    normalize(value, fallback = 1) {
+        const numeric = Number(value);
+        const base = Number.isFinite(numeric) ? numeric : fallback;
+        const stepped = Math.round(base / this.step) * this.step;
+        return Math.min(this.max, Math.max(this.min, Number(stepped.toFixed(2))));
+    },
+
+    getFromConfig(config = window.globalMaxExtensionConfig) {
+        return this.normalize(config?.uiScale, 1);
+    },
+
+    toPercent(scale) {
+        return Math.round(this.normalize(scale) * 100);
+    },
+
+    applyToInlineContainer(container, config = window.globalMaxExtensionConfig) {
+        if (!container) return;
+        const scale = this.getFromConfig(config);
+        container.style.transform = '';
+        container.style.transformOrigin = '';
+        container.style.zoom = scale === 1 ? '' : String(scale);
+        container.dataset.ocpUiScale = String(scale);
+    },
+
+    resetInlineContainer(container) {
+        if (!container) return;
+        container.style.zoom = '';
+        delete container.dataset.ocpUiScale;
+    }
+};

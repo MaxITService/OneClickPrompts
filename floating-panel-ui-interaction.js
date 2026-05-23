@@ -325,21 +325,11 @@ window.MaxExtensionFloatingPanel.updatePanelFromSettings = function () {
         transparencyValue.textContent = `${transparencyPercent}%`;
     }
 
-    const scaleSlider = document.getElementById('max-extension-scale-slider');
-    const scaleValue = document.getElementById('max-extension-scale-value');
-    const scalePercent = Math.round(panelScale * 100);
-    if (scaleSlider && String(scaleSlider.value) !== String(scalePercent)) {
-        scaleSlider.value = scalePercent;
-    }
-    if (scaleValue) {
-        scaleValue.textContent = `${scalePercent}%`;
-    }
 };
 
 window.MaxExtensionFloatingPanel.getPanelScale = function () {
-    let panelScale = this.currentPanelSettings?.scale;
-    if (typeof panelScale !== 'number' || Number.isNaN(panelScale)) {
-        panelScale = this.defaultPanelSettings.scale;
+    if (window.MaxExtensionUiScale && typeof window.MaxExtensionUiScale.getFromConfig === 'function') {
+        return window.MaxExtensionUiScale.getFromConfig(window.globalMaxExtensionConfig);
     }
-    return Math.min(1.5, Math.max(0.7, panelScale));
+    return 1;
 };

@@ -85,6 +85,12 @@ window.MaxExtensionButtonsInit = {
      * @param {boolean} isPanel - Flag indicating if the container is the floating panel.
      */
     generateAndAppendAllButtons: async function (container, isPanel) {
+        if (isPanel) {
+            window.MaxExtensionUiScale?.resetInlineContainer(container);
+        } else {
+            window.MaxExtensionUiScale?.applyToInlineContainer(container);
+        }
+
         const SETTINGS_BUTTON_MAGIC_TEXT = '%OCP_APP_SETTINGS_SYSTEM_BUTTON%';
         const COPY_LAST_CHATGPT_RESPONSE_BUTTON_MAGIC_TEXT = '%OCP_COPY_LAST_CHATGPT_RESPONSE_SYSTEM_BUTTON%';
         const QUEUE_CURRENT_EDITOR_BUTTON_MAGIC_TEXT = '%OCP_QUEUE_CURRENT_EDITOR_SYSTEM_BUTTON%';
@@ -316,6 +322,11 @@ window.MaxExtensionButtonsInit = {
             } else {
                 logConCgp('[init] Custom buttons container already exists in this target. Reusing it.');
             }
+            if (isPanel) {
+                window.MaxExtensionUiScale?.resetInlineContainer(existingContainer);
+            } else {
+                window.MaxExtensionUiScale?.applyToInlineContainer(existingContainer);
+            }
         }
 
         // If we do not have a reusable container, create a fresh one
@@ -406,6 +417,9 @@ window.MaxExtensionButtonsInit = {
         // If origin is 'panel', only update the floating panel
         if (origin === 'panel') {
             if (window.MaxExtensionFloatingPanel && window.MaxExtensionFloatingPanel.panelElement) {
+                if (typeof window.MaxExtensionFloatingPanel.updatePanelFromSettings === 'function') {
+                    window.MaxExtensionFloatingPanel.updatePanelFromSettings();
+                }
                 const buttonsArea = document.getElementById('max-extension-buttons-area');
                 if (buttonsArea) {
                     const panelVisible = !!window.MaxExtensionFloatingPanel.isPanelVisible;

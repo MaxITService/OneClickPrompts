@@ -56,10 +56,6 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
         const transparencyPopover = document.getElementById('max-extension-transparency-popover');
         const transparencySlider = document.getElementById('max-extension-transparency-slider');
         const transparencyValue = document.getElementById('max-extension-transparency-value');
-        const scaleButton = document.getElementById('max-extension-panel-scale-btn');
-        const scalePopover = document.getElementById('max-extension-scale-popover');
-        const scaleSlider = document.getElementById('max-extension-scale-slider');
-        const scaleValue = document.getElementById('max-extension-scale-value');
         const collapseFooterButton = document.getElementById('max-extension-panel-collapse-footer-btn');
         const profileSwitcherContainer = document.getElementById('max-extension-profile-switcher');
 
@@ -96,13 +92,8 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
         // --- Transparency controls ---
         const clampPercent = (p) => Math.min(100, Math.max(0, Math.round(p)));
         const clampOpacity = (o) => Math.min(1, Math.max(0, o));
-        const clampScalePercent = (p) => Math.min(150, Math.max(70, Math.round(p / 5) * 5));
-        const clampPanelScale = (s) => Math.min(1.5, Math.max(0.7, s));
         const updateTransparencyLabel = (p) => {
             if (transparencyValue) transparencyValue.textContent = `${p}%`;
-        };
-        const updateScaleLabel = (p) => {
-            if (scaleValue) scaleValue.textContent = `${p}%`;
         };
 
         this._rememberPopoverOrigin = (popover) => {
@@ -282,83 +273,6 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
             // Prevent drag interference while interacting with slider
             transparencySlider.addEventListener('mousedown', (event) => event.stopPropagation());
             transparencySlider.addEventListener('click', (event) => event.stopPropagation());
-        }
-
-        const applyScalePercent = (percent) => {
-            const clampedPercent = clampScalePercent(percent);
-            if (scaleSlider && String(scaleSlider.value) !== String(clampedPercent)) {
-                scaleSlider.value = clampedPercent;
-            }
-            updateScaleLabel(clampedPercent);
-            if (!this.currentPanelSettings) this.currentPanelSettings = { ...this.defaultPanelSettings };
-            this.currentPanelSettings.scale = clampPanelScale(clampedPercent / 100);
-            this.updatePanelFromSettings();
-            this.debouncedSavePanelSettings();
-        };
-
-        const getCurrentScalePercent = () => {
-            let currentScale = this.currentPanelSettings?.scale;
-            if (typeof currentScale !== 'number' || Number.isNaN(currentScale)) {
-                currentScale = this.defaultPanelSettings.scale;
-            }
-            return clampScalePercent(clampPanelScale(currentScale) * 100);
-        };
-
-        if (scaleButton && scalePopover && scaleSlider) {
-            const initialPercent = getCurrentScalePercent();
-            scaleSlider.value = initialPercent;
-            updateScaleLabel(initialPercent);
-
-            const openScalePopover = () => {
-                const currentPercent = getCurrentScalePercent();
-                scaleSlider.value = currentPercent;
-                updateScaleLabel(currentPercent);
-                scalePopover.style.display = 'block';
-                if (typeof this.positionFloatingPopover === 'function') {
-                    this.positionFloatingPopover(scalePopover, scaleButton, { offsetY: 6, align: 'right' });
-                }
-            };
-
-            const closeScalePopover = () => {
-                scalePopover.style.display = 'none';
-                if (typeof this.restorePopoverToOriginalParent === 'function') {
-                    this.restorePopoverToOriginalParent(scalePopover);
-                }
-            };
-            this.closeScalePopover = closeScalePopover;
-
-            scaleButton.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const isVisible = scalePopover.style.display === 'block';
-                if (isVisible) {
-                    closeScalePopover();
-                } else {
-                    openScalePopover();
-                }
-            });
-
-            const outsideScaleClickHandler = (e) => {
-                if (!scalePopover || scalePopover.style.display !== 'block') return;
-                const withinPopover = scalePopover.contains(e.target);
-                const onButton = scaleButton.contains(e.target);
-                if (!withinPopover && !onButton) {
-                    closeScalePopover();
-                }
-            };
-            document.addEventListener('mousedown', outsideScaleClickHandler, true);
-
-            const scaleEscHandler = (e) => {
-                if (e.key === 'Escape' && scalePopover.style.display === 'block') {
-                    closeScalePopover();
-                }
-            };
-            document.addEventListener('keydown', scaleEscHandler, true);
-
-            scaleSlider.addEventListener('input', (e) => {
-                applyScalePercent(Number(e.target.value));
-            });
-            scaleSlider.addEventListener('mousedown', (event) => event.stopPropagation());
-            scaleSlider.addEventListener('click', (event) => event.stopPropagation());
         }
 
         this.makeDraggable(panel, panelHeader);

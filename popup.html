@@ -463,6 +463,42 @@
             <span>Hide Hotkeys on-page control</span>
           </label>
         </div>
+        <div class="ui-scale-setting text-inside-container">
+          <div class="ui-scale-setting__control">
+            <label for="uiScaleSlider">
+              Interface scale:
+              <strong id="uiScaleValue">100%</strong>
+            </label>
+            <input
+              id="uiScaleSlider"
+              type="range"
+              min="70"
+              max="150"
+              step="5"
+              value="100"
+              title="Scale both the floating panel and injected on-page button row for this profile."
+            />
+          </div>
+          <div
+            id="uiScalePreview"
+            class="ui-scale-preview"
+            aria-label="Interface scale live preview"
+          >
+            <div class="ui-scale-preview__panel">
+              <div class="ui-scale-preview__header"></div>
+              <div class="ui-scale-preview__buttons">
+                <button type="button">🧠</button>
+                <button type="button">💡</button>
+                <button type="button">⚙️</button>
+              </div>
+            </div>
+            <div class="ui-scale-preview__row">
+              <button type="button">Auto</button>
+              <button type="button">Alt+1</button>
+              <button type="button">Queue</button>
+            </div>
+          </div>
+        </div>
         <div class="row">
           <button
             id="revertDefault"
@@ -1495,9 +1531,9 @@
               buttons, profile switching, and queue controls.
             </li>
             <li>
-              <strong>Floating panel scale:</strong> Use the ⤢ control in the
-              floating panel header to scale the panel from compact to larger UI.
-              Scale is saved with the floating panel settings for that site.
+              <strong>Interface scale:</strong> Use the Settings scale slider to
+              resize both the injected on-page buttons and the floating panel.
+              Scale is saved with the current profile.
             </li>
             <li>
               <strong>Queue Feature:</strong> Queue sends multiple prompts
