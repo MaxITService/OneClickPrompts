@@ -291,7 +291,7 @@ function initSideDonateCreeper() {
     const openButton = document.getElementById('sideDonateOpen');
     const donateUrl = 'https://buymeacoffee.com/netstaff';
 
-    if (!creeper || !trigger || !tooltip || !openButton) {
+    if (!creeper || !trigger || !tooltip) {
         return;
     }
 
@@ -358,7 +358,7 @@ function initSideDonateCreeper() {
         const viewportHeight = Math.max(window.innerHeight || 0, 420);
         const safeTop = 88;
         const safeBottom = 118;
-        const buttonHeight = 68;
+        const buttonHeight = 55;
         const minY = safeTop;
         const maxY = Math.max(minY + 80, viewportHeight - safeBottom - buttonHeight);
         const startY = Math.round(minY + Math.random() * Math.max(1, maxY - minY));
@@ -399,10 +399,12 @@ function initSideDonateCreeper() {
         }, { once: true });
     });
 
-    openButton.addEventListener('click', (event) => {
-        event.stopPropagation();
-        chrome.tabs.create({ url: donateUrl });
-    });
+    if (openButton) {
+        openButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            chrome.tabs.create({ url: donateUrl });
+        });
+    }
 
     creeper.addEventListener('mouseenter', () => {
         setTooltipVisible(true);

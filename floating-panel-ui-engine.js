@@ -96,11 +96,11 @@ window.MaxExtensionFloatingPanel.getQueueBaseDelayMs = function () {
     const unit = (config.queueDelayUnit === 'sec') ? 'sec' : 'min';
     if (unit === 'sec') {
         const secondsValue = Number(config.queueDelaySeconds);
-        const seconds = Number.isFinite(secondsValue) ? secondsValue : 300;
+        const seconds = Number.isFinite(secondsValue) ? secondsValue : 60;
         return Math.max(10, seconds) * 1000;
     }
     const minutesValue = Number(config.queueDelayMinutes);
-    const minutes = Number.isFinite(minutesValue) ? minutesValue : 5;
+    const minutes = Number.isFinite(minutesValue) ? minutesValue : 1;
     return Math.max(1, minutes) * 60 * 1000;
 };
 

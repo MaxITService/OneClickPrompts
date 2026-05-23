@@ -90,6 +90,10 @@ function createButtonCardElement(button, index, crossChatSettings = null) {
             ? `<div class="autosend-line"><label class="checkbox-row"><input type="checkbox" class="autosend-toggle" ${button.autoSend ? 'checked' : ''}><span>Auto-send</span></label></div>`
             : '';
 
+        const queueDelayHTML = isQueueCurrentEditorButton
+            ? `<div class="queue-delay-line" title="Default delay in seconds for this button"><label class="delay-row"><span>Delay (sec):</span><input type="number" class="queue-delay-input" min="1" max="64000" style="width: 65px; margin-left: 5px; padding: 2px 4px; border: 1px solid rgba(0,0,0,0.2); border-radius: 4px;" value="${button.defaultDelaySeconds !== undefined ? button.defaultDelaySeconds : 60}"></label></div>`
+            : '';
+
         // Calculate hotkey with consideration for CrossChat buttons and separators
         let hotkeyHintHTML = '';
         if (!button.separator) {
@@ -112,7 +116,7 @@ function createButtonCardElement(button, index, crossChatSettings = null) {
                 </div>`;
         }
 
-        const metaSeparatorHTML = (autoSendHTML && hotkeyHintHTML)
+        const metaSeparatorHTML = ((autoSendHTML || queueDelayHTML) && hotkeyHintHTML)
             ? `<div class="meta-separator"></div>`
             : '';
 
@@ -122,6 +126,7 @@ function createButtonCardElement(button, index, crossChatSettings = null) {
             ${textElementHTML}
             <div class="meta-block">
                 ${autoSendHTML}
+                ${queueDelayHTML}
                 ${metaSeparatorHTML}
                 ${hotkeyHintHTML}
             </div>
@@ -182,6 +187,7 @@ async function updatebuttonCardsList(restoreScroll = true) {
     textareaSaverAndResizerFunc();
     attachEmojiInputListeners();
     attachAutoSendToggleListeners();
+    attachQueueDelayListeners();
     reapplyPendingDeletionUI();
 
     // Restore scroll position only if requested
@@ -1386,6 +1392,38 @@ function textareaSaverAndResizerFunc() {
 
             // Use debounced save to throttle saving.
             debouncedSaveCurrentProfile();
+        });
+    });
+}
+
+/**
+ * Attaches listeners to queue delay inputs to update defaultDelaySeconds.
+ */
+function attachQueueDelayListeners() {
+    const delayInputs = buttonCardsList.querySelectorAll('input.queue-delay-input');
+    delayInputs.forEach(input => {
+        input.addEventListener('change', () => {
+            const buttonItem = input.closest('.button-item');
+            if (buttonItem) {
+                const index = parseInt(buttonItem.dataset.index);
+                const val = parseInt(input.value, 10);
+                const sanitized = Number.isFinite(val) ? Math.max(1, Math.min(64000, val)) : 60;
+                input.value = sanitized;
+                currentProfile.customButtons[index].defaultDelaySeconds = sanitized;
+                debouncedSaveCurrentProfile();
+                logToGUIConsole(`Updated default delay for Queue button at index ${index} to ${sanitized}s`);
+            }
+        });
+        input.addEventListener('input', () => {
+            const buttonItem = input.closest('.button-item');
+            if (buttonItem) {
+                const index = parseInt(buttonItem.dataset.index);
+                const val = parseInt(input.value, 10);
+                if (Number.isFinite(val)) {
+                    currentProfile.customButtons[index].defaultDelaySeconds = val;
+                    debouncedSaveCurrentProfile();
+                }
+            }
         });
     });
 }

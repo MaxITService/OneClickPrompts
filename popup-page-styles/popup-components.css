@@ -886,6 +886,8 @@ Key areas:
 .help-donate-list-item {
     list-style: none;
     margin: 18px 0 20px -20px;
+    display: flex;
+    justify-content: center;
 }
 
 .help-donate-button {
@@ -896,6 +898,7 @@ Key areas:
     justify-content: center;
     gap: 14px;
     width: min(100%, 520px);
+    margin-inline: auto;
     min-height: 76px;
     padding: 16px 22px;
     overflow: hidden;
@@ -910,9 +913,11 @@ Key areas:
     color: #271600;
     text-align: center;
     text-decoration: none;
-    transform: translateY(0) scale(1);
+    translate: 0 0;
+    scale: 1;
     transition:
-        transform 340ms cubic-bezier(0.34, 1.56, 0.64, 1),
+        translate 340ms cubic-bezier(0.34, 1.56, 0.64, 1),
+        scale 340ms cubic-bezier(0.34, 1.56, 0.64, 1),
         box-shadow 260ms ease,
         filter 220ms ease;
     animation: helpDonateFloat 3.8s ease-in-out infinite;
@@ -951,16 +956,19 @@ Key areas:
     box-shadow:
         0 20px 40px rgba(255, 138, 91, 0.38),
         0 8px 0 rgba(98, 65, 20, 0.24);
-    transform: translateY(-7px) scale(1.03);
+    translate: 0 -5px;
+    scale: 1.04;
 }
 
 .help-donate-button:active {
     box-shadow:
         0 4px 12px rgba(255, 138, 91, 0.25),
         0 1px 0 rgba(98, 65, 20, 0.22);
-    transform: translateY(3px) scale(0.98);
+    translate: 0 3px;
+    scale: 0.98;
     transition:
-        transform 100ms ease,
+        translate 100ms ease,
+        scale 100ms ease,
         box-shadow 100ms ease;
 }
 
@@ -1078,8 +1086,8 @@ body.dark-theme .help-donate-button:focus-visible {
     position: fixed;
     top: var(--side-donate-y-start);
     z-index: 80;
-    width: 26px;
-    height: 68px;
+    width: 21px;
+    height: 55px;
     pointer-events: none;
     animation: sideDonateCrawl 56s ease-in-out infinite alternate;
 }
@@ -1136,10 +1144,10 @@ body.dark-theme .help-donate-button:focus-visible {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    width: 26px;
-    height: 68px;
-    padding: 8px 3px;
+    gap: 2px;
+    width: 21px;
+    height: 55px;
+    padding: 5px 2px;
     border: 1px solid var(--side-donate-idle-border);
     border-radius: 7px;
     background: var(--side-donate-idle-bg);

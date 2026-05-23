@@ -17,15 +17,15 @@ export function normalizeProfileConfig(profile, profileName) {
     }
     // Ensure queue settings exist for backward compatibility
     if (typeof profile.queueDelayMinutes === 'undefined') {
-        profile.queueDelayMinutes = 5; // Default delay in minutes
+        profile.queueDelayMinutes = 1; // Default delay in minutes
         logConfigurationRelatedStuff(`Initialized missing 'queueDelayMinutes' for profile: ${profileName}`);
     }
     if (typeof profile.queueDelaySeconds === 'undefined') {
-        profile.queueDelaySeconds = 300; // Default delay in seconds
+        profile.queueDelaySeconds = 60; // Default delay in seconds
         logConfigurationRelatedStuff(`Initialized missing 'queueDelaySeconds' for profile: ${profileName}`);
     }
     if (typeof profile.queueDelayUnit === 'undefined') {
-        profile.queueDelayUnit = 'min'; // Default unit is minutes
+        profile.queueDelayUnit = 'sec'; // Default unit is seconds
         logConfigurationRelatedStuff(`Initialized missing 'queueDelayUnit' for profile: ${profileName}`);
     }
     if (typeof profile.enableQueueMode === 'undefined') {

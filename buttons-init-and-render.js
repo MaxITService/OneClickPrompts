@@ -251,7 +251,7 @@ window.MaxExtensionButtonsInit = {
                     };
                     const queueClickHandler = (event) => {
                         if (window.MaxExtensionButtons && typeof window.MaxExtensionButtons.queueCurrentEditorText === 'function') {
-                            window.MaxExtensionButtons.queueCurrentEditorText(event);
+                            window.MaxExtensionButtons.queueCurrentEditorText(event, def.config.defaultDelaySeconds);
                         }
                     };
                     buttonElement = MaxExtensionButtons.createCustomSendButton(queueButtonConfig, index, queueClickHandler, shortcutKey);

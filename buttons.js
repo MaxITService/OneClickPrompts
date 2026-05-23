@@ -421,12 +421,38 @@ window.MaxExtensionButtons = {
      * @param {Event} event
      * @returns {Promise<Object>}
      */
-    queueCurrentEditorText: async function (event) {
+    queueCurrentEditorText: async function (event, defaultDelaySeconds) {
         if (event && typeof event.preventDefault === 'function') {
             event.preventDefault();
         }
         if (event && typeof event.stopPropagation === 'function') {
             event.stopPropagation();
+        }
+
+        // Shift + click on Queue button opens slider + entry flyout over cursor to edit delay in seconds
+        if (event && event.shiftKey) {
+            this.__showDelayFlyout(event);
+            return { status: 'flyout_opened' };
+        }
+
+        const queue = window.MaxExtensionFloatingPanel;
+
+        // Apply custom defaultDelaySeconds if provided on regular click
+        if (defaultDelaySeconds !== undefined && defaultDelaySeconds !== null) {
+            const parsedDelay = parseInt(defaultDelaySeconds, 10);
+            if (Number.isFinite(parsedDelay) && parsedDelay > 0) {
+                if (!window.globalMaxExtensionConfig) {
+                    window.globalMaxExtensionConfig = {};
+                }
+                window.globalMaxExtensionConfig.queueDelaySeconds = parsedDelay;
+                window.globalMaxExtensionConfig.queueDelayUnit = 'sec';
+                if (queue && typeof queue.recalculateRunningTimer === 'function') {
+                    queue.recalculateRunningTimer();
+                }
+                if (queue && typeof queue.syncQueueModeUiFromConfig === 'function') {
+                    queue.syncQueueModeUiFromConfig();
+                }
+            }
         }
 
         const editor = this.__findActiveEditor();
@@ -442,7 +468,6 @@ window.MaxExtensionButtons = {
             return { status: 'failed', reason: 'empty_editor' };
         }
 
-        const queue = window.MaxExtensionFloatingPanel;
         if (!queue || typeof queue.addToQueue !== 'function' || typeof queue.startQueue !== 'function') {
             this.__toast('Queue engine is not ready on this page.', 'error');
             return { status: 'failed', reason: 'queue_unavailable' };
@@ -493,6 +518,186 @@ window.MaxExtensionButtons = {
         const count = Array.isArray(queue.promptQueue) ? queue.promptQueue.length : 0;
         this.__toast(`Queued. ${count} item${count === 1 ? '' : 's'} waiting.`, 'success');
         return { status: 'queued', count };
+    },
+
+    __showDelayFlyout: function (event) {
+        // Remove any existing flyout
+        const existing = document.getElementById('ocp-queue-delay-flyout');
+        if (existing) {
+            existing.remove();
+        }
+
+        const flyout = document.createElement('div');
+        flyout.id = 'ocp-queue-delay-flyout';
+        
+        // Premium glassmorphism styles
+        flyout.style.cssText = `
+            position: fixed;
+            z-index: 2147483647;
+            background: rgba(25, 25, 25, 0.75);
+            backdrop-filter: blur(12px) saturate(180%);
+            -webkit-backdrop-filter: blur(12px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            padding: 14px;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-size: 13px;
+            width: 240px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: auto;
+            user-select: none;
+            transition: opacity 150ms ease, transform 150ms ease;
+            opacity: 0;
+            transform: scale(0.95);
+        `;
+
+        const currentDelay = window.globalMaxExtensionConfig?.queueDelaySeconds !== undefined
+            ? window.globalMaxExtensionConfig.queueDelaySeconds
+            : 60; // Fallback to 60 as default for the whole app
+
+        flyout.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; font-weight: 600; margin-bottom: 2px;">
+                <span>Queue Delay</span>
+                <span id="ocp-flyout-close" style="cursor: pointer; opacity: 0.6; font-size: 16px; padding: 2px 6px; transition: opacity 120ms;">&times;</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+                <div style="display: flex; justify-content: space-between; color: rgba(255,255,255,0.7); font-size: 11px;">
+                    <span>Adjust (sec):</span>
+                    <span id="ocp-flyout-val" style="font-weight: bold; color: #10a37f;">${currentDelay}s</span>
+                </div>
+                <input type="range" id="ocp-flyout-slider" min="10" max="600" value="${Math.min(600, Math.max(10, currentDelay))}" style="
+                    width: 100%;
+                    accent-color: #10a37f;
+                    cursor: pointer;
+                    height: 5px;
+                    border-radius: 5px;
+                    background: rgba(255,255,255,0.2);
+                    outline: none;
+                    margin: 4px 0;
+                ">
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                <span>Exact seconds:</span>
+                <input type="number" id="ocp-flyout-input" min="1" max="64000" value="${currentDelay}" style="
+                    width: 75px;
+                    background: rgba(255, 255, 255, 0.1);
+                    border: 1px solid rgba(255,255,255,0.2);
+                    border-radius: 6px;
+                    color: #fff;
+                    padding: 4px 6px;
+                    text-align: right;
+                    font-size: 13px;
+                    outline: none;
+                ">
+            </div>
+        `;
+
+        document.body.appendChild(flyout);
+
+        // Position over cursor or fallback to button
+        let x = event.clientX - 120;
+        let y = event.clientY - 130;
+        
+        // Keep in viewport
+        x = Math.max(10, Math.min(window.innerWidth - 260, x));
+        y = Math.max(10, Math.min(window.innerHeight - 180, y));
+
+        flyout.style.left = `${x}px`;
+        flyout.style.top = `${y}px`;
+
+        requestAnimationFrame(() => {
+            flyout.style.opacity = '1';
+            flyout.style.transform = 'scale(1)';
+        });
+
+        const slider = flyout.querySelector('#ocp-flyout-slider');
+        const input = flyout.querySelector('#ocp-flyout-input');
+        const valLabel = flyout.querySelector('#ocp-flyout-val');
+        const closeBtn = flyout.querySelector('#ocp-flyout-close');
+
+        const updateDelay = (val) => {
+            const parsed = parseInt(val, 10);
+            if (!Number.isFinite(parsed)) return;
+            const clamped = Math.max(1, Math.min(64000, parsed));
+            
+            // Save state
+            if (!window.globalMaxExtensionConfig) {
+                window.globalMaxExtensionConfig = {};
+            }
+            window.globalMaxExtensionConfig.queueDelaySeconds = clamped;
+            window.globalMaxExtensionConfig.queueDelayUnit = 'sec';
+
+            // Recalculate
+            const queue = window.MaxExtensionFloatingPanel;
+            if (queue && typeof queue.recalculateRunningTimer === 'function') {
+                queue.recalculateRunningTimer();
+            }
+            if (queue && typeof queue.syncQueueModeUiFromConfig === 'function') {
+                queue.syncQueueModeUiFromConfig();
+            }
+            if (queue && typeof queue.saveCurrentProfileConfig === 'function') {
+                queue.saveCurrentProfileConfig();
+            }
+
+            // Sync visual labels
+            valLabel.textContent = `${clamped}s`;
+            if (slider.value !== String(clamped) && clamped <= 600 && clamped >= 10) {
+                slider.value = String(clamped);
+            }
+            if (input.value !== String(clamped)) {
+                input.value = String(clamped);
+            }
+        };
+
+        slider.addEventListener('input', (e) => {
+            updateDelay(e.target.value);
+        });
+
+        input.addEventListener('input', (e) => {
+            updateDelay(e.target.value);
+        });
+
+        input.addEventListener('change', (e) => {
+            const val = parseInt(e.target.value, 10);
+            const clamped = Number.isFinite(val) ? Math.max(1, Math.min(64000, val)) : 60;
+            updateDelay(clamped);
+        });
+
+        const closeFlyout = () => {
+            flyout.style.opacity = '0';
+            flyout.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                flyout.remove();
+            }, 150);
+            document.removeEventListener('mousedown', onOutsideClick, true);
+            document.removeEventListener('keydown', onKeyDown, true);
+        };
+
+        const onOutsideClick = (e) => {
+            if (!flyout.contains(e.target)) {
+                closeFlyout();
+            }
+        };
+
+        const onKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                closeFlyout();
+            }
+        };
+
+        closeBtn.addEventListener('click', closeFlyout);
+        closeBtn.addEventListener('mouseenter', () => { closeBtn.style.opacity = '1'; });
+        closeBtn.addEventListener('mouseleave', () => { closeBtn.style.opacity = '0.6'; });
+
+        // Wait slightly to hook click-outside listener to avoid immediate triggers
+        setTimeout(() => {
+            document.addEventListener('mousedown', onOutsideClick, true);
+            document.addEventListener('keydown', onKeyDown, true);
+        }, 50);
     },
 
     __findActiveEditor: function () {
