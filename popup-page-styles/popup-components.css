@@ -747,6 +747,182 @@ Key areas:
     padding: 0 10px 10px 10px;
 }
 
+.help-donate-list-item {
+    list-style: none;
+    margin: 18px 0 20px -20px;
+}
+
+.help-donate-button {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    width: min(100%, 520px);
+    min-height: 76px;
+    padding: 16px 22px;
+    overflow: hidden;
+    border: 1px solid rgba(91, 209, 138, 0.76);
+    border-radius: 8px;
+    background:
+        radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.72), transparent 24%),
+        linear-gradient(135deg, #fff7ad 0%, #ffd15c 38%, #ff8a5b 68%, #5bd18a 100%);
+    box-shadow:
+        0 12px 26px rgba(255, 138, 91, 0.28),
+        0 5px 0 rgba(98, 65, 20, 0.22);
+    color: #271600;
+    text-align: center;
+    text-decoration: none;
+    transform: translateY(0) scale(1);
+    transition:
+        transform 180ms ease,
+        box-shadow 180ms ease,
+        filter 180ms ease;
+    animation: helpDonateFloat 3.8s ease-in-out infinite;
+}
+
+.help-donate-button::before {
+    content: "";
+    position: absolute;
+    inset: -45% -30%;
+    z-index: -1;
+    background: linear-gradient(
+        115deg,
+        transparent 30%,
+        rgba(255, 255, 255, 0.72) 44%,
+        transparent 58%
+    );
+    transform: translateX(-55%) rotate(4deg);
+    animation: helpDonateShine 3.2s ease-in-out infinite;
+}
+
+.help-donate-button::after {
+    content: "";
+    position: absolute;
+    inset: 7px;
+    z-index: -1;
+    border: 1px solid rgba(255, 255, 255, 0.52);
+    border-radius: 6px;
+    pointer-events: none;
+}
+
+.help-donate-button:hover,
+.help-donate-button:focus-visible {
+    color: #271600;
+    text-decoration: none;
+    filter: saturate(1.08) brightness(1.04);
+    box-shadow:
+        0 16px 34px rgba(255, 138, 91, 0.36),
+        0 7px 0 rgba(98, 65, 20, 0.22);
+    transform: translateY(-3px) scale(1.015);
+}
+
+.help-donate-button:active {
+    box-shadow:
+        0 7px 18px rgba(255, 138, 91, 0.25),
+        0 2px 0 rgba(98, 65, 20, 0.22);
+    transform: translateY(2px) scale(0.995);
+}
+
+.help-donate-button__spark,
+.help-donate-button__heart {
+    flex: 0 0 auto;
+    font-size: 28px;
+    line-height: 1;
+    filter: drop-shadow(0 2px 3px rgba(69, 35, 0, 0.22));
+}
+
+.help-donate-button__spark {
+    animation: helpDonateWiggle 2.4s ease-in-out infinite;
+}
+
+.help-donate-button__heart {
+    animation: helpDonatePulse 1.9s ease-in-out infinite;
+}
+
+.help-donate-button__body {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.help-donate-button__title {
+    font-size: 19px;
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+.help-donate-button__subtitle {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0;
+    opacity: 0.84;
+}
+
+body.dark-theme .help-donate-button {
+    border-color: rgba(255, 209, 92, 0.76);
+    box-shadow:
+        0 14px 30px rgba(255, 177, 72, 0.22),
+        0 5px 0 rgba(0, 0, 0, 0.34);
+}
+
+@keyframes helpDonateFloat {
+    0%,
+    100% {
+        transform: translateY(0) scale(1);
+    }
+
+    50% {
+        transform: translateY(-2px) scale(1.006);
+    }
+}
+
+@keyframes helpDonateShine {
+    0%,
+    42% {
+        transform: translateX(-58%) rotate(4deg);
+    }
+
+    72%,
+    100% {
+        transform: translateX(62%) rotate(4deg);
+    }
+}
+
+@keyframes helpDonateWiggle {
+    0%,
+    100% {
+        transform: rotate(-7deg) scale(1);
+    }
+
+    50% {
+        transform: rotate(7deg) scale(1.08);
+    }
+}
+
+@keyframes helpDonatePulse {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    45% {
+        transform: scale(1.16);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .help-donate-button,
+    .help-donate-button::before,
+    .help-donate-button__spark,
+    .help-donate-button__heart {
+        animation: none;
+    }
+}
+
 .crosschat-setting-group {
     border: 1px solid var(--border-color);
     border-radius: 8px;
