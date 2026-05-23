@@ -227,8 +227,7 @@ Key areas:
 
 .ui-scale-preview__panel,
 .ui-scale-preview__row {
-    transform: scale(var(--ocp-preview-scale));
-    transform-origin: top left;
+    zoom: var(--ocp-preview-scale);
 }
 
 .ui-scale-preview__panel {
@@ -1269,7 +1268,7 @@ body.dark-theme .side-donate-creeper__close {
 @keyframes sideDonateCreepInLeft {
     0% {
         opacity: 0;
-        transform: translateX(-130%);
+        transform: translateX(-39%);
     }
 
     100% {
@@ -1281,7 +1280,7 @@ body.dark-theme .side-donate-creeper__close {
 @keyframes sideDonateCreepInRight {
     0% {
         opacity: 0;
-        transform: translateX(130%);
+        transform: translateX(39%);
     }
 
     100% {
