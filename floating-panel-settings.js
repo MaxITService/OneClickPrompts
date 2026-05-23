@@ -35,6 +35,31 @@
 
 'use strict';
 
+window.MaxExtensionFloatingPanel.normalizePanelSettings = function (settings = {}) {
+    const source = settings && typeof settings === 'object' ? settings : {};
+    const defaults = this.defaultPanelSettings || {};
+    const merged = { ...defaults, ...source };
+
+    const numberOrDefault = (value, fallback) => {
+        const numeric = Number(value);
+        return Number.isFinite(numeric) ? numeric : fallback;
+    };
+    const boolOrDefault = (value, fallback) => (
+        typeof value === 'boolean' ? value : fallback
+    );
+
+    merged.width = Math.max(1, numberOrDefault(merged.width, defaults.width));
+    merged.height = Math.max(1, numberOrDefault(merged.height, defaults.height));
+    merged.posX = numberOrDefault(merged.posX, defaults.posX);
+    merged.posY = numberOrDefault(merged.posY, defaults.posY);
+    merged.opacity = Math.min(1, Math.max(0, numberOrDefault(merged.opacity, defaults.opacity)));
+    merged.scale = Math.min(1.5, Math.max(0.7, numberOrDefault(merged.scale, defaults.scale)));
+    merged.isVisible = boolOrDefault(merged.isVisible, defaults.isVisible);
+    merged.isHeaderCollapsed = boolOrDefault(merged.isHeaderCollapsed, defaults.isHeaderCollapsed);
+    merged.isFooterCollapsed = boolOrDefault(merged.isFooterCollapsed, defaults.isFooterCollapsed);
+
+    return merged;
+};
 
 /**
  * Debounced version of savePanelSettings.
@@ -57,7 +82,7 @@ window.MaxExtensionFloatingPanel.debouncedSavePanelSettings = function () {
 window.MaxExtensionFloatingPanel.loadPanelSettings = function () {
     try {
         // Initialize with default settings immediately to avoid null references.
-        this.currentPanelSettings = { ...this.defaultPanelSettings };
+        this.currentPanelSettings = this.normalizePanelSettings();
         const hostname = window.location.hostname;
 
         // Request settings from the service worker.
@@ -67,12 +92,12 @@ window.MaxExtensionFloatingPanel.loadPanelSettings = function () {
         }, (response) => {
             if (chrome.runtime.lastError) {
                 logConCgp('[floating-panel] Error loading panel settings:', chrome.runtime.lastError.message);
-                this.currentPanelSettings = { ...this.defaultPanelSettings };
+                this.currentPanelSettings = this.normalizePanelSettings();
                 return;
             }
 
             if (response && response.settings) {
-                this.currentPanelSettings = response.settings;
+                this.currentPanelSettings = this.normalizePanelSettings(response.settings);
                 logConCgp('[floating-panel] Loaded panel settings for ' + hostname);
             } else {
                 logConCgp('[floating-panel] Using default panel settings for ' + hostname);
@@ -94,7 +119,7 @@ window.MaxExtensionFloatingPanel.loadPanelSettings = function () {
         });
     } catch (error) {
         logConCgp('[floating-panel] Error loading panel settings: ' + error.message);
-        this.currentPanelSettings = { ...this.defaultPanelSettings };
+        this.currentPanelSettings = this.normalizePanelSettings();
         // Even on error, mark as loaded to avoid overwriting user position on toggle
         this.panelSettingsLoaded = true;
     }
