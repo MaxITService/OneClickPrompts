@@ -227,6 +227,8 @@ window.MaxExtensionButtonEditMode = {
 
         // Capture initial rect so the button can follow the cursor from the grab point
         const rect = button.getBoundingClientRect();
+        const layoutWidth = button.offsetWidth || rect.width;
+        const layoutHeight = button.offsetHeight || rect.height;
         this.pointerState = {
             button,
             pointerId: event.pointerId,
@@ -238,8 +240,10 @@ window.MaxExtensionButtonEditMode = {
             originalIndex: index,
             offsetX: event.clientX - rect.left,
             offsetY: event.clientY - rect.top,
-            origWidth: rect.width,
-            origHeight: rect.height,
+            layoutWidth,
+            layoutHeight,
+            visualScaleX: layoutWidth ? rect.width / layoutWidth : 1,
+            visualScaleY: layoutHeight ? rect.height / layoutHeight : 1,
             ghost: null
         };
 
@@ -269,6 +273,8 @@ window.MaxExtensionButtonEditMode = {
             // coords — causing a position mismatch (button flies off-screen).
             // Solution: append the ghost to document.body which has no transforms,
             // so `position:fixed` + `left/top` work in true viewport coordinates.
+            // The ghost keeps the source element's layout size, then receives the
+            // measured visual scale so its text/icon does not shrink while dragged.
             // The original button stays hidden in-flow so DOM reordering works
             // naturally and siblings reflow correctly for FLIP animations.
             const ghost = state.button.cloneNode(true);
@@ -278,8 +284,8 @@ window.MaxExtensionButtonEditMode = {
                 position: fixed;
                 left: ${btnRect.left}px;
                 top: ${btnRect.top}px;
-                width: ${state.origWidth}px;
-                height: ${state.origHeight}px;
+                width: ${state.layoutWidth}px;
+                height: ${state.layoutHeight}px;
                 margin: 0;
                 pointer-events: none;
                 z-index: 2147483647;
@@ -288,6 +294,8 @@ window.MaxExtensionButtonEditMode = {
                 animation: none;
                 box-shadow: 0 8px 24px rgba(0,0,0,0.35);
                 border-radius: 6px;
+                transform: scale(${state.visualScaleX}, ${state.visualScaleY});
+                transform-origin: 0 0;
             `;
             document.body.appendChild(ghost);
             state.ghost = ghost;
