@@ -435,10 +435,109 @@ window.MaxExtensionContainerMover = {
         session.hoverPreviewEl = null;
         session.nudgeCache = null;
         session.isPicking = false;
+        this.__removeFloatingPanelToggleHideControl(session);
         this.__clearHighlight();
         if (this.__activeSession === session) {
             this.__activeSession = null;
         }
+    },
+
+    __saveCurrentProfileConfig: async function () {
+        if (!window.globalMaxExtensionConfig) {
+            this.__toast('Cannot save profile setting: config is missing.', 'error');
+            return false;
+        }
+
+        try {
+            const { currentProfile } = await chrome.storage.local.get('currentProfile');
+            const profileName = currentProfile || window.globalMaxExtensionConfig.PROFILE_NAME;
+            if (!profileName) {
+                throw new Error('Missing current profile name');
+            }
+
+            await chrome.runtime.sendMessage({
+                type: 'saveConfig',
+                profileName,
+                config: window.globalMaxExtensionConfig
+            });
+            return true;
+        } catch (error) {
+            logConCgp('[ContainerMover] Failed to save profile config:', error?.message || error);
+            this.__toast('Could not save profile setting.', 'error');
+            return false;
+        }
+    },
+
+    __removeFloatingPanelToggleHideControl: function (session) {
+        if (!session) return;
+        try {
+            session.floatingToggleHideControl?.remove();
+        } catch (_) { /* ignore */ }
+        try {
+            if (session.floatingToggleHideButton?.isConnected && session.floatingToggleOriginalPosition !== null) {
+                session.floatingToggleHideButton.style.position = session.floatingToggleOriginalPosition;
+            }
+        } catch (_) { /* ignore */ }
+        session.floatingToggleHideControl = null;
+        session.floatingToggleHideButton = null;
+        session.floatingToggleOriginalPosition = null;
+    },
+
+    __installFloatingPanelToggleHideControl: function (session) {
+        if (!session?.active || !session.container) return;
+        const toggleButton = session.container.querySelector('[data-ocp-floating-panel-toggle-button="true"]');
+        if (!toggleButton) return;
+        if (session.floatingToggleHideControl?.isConnected) return;
+
+        try {
+            const currentPosition = window.getComputedStyle(toggleButton).position;
+            if (currentPosition === 'static') {
+                session.floatingToggleOriginalPosition = toggleButton.style.position || '';
+                toggleButton.style.position = 'relative';
+            } else {
+                session.floatingToggleOriginalPosition = null;
+            }
+        } catch (_) {
+            session.floatingToggleOriginalPosition = toggleButton.style.position || '';
+            toggleButton.style.position = 'relative';
+        }
+
+        const hideControl = document.createElement('span');
+        hideControl.setAttribute('role', 'button');
+        hideControl.tabIndex = 0;
+        hideControl.className = 'ocp-button-delete-x ocp-floating-toggle-hide-x';
+        hideControl.textContent = '×';
+        hideControl.title = 'Hide the floating panel launcher button for this profile';
+
+        const hideToggle = async (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const previousValue = window.globalMaxExtensionConfig.hideOnPageFloatingPanelToggle;
+            window.globalMaxExtensionConfig.hideOnPageFloatingPanelToggle = true;
+            const saved = await this.__saveCurrentProfileConfig();
+            if (!saved) {
+                window.globalMaxExtensionConfig.hideOnPageFloatingPanelToggle = previousValue;
+                return;
+            }
+
+            try {
+                toggleButton.remove();
+            } catch (_) { /* ignore */ }
+
+            session.floatingToggleHideControl = null;
+            this.__toast('Floating panel launcher hidden. You can turn it back on in Settings.', 'success', 4500);
+        };
+
+        hideControl.addEventListener('click', hideToggle);
+        hideControl.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            void hideToggle(event);
+        });
+
+        toggleButton.appendChild(hideControl);
+        session.floatingToggleHideButton = toggleButton;
+        session.floatingToggleHideControl = hideControl;
     },
 
     /**
@@ -724,10 +823,14 @@ window.MaxExtensionContainerMover = {
             hoverRafId: null,
             hoverLastTarget: null,
             hoverPreviewEl: null,
-            nudgeCache: null
+            nudgeCache: null,
+            floatingToggleHideControl: null,
+            floatingToggleHideButton: null,
+            floatingToggleOriginalPosition: null
         };
 
         this.__activeSession = session;
+        this.__installFloatingPanelToggleHideControl(session);
 
         if (container.parentElement) {
             this.__highlight(container.parentElement, '#FFC107');
