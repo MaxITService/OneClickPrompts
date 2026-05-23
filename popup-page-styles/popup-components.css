@@ -1380,7 +1380,7 @@ body.dark-theme .side-donate-creeper__close {
 
 /* Squash-and-stretch on click or landing */
 .side-donate-creeper__button.is-squishing {
-    animation: sideDonateSquish 4800ms ease-out 1 normal both !important;
+    animation: sideDonateSquish 9600ms ease-out 1 normal both !important;
 }
 
 /* Tipsy crawl — gentle horizontal sway as it moves vertically */
