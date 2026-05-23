@@ -297,6 +297,7 @@ function initSideDonateCreeper() {
 
     let dismissed = false;
     let exitTimerId = null;
+    let lastInteractionEnd = 0;
 
     function setTooltipVisible(isVisible) {
         trigger.setAttribute('aria-expanded', String(isVisible));
@@ -315,6 +316,13 @@ function initSideDonateCreeper() {
         if (dismissed) return;
         if (creeper.matches(':hover') || creeper.contains(document.activeElement)) {
             scheduleNextExit();
+            return;
+        }
+
+        // 2-second grace period after last hover/focus interaction
+        const elapsed = Date.now() - lastInteractionEnd;
+        if (elapsed < 2000) {
+            exitTimerId = setTimeout(triggerExitSequence, 2000 - elapsed);
             return;
         }
 
@@ -401,6 +409,7 @@ function initSideDonateCreeper() {
     });
 
     creeper.addEventListener('mouseleave', () => {
+        lastInteractionEnd = Date.now();
         setTooltipVisible(false);
     });
 
@@ -412,6 +421,7 @@ function initSideDonateCreeper() {
         if (event.relatedTarget && creeper.contains(event.relatedTarget)) {
             return;
         }
+        lastInteractionEnd = Date.now();
         setTooltipVisible(false);
     });
 
