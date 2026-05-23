@@ -1334,7 +1334,7 @@ body.dark-theme .side-donate-creeper__close {
     }
 
     100% {
-        translate: 7px -1px;
+        translate: 3.5px -1px;
     }
 }
 
@@ -1344,7 +1344,7 @@ body.dark-theme .side-donate-creeper__close {
     }
 
     100% {
-        translate: -7px -1px;
+        translate: -3.5px -1px;
     }
 }
 
