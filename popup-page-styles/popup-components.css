@@ -1189,21 +1189,21 @@ body.dark-theme .help-donate-button {
     top: 50%;
     width: 236px;
     padding: 13px 14px 14px;
-    border: 1px solid rgba(255, 209, 92, 0.8);
+    border: 1px solid rgba(180, 180, 180, 0.6);
     border-radius: 8px;
     background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 247, 205, 0.98)),
-        #fff7cd;
+        linear-gradient(135deg, rgba(245, 245, 245, 0.96), rgba(235, 235, 235, 0.96)),
+        #f5f5f5;
     box-shadow: 0 16px 34px rgba(31, 22, 8, 0.18);
-    color: #271600;
+    color: #333333;
     font-size: 13px;
     line-height: 1.35;
     opacity: 0;
     pointer-events: none;
     transform: translateY(-50%) scale(0.96);
     transition:
-        opacity 160ms ease,
-        transform 160ms ease;
+        opacity 320ms ease,
+        transform 320ms ease;
 }
 
 .side-donate-creeper--left .side-donate-creeper__tooltip {
@@ -1216,7 +1216,7 @@ body.dark-theme .help-donate-button {
 
 .side-donate-creeper:hover .side-donate-creeper__tooltip,
 .side-donate-creeper:focus-within .side-donate-creeper__tooltip {
-    opacity: 1;
+    opacity: 0.8;
     pointer-events: auto;
     transform: translateY(-50%) scale(1);
 }
@@ -1260,11 +1260,12 @@ body.dark-theme .side-donate-creeper__button {
 }
 
 body.dark-theme .side-donate-creeper__tooltip {
+    border-color: rgba(90, 90, 90, 0.6);
     background:
-        linear-gradient(135deg, rgba(48, 39, 26, 0.98), rgba(36, 31, 27, 0.98)),
-        #30271a;
+        linear-gradient(135deg, rgba(45, 45, 45, 0.96), rgba(35, 35, 35, 0.96)),
+        #222222;
     box-shadow: 0 16px 34px rgba(0, 0, 0, 0.42);
-    color: #ffe8aa;
+    color: #dddddd;
 }
 
 body.dark-theme .side-donate-creeper__close {
