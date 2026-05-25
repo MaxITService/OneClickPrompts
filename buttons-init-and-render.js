@@ -420,6 +420,10 @@ window.MaxExtensionButtonEditMode = {
             return;
         }
 
+        const deletedButton = this.cloneButtonConfig(config.customButtons[index]);
+        const previousNeighbor = this.cloneButtonConfig(config.customButtons[index - 1]);
+        const nextNeighbor = this.cloneButtonConfig(config.customButtons[index + 1]);
+        const deleteOrigin = this.origin;
         const beforeRects = this.captureRects();
         config.customButtons.splice(index, 1);
         button.remove();
@@ -430,8 +434,105 @@ window.MaxExtensionButtonEditMode = {
             }
         });
         this.playFlip(beforeRects);
-        await this.saveCurrentProfileConfig();
-        this.__toast('Button deleted.', 'success', 1800);
+        const saved = await this.saveCurrentProfileConfig();
+        if (!saved) {
+            config.customButtons.splice(index, 0, deletedButton);
+            window.MaxExtensionButtonsInit?.updateButtonsForProfileChange?.(deleteOrigin);
+            return;
+        }
+        this.showDeleteUndoToast({
+            deletedButton,
+            previousNeighbor,
+            nextNeighbor,
+            originalIndex: index,
+            origin: deleteOrigin
+        });
+    },
+
+    cloneButtonConfig(button) {
+        if (!button) return null;
+        try {
+            return structuredClone(button);
+        } catch (_) {
+            try {
+                return JSON.parse(JSON.stringify(button));
+            } catch (error) {
+                logConCgp('[ButtonEditMode] Failed to clone button config:', error?.message || error);
+                return { ...button };
+            }
+        }
+    },
+
+    serializeButtonConfig(button) {
+        if (!button) return '';
+        try {
+            return JSON.stringify(button);
+        } catch (_) {
+            return '';
+        }
+    },
+
+    findButtonConfigIndex(button) {
+        const buttons = window.globalMaxExtensionConfig?.customButtons;
+        if (!Array.isArray(buttons) || !button) return -1;
+        const serialized = this.serializeButtonConfig(button);
+        if (!serialized) return -1;
+        return buttons.findIndex(candidate => this.serializeButtonConfig(candidate) === serialized);
+    },
+
+    getUndoInsertionIndex({ previousNeighbor, nextNeighbor, originalIndex }) {
+        const buttons = window.globalMaxExtensionConfig?.customButtons;
+        if (!Array.isArray(buttons)) return -1;
+
+        const nextIndex = this.findButtonConfigIndex(nextNeighbor);
+        if (nextIndex !== -1) {
+            return nextIndex;
+        }
+
+        const previousIndex = this.findButtonConfigIndex(previousNeighbor);
+        if (previousIndex !== -1) {
+            return previousIndex + 1;
+        }
+
+        return Math.max(0, Math.min(originalIndex, buttons.length));
+    },
+
+    showDeleteUndoToast({ deletedButton, previousNeighbor, nextNeighbor, originalIndex, origin }) {
+        const label = deletedButton?.separator ? 'Separator deleted.' : 'Button deleted.';
+        this.__toast(label, 'success', {
+            duration: 10000,
+            customButtons: [
+                {
+                    text: 'Undo',
+                    title: 'Restore this deleted button',
+                    className: 'toast-action-primary',
+                    onClick: async () => {
+                        const buttons = window.globalMaxExtensionConfig?.customButtons;
+                        if (!Array.isArray(buttons)) {
+                            this.__toast('Could not undo: profile buttons are unavailable.', 'error');
+                            return false;
+                        }
+
+                        const insertionIndex = this.getUndoInsertionIndex({ previousNeighbor, nextNeighbor, originalIndex });
+                        if (insertionIndex < 0) {
+                            this.__toast('Could not undo button deletion.', 'error');
+                            return false;
+                        }
+
+                        buttons.splice(insertionIndex, 0, this.cloneButtonConfig(deletedButton));
+                        const saved = await this.saveCurrentProfileConfig();
+                        if (!saved) {
+                            buttons.splice(insertionIndex, 1);
+                            return false;
+                        }
+
+                        window.MaxExtensionButtonsInit?.updateButtonsForProfileChange?.(origin);
+                        this.__toast(deletedButton?.separator ? 'Separator restored.' : 'Button restored.', 'success', 1800);
+                        return true;
+                    }
+                }
+            ]
+        });
     },
 
     async saveCurrentProfileConfig() {
@@ -446,9 +547,11 @@ window.MaxExtensionButtonEditMode = {
                 profileName,
                 config: window.globalMaxExtensionConfig
             });
+            return true;
         } catch (error) {
             this.__toast('Could not save button edit.', 'error');
             logConCgp('[ButtonEditMode] Save failed:', error?.message || error);
+            return false;
         }
     },
 
