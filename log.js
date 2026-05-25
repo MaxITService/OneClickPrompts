@@ -35,8 +35,6 @@
 
     const gatedMethods = ['log', 'info', 'debug', 'warn', 'error'];
     const originalConsole = {};
-    const queuedConsoleCalls = [];
-    const maxQueuedConsoleCalls = 100;
     let storagePreferenceReady = false;
     let storagePreferenceDisablesLogs = false;
 
@@ -79,17 +77,6 @@
         });
     }
 
-    function flushQueuedConsoleCalls() {
-        if (browserConsoleLogsAreDisabled()) {
-            queuedConsoleCalls.length = 0;
-            return;
-        }
-        while (queuedConsoleCalls.length > 0) {
-            const { methodName, args } = queuedConsoleCalls.shift();
-            originalConsole[methodName]?.(...args);
-        }
-    }
-
     async function refreshStoragePreference() {
         const current = await storageGet(['currentProfile']);
         const profileName = current.currentProfile || 'Default';
@@ -97,7 +84,6 @@
         const profileResult = await storageGet([profileKey]);
         storagePreferenceDisablesLogs = !!profileResult[profileKey]?.disableBrowserConsoleLogs;
         storagePreferenceReady = true;
-        flushQueuedConsoleCalls();
     }
 
     gatedMethods.forEach((methodName) => {
@@ -109,9 +95,6 @@
         originalConsole[methodName] = originalMethod.bind(root.console);
         root.console[methodName] = (...args) => {
             if (!storagePreferenceReady && getConfigPreference() === null) {
-                if (queuedConsoleCalls.length < maxQueuedConsoleCalls) {
-                    queuedConsoleCalls.push({ methodName, args });
-                }
                 return;
             }
             if (browserConsoleLogsAreDisabled()) {
