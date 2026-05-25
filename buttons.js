@@ -1376,6 +1376,7 @@ window.MaxExtensionButtons = {
 
         const state = {
             ...created,
+            mode: created?.mode || 'create',
             lookupText: created?.button?.text || '',
             button: {
                 icon: created?.button?.icon || '+',
@@ -1383,6 +1384,7 @@ window.MaxExtensionButtons = {
                 autoSend: created?.button?.autoSend !== false
             }
         };
+        const isEditMode = state.mode === 'edit';
         const hasCreatedButton = () => !!state.success && Number.isInteger(Number(state.buttonIndex)) && !!state.profileName;
 
         const flyout = document.createElement('div');
@@ -1413,7 +1415,7 @@ window.MaxExtensionButtons = {
         header.style.cssText = 'display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 700;';
 
         const title = document.createElement('span');
-        title.textContent = hasCreatedButton() ? '+ Button created' : '+ Create button';
+        title.textContent = isEditMode ? 'Edit button' : (hasCreatedButton() ? '+ Button created' : '+ Create button');
 
         const closeButton = document.createElement('button');
         closeButton.type = 'button';
@@ -1446,7 +1448,7 @@ window.MaxExtensionButtons = {
         `;
 
         const textDetails = document.createElement('details');
-        textDetails.open = !hasCreatedButton();
+        textDetails.open = isEditMode || !hasCreatedButton();
         textDetails.style.cssText = 'display: grid; gap: 8px;';
 
         const textSummary = document.createElement('summary');
@@ -1512,7 +1514,7 @@ window.MaxExtensionButtons = {
         toggleLabel.append(toggleText, toggle);
         const createButton = document.createElement('button');
         createButton.type = 'button';
-        createButton.textContent = 'Create';
+        createButton.textContent = isEditMode ? 'Save' : 'Create';
         createButton.style.cssText = `
             min-height: 30px;
             border: 0;
@@ -1522,7 +1524,7 @@ window.MaxExtensionButtons = {
             cursor: pointer;
             font-weight: 700;
         `;
-        if (hasCreatedButton()) {
+        if (hasCreatedButton() && !isEditMode) {
             createButton.style.display = 'none';
         }
 
@@ -1556,10 +1558,10 @@ window.MaxExtensionButtons = {
 
         const syncCreatedUi = () => {
             const createdNow = hasCreatedButton();
-            title.textContent = createdNow ? '+ Button created' : '+ Create button';
+            title.textContent = isEditMode ? 'Edit button' : (createdNow ? '+ Button created' : '+ Create button');
             textSummary.textContent = createdNow ? 'Button text' : 'Button text required';
             preview.textContent = state.button.text || 'Enter button text below.';
-            createButton.style.display = createdNow ? 'none' : '';
+            createButton.style.display = createdNow && !isEditMode ? 'none' : '';
         };
 
         const createButtonNow = async () => {
@@ -1642,25 +1644,27 @@ window.MaxExtensionButtons = {
         };
 
         iconInput.addEventListener('input', () => {
+            if (isEditMode) return;
             if (!hasCreatedButton()) return;
             clearTimeout(iconSaveTimer);
             iconSaveTimer = setTimeout(async () => {
                 try {
                     await saveCreatedButtonOptions();
                 } catch (error) {
-                    this.__toast('Could not update icon for the new button.', 'error');
+                    this.__toast(isEditMode ? 'Could not update button icon.' : 'Could not update icon for the new button.', 'error');
                     logConCgp('[buttons][create] Icon update failed:', error?.message || error);
                 }
             }, 250);
         });
 
         iconInput.addEventListener('change', async () => {
+            if (isEditMode) return;
             if (!hasCreatedButton()) return;
             clearTimeout(iconSaveTimer);
             try {
                 await saveCreatedButtonOptions();
             } catch (error) {
-                this.__toast('Could not update icon for the new button.', 'error');
+                this.__toast(isEditMode ? 'Could not update button icon.' : 'Could not update icon for the new button.', 'error');
                 logConCgp('[buttons][create] Icon update failed:', error?.message || error);
             }
         });
@@ -1668,37 +1672,40 @@ window.MaxExtensionButtons = {
         textInput.addEventListener('input', () => {
             state.button.text = textInput.value;
             syncCreatedUi();
+            if (isEditMode) return;
             if (!hasCreatedButton()) return;
             clearTimeout(textSaveTimer);
             textSaveTimer = setTimeout(async () => {
                 try {
                     await saveCreatedButtonOptions();
                 } catch (error) {
-                    this.__toast('Could not update text for the new button.', 'error');
+                    this.__toast(isEditMode ? 'Could not update button text.' : 'Could not update text for the new button.', 'error');
                     logConCgp('[buttons][create] Text update failed:', error?.message || error);
                 }
             }, 350);
         });
 
         textInput.addEventListener('change', async () => {
+            if (isEditMode) return;
             if (!hasCreatedButton()) return;
             clearTimeout(textSaveTimer);
             try {
                 await saveCreatedButtonOptions();
             } catch (error) {
-                this.__toast('Could not update text for the new button.', 'error');
+                this.__toast(isEditMode ? 'Could not update button text.' : 'Could not update text for the new button.', 'error');
                 logConCgp('[buttons][create] Text update failed:', error?.message || error);
             }
         });
 
         toggle.addEventListener('change', async () => {
+            if (isEditMode) return;
             if (!hasCreatedButton()) return;
             try {
                 await saveCreatedButtonOptions({ autoSend: toggle.checked });
-                this.__toast(toggle.checked ? 'New button will auto-send.' : 'New button will not auto-send.', 'success');
+                this.__toast(toggle.checked ? 'Button will auto-send.' : 'Button will not auto-send.', 'success');
             } catch (error) {
                 toggle.checked = !toggle.checked;
-                this.__toast('Could not update Auto-send for the new button.', 'error');
+                this.__toast('Could not update Auto-send for the button.', 'error');
                 logConCgp('[buttons][create] Auto-send update failed:', error?.message || error);
             }
         });
@@ -1706,9 +1713,14 @@ window.MaxExtensionButtons = {
         createButton.addEventListener('click', async () => {
             createButton.disabled = true;
             try {
-                await createButtonNow();
+                if (isEditMode && hasCreatedButton()) {
+                    await saveCreatedButtonOptions();
+                    this.__toast('Button saved.', 'success', 1800);
+                } else {
+                    await createButtonNow();
+                }
             } catch (error) {
-                this.__toast('Could not create button.', 'error');
+                this.__toast(isEditMode ? 'Could not save button.' : 'Could not create button.', 'error');
                 logConCgp('[buttons][create] Manual create failed:', error?.message || error);
             } finally {
                 createButton.disabled = false;

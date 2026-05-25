@@ -61,7 +61,7 @@ window.MaxExtensionButtonEditMode = {
         container.classList.add('ocp-button-edit-mode');
         this.decorateContainer(container);
         this.updateSettingsButtonHint(container, true);
-        this.__toast('Button edit mode: drag buttons or separators to reorder, click × to delete. Click Settings to exit.', 'info', 4500);
+        this.__toast('Button edit mode: drag to reorder, Shift-click a button to edit text, click × to delete. Click Settings to exit.', 'info', 5500);
     },
 
     exit() {
@@ -124,7 +124,14 @@ window.MaxExtensionButtonEditMode = {
                 if (!this.active) return;
                 if (event.target?.closest?.('.ocp-button-delete-x')) return;
                 if (event.target?.closest?.('[data-ocp-settings-button="true"]')) return;
-                if (event.target?.closest?.('[data-ocp-button-edit-index]')) {
+                const editableButton = event.target?.closest?.('[data-ocp-button-edit-index]');
+                if (editableButton && event.shiftKey) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    void this.openButtonTextEditor(event, editableButton);
+                    return;
+                }
+                if (editableButton) {
                     event.preventDefault();
                     event.stopPropagation();
                 }
@@ -162,6 +169,42 @@ window.MaxExtensionButtonEditMode = {
         button.addEventListener('pointerdown', button.__ocpEditPointerDown);
     },
 
+    canEditButtonText(buttonConfig) {
+        if (!buttonConfig || buttonConfig.separator) return false;
+        return typeof buttonConfig.text === 'string' && !buttonConfig.text.startsWith('%OCP_');
+    },
+
+    async openButtonTextEditor(event, button) {
+        const index = Number(button?.dataset?.ocpButtonEditIndex);
+        const config = window.globalMaxExtensionConfig;
+        const buttonConfig = Number.isInteger(index) && Array.isArray(config?.customButtons)
+            ? config.customButtons[index]
+            : null;
+
+        if (!this.canEditButtonText(buttonConfig)) {
+            this.__toast('This button cannot be text-edited here.', 'info', 2200);
+            return;
+        }
+
+        try {
+            const { currentProfile } = await chrome.storage.local.get('currentProfile');
+            const profileName = currentProfile || window.globalMaxExtensionConfig?.PROFILE_NAME;
+            if (!profileName) {
+                throw new Error('Missing current profile name');
+            }
+            window.MaxExtensionButtons?.__showCreatedButtonFlyout?.(event, {
+                success: true,
+                mode: 'edit',
+                profileName,
+                buttonIndex: index,
+                button: this.cloneButtonConfig(buttonConfig)
+            });
+        } catch (error) {
+            logConCgp('[ButtonEditMode] Failed to open button editor:', error?.message || error);
+            this.__toast('Could not open button editor.', 'error');
+        }
+    },
+
     updateSettingsButtonHint(container = this.container, isEditing = this.active) {
         if (!container) return;
         container.querySelectorAll('[data-ocp-settings-button="true"]').forEach(button => {
@@ -171,7 +214,7 @@ window.MaxExtensionButtonEditMode = {
             if (isEditing) {
                 this.setSettingsButtonTooltip(
                     button,
-                    'Settings button\n• Click: exit individual button edit mode.\n• Drag buttons or separators: reorder them relative to each other.\n• Click ×: delete a button or separator.'
+                    'Settings button\n• Click: exit individual button edit mode.\n• Drag buttons or separators: reorder them relative to each other.\n• Shift-click a button: edit its text.\n• Click ×: delete a button or separator.'
                 );
             } else {
                 const defaultTitle = button.dataset.ocpSettingsDefaultTitle || 'Open extension settings';
