@@ -565,7 +565,7 @@ window.MaxExtensionButtonEditMode = {
     showDeleteUndoToast({ deletedButton, previousNeighborRef, previousNeighbor, nextNeighborRef, nextNeighbor, originalIndex, profileName, origin }) {
         const label = deletedButton?.separator ? 'Separator deleted.' : 'Button deleted.';
         this.__toast(label, 'success', {
-            duration: 10000,
+            duration: 6000,
             customButtons: [
                 {
                     text: 'Undo',
