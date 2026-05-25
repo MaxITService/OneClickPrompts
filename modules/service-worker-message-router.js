@@ -395,7 +395,7 @@ async function createCustomButtonFromEditorText(payload = {}) {
 
     const profile = normalizeProfileConfig(deepCloneSafeJson(loadedProfile), profileName);
     const button = {
-        icon: '+',
+        icon: typeof payload.icon === 'string' && payload.icon.trim() ? payload.icon.trim() : '+',
         text: rawText,
         autoSend: payload.autoSend !== false
     };
@@ -414,10 +414,15 @@ async function createCustomButtonFromEditorText(payload = {}) {
 async function updateCustomButtonFromEditorOptions(payload = {}) {
     const profileName = sanitizeProfileName(payload.profileName);
     const text = typeof payload.text === 'string' ? payload.text : '';
+    const hasNewText = typeof payload.newText === 'string';
+    const newText = hasNewText ? payload.newText.trim() : '';
     const requestedIndex = Number(payload.buttonIndex);
 
     if (!profileName || !text) {
         return { success: false, reason: 'invalid_request' };
+    }
+    if (hasNewText && !newText) {
+        return { success: false, reason: 'empty_text' };
     }
 
     const loadedProfile = await loadProfileConfig(profileName);
@@ -445,6 +450,9 @@ async function updateCustomButtonFromEditorOptions(payload = {}) {
     if (typeof payload.icon === 'string') {
         const icon = payload.icon.trim();
         button.icon = icon || '+';
+    }
+    if (hasNewText) {
+        button.text = newText;
     }
 
     const success = await saveProfileConfig(profileName, profile);

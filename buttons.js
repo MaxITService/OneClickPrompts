@@ -1315,16 +1315,30 @@ window.MaxExtensionButtons = {
         }
 
         const editor = this.__findActiveEditor();
-        if (!editor) {
-            this.__toast('Could not find the chat editor.', 'error');
-            logConCgp('[buttons][create] Editor not found.');
-            return { status: 'failed', reason: 'editor_not_found' };
-        }
-
-        const text = this.__readEditorText(editor).trim();
+        const text = editor ? this.__readEditorText(editor).trim() : '';
         if (!text) {
-            this.__toast('Nothing to turn into a button. Type text in the editor first.', 'warning');
-            return { status: 'failed', reason: 'empty_editor' };
+            const reason = editor ? 'empty_editor' : 'editor_not_found';
+            this.__toast(
+                editor
+                    ? 'Editor is empty. Enter button text manually.'
+                    : 'Could not find the chat editor. Enter button text manually.',
+                'warning',
+                3500
+            );
+            if (!editor) {
+                logConCgp('[buttons][create] Editor not found; opening manual create flyout.');
+            }
+            this.__showCreatedButtonFlyout(event, {
+                success: false,
+                reason,
+                manualEntry: true,
+                button: {
+                    icon: '+',
+                    text: '',
+                    autoSend: true
+                }
+            });
+            return { status: 'manual_entry', reason };
         }
 
         try {
@@ -1342,7 +1356,7 @@ window.MaxExtensionButtons = {
             }
 
             this.__toast('Button created from editor text.', 'success');
-            this.__showCreatedButtonFlyout(event, response);
+            this.__showCreatedButtonFlyout(event, { ...response, capturedFromEditor: true });
             return { status: 'created', ...response };
         } catch (error) {
             this.__toast('Could not create button from editor text.', 'error');
@@ -1360,12 +1374,23 @@ window.MaxExtensionButtons = {
             existing.remove();
         }
 
+        const state = {
+            ...created,
+            lookupText: created?.button?.text || '',
+            button: {
+                icon: created?.button?.icon || '+',
+                text: created?.button?.text || '',
+                autoSend: created?.button?.autoSend !== false
+            }
+        };
+        const hasCreatedButton = () => !!state.success && Number.isInteger(Number(state.buttonIndex)) && !!state.profileName;
+
         const flyout = document.createElement('div');
         flyout.id = 'ocp-create-button-flyout';
         flyout.style.cssText = `
             position: fixed;
             z-index: 2147483647;
-            width: 260px;
+            width: 300px;
             padding: 12px;
             display: grid;
             gap: 10px;
@@ -1388,7 +1413,7 @@ window.MaxExtensionButtons = {
         header.style.cssText = 'display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 700;';
 
         const title = document.createElement('span');
-        title.textContent = '+ Button created';
+        title.textContent = hasCreatedButton() ? '+ Button created' : '+ Create button';
 
         const closeButton = document.createElement('button');
         closeButton.type = 'button';
@@ -1409,7 +1434,7 @@ window.MaxExtensionButtons = {
         header.append(title, closeButton);
 
         const preview = document.createElement('div');
-        preview.textContent = created?.button?.text || '';
+        preview.textContent = state.button.text || 'Enter button text below.';
         preview.style.cssText = `
             max-height: 72px;
             overflow: hidden;
@@ -1419,6 +1444,35 @@ window.MaxExtensionButtons = {
             color: rgba(255, 255, 255, 0.84);
             line-height: 1.3;
         `;
+
+        const textDetails = document.createElement('details');
+        textDetails.open = !hasCreatedButton();
+        textDetails.style.cssText = 'display: grid; gap: 8px;';
+
+        const textSummary = document.createElement('summary');
+        textSummary.textContent = hasCreatedButton() ? 'Button text' : 'Button text required';
+        textSummary.style.cssText = 'cursor: pointer; color: rgba(255, 255, 255, 0.84);';
+
+        const textInput = document.createElement('textarea');
+        textInput.value = state.button.text || '';
+        textInput.rows = hasCreatedButton() ? 3 : 5;
+        textInput.placeholder = 'Type the text this button should insert...';
+        textInput.setAttribute('aria-label', 'Button text');
+        textInput.style.cssText = `
+            width: 100%;
+            min-height: 72px;
+            box-sizing: border-box;
+            resize: vertical;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font: inherit;
+            line-height: 1.35;
+            outline: none;
+            padding: 8px;
+        `;
+        textDetails.append(textSummary, textInput);
 
         const iconLabel = document.createElement('label');
         iconLabel.style.cssText = 'display: flex; align-items: center; justify-content: space-between; gap: 10px;';
@@ -1456,14 +1510,30 @@ window.MaxExtensionButtons = {
         toggle.style.cssText = 'width: 18px; height: 18px; accent-color: #10a37f;';
 
         toggleLabel.append(toggleText, toggle);
-        flyout.append(header, preview, iconLabel, toggleLabel);
+        const createButton = document.createElement('button');
+        createButton.type = 'button';
+        createButton.textContent = 'Create';
+        createButton.style.cssText = `
+            min-height: 30px;
+            border: 0;
+            border-radius: 8px;
+            background: #10a37f;
+            color: #fff;
+            cursor: pointer;
+            font-weight: 700;
+        `;
+        if (hasCreatedButton()) {
+            createButton.style.display = 'none';
+        }
+
+        flyout.append(header, preview, textDetails, iconLabel, toggleLabel, createButton);
         document.body.appendChild(flyout);
 
         const rect = event?.target?.getBoundingClientRect?.();
         let x = rect ? rect.left : (event?.clientX || 24);
         let y = rect ? rect.bottom + 8 : (event?.clientY || 24);
-        x = Math.max(10, Math.min(window.innerWidth - 280, x));
-        y = Math.max(10, Math.min(window.innerHeight - 170, y));
+        x = Math.max(10, Math.min(window.innerWidth - 320, x));
+        y = Math.max(10, Math.min(window.innerHeight - 250, y));
         flyout.style.left = `${Math.round(x)}px`;
         flyout.style.top = `${Math.round(y)}px`;
 
@@ -1484,13 +1554,66 @@ window.MaxExtensionButtons = {
             }
         };
 
+        const syncCreatedUi = () => {
+            const createdNow = hasCreatedButton();
+            title.textContent = createdNow ? '+ Button created' : '+ Create button';
+            textSummary.textContent = createdNow ? 'Button text' : 'Button text required';
+            preview.textContent = state.button.text || 'Enter button text below.';
+            createButton.style.display = createdNow ? 'none' : '';
+        };
+
+        const createButtonNow = async () => {
+            const text = textInput.value.trim();
+            if (!text) {
+                this.__toast('Button text is empty.', 'warning');
+                textDetails.open = true;
+                textInput.focus();
+                return false;
+            }
+
+            const response = await chrome.runtime.sendMessage({
+                type: 'createCustomButtonFromEditorText',
+                text,
+                autoSend: toggle.checked,
+                icon: iconInput.value
+            });
+            if (!response?.success) {
+                throw new Error(response?.reason || response?.error || 'create_failed');
+            }
+
+            Object.assign(state, response, { success: true });
+            state.button = response.button || {
+                icon: iconInput.value.trim() || '+',
+                text,
+                autoSend: toggle.checked
+            };
+            state.lookupText = state.button.text || text;
+            textInput.value = state.button.text || text;
+            iconInput.value = state.button.icon || '+';
+            toggle.checked = state.button.autoSend !== false;
+            syncCreatedUi();
+            window.MaxExtensionButtonsInit?.updateButtonsForProfileChange?.('inline');
+            window.MaxExtensionButtonsInit?.updateButtonsForProfileChange?.('panel');
+            this.__toast('Button created.', 'success');
+            return true;
+        };
+
         let iconSaveTimer = null;
+        let textSaveTimer = null;
         const saveCreatedButtonOptions = async (options = {}) => {
+            if (!hasCreatedButton()) {
+                return null;
+            }
+            const nextText = textInput.value.trim();
+            if (!nextText) {
+                throw new Error('empty_text');
+            }
             const response = await chrome.runtime.sendMessage({
                 type: 'updateCustomButtonFromEditorOptions',
-                profileName: created.profileName,
-                buttonIndex: created.buttonIndex,
-                text: created?.button?.text || '',
+                profileName: state.profileName,
+                buttonIndex: state.buttonIndex,
+                text: state.lookupText || state?.button?.text || '',
+                newText: nextText,
                 autoSend: toggle.checked,
                 icon: iconInput.value,
                 ...options
@@ -1498,19 +1621,28 @@ window.MaxExtensionButtons = {
             if (!response?.success) {
                 throw new Error(response?.reason || response?.error || 'update_failed');
             }
-            created.button = response.button || {
-                ...created.button,
+            state.button = response.button || {
+                ...state.button,
+                text: nextText,
                 autoSend: toggle.checked,
                 icon: iconInput.value.trim() || '+'
             };
-            created.buttonIndex = response.buttonIndex ?? created.buttonIndex;
-            if (iconInput.value !== created.button.icon) {
-                iconInput.value = created.button.icon;
+            state.buttonIndex = response.buttonIndex ?? state.buttonIndex;
+            if (iconInput.value !== state.button.icon) {
+                iconInput.value = state.button.icon;
             }
+            if (textInput.value.trim() !== state.button.text) {
+                textInput.value = state.button.text;
+            }
+            state.lookupText = state.button.text || nextText;
+            syncCreatedUi();
+            window.MaxExtensionButtonsInit?.updateButtonsForProfileChange?.('inline');
+            window.MaxExtensionButtonsInit?.updateButtonsForProfileChange?.('panel');
             return response;
         };
 
         iconInput.addEventListener('input', () => {
+            if (!hasCreatedButton()) return;
             clearTimeout(iconSaveTimer);
             iconSaveTimer = setTimeout(async () => {
                 try {
@@ -1523,6 +1655,7 @@ window.MaxExtensionButtons = {
         });
 
         iconInput.addEventListener('change', async () => {
+            if (!hasCreatedButton()) return;
             clearTimeout(iconSaveTimer);
             try {
                 await saveCreatedButtonOptions();
@@ -1532,7 +1665,34 @@ window.MaxExtensionButtons = {
             }
         });
 
+        textInput.addEventListener('input', () => {
+            state.button.text = textInput.value;
+            syncCreatedUi();
+            if (!hasCreatedButton()) return;
+            clearTimeout(textSaveTimer);
+            textSaveTimer = setTimeout(async () => {
+                try {
+                    await saveCreatedButtonOptions();
+                } catch (error) {
+                    this.__toast('Could not update text for the new button.', 'error');
+                    logConCgp('[buttons][create] Text update failed:', error?.message || error);
+                }
+            }, 350);
+        });
+
+        textInput.addEventListener('change', async () => {
+            if (!hasCreatedButton()) return;
+            clearTimeout(textSaveTimer);
+            try {
+                await saveCreatedButtonOptions();
+            } catch (error) {
+                this.__toast('Could not update text for the new button.', 'error');
+                logConCgp('[buttons][create] Text update failed:', error?.message || error);
+            }
+        });
+
         toggle.addEventListener('change', async () => {
+            if (!hasCreatedButton()) return;
             try {
                 await saveCreatedButtonOptions({ autoSend: toggle.checked });
                 this.__toast(toggle.checked ? 'New button will auto-send.' : 'New button will not auto-send.', 'success');
@@ -1543,8 +1703,21 @@ window.MaxExtensionButtons = {
             }
         });
 
+        createButton.addEventListener('click', async () => {
+            createButton.disabled = true;
+            try {
+                await createButtonNow();
+            } catch (error) {
+                this.__toast('Could not create button.', 'error');
+                logConCgp('[buttons][create] Manual create failed:', error?.message || error);
+            } finally {
+                createButton.disabled = false;
+            }
+        });
+
         closeButton.addEventListener('click', closeFlyout);
         document.addEventListener('keydown', onKeyDown, true);
+        syncCreatedUi();
 
         requestAnimationFrame(() => {
             flyout.style.opacity = '1';
