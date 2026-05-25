@@ -464,8 +464,11 @@ window.MaxExtensionButtonEditMode = {
         }
 
         const deletedButton = this.cloneButtonConfig(config.customButtons[index]);
+        const previousNeighborRef = config.customButtons[index - 1] || null;
+        const nextNeighborRef = config.customButtons[index + 1] || null;
         const previousNeighbor = this.cloneButtonConfig(config.customButtons[index - 1]);
         const nextNeighbor = this.cloneButtonConfig(config.customButtons[index + 1]);
+        const deletedProfileName = await this.getCurrentProfileName();
         const deleteOrigin = this.origin;
         const beforeRects = this.captureRects();
         config.customButtons.splice(index, 1);
@@ -485,9 +488,12 @@ window.MaxExtensionButtonEditMode = {
         }
         this.showDeleteUndoToast({
             deletedButton,
+            previousNeighborRef,
             previousNeighbor,
+            nextNeighborRef,
             nextNeighbor,
             originalIndex: index,
+            profileName: deletedProfileName,
             origin: deleteOrigin
         });
     },
@@ -523,13 +529,29 @@ window.MaxExtensionButtonEditMode = {
         return buttons.findIndex(candidate => this.serializeButtonConfig(candidate) === serialized);
     },
 
-    getUndoInsertionIndex({ previousNeighbor, nextNeighbor, originalIndex }) {
+    getButtonConfigRefIndex(button) {
+        const buttons = window.globalMaxExtensionConfig?.customButtons;
+        if (!button) return -1;
+        return Array.isArray(buttons) ? buttons.indexOf(button) : -1;
+    },
+
+    getUndoInsertionIndex({ previousNeighborRef, previousNeighbor, nextNeighborRef, nextNeighbor, originalIndex }) {
         const buttons = window.globalMaxExtensionConfig?.customButtons;
         if (!Array.isArray(buttons)) return -1;
+
+        const nextRefIndex = this.getButtonConfigRefIndex(nextNeighborRef);
+        if (nextRefIndex !== -1) {
+            return nextRefIndex;
+        }
 
         const nextIndex = this.findButtonConfigIndex(nextNeighbor);
         if (nextIndex !== -1) {
             return nextIndex;
+        }
+
+        const previousRefIndex = this.getButtonConfigRefIndex(previousNeighborRef);
+        if (previousRefIndex !== -1) {
+            return previousRefIndex + 1;
         }
 
         const previousIndex = this.findButtonConfigIndex(previousNeighbor);
@@ -540,7 +562,7 @@ window.MaxExtensionButtonEditMode = {
         return Math.max(0, Math.min(originalIndex, buttons.length));
     },
 
-    showDeleteUndoToast({ deletedButton, previousNeighbor, nextNeighbor, originalIndex, origin }) {
+    showDeleteUndoToast({ deletedButton, previousNeighborRef, previousNeighbor, nextNeighborRef, nextNeighbor, originalIndex, profileName, origin }) {
         const label = deletedButton?.separator ? 'Separator deleted.' : 'Button deleted.';
         this.__toast(label, 'success', {
             duration: 10000,
@@ -550,13 +572,25 @@ window.MaxExtensionButtonEditMode = {
                     title: 'Restore this deleted button',
                     className: 'toast-action-primary',
                     onClick: async () => {
+                        const currentProfileName = await this.getCurrentProfileName();
+                        if (profileName && currentProfileName && currentProfileName !== profileName) {
+                            this.__toast('Switch back to the original profile before undoing this deletion.', 'warning', 4500);
+                            return false;
+                        }
+
                         const buttons = window.globalMaxExtensionConfig?.customButtons;
                         if (!Array.isArray(buttons)) {
                             this.__toast('Could not undo: profile buttons are unavailable.', 'error');
                             return false;
                         }
 
-                        const insertionIndex = this.getUndoInsertionIndex({ previousNeighbor, nextNeighbor, originalIndex });
+                        const insertionIndex = this.getUndoInsertionIndex({
+                            previousNeighborRef,
+                            previousNeighbor,
+                            nextNeighborRef,
+                            nextNeighbor,
+                            originalIndex
+                        });
                         if (insertionIndex < 0) {
                             this.__toast('Could not undo button deletion.', 'error');
                             return false;
@@ -578,10 +612,18 @@ window.MaxExtensionButtonEditMode = {
         });
     },
 
-    async saveCurrentProfileConfig() {
+    async getCurrentProfileName() {
         try {
             const { currentProfile } = await chrome.storage.local.get('currentProfile');
-            const profileName = currentProfile || window.globalMaxExtensionConfig?.PROFILE_NAME;
+            return currentProfile || window.globalMaxExtensionConfig?.PROFILE_NAME || '';
+        } catch (_) {
+            return window.globalMaxExtensionConfig?.PROFILE_NAME || '';
+        }
+    },
+
+    async saveCurrentProfileConfig() {
+        try {
+            const profileName = await this.getCurrentProfileName();
             if (!profileName) {
                 throw new Error('Missing current profile name');
             }
