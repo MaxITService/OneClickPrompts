@@ -279,6 +279,9 @@ async function commenceExtensionInitialization(configurationObject) {
     logConCgp('[init] Async initialization started.');
     // Configs are now set in publicStaticVoidMain before this is called.
     window.globalMaxExtensionConfig = configurationObject;
+    if (window.MaxExtensionPromptVariables && typeof window.MaxExtensionPromptVariables.ensureFirstRunDateExampleButton === 'function') {
+        window.globalMaxExtensionConfig = await window.MaxExtensionPromptVariables.ensureFirstRunDateExampleButton(window.globalMaxExtensionConfig);
+    }
 
     /**
      * Helper to get panel visibility setting from storage, wrapped in a Promise.

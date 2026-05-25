@@ -502,6 +502,11 @@ window.MaxExtensionButtonsInit = {
         } else {
             logConCgp('[init] Hotkeys toggle rendering skipped by profile setting hideOnPageHotkeysToggle.');
         }
+
+        if (window.MaxExtensionPromptVariables && typeof window.MaxExtensionPromptVariables.createControl === 'function') {
+            container.appendChild(window.MaxExtensionPromptVariables.createControl());
+            logConCgp('[init] Smart placeholder variables control has been created and appended.');
+        }
     },
 
     /**
@@ -741,6 +746,9 @@ window.MaxExtensionButtonsInit = {
 
                 if (Number.isInteger(def.profileIndex) && buttonElement) {
                     buttonElement.dataset.ocpButtonEditIndex = String(def.profileIndex);
+                    if (window.MaxExtensionPromptVariables?.shouldShineButton?.(def.config, def.profileIndex)) {
+                        window.MaxExtensionPromptVariables.applyShine(buttonElement);
+                    }
                 }
             }
 

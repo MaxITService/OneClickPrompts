@@ -21,7 +21,8 @@ import {
 import { logConfigurationRelatedStuff, handleStorageError } from './service-worker-config-helpers.js';
 
 const BACKUP_KIND = 'OneClickPromptsBackup';
-const BACKUP_VERSION = 2;
+const BACKUP_VERSION = 3;
+const PROMPT_VARIABLES_STORAGE_KEY = 'ocpPromptVariablesSettings';
 const DANGEROUS_OBJECT_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
 
 function isPlainObject(value) {
@@ -129,6 +130,10 @@ function sanitizeAppSettings(rawAppSettings) {
         sanitized.manualQueueCards = deepCloneSafeJson(rawAppSettings.manualQueueCards);
     }
 
+    if (isPlainObject(rawAppSettings.promptVariables)) {
+        sanitized.promptVariables = deepCloneSafeJson(rawAppSettings.promptVariables);
+    }
+
     if (isPlainObject(rawAppSettings.floatingPanel)) {
         sanitized.floatingPanel = deepCloneSafeJson(rawAppSettings.floatingPanel);
     }
@@ -199,7 +204,7 @@ async function buildBackupPayload(scope = 'currentProfile') {
         : scope === 'allProfiles'
             ? 'allProfiles'
             : 'currentProfile';
-    const currentResponse = await chrome.storage.local.get(['currentProfile', 'globalSettings']);
+    const currentResponse = await chrome.storage.local.get(['currentProfile', 'globalSettings', PROMPT_VARIABLES_STORAGE_KEY]);
     const currentProfileName = sanitizeProfileName(currentResponse.currentProfile) || 'Default';
     const profiles = {};
 
@@ -236,6 +241,11 @@ async function buildBackupPayload(scope = 'currentProfile') {
             selectorAutoDetector: deepCloneSafeJson(await StateStore.getSelectorAutoDetectorSettings()),
             tooltip: deepCloneSafeJson(await StateStore.getTooltipSettings()),
             manualQueueCards: deepCloneSafeJson(await StateStore.getManualQueueCards()),
+            promptVariables: deepCloneSafeJson(currentResponse[PROMPT_VARIABLES_STORAGE_KEY] || {
+                enabled: true,
+                dateExampleInitialized: false,
+                customVariables: []
+            }),
             floatingPanel: deepCloneSafeJson(floatingPanel),
             customSelectors: deepCloneSafeJson(await StateStore.getCustomSelectors()),
         };
@@ -317,6 +327,10 @@ async function applyBackupPayload(rawPayload, options = {}) {
 
         if (isPlainObject(appSettings.manualQueueCards)) {
             await StateStore.saveManualQueueCards(appSettings.manualQueueCards);
+        }
+
+        if (isPlainObject(appSettings.promptVariables)) {
+            await chrome.storage.local.set({ [PROMPT_VARIABLES_STORAGE_KEY]: deepCloneSafeJson(appSettings.promptVariables) });
         }
 
         if (isPlainObject(appSettings.floatingPanel)) {

@@ -50,6 +50,777 @@ const escapeTooltipHtml = (text) => {
         .replace(/'/g, '&#39;');
 };
 
+const OCP_PROMPT_VARIABLES_STORAGE_KEY = 'ocpPromptVariablesSettings';
+
+window.MaxExtensionPromptVariables = {
+    storageKey: OCP_PROMPT_VARIABLES_STORAGE_KEY,
+    dateExampleText: 'Today is {{today}}.',
+    dateExampleIcon: '📅',
+    shineDurationMs: 15000,
+    shineState: null,
+    activePopover: null,
+    activePopoverCleanup: null,
+
+    createTokenPattern() {
+        return /\{\{\s*(selection|today)\s*\}\}|\{\{\s*prompt\s*:\s*([^}]+?)\s*\}\}|\{\{\s*(?:var|variable)\s*:\s*([^}]+?)\s*\}\}|\{%\{\s*([^}%]+?)\s*\}%\}/gi;
+    },
+
+    normalizeSettings(settings = {}) {
+        const rawVariables = Array.isArray(settings.customVariables) ? settings.customVariables : [];
+        return {
+            enabled: settings.enabled !== false,
+            dateExampleInitialized: settings.dateExampleInitialized === true,
+            customVariables: rawVariables
+                .filter(item => item && typeof item === 'object')
+                .map(item => ({
+                    name: String(item.name || '').trim(),
+                    value: String(item.value ?? ''),
+                    executeJavaScript: item.executeJavaScript === true || item.mode === 'javascript'
+                }))
+                .filter(item => item.name)
+        };
+    },
+
+    async loadSettings() {
+        try {
+            const result = await chrome.storage.local.get([this.storageKey]);
+            return this.normalizeSettings(result?.[this.storageKey]);
+        } catch (error) {
+            logConCgp('[prompt-vars] Failed loading settings:', error?.message || error);
+            return this.normalizeSettings();
+        }
+    },
+
+    async saveSettings(settings, options = {}) {
+        const normalized = this.normalizeSettings(settings);
+        await chrome.storage.local.set({ [this.storageKey]: normalized });
+        if (!options.silent) {
+            this.refreshControls(normalized);
+        }
+        return normalized;
+    },
+
+    async ensureFirstRunDateExampleButton(config) {
+        if (!config || !Array.isArray(config.customButtons)) {
+            return config;
+        }
+
+        const settings = await this.loadSettings();
+        if (settings.dateExampleInitialized) {
+            return config;
+        }
+
+        const alreadyExists = config.customButtons.some(button => (
+            button &&
+            !button.separator &&
+            (button.__ocpSmartVariableExample === 'today' || button.text === this.dateExampleText)
+        ));
+
+        await this.saveSettings({ ...settings, dateExampleInitialized: true }, { silent: true });
+        if (alreadyExists) {
+            return config;
+        }
+
+        const exampleButton = {
+            icon: this.dateExampleIcon,
+            text: this.dateExampleText,
+            autoSend: false,
+            __ocpSmartVariableExample: 'today'
+        };
+        config.customButtons.push(exampleButton);
+        this.markButtonForShine(config.customButtons.length - 1, 'today');
+
+        try {
+            const { currentProfile } = await chrome.storage.local.get('currentProfile');
+            const profileName = currentProfile || config.PROFILE_NAME;
+            if (profileName) {
+                await chrome.runtime.sendMessage({
+                    type: 'saveConfig',
+                    profileName,
+                    config
+                });
+            }
+        } catch (error) {
+            logConCgp('[prompt-vars] Failed saving first-run date example:', error?.message || error);
+        }
+
+        return config;
+    },
+
+    markButtonForShine(profileIndex, kind = '') {
+        this.shineState = {
+            profileIndex,
+            kind,
+            until: Date.now() + this.shineDurationMs
+        };
+    },
+
+    shouldShineButton(buttonConfig, profileIndex) {
+        const state = this.shineState;
+        if (!state || Date.now() > state.until) {
+            this.shineState = null;
+            return false;
+        }
+        if (Number.isInteger(profileIndex) && profileIndex === state.profileIndex) {
+            return true;
+        }
+        return state.kind && buttonConfig?.__ocpSmartVariableExample === state.kind;
+    },
+
+    applyShine(buttonElement) {
+        if (!buttonElement) return;
+        this.ensureStyles();
+        buttonElement.classList.add('ocp-smart-vars-new-button');
+        setTimeout(() => {
+            buttonElement.classList.remove('ocp-smart-vars-new-button');
+        }, this.shineDurationMs);
+    },
+
+    async resolvePromptText(rawText, context = {}) {
+        if (typeof rawText !== 'string') {
+            return rawText;
+        }
+        if (!rawText.includes('{{') && !rawText.includes('{%{')) {
+            return rawText;
+        }
+
+        const settings = await this.loadSettings();
+        if (!settings.enabled) {
+            return rawText;
+        }
+
+        const tokens = this.collectTokens(rawText);
+        if (!tokens.hasAny) {
+            return rawText;
+        }
+
+        const builtins = {};
+        if (tokens.builtins.has('selection')) {
+            builtins.selection = this.readSelectionText();
+        }
+        if (tokens.builtins.has('today')) {
+            builtins.today = this.formatToday();
+        }
+
+        const promptValues = tokens.promptNames.length
+            ? await this.requestPromptValues(tokens.promptNames, context)
+            : {};
+        if (promptValues === null) {
+            return null;
+        }
+
+        const customValues = {};
+        const customLookup = new Map(
+            settings.customVariables.map(variable => [variable.name.toLowerCase(), variable])
+        );
+        for (const name of tokens.customNames) {
+            const variable = customLookup.get(name.toLowerCase());
+            customValues[name] = variable
+                ? await this.resolveCustomVariable(variable)
+                : '';
+        }
+
+        return rawText.replace(this.createTokenPattern(), (match, builtinName, promptName, customName, aliasName) => {
+            if (builtinName) {
+                return builtins[builtinName.toLowerCase()] ?? '';
+            }
+            if (promptName) {
+                return promptValues[this.normalizeVariableName(promptName)] ?? '';
+            }
+            const resolvedCustomName = this.normalizeVariableName(customName || aliasName);
+            return customValues[resolvedCustomName] ?? '';
+        });
+    },
+
+    collectTokens(rawText) {
+        const builtins = new Set();
+        const promptNames = [];
+        const customNames = [];
+        const addUnique = (list, value) => {
+            const normalized = this.normalizeVariableName(value);
+            if (normalized && !list.includes(normalized)) {
+                list.push(normalized);
+            }
+        };
+
+        for (const match of rawText.matchAll(this.createTokenPattern())) {
+            if (match[1]) {
+                builtins.add(match[1].toLowerCase());
+            } else if (match[2]) {
+                addUnique(promptNames, match[2]);
+            } else if (match[3] || match[4]) {
+                addUnique(customNames, match[3] || match[4]);
+            }
+        }
+
+        return {
+            builtins,
+            promptNames,
+            customNames,
+            hasAny: builtins.size > 0 || promptNames.length > 0 || customNames.length > 0
+        };
+    },
+
+    normalizeVariableName(name) {
+        return String(name || '').trim();
+    },
+
+    readSelectionText() {
+        const activeElement = document.activeElement;
+        if (activeElement && typeof activeElement.selectionStart === 'number' && typeof activeElement.selectionEnd === 'number') {
+            const value = activeElement.value ?? '';
+            const selected = value.slice(activeElement.selectionStart, activeElement.selectionEnd);
+            if (selected) {
+                return selected;
+            }
+        }
+        return window.getSelection?.().toString() || '';
+    },
+
+    formatToday(date = new Date()) {
+        const pad = (value) => String(value).padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    },
+
+    async resolveCustomVariable(variable) {
+        if (!variable.executeJavaScript) {
+            return variable.value;
+        }
+        return await this.executeVariableJavaScript(variable.value, variable.name);
+    },
+
+    async executeVariableJavaScript(script, name) {
+        const source = String(script || '').trim();
+        if (!source) return '';
+
+        const timeout = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Timed out')), 1000);
+        });
+
+        try {
+            let task;
+            try {
+                task = new Function('"use strict"; return (async () => (' + source + '))();')();
+            } catch (_) {
+                task = new Function('"use strict"; return (async () => {' + source + '\n})();')();
+            }
+            const result = await Promise.race([Promise.resolve(task), timeout]);
+            if (result === null || result === undefined) return '';
+            if (typeof result === 'object') {
+                return JSON.stringify(result);
+            }
+            return String(result);
+        } catch (error) {
+            this.__toast(`Variable "${name}" JavaScript failed.`, 'warning');
+            logConCgp('[prompt-vars] JavaScript variable failed:', { name, error: error?.message || error });
+            return '';
+        }
+    },
+
+    requestPromptValues(names, context = {}) {
+        return new Promise((resolve) => {
+            this.ensureStyles();
+            document.querySelectorAll('[data-ocp-prompt-input-overlay="true"]').forEach(node => node.remove());
+
+            const overlay = document.createElement('div');
+            overlay.className = 'ocp-prompt-input-overlay';
+            overlay.dataset.ocpPromptInputOverlay = 'true';
+
+            const dialog = document.createElement('form');
+            dialog.className = 'ocp-prompt-input-dialog';
+            dialog.setAttribute('role', 'dialog');
+            dialog.setAttribute('aria-modal', 'true');
+
+            const title = document.createElement('div');
+            title.className = 'ocp-prompt-input-title';
+            title.textContent = names.length === 1 ? names[0] : 'Prompt variables';
+            dialog.appendChild(title);
+
+            const inputs = new Map();
+            names.forEach((name) => {
+                const label = document.createElement('label');
+                label.className = 'ocp-prompt-input-field';
+
+                const labelText = document.createElement('span');
+                labelText.textContent = name;
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.autocomplete = 'off';
+                input.spellcheck = true;
+
+                label.appendChild(labelText);
+                label.appendChild(input);
+                dialog.appendChild(label);
+                inputs.set(name, input);
+            });
+
+            const actions = document.createElement('div');
+            actions.className = 'ocp-prompt-input-actions';
+
+            const cancelButton = document.createElement('button');
+            cancelButton.type = 'button';
+            cancelButton.textContent = 'Cancel';
+
+            const submitButton = document.createElement('button');
+            submitButton.type = 'submit';
+            submitButton.textContent = 'Insert';
+
+            actions.appendChild(cancelButton);
+            actions.appendChild(submitButton);
+            dialog.appendChild(actions);
+            overlay.appendChild(dialog);
+            document.body.appendChild(overlay);
+
+            const cleanup = (value) => {
+                document.removeEventListener('keydown', onKeydown, true);
+                overlay.remove();
+                resolve(value);
+            };
+
+            const onKeydown = (event) => {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    cleanup(null);
+                }
+            };
+
+            dialog.addEventListener('submit', (event) => {
+                event.preventDefault();
+                const values = {};
+                inputs.forEach((input, name) => {
+                    values[name] = input.value;
+                });
+                cleanup(values);
+            });
+
+            cancelButton.addEventListener('click', () => cleanup(null));
+            overlay.addEventListener('click', (event) => {
+                if (event.target === overlay) {
+                    cleanup(null);
+                }
+            });
+            document.addEventListener('keydown', onKeydown, true);
+
+            requestAnimationFrame(() => {
+                this.positionDialogNearTarget(dialog, context.event?.currentTarget || context.event?.target);
+                inputs.values().next().value?.focus({ preventScroll: true });
+            });
+        });
+    },
+
+    positionDialogNearTarget(dialog, target) {
+        const targetRect = target?.getBoundingClientRect?.();
+        const dialogRect = dialog.getBoundingClientRect();
+        const viewportPadding = 12;
+        const fallbackLeft = Math.max(viewportPadding, (window.innerWidth - dialogRect.width) / 2);
+        const fallbackTop = Math.max(viewportPadding, window.innerHeight - dialogRect.height - 96);
+        const left = targetRect
+            ? Math.min(window.innerWidth - dialogRect.width - viewportPadding, Math.max(viewportPadding, targetRect.left))
+            : fallbackLeft;
+        const top = targetRect
+            ? Math.min(window.innerHeight - dialogRect.height - viewportPadding, Math.max(viewportPadding, targetRect.bottom + 8))
+            : fallbackTop;
+        dialog.style.left = `${left}px`;
+        dialog.style.top = `${top}px`;
+    },
+
+    createControl() {
+        this.ensureStyles();
+        const wrapper = document.createElement('div');
+        wrapper.className = 'ocp-smart-vars-control';
+
+        const trigger = document.createElement('button');
+        trigger.type = 'button';
+        trigger.className = 'ocp-smart-vars-trigger';
+        trigger.dataset.ocpSmartVarsTrigger = 'true';
+        trigger.textContent = 'Vars';
+        trigger.title = 'Smart placeholders';
+
+        wrapper.appendChild(trigger);
+
+        this.loadSettings().then(settings => {
+            this.updateControlTrigger(trigger, settings);
+        });
+
+        trigger.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            this.openVariablesMenu(trigger);
+        });
+
+        ['pointerdown', 'mousedown', 'mouseup', 'touchstart', 'touchend'].forEach(eventName => {
+            wrapper.addEventListener(eventName, event => event.stopPropagation());
+        });
+
+        return wrapper;
+    },
+
+    updateControlTrigger(trigger, settings) {
+        const normalized = this.normalizeSettings(settings);
+        trigger.textContent = normalized.enabled ? 'Vars: On' : 'Vars: Off';
+        trigger.classList.toggle('is-off', !normalized.enabled);
+        trigger.setAttribute('aria-pressed', normalized.enabled ? 'true' : 'false');
+    },
+
+    async refreshControls(settings = null) {
+        const normalized = settings || await this.loadSettings();
+        document.querySelectorAll('[data-ocp-smart-vars-trigger="true"]').forEach(trigger => {
+            this.updateControlTrigger(trigger, normalized);
+        });
+    },
+
+    async openVariablesMenu(trigger) {
+        if (this.activePopover) {
+            const sameTrigger = this.activePopoverTrigger === trigger;
+            this.closeActivePopover();
+            if (sameTrigger) {
+                return;
+            }
+        }
+
+        let draft = await this.loadSettings();
+        const popover = document.createElement('div');
+        popover.className = 'ocp-smart-vars-popover';
+        popover.setAttribute('role', 'dialog');
+        popover.setAttribute('aria-label', 'Smart placeholders');
+        this.activePopover = popover;
+        this.activePopoverTrigger = trigger;
+
+        const render = () => {
+            popover.replaceChildren();
+
+            const header = document.createElement('div');
+            header.className = 'ocp-smart-vars-header';
+            header.textContent = 'Smart placeholders';
+            popover.appendChild(header);
+
+            const toggleLabel = document.createElement('label');
+            toggleLabel.className = 'ocp-smart-vars-toggle';
+            const toggle = document.createElement('input');
+            toggle.type = 'checkbox';
+            toggle.checked = draft.enabled;
+            const toggleText = document.createElement('span');
+            toggleText.textContent = 'Enabled';
+            toggleLabel.appendChild(toggle);
+            toggleLabel.appendChild(toggleText);
+            popover.appendChild(toggleLabel);
+
+            const syntax = document.createElement('div');
+            syntax.className = 'ocp-smart-vars-syntax';
+            syntax.textContent = '{{selection}}  {{today}}  {{prompt:name}}  {{var:name}}  {%{name}%}';
+            popover.appendChild(syntax);
+
+            const list = document.createElement('div');
+            list.className = 'ocp-smart-vars-list';
+            draft.customVariables.forEach((variable, index) => {
+                list.appendChild(this.createVariableRow(variable, index, draft, async () => {
+                    draft.customVariables.splice(index, 1);
+                    draft = await this.saveSettings(draft);
+                    render();
+                }));
+            });
+            popover.appendChild(list);
+
+            const actions = document.createElement('div');
+            actions.className = 'ocp-smart-vars-menu-actions';
+
+            const addButton = document.createElement('button');
+            addButton.type = 'button';
+            addButton.textContent = 'Add var';
+            addButton.addEventListener('click', () => {
+                draft.customVariables.push({ name: '', value: '', executeJavaScript: false });
+                render();
+            });
+
+            const saveButton = document.createElement('button');
+            saveButton.type = 'button';
+            saveButton.textContent = 'Save';
+            saveButton.className = 'ocp-smart-vars-save';
+            saveButton.addEventListener('click', async () => {
+                draft = await this.saveSettings(draft);
+                this.__toast('Smart variables saved.', 'success', 1800);
+                render();
+            });
+
+            actions.appendChild(addButton);
+            actions.appendChild(saveButton);
+            popover.appendChild(actions);
+
+            toggle.addEventListener('change', async () => {
+                draft.enabled = toggle.checked;
+                draft = await this.saveSettings(draft);
+                render();
+            });
+        };
+
+        render();
+        document.body.appendChild(popover);
+        this.positionPopover(trigger, popover);
+
+        const closeOnOutsideClick = (event) => {
+            if (!popover.contains(event.target) && !trigger.contains(event.target)) {
+                this.closeActivePopover();
+            }
+        };
+        const reposition = () => this.positionPopover(trigger, popover);
+        this.activePopoverCleanup = () => {
+            popover.remove();
+            document.removeEventListener('click', closeOnOutsideClick, true);
+            window.removeEventListener('resize', reposition);
+            window.removeEventListener('scroll', reposition, true);
+            if (this.activePopover === popover) {
+                this.activePopover = null;
+                this.activePopoverTrigger = null;
+                this.activePopoverCleanup = null;
+            }
+        };
+        setTimeout(() => document.addEventListener('click', closeOnOutsideClick, true), 0);
+        window.addEventListener('resize', reposition, { passive: true });
+        window.addEventListener('scroll', reposition, { capture: true, passive: true });
+    },
+
+    closeActivePopover() {
+        if (typeof this.activePopoverCleanup === 'function') {
+            this.activePopoverCleanup();
+            return;
+        }
+        this.activePopover?.remove();
+        this.activePopover = null;
+        this.activePopoverTrigger = null;
+        this.activePopoverCleanup = null;
+    },
+
+    createVariableRow(variable, index, draft, onDelete) {
+        const row = document.createElement('div');
+        row.className = 'ocp-smart-vars-row';
+
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.placeholder = 'name';
+        nameInput.value = variable.name || '';
+        nameInput.addEventListener('input', () => {
+            draft.customVariables[index].name = nameInput.value;
+        });
+
+        const valueInput = document.createElement('textarea');
+        valueInput.rows = 2;
+        valueInput.placeholder = 'value or JavaScript';
+        valueInput.value = variable.value || '';
+        valueInput.addEventListener('input', () => {
+            draft.customVariables[index].value = valueInput.value;
+        });
+
+        const jsLabel = document.createElement('label');
+        jsLabel.className = 'ocp-smart-vars-js-toggle';
+        const jsToggle = document.createElement('input');
+        jsToggle.type = 'checkbox';
+        jsToggle.checked = variable.executeJavaScript === true;
+        jsToggle.addEventListener('change', () => {
+            draft.customVariables[index].executeJavaScript = jsToggle.checked;
+        });
+        const jsText = document.createElement('span');
+        jsText.textContent = 'JS';
+        jsLabel.appendChild(jsToggle);
+        jsLabel.appendChild(jsText);
+
+        const deleteButton = document.createElement('button');
+        deleteButton.type = 'button';
+        deleteButton.textContent = 'Delete';
+        deleteButton.addEventListener('click', onDelete);
+
+        row.appendChild(nameInput);
+        row.appendChild(valueInput);
+        row.appendChild(jsLabel);
+        row.appendChild(deleteButton);
+        return row;
+    },
+
+    positionPopover(trigger, popover) {
+        if (!trigger?.isConnected || !popover?.isConnected) return;
+        const rect = trigger.getBoundingClientRect();
+        const popoverRect = popover.getBoundingClientRect();
+        const padding = 10;
+        const left = Math.min(
+            window.innerWidth - popoverRect.width - padding,
+            Math.max(padding, rect.left)
+        );
+        const canOpenUp = rect.top > popoverRect.height + padding;
+        const top = canOpenUp
+            ? rect.top - popoverRect.height - 8
+            : Math.min(window.innerHeight - popoverRect.height - padding, rect.bottom + 8);
+        popover.style.left = `${left}px`;
+        popover.style.top = `${Math.max(padding, top)}px`;
+    },
+
+    ensureStyles() {
+        if (document.getElementById('ocp-smart-vars-styles')) return;
+        const style = document.createElement('style');
+        style.id = 'ocp-smart-vars-styles';
+        style.textContent = `
+            .ocp-smart-vars-control {
+                display: flex;
+                align-items: center;
+                margin-top: 8px;
+                padding-left: 8px;
+            }
+            .ocp-smart-vars-trigger {
+                border: 1px solid rgba(127, 127, 127, 0.35);
+                border-radius: 6px;
+                background: rgba(127, 127, 127, 0.12);
+                color: inherit;
+                cursor: pointer;
+                font-size: 12px;
+                line-height: 1.2;
+                padding: 4px 8px;
+                white-space: nowrap;
+            }
+            .ocp-smart-vars-trigger.is-off {
+                opacity: 0.65;
+            }
+            .ocp-smart-vars-popover,
+            .ocp-prompt-input-dialog {
+                position: fixed;
+                z-index: 2147483602;
+                box-sizing: border-box;
+                color: #1f2937;
+                background: rgba(255, 255, 255, 0.98);
+                border: 1px solid rgba(17, 24, 39, 0.14);
+                box-shadow: 0 16px 42px rgba(0, 0, 0, 0.26);
+                border-radius: 8px;
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            }
+            .ocp-smart-vars-popover {
+                width: min(520px, calc(100vw - 20px));
+                max-height: min(560px, calc(100vh - 20px));
+                overflow: auto;
+                padding: 12px;
+            }
+            .ocp-smart-vars-header,
+            .ocp-prompt-input-title {
+                font-size: 14px;
+                font-weight: 700;
+                margin-bottom: 10px;
+            }
+            .ocp-smart-vars-toggle,
+            .ocp-smart-vars-js-toggle {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 13px;
+            }
+            .ocp-smart-vars-syntax {
+                margin: 8px 0 10px;
+                padding: 8px;
+                border-radius: 6px;
+                background: rgba(17, 24, 39, 0.06);
+                font: 12px/1.45 ui-monospace, SFMono-Regular, Consolas, monospace;
+                overflow-wrap: anywhere;
+            }
+            .ocp-smart-vars-list {
+                display: grid;
+                gap: 8px;
+            }
+            .ocp-smart-vars-row {
+                display: grid;
+                grid-template-columns: minmax(92px, 0.7fr) minmax(150px, 1.3fr) auto auto;
+                gap: 6px;
+                align-items: center;
+            }
+            .ocp-smart-vars-row input[type="text"],
+            .ocp-smart-vars-row textarea,
+            .ocp-prompt-input-field input {
+                box-sizing: border-box;
+                width: 100%;
+                border: 1px solid rgba(17, 24, 39, 0.18);
+                border-radius: 6px;
+                background: #fff;
+                color: #111827;
+                font: inherit;
+                padding: 6px 8px;
+            }
+            .ocp-smart-vars-row textarea {
+                resize: vertical;
+            }
+            .ocp-smart-vars-menu-actions,
+            .ocp-prompt-input-actions {
+                display: flex;
+                justify-content: flex-end;
+                gap: 8px;
+                margin-top: 10px;
+            }
+            .ocp-smart-vars-popover button,
+            .ocp-prompt-input-dialog button {
+                border: 1px solid rgba(17, 24, 39, 0.18);
+                border-radius: 6px;
+                background: #f8fafc;
+                color: #111827;
+                cursor: pointer;
+                font: inherit;
+                padding: 6px 10px;
+            }
+            .ocp-smart-vars-save,
+            .ocp-prompt-input-actions button[type="submit"] {
+                background: #2563eb !important;
+                border-color: #2563eb !important;
+                color: #fff !important;
+            }
+            .ocp-prompt-input-overlay {
+                position: fixed;
+                inset: 0;
+                z-index: 2147483601;
+                background: rgba(0, 0, 0, 0.08);
+            }
+            .ocp-prompt-input-dialog {
+                width: min(360px, calc(100vw - 24px));
+                padding: 14px;
+            }
+            .ocp-prompt-input-field {
+                display: grid;
+                gap: 4px;
+                font-size: 13px;
+                margin-bottom: 8px;
+            }
+            @keyframes ocp-smart-vars-button-shine {
+                0%, 100% {
+                    box-shadow: 0 0 0 rgba(37, 99, 235, 0);
+                    transform: translateY(0);
+                }
+                45% {
+                    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25), 0 0 18px rgba(37, 99, 235, 0.9);
+                    transform: translateY(-1px);
+                }
+            }
+            .ocp-smart-vars-new-button {
+                border-radius: 8px !important;
+                animation: ocp-smart-vars-button-shine 1.25s ease-in-out infinite;
+            }
+        `;
+        document.documentElement.appendChild(style);
+    },
+
+    __toast(message, type = 'info', options = 3000) {
+        if (typeof window.showToast === 'function') {
+            window.showToast(message, type, options);
+        }
+    },
+
+    registerStorageListener() {
+        if (window.__OCP_promptVariablesStorageListenerRegistered || !chrome.storage?.onChanged) {
+            return;
+        }
+        window.__OCP_promptVariablesStorageListenerRegistered = true;
+        chrome.storage.onChanged.addListener((changes, namespace) => {
+            if (namespace !== 'local' || !changes[this.storageKey]) {
+                return;
+            }
+            this.refreshControls(this.normalizeSettings(changes[this.storageKey].newValue));
+        });
+    }
+};
+
+window.MaxExtensionPromptVariables.registerStorageListener();
+
 /**
  * Namespace object containing functions related to creating and managing custom buttons.
  */
@@ -1166,6 +1937,25 @@ async function processCustomSendButtonClick(event, customText, autoSend) {
     // Detect if this invocation originates from the queue engine.
     const invokedByQueue = !!(event && event.__fromQueue);
 
+    if (event && typeof event.preventDefault === 'function') {
+        event.preventDefault();
+    }
+    logConCgp('[buttons] Custom send button clicked');
+
+    // Invert autoSend if Shift key is pressed during a real click (not for queued dispatches)
+    if (!invokedByQueue && event && event.shiftKey) {
+        autoSend = !autoSend;
+        logConCgp('[buttons] Shift key detected. autoSend inverted to:', autoSend);
+    }
+
+    if (window.MaxExtensionPromptVariables && typeof window.MaxExtensionPromptVariables.resolvePromptText === 'function') {
+        customText = await window.MaxExtensionPromptVariables.resolvePromptText(customText, { event, autoSend, invokedByQueue });
+        if (customText === null) {
+            logConCgp('[buttons] Smart placeholder input cancelled.');
+            return { status: 'cancelled', reason: 'prompt_variable_cancelled' };
+        }
+    }
+
     // Check if we are in queue mode in the floating panel.
     // IMPORTANT: When invoked by the queue itself, do NOT re-enqueue.
     if (!invokedByQueue &&
@@ -1181,17 +1971,6 @@ async function processCustomSendButtonClick(event, customText, autoSend) {
         // Add to queue and stop further processing. The engine handles the rest.
         window.MaxExtensionFloatingPanel.addToQueue(buttonConfig);
         return;
-    }
-
-    if (event && typeof event.preventDefault === 'function') {
-        event.preventDefault();
-    }
-    logConCgp('[buttons] Custom send button clicked');
-
-    // Invert autoSend if Shift key is pressed during a real click (not for queued dispatches)
-    if (!invokedByQueue && event && event.shiftKey) {
-        autoSend = !autoSend;
-        logConCgp('[buttons] Shift key detected. autoSend inverted to:', autoSend);
     }
 
     // Get the active site from the injection targets
