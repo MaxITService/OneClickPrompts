@@ -35,10 +35,69 @@
 
     const gatedMethods = ['log', 'info', 'debug', 'warn', 'error'];
     const originalConsole = {};
+    const queuedConsoleCalls = [];
+    const maxQueuedConsoleCalls = 100;
+    let storagePreferenceReady = false;
+    let storagePreferenceDisablesLogs = false;
+
+    function getConfigPreference() {
+        const config = root.globalMaxExtensionConfig;
+        if (config && typeof config.disableBrowserConsoleLogs === 'boolean') {
+            return config.disableBrowserConsoleLogs;
+        }
+        return null;
+    }
 
     function browserConsoleLogsAreDisabled() {
-        const config = root.globalMaxExtensionConfig;
-        return !!(config && config.disableBrowserConsoleLogs);
+        const configPreference = getConfigPreference();
+        if (configPreference !== null) {
+            return configPreference;
+        }
+        if (!storagePreferenceReady) {
+            return true;
+        }
+        return storagePreferenceDisablesLogs;
+    }
+
+    function storageGet(keys) {
+        return new Promise(resolve => {
+            try {
+                if (!root.chrome?.storage?.local) {
+                    resolve({});
+                    return;
+                }
+                root.chrome.storage.local.get(keys, result => {
+                    if (root.chrome.runtime?.lastError) {
+                        resolve({});
+                        return;
+                    }
+                    resolve(result || {});
+                });
+            } catch (_) {
+                resolve({});
+            }
+        });
+    }
+
+    function flushQueuedConsoleCalls() {
+        if (browserConsoleLogsAreDisabled()) {
+            queuedConsoleCalls.length = 0;
+            return;
+        }
+        while (queuedConsoleCalls.length > 0) {
+            const { methodName, args } = queuedConsoleCalls.shift();
+            originalConsole[methodName]?.(...args);
+        }
+    }
+
+    async function refreshStoragePreference() {
+        const current = await storageGet(['currentProfile']);
+        const profileName = current.currentProfile || 'Default';
+        const profileKey = `profiles.${profileName}`;
+        const profileResult = await storageGet([profileKey]);
+        storagePreferenceDisablesLogs = !!profileResult[profileKey]?.disableBrowserConsoleLogs;
+        storagePreferenceReady = true;
+        flushQueuedConsoleCalls();
     }
 
     gatedMethods.forEach((methodName) => {
@@ -49,6 +108,12 @@
 
         originalConsole[methodName] = originalMethod.bind(root.console);
         root.console[methodName] = (...args) => {
+            if (!storagePreferenceReady && getConfigPreference() === null) {
+                if (queuedConsoleCalls.length < maxQueuedConsoleCalls) {
+                    queuedConsoleCalls.push({ methodName, args });
+                }
+                return;
+            }
             if (browserConsoleLogsAreDisabled()) {
                 return;
             }
@@ -56,9 +121,21 @@
         };
     });
 
+    refreshStoragePreference();
+    root.chrome?.storage?.onChanged?.addListener((changes, namespace) => {
+        if (namespace !== 'local') {
+            return;
+        }
+        if (changes.currentProfile || Object.keys(changes).some(key => key.startsWith('profiles.'))) {
+            storagePreferenceReady = false;
+            refreshStoragePreference();
+        }
+    });
+
     root.__OCPBrowserConsoleLogGateInstalled = true;
     root.OCPBrowserConsoleLogGate = {
         isDisabled: browserConsoleLogsAreDisabled,
+        refresh: refreshStoragePreference,
         originalConsole
     };
 })();
