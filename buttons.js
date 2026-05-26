@@ -60,7 +60,7 @@ window.MaxExtensionPromptVariables = {
     shineState: null,
 
     createTokenPattern() {
-        return /\{\{\s*(today|date|time)\s*\}\}|\{\{\s*(?:input|prompt)\s*:\s*([^}]+?)\s*\}\}|\{\{\s*(?:var|variable)\s*:\s*([^}]+?)\s*\}\}|\{%\{\s*([^}%]+?)\s*\}%\}/gi;
+        return /\{\{\s*(today|date|time)\s*\}\}|\{\{\s*(?:var|variable)\s*:\s*([^}]+?)\s*\}\}|\{%\{\s*([^}%]+?)\s*\}%\}/gi;
     },
 
     normalizeSettings(settings = {}) {
@@ -199,13 +199,6 @@ window.MaxExtensionPromptVariables = {
             builtins.time = this.formatTime();
         }
 
-        const promptValues = tokens.promptNames.length
-            ? await this.requestPromptValues(tokens.promptNames, context)
-            : {};
-        if (promptValues === null) {
-            return null;
-        }
-
         const customValues = {};
         const customLookup = new Map(
             settings.customVariables.map(variable => [variable.name.toLowerCase(), variable])
@@ -215,12 +208,9 @@ window.MaxExtensionPromptVariables = {
             customValues[name] = variable ? variable.value : '';
         }
 
-        return rawText.replace(this.createTokenPattern(), (match, builtinName, promptName, customName, aliasName) => {
+        return rawText.replace(this.createTokenPattern(), (match, builtinName, customName, aliasName) => {
             if (builtinName) {
                 return builtins[builtinName.toLowerCase()] ?? '';
-            }
-            if (promptName) {
-                return promptValues[this.normalizeVariableName(promptName)] ?? '';
             }
             const resolvedCustomName = this.normalizeVariableName(customName || aliasName);
             return customValues[resolvedCustomName] ?? '';
@@ -229,7 +219,6 @@ window.MaxExtensionPromptVariables = {
 
     collectTokens(rawText) {
         const builtins = new Set();
-        const promptNames = [];
         const customNames = [];
         const addUnique = (list, value) => {
             const normalized = this.normalizeVariableName(value);
@@ -242,17 +231,16 @@ window.MaxExtensionPromptVariables = {
             if (match[1]) {
                 builtins.add(match[1].toLowerCase());
             } else if (match[2]) {
-                addUnique(promptNames, match[2]);
-            } else if (match[3] || match[4]) {
-                addUnique(customNames, match[3] || match[4]);
+                addUnique(customNames, match[2]);
+            } else if (match[3]) {
+                addUnique(customNames, match[3]);
             }
         }
 
         return {
             builtins,
-            promptNames,
             customNames,
-            hasAny: builtins.size > 0 || promptNames.length > 0 || customNames.length > 0
+            hasAny: builtins.size > 0 || customNames.length > 0
         };
     },
 
@@ -275,181 +263,11 @@ window.MaxExtensionPromptVariables = {
         return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
     },
 
-    requestPromptValues(names, context = {}) {
-        return new Promise((resolve) => {
-            this.ensureStyles();
-            document.querySelectorAll('[data-ocp-prompt-input-overlay="true"]').forEach(node => node.remove());
-
-            const overlay = document.createElement('div');
-            overlay.className = 'ocp-prompt-input-overlay';
-            overlay.dataset.ocpPromptInputOverlay = 'true';
-
-            const dialog = document.createElement('form');
-            dialog.className = 'ocp-prompt-input-dialog';
-            dialog.setAttribute('role', 'dialog');
-            dialog.setAttribute('aria-modal', 'true');
-
-            const title = document.createElement('div');
-            title.className = 'ocp-prompt-input-title';
-            title.textContent = names.length === 1 ? names[0] : 'Input variables';
-            dialog.appendChild(title);
-
-            const inputs = new Map();
-            names.forEach((name) => {
-                const label = document.createElement('label');
-                label.className = 'ocp-prompt-input-field';
-
-                const labelText = document.createElement('span');
-                labelText.textContent = name;
-
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.autocomplete = 'off';
-                input.spellcheck = true;
-
-                label.appendChild(labelText);
-                label.appendChild(input);
-                dialog.appendChild(label);
-                inputs.set(name, input);
-            });
-
-            const actions = document.createElement('div');
-            actions.className = 'ocp-prompt-input-actions';
-
-            const cancelButton = document.createElement('button');
-            cancelButton.type = 'button';
-            cancelButton.textContent = 'Cancel';
-
-            const submitButton = document.createElement('button');
-            submitButton.type = 'submit';
-            submitButton.textContent = 'Insert';
-
-            actions.appendChild(cancelButton);
-            actions.appendChild(submitButton);
-            dialog.appendChild(actions);
-            overlay.appendChild(dialog);
-            document.body.appendChild(overlay);
-
-            const cleanup = (value) => {
-                document.removeEventListener('keydown', onKeydown, true);
-                overlay.remove();
-                resolve(value);
-            };
-
-            const onKeydown = (event) => {
-                if (event.key === 'Escape') {
-                    event.preventDefault();
-                    cleanup(null);
-                }
-            };
-
-            dialog.addEventListener('submit', (event) => {
-                event.preventDefault();
-                const values = {};
-                inputs.forEach((input, name) => {
-                    values[name] = input.value;
-                });
-                cleanup(values);
-            });
-
-            cancelButton.addEventListener('click', () => cleanup(null));
-            overlay.addEventListener('click', (event) => {
-                if (event.target === overlay) {
-                    cleanup(null);
-                }
-            });
-            document.addEventListener('keydown', onKeydown, true);
-
-            requestAnimationFrame(() => {
-                this.positionDialogNearTarget(dialog, context.event?.currentTarget || context.event?.target);
-                inputs.values().next().value?.focus({ preventScroll: true });
-            });
-        });
-    },
-
-    positionDialogNearTarget(dialog, target) {
-        const targetRect = target?.getBoundingClientRect?.();
-        const dialogRect = dialog.getBoundingClientRect();
-        const viewportPadding = 12;
-        const fallbackLeft = Math.max(viewportPadding, (window.innerWidth - dialogRect.width) / 2);
-        const fallbackTop = Math.max(viewportPadding, window.innerHeight - dialogRect.height - 96);
-        const left = targetRect
-            ? Math.min(window.innerWidth - dialogRect.width - viewportPadding, Math.max(viewportPadding, targetRect.left))
-            : fallbackLeft;
-        const top = targetRect
-            ? Math.min(window.innerHeight - dialogRect.height - viewportPadding, Math.max(viewportPadding, targetRect.bottom + 8))
-            : fallbackTop;
-        dialog.style.left = `${left}px`;
-        dialog.style.top = `${top}px`;
-    },
-
     ensureStyles() {
         if (document.getElementById('ocp-smart-vars-styles')) return;
         const style = document.createElement('style');
         style.id = 'ocp-smart-vars-styles';
         style.textContent = `
-            .ocp-prompt-input-dialog {
-                position: fixed;
-                z-index: 2147483602;
-                box-sizing: border-box;
-                color: #1f2937;
-                background: rgba(255, 255, 255, 0.98);
-                border: 1px solid rgba(17, 24, 39, 0.14);
-                box-shadow: 0 16px 42px rgba(0, 0, 0, 0.26);
-                border-radius: 8px;
-                font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            }
-            .ocp-prompt-input-title {
-                font-size: 14px;
-                font-weight: 700;
-                margin-bottom: 10px;
-            }
-            .ocp-prompt-input-field input {
-                box-sizing: border-box;
-                width: 100%;
-                border: 1px solid rgba(17, 24, 39, 0.18);
-                border-radius: 6px;
-                background: #fff;
-                color: #111827;
-                font: inherit;
-                padding: 6px 8px;
-            }
-            .ocp-prompt-input-actions {
-                display: flex;
-                justify-content: flex-end;
-                gap: 8px;
-                margin-top: 10px;
-            }
-            .ocp-prompt-input-dialog button {
-                border: 1px solid rgba(17, 24, 39, 0.18);
-                border-radius: 6px;
-                background: #f8fafc;
-                color: #111827;
-                cursor: pointer;
-                font: inherit;
-                padding: 6px 10px;
-            }
-            .ocp-prompt-input-actions button[type="submit"] {
-                background: #2563eb !important;
-                border-color: #2563eb !important;
-                color: #fff !important;
-            }
-            .ocp-prompt-input-overlay {
-                position: fixed;
-                inset: 0;
-                z-index: 2147483601;
-                background: rgba(0, 0, 0, 0.08);
-            }
-            .ocp-prompt-input-dialog {
-                width: min(360px, calc(100vw - 24px));
-                padding: 14px;
-            }
-            .ocp-prompt-input-field {
-                display: grid;
-                gap: 4px;
-                font-size: 13px;
-                margin-bottom: 8px;
-            }
             @keyframes ocp-smart-vars-button-shine {
                 0%, 100% {
                     box-shadow: 0 0 0 rgba(37, 99, 235, 0);
@@ -1064,8 +882,8 @@ window.MaxExtensionButtons = {
             font-size: 13px;
             pointer-events: auto;
             opacity: 0;
-            transform: scale(0.96);
-            transition: opacity 150ms ease, transform 150ms ease;
+            transform: scale(0.96) translateY(4px);
+            transition: opacity 150ms ease, transform 150ms ease, border-color 300ms ease;
         `;
 
         const header = document.createElement('div');
@@ -1076,9 +894,12 @@ window.MaxExtensionButtons = {
 
         const closeButton = document.createElement('button');
         closeButton.type = 'button';
-        closeButton.textContent = '×';
+        closeButton.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L13 13M13 1L1 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
         closeButton.setAttribute('aria-label', 'Close');
         closeButton.style.cssText = `
+            display: flex;
+            align-items: center;
+            justify-content: center;
             width: 26px;
             height: 26px;
             border: 0;
@@ -1086,9 +907,13 @@ window.MaxExtensionButtons = {
             background: rgba(255, 255, 255, 0.1);
             color: #fff;
             cursor: pointer;
-            font-size: 18px;
-            line-height: 1;
+            transition: background 150ms ease, transform 100ms ease;
         `;
+
+        closeButton.addEventListener('mouseenter', () => { closeButton.style.background = 'rgba(255, 255, 255, 0.18)'; });
+        closeButton.addEventListener('mouseleave', () => { closeButton.style.background = 'rgba(255, 255, 255, 0.1)'; });
+        closeButton.addEventListener('mousedown', () => { closeButton.style.transform = 'scale(0.92)'; });
+        closeButton.addEventListener('mouseup', () => { closeButton.style.transform = ''; });
 
         header.append(title, closeButton);
 
@@ -1158,7 +983,7 @@ window.MaxExtensionButtons = {
         iconLabel.append(iconText, iconInput);
 
         const toggleLabel = document.createElement('label');
-        toggleLabel.style.cssText = 'display: flex; align-items: center; justify-content: space-between; gap: 10px;';
+        toggleLabel.style.cssText = 'display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer;';
 
         const toggleText = document.createElement('span');
         toggleText.textContent = 'Auto-send';
@@ -1166,9 +991,39 @@ window.MaxExtensionButtons = {
         const toggle = document.createElement('input');
         toggle.type = 'checkbox';
         toggle.checked = created?.button?.autoSend !== false;
-        toggle.style.cssText = 'width: 18px; height: 18px; accent-color: #10a37f;';
+        toggle.style.cssText = 'position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;';
 
-        toggleLabel.append(toggleText, toggle);
+        const toggleTrack = document.createElement('span');
+        const toggleThumb = document.createElement('span');
+        const syncToggleVisual = () => {
+            toggleTrack.style.background = toggle.checked ? '#10a37f' : 'rgba(255, 255, 255, 0.2)';
+            toggleThumb.style.left = toggle.checked ? '18px' : '2px';
+        };
+        toggleTrack.style.cssText = `
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 20px;
+            border-radius: 10px;
+            background: ${toggle.checked ? '#10a37f' : 'rgba(255, 255, 255, 0.2)'};
+            transition: background 200ms ease;
+            flex-shrink: 0;
+        `;
+        toggleThumb.style.cssText = `
+            position: absolute;
+            top: 2px;
+            left: ${toggle.checked ? '18px' : '2px'};
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            transition: left 200ms ease;
+        `;
+        toggleTrack.appendChild(toggleThumb);
+        toggle.addEventListener('change', syncToggleVisual);
+
+        toggleLabel.append(toggleText, toggle, toggleTrack);
         const createButton = document.createElement('button');
         createButton.type = 'button';
         createButton.textContent = isEditMode ? 'Save' : 'Create';
@@ -1180,12 +1035,23 @@ window.MaxExtensionButtons = {
             color: #fff;
             cursor: pointer;
             font-weight: 700;
+            transition: background 150ms ease, transform 100ms ease;
         `;
+        createButton.addEventListener('mouseenter', () => { createButton.style.background = '#0e8c6b'; });
+        createButton.addEventListener('mouseleave', () => { createButton.style.background = '#10a37f'; createButton.style.transform = ''; });
+        createButton.addEventListener('mousedown', () => { createButton.style.transform = 'scale(0.97)'; });
+        createButton.addEventListener('mouseup', () => { createButton.style.transform = ''; });
         if (hasCreatedButton() && !isEditMode) {
             createButton.style.display = 'none';
         }
 
-        flyout.append(header, preview, textDetails, iconLabel, toggleLabel, createButton);
+        const makeSeparator = () => {
+            const hr = document.createElement('hr');
+            hr.style.cssText = 'border: none; border-top: 1px solid rgba(255, 255, 255, 0.08); margin: 0;';
+            return hr;
+        };
+
+        flyout.append(header, preview, makeSeparator(), textDetails, iconLabel, toggleLabel, makeSeparator(), createButton);
         document.body.appendChild(flyout);
 
         const rect = event?.target?.getBoundingClientRect?.();
@@ -1255,7 +1121,7 @@ window.MaxExtensionButtons = {
 
         const closeFlyout = () => {
             flyout.style.opacity = '0';
-            flyout.style.transform = 'scale(0.96)';
+            flyout.style.transform = 'scale(0.96) translateY(4px)';
             setTimeout(() => flyout.remove(), 150);
             document.removeEventListener('keydown', onKeyDown, true);
             window.removeEventListener('resize', clampCurrentPosition);
@@ -1311,10 +1177,13 @@ window.MaxExtensionButtons = {
             textInput.value = state.button.text || text;
             iconInput.value = state.button.icon || '+';
             toggle.checked = state.button.autoSend !== false;
+            syncToggleVisual();
             syncCreatedUi();
             window.MaxExtensionButtonsInit?.updateButtonsForProfileChange?.('inline');
             window.MaxExtensionButtonsInit?.updateButtonsForProfileChange?.('panel');
             this.__toast('Button created.', 'success');
+            flyout.style.borderColor = '#10a37f';
+            setTimeout(() => { flyout.style.borderColor = 'rgba(255, 255, 255, 0.16)'; }, 800);
             return true;
         };
 
@@ -1423,6 +1292,7 @@ window.MaxExtensionButtons = {
                 this.__toast(toggle.checked ? 'Button will auto-send.' : 'Button will not auto-send.', 'success');
             } catch (error) {
                 toggle.checked = !toggle.checked;
+                syncToggleVisual();
                 this.__toast('Could not update Auto-send for the button.', 'error');
                 logConCgp('[buttons][create] Auto-send update failed:', error?.message || error);
             }
@@ -1454,7 +1324,7 @@ window.MaxExtensionButtons = {
         requestAnimationFrame(() => {
             clampCurrentPosition();
             flyout.style.opacity = '1';
-            flyout.style.transform = 'scale(1)';
+            flyout.style.transform = 'scale(1) translateY(0)';
         });
     },
 
