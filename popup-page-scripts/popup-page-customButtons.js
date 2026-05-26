@@ -504,7 +504,7 @@ async function addQueueCurrentEditorButton(event) {
  * @param {MouseEvent} [event]
  */
 async function addCreateButtonFromEditorButton(event) {
-    const icon = document.getElementById('buttonIcon').value || '+';
+    const icon = document.getElementById('buttonIcon').value || '✨';
     const text = CREATE_BUTTON_FROM_EDITOR_MAGIC_TEXT;
     const autoSend = false;
 

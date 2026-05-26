@@ -421,7 +421,7 @@ async function createCustomButtonFromEditorText(payload = {}) {
 
     const profile = normalizeProfileConfig(deepCloneSafeJson(loadedProfile), profileName);
     const button = {
-        icon: typeof payload.icon === 'string' && payload.icon.trim() ? payload.icon.trim() : '+',
+        icon: typeof payload.icon === 'string' && payload.icon.trim() ? payload.icon.trim() : '✨',
         text: rawText,
         autoSend: payload.autoSend !== false
     };
@@ -475,7 +475,7 @@ async function updateCustomButtonFromEditorOptions(payload = {}) {
     }
     if (typeof payload.icon === 'string') {
         const icon = payload.icon.trim();
-        button.icon = icon || '+';
+        button.icon = icon || '✨';
     }
     if (hasNewText) {
         button.text = newText;

@@ -805,7 +805,7 @@ window.MaxExtensionButtons = {
                 reason,
                 manualEntry: true,
                 button: {
-                    icon: '+',
+                    icon: '✨',
                     text: '',
                     autoSend: true
                 }
@@ -851,7 +851,7 @@ window.MaxExtensionButtons = {
             mode: created?.mode || 'create',
             lookupText: created?.button?.text || '',
             button: {
-                icon: created?.button?.icon || '+',
+                icon: created?.button?.icon || '✨',
                 text: created?.button?.text || '',
                 autoSend: created?.button?.autoSend !== false
             }
@@ -966,7 +966,7 @@ window.MaxExtensionButtons = {
 
         const iconInput = document.createElement('input');
         iconInput.type = 'text';
-        iconInput.value = created?.button?.icon || '+';
+        iconInput.value = created?.button?.icon || '✨';
         iconInput.setAttribute('aria-label', 'New button icon');
         iconInput.style.cssText = `
             width: 72px;
@@ -1169,13 +1169,13 @@ window.MaxExtensionButtons = {
 
             Object.assign(state, response, { success: true });
             state.button = response.button || {
-                icon: iconInput.value.trim() || '+',
+                icon: iconInput.value.trim() || '✨',
                 text,
                 autoSend: toggle.checked
             };
             state.lookupText = state.button.text || text;
             textInput.value = state.button.text || text;
-            iconInput.value = state.button.icon || '+';
+            iconInput.value = state.button.icon || '✨';
             toggle.checked = state.button.autoSend !== false;
             syncToggleVisual();
             syncCreatedUi();
@@ -1214,7 +1214,7 @@ window.MaxExtensionButtons = {
                 ...state.button,
                 text: nextText,
                 autoSend: toggle.checked,
-                icon: iconInput.value.trim() || '+'
+                icon: iconInput.value.trim() || '✨'
             };
             state.buttonIndex = response.buttonIndex ?? state.buttonIndex;
             if (iconInput.value !== state.button.icon) {
