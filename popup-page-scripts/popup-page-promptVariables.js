@@ -3,6 +3,8 @@
 'use strict';
 
 const OCP_PROMPT_VARIABLES_STORAGE_KEY = 'ocpPromptVariablesSettings';
+const BUTTON_TEXT_INSERT_TARGET = 'Button Template Text To be Inserted';
+const INSERT_BUTTON_TOOLTIP = `Insert this placeholder into the "${BUTTON_TEXT_INSERT_TARGET}" field at the current cursor position.`;
 
 const SMART_VARIABLE_BUILTINS = [
     {
@@ -16,10 +18,6 @@ const SMART_VARIABLE_BUILTINS = [
     {
         token: '{{time}}',
         description: 'Current local time only, formatted as HH:mm.'
-    },
-    {
-        token: '{{input:Variable Name}}',
-        description: 'Ask for this value in a small input when the button runs.'
     },
     {
         token: '{{var:name}}',
@@ -98,6 +96,9 @@ function renderSmartVariableBuiltins() {
         const insertButton = document.createElement('button');
         insertButton.type = 'button';
         insertButton.textContent = 'Insert';
+        insertButton.title = INSERT_BUTTON_TOOLTIP;
+        insertButton.setAttribute('aria-label', INSERT_BUTTON_TOOLTIP);
+        insertButton.dataset.ocpTooltip = INSERT_BUTTON_TOOLTIP;
         insertButton.addEventListener('click', () => insertIntoButtonText(token));
 
         item.appendChild(body);
@@ -129,6 +130,9 @@ function createSmartVariableRow(variable, index, draft, rerender) {
     const insertButton = document.createElement('button');
     insertButton.type = 'button';
     insertButton.textContent = 'Insert';
+    insertButton.title = INSERT_BUTTON_TOOLTIP;
+    insertButton.setAttribute('aria-label', INSERT_BUTTON_TOOLTIP);
+    insertButton.dataset.ocpTooltip = INSERT_BUTTON_TOOLTIP;
     insertButton.addEventListener('click', () => {
         const name = draft.customVariables[index]?.name?.trim();
         if (!name) {
