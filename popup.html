@@ -229,6 +229,41 @@
         <div id="buttonCardsList" data-draggable="true">
           <!-- Button cards added dynamically here -->
         </div>
+        <div
+          id="smartVariablesPanel"
+          class="smart-variables-panel collapsible"
+          aria-labelledby="smartVariablesHeading"
+        >
+          <div class="section-header smart-variables-header">
+            <h3 id="smartVariablesHeading">
+              Smart Variables
+              <span class="expand-text">(click to expand)</span>
+            </h3>
+            <span class="toggle-icon">▶</span>
+          </div>
+          <div class="section-content">
+            <div class="smart-variables-intro-row">
+              <p>Insert placeholders into button text. Values are resolved when the button is clicked.</p>
+              <label class="checkbox-row" for="smartVariablesEnabled">
+                <input type="checkbox" id="smartVariablesEnabled" />
+                <span>Enabled</span>
+              </label>
+            </div>
+
+            <div class="smart-variables-builtins" id="smartVariablesBuiltins"></div>
+
+            <div class="smart-variables-custom">
+              <div class="smart-variables-subheader">
+                <h4>Custom Variables</h4>
+                <button type="button" id="addSmartVariable">Add Variable</button>
+              </div>
+              <div id="smartVariablesCustomList" class="smart-variables-custom-list"></div>
+              <div class="smart-variables-actions">
+                <button type="button" id="saveSmartVariables">Save Variables</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <aside
@@ -1979,6 +2014,7 @@
     <script src="/popup-page-scripts/popup-page-modal.js"></script>
     <script src="/popup-page-scripts/popup-page-profiles.js"></script>
     <script src="/popup-page-scripts/popup-page-backup-handler.js"></script>
+    <script src="/popup-page-scripts/popup-page-promptVariables.js"></script>
     <script src="/popup-page-scripts/popup-page-customButtons.js"></script>
     <script src="/popup-page-scripts/popup-page-script.js"></script>
     <!-- New Theme script for Dark Mode support -->

@@ -137,6 +137,31 @@ body.dark-theme #buttonCardsList {
     background-color: #333;
 }
 
+body.dark-theme .smart-variables-panel {
+    color: var(--text-color);
+}
+
+body.dark-theme .smart-variable-builtin {
+    background: rgba(154, 121, 211, 0.12);
+    border-color: #555;
+}
+
+body.dark-theme .smart-variables-custom {
+    border-top-color: #444;
+}
+
+body.dark-theme .smart-variables-empty {
+    border-color: #555;
+    color: var(--text-muted);
+}
+
+body.dark-theme .smart-variables-custom-row input[type="text"],
+body.dark-theme .smart-variables-custom-row textarea {
+    background: #333;
+    color: #eee;
+    border-color: #555;
+}
+
 /* Override Export/Import buttons to use primary color in dark mode */
 body.dark-theme #exportProfile,
 body.dark-theme #importProfile {

@@ -131,7 +131,7 @@ function sanitizeAppSettings(rawAppSettings) {
     }
 
     if (isPlainObject(rawAppSettings.promptVariables)) {
-        sanitized.promptVariables = deepCloneSafeJson(rawAppSettings.promptVariables);
+        sanitized.promptVariables = sanitizePromptVariables(rawAppSettings.promptVariables);
     }
 
     if (isPlainObject(rawAppSettings.floatingPanel)) {
@@ -143,6 +143,32 @@ function sanitizeAppSettings(rawAppSettings) {
     }
 
     return Object.keys(sanitized).length > 0 ? sanitized : null;
+}
+
+function sanitizePromptVariables(rawPromptVariables) {
+    if (!isPlainObject(rawPromptVariables)) {
+        return {
+            enabled: false,
+            dateExampleInitialized: false,
+            customVariables: []
+        };
+    }
+
+    const customVariables = Array.isArray(rawPromptVariables.customVariables)
+        ? rawPromptVariables.customVariables
+            .filter(item => isPlainObject(item))
+            .map(item => ({
+                name: typeof item.name === 'string' ? item.name.trim() : '',
+                value: String(item.value ?? '')
+            }))
+            .filter(item => item.name)
+        : [];
+
+    return {
+        enabled: rawPromptVariables.enabled === true,
+        dateExampleInitialized: rawPromptVariables.dateExampleInitialized === true,
+        customVariables
+    };
 }
 
 function sanitizeBackupPayload(rawPayload) {
@@ -241,8 +267,8 @@ async function buildBackupPayload(scope = 'currentProfile') {
             selectorAutoDetector: deepCloneSafeJson(await StateStore.getSelectorAutoDetectorSettings()),
             tooltip: deepCloneSafeJson(await StateStore.getTooltipSettings()),
             manualQueueCards: deepCloneSafeJson(await StateStore.getManualQueueCards()),
-            promptVariables: deepCloneSafeJson(currentResponse[PROMPT_VARIABLES_STORAGE_KEY] || {
-                enabled: true,
+            promptVariables: sanitizePromptVariables(currentResponse[PROMPT_VARIABLES_STORAGE_KEY] || {
+                enabled: false,
                 dateExampleInitialized: false,
                 customVariables: []
             }),
@@ -330,7 +356,7 @@ async function applyBackupPayload(rawPayload, options = {}) {
         }
 
         if (isPlainObject(appSettings.promptVariables)) {
-            await chrome.storage.local.set({ [PROMPT_VARIABLES_STORAGE_KEY]: deepCloneSafeJson(appSettings.promptVariables) });
+            await chrome.storage.local.set({ [PROMPT_VARIABLES_STORAGE_KEY]: sanitizePromptVariables(appSettings.promptVariables) });
         }
 
         if (isPlainObject(appSettings.floatingPanel)) {

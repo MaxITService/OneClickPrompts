@@ -108,6 +108,147 @@ button.danger:hover {
     margin-bottom: 0;
 }
 
+/* ------------------------------------------------------------------------- */
+/* Smart Variables Panel                                                     */
+/* ------------------------------------------------------------------------- */
+.smart-variables-panel {
+    color: var(--text-color);
+    margin: 12px 0 16px;
+}
+
+.smart-variables-subheader,
+.smart-variables-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.smart-variables-header h3,
+.smart-variables-subheader h4 {
+    margin: 0;
+    color: var(--primary-color);
+}
+
+.smart-variables-intro-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.smart-variables-intro-row p {
+    margin: 4px 0 0;
+    color: var(--text-muted, #666);
+    font-size: 13px;
+}
+
+.smart-variables-builtins {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 8px;
+    margin: 12px 0;
+}
+
+.smart-variable-builtin {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 8px;
+    background: var(--primary-color-faded, #f5f0ff);
+    color: var(--text-color);
+}
+
+.smart-variable-builtin code {
+    font-family: Consolas, monospace;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.smart-variable-builtin span {
+    display: block;
+    color: var(--text-muted, #666);
+    font-size: 12px;
+    line-height: 1.35;
+    margin-top: 3px;
+}
+
+.smart-variable-builtin button,
+.smart-variables-custom-row button {
+    padding: 6px 10px;
+    font-size: 12px;
+}
+
+.smart-variables-custom {
+    border-top: 1px solid var(--border-color);
+    padding-top: 12px;
+}
+
+.smart-variables-custom-list {
+    display: grid;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.smart-variables-custom-row {
+    display: grid;
+    grid-template-columns: minmax(120px, 0.75fr) minmax(180px, 1.25fr) auto auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.smart-variables-custom-row input[type="text"],
+.smart-variables-custom-row textarea {
+    box-sizing: border-box;
+    width: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-color);
+    background: var(--bg-color);
+    font: inherit;
+    padding: 6px 8px;
+}
+
+.smart-variables-custom-row textarea {
+    min-height: 38px;
+    resize: vertical;
+}
+
+.smart-variables-empty {
+    border: 1px dashed var(--border-color);
+    border-radius: 6px;
+    color: var(--text-muted, #666);
+    padding: 10px;
+    text-align: center;
+}
+
+.smart-variables-actions {
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+@media (max-width: 620px) {
+    .smart-variables-intro-row,
+    .smart-variables-subheader {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .smart-variable-builtin,
+    .smart-variables-custom-row {
+        grid-template-columns: 1fr;
+    }
+
+    .smart-variable-builtin button,
+    .smart-variables-custom-row button {
+        justify-self: start;
+    }
+}
+
 /* Container for the custom button list */
 #buttonCardsList {
     border: 1px solid var(--border-color);

@@ -691,10 +691,6 @@ window.MaxExtensionButtonsInit = {
             logConCgp('[init] Hotkeys toggle rendering skipped by profile setting hideOnPageHotkeysToggle.');
         }
 
-        if (window.MaxExtensionPromptVariables && typeof window.MaxExtensionPromptVariables.createControl === 'function') {
-            container.appendChild(window.MaxExtensionPromptVariables.createControl());
-            logConCgp('[init] Smart placeholder variables control has been created and appended.');
-        }
     },
 
     /**

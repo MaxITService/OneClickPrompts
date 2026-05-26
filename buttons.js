@@ -58,24 +58,21 @@ window.MaxExtensionPromptVariables = {
     dateExampleIcon: '📅',
     shineDurationMs: 15000,
     shineState: null,
-    activePopover: null,
-    activePopoverCleanup: null,
 
     createTokenPattern() {
-        return /\{\{\s*(selection|today)\s*\}\}|\{\{\s*prompt\s*:\s*([^}]+?)\s*\}\}|\{\{\s*(?:var|variable)\s*:\s*([^}]+?)\s*\}\}|\{%\{\s*([^}%]+?)\s*\}%\}/gi;
+        return /\{\{\s*(today|date|time)\s*\}\}|\{\{\s*(?:input|prompt)\s*:\s*([^}]+?)\s*\}\}|\{\{\s*(?:var|variable)\s*:\s*([^}]+?)\s*\}\}|\{%\{\s*([^}%]+?)\s*\}%\}/gi;
     },
 
     normalizeSettings(settings = {}) {
         const rawVariables = Array.isArray(settings.customVariables) ? settings.customVariables : [];
         return {
-            enabled: settings.enabled !== false,
+            enabled: settings.enabled === true,
             dateExampleInitialized: settings.dateExampleInitialized === true,
             customVariables: rawVariables
                 .filter(item => item && typeof item === 'object')
                 .map(item => ({
                     name: String(item.name || '').trim(),
-                    value: String(item.value ?? ''),
-                    executeJavaScript: item.executeJavaScript === true || item.mode === 'javascript'
+                    value: String(item.value ?? '')
                 }))
                 .filter(item => item.name)
         };
@@ -94,9 +91,6 @@ window.MaxExtensionPromptVariables = {
     async saveSettings(settings, options = {}) {
         const normalized = this.normalizeSettings(settings);
         await chrome.storage.local.set({ [this.storageKey]: normalized });
-        if (!options.silent) {
-            this.refreshControls(normalized);
-        }
         return normalized;
     },
 
@@ -195,11 +189,14 @@ window.MaxExtensionPromptVariables = {
         }
 
         const builtins = {};
-        if (tokens.builtins.has('selection')) {
-            builtins.selection = this.readSelectionText();
-        }
         if (tokens.builtins.has('today')) {
             builtins.today = this.formatToday();
+        }
+        if (tokens.builtins.has('date')) {
+            builtins.date = this.formatDate();
+        }
+        if (tokens.builtins.has('time')) {
+            builtins.time = this.formatTime();
         }
 
         const promptValues = tokens.promptNames.length
@@ -215,9 +212,7 @@ window.MaxExtensionPromptVariables = {
         );
         for (const name of tokens.customNames) {
             const variable = customLookup.get(name.toLowerCase());
-            customValues[name] = variable
-                ? await this.resolveCustomVariable(variable)
-                : '';
+            customValues[name] = variable ? variable.value : '';
         }
 
         return rawText.replace(this.createTokenPattern(), (match, builtinName, promptName, customName, aliasName) => {
@@ -265,56 +260,19 @@ window.MaxExtensionPromptVariables = {
         return String(name || '').trim();
     },
 
-    readSelectionText() {
-        const activeElement = document.activeElement;
-        if (activeElement && typeof activeElement.selectionStart === 'number' && typeof activeElement.selectionEnd === 'number') {
-            const value = activeElement.value ?? '';
-            const selected = value.slice(activeElement.selectionStart, activeElement.selectionEnd);
-            if (selected) {
-                return selected;
-            }
-        }
-        return window.getSelection?.().toString() || '';
-    },
-
     formatToday(date = new Date()) {
         const pad = (value) => String(value).padStart(2, '0');
         return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
     },
 
-    async resolveCustomVariable(variable) {
-        if (!variable.executeJavaScript) {
-            return variable.value;
-        }
-        return await this.executeVariableJavaScript(variable.value, variable.name);
+    formatDate(date = new Date()) {
+        const pad = (value) => String(value).padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
     },
 
-    async executeVariableJavaScript(script, name) {
-        const source = String(script || '').trim();
-        if (!source) return '';
-
-        const timeout = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Timed out')), 1000);
-        });
-
-        try {
-            let task;
-            try {
-                task = new Function('"use strict"; return (async () => (' + source + '))();')();
-            } catch (_) {
-                task = new Function('"use strict"; return (async () => {' + source + '\n})();')();
-            }
-            const result = await Promise.race([Promise.resolve(task), timeout]);
-            if (result === null || result === undefined) return '';
-            if (typeof result === 'object') {
-                return JSON.stringify(result);
-            }
-            return String(result);
-        } catch (error) {
-            this.__toast(`Variable "${name}" JavaScript failed.`, 'warning');
-            logConCgp('[prompt-vars] JavaScript variable failed:', { name, error: error?.message || error });
-            return '';
-        }
+    formatTime(date = new Date()) {
+        const pad = (value) => String(value).padStart(2, '0');
+        return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
     },
 
     requestPromptValues(names, context = {}) {
@@ -333,7 +291,7 @@ window.MaxExtensionPromptVariables = {
 
             const title = document.createElement('div');
             title.className = 'ocp-prompt-input-title';
-            title.textContent = names.length === 1 ? names[0] : 'Prompt variables';
+            title.textContent = names.length === 1 ? names[0] : 'Input variables';
             dialog.appendChild(title);
 
             const inputs = new Map();
@@ -425,260 +383,11 @@ window.MaxExtensionPromptVariables = {
         dialog.style.top = `${top}px`;
     },
 
-    createControl() {
-        this.ensureStyles();
-        const wrapper = document.createElement('div');
-        wrapper.className = 'ocp-smart-vars-control';
-
-        const trigger = document.createElement('button');
-        trigger.type = 'button';
-        trigger.className = 'ocp-smart-vars-trigger';
-        trigger.dataset.ocpSmartVarsTrigger = 'true';
-        trigger.textContent = 'Vars';
-        trigger.title = 'Smart placeholders';
-
-        wrapper.appendChild(trigger);
-
-        this.loadSettings().then(settings => {
-            this.updateControlTrigger(trigger, settings);
-        });
-
-        trigger.addEventListener('click', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            this.openVariablesMenu(trigger);
-        });
-
-        ['pointerdown', 'mousedown', 'mouseup', 'touchstart', 'touchend'].forEach(eventName => {
-            wrapper.addEventListener(eventName, event => event.stopPropagation());
-        });
-
-        return wrapper;
-    },
-
-    updateControlTrigger(trigger, settings) {
-        const normalized = this.normalizeSettings(settings);
-        trigger.textContent = normalized.enabled ? 'Vars: On' : 'Vars: Off';
-        trigger.classList.toggle('is-off', !normalized.enabled);
-        trigger.setAttribute('aria-pressed', normalized.enabled ? 'true' : 'false');
-    },
-
-    async refreshControls(settings = null) {
-        const normalized = settings || await this.loadSettings();
-        document.querySelectorAll('[data-ocp-smart-vars-trigger="true"]').forEach(trigger => {
-            this.updateControlTrigger(trigger, normalized);
-        });
-    },
-
-    async openVariablesMenu(trigger) {
-        if (this.activePopover) {
-            const sameTrigger = this.activePopoverTrigger === trigger;
-            this.closeActivePopover();
-            if (sameTrigger) {
-                return;
-            }
-        }
-
-        let draft = await this.loadSettings();
-        const popover = document.createElement('div');
-        popover.className = 'ocp-smart-vars-popover';
-        popover.setAttribute('role', 'dialog');
-        popover.setAttribute('aria-label', 'Smart placeholders');
-        this.activePopover = popover;
-        this.activePopoverTrigger = trigger;
-
-        const render = () => {
-            popover.replaceChildren();
-
-            const header = document.createElement('div');
-            header.className = 'ocp-smart-vars-header';
-            header.textContent = 'Smart placeholders';
-            popover.appendChild(header);
-
-            const toggleLabel = document.createElement('label');
-            toggleLabel.className = 'ocp-smart-vars-toggle';
-            const toggle = document.createElement('input');
-            toggle.type = 'checkbox';
-            toggle.checked = draft.enabled;
-            const toggleText = document.createElement('span');
-            toggleText.textContent = 'Enabled';
-            toggleLabel.appendChild(toggle);
-            toggleLabel.appendChild(toggleText);
-            popover.appendChild(toggleLabel);
-
-            const syntax = document.createElement('div');
-            syntax.className = 'ocp-smart-vars-syntax';
-            syntax.textContent = '{{selection}}  {{today}}  {{prompt:name}}  {{var:name}}  {%{name}%}';
-            popover.appendChild(syntax);
-
-            const list = document.createElement('div');
-            list.className = 'ocp-smart-vars-list';
-            draft.customVariables.forEach((variable, index) => {
-                list.appendChild(this.createVariableRow(variable, index, draft, async () => {
-                    draft.customVariables.splice(index, 1);
-                    draft = await this.saveSettings(draft);
-                    render();
-                }));
-            });
-            popover.appendChild(list);
-
-            const actions = document.createElement('div');
-            actions.className = 'ocp-smart-vars-menu-actions';
-
-            const addButton = document.createElement('button');
-            addButton.type = 'button';
-            addButton.textContent = 'Add var';
-            addButton.addEventListener('click', () => {
-                draft.customVariables.push({ name: '', value: '', executeJavaScript: false });
-                render();
-            });
-
-            const saveButton = document.createElement('button');
-            saveButton.type = 'button';
-            saveButton.textContent = 'Save';
-            saveButton.className = 'ocp-smart-vars-save';
-            saveButton.addEventListener('click', async () => {
-                draft = await this.saveSettings(draft);
-                this.__toast('Smart variables saved.', 'success', 1800);
-                render();
-            });
-
-            actions.appendChild(addButton);
-            actions.appendChild(saveButton);
-            popover.appendChild(actions);
-
-            toggle.addEventListener('change', async () => {
-                draft.enabled = toggle.checked;
-                draft = await this.saveSettings(draft);
-                render();
-            });
-        };
-
-        render();
-        document.body.appendChild(popover);
-        this.positionPopover(trigger, popover);
-
-        const closeOnOutsideClick = (event) => {
-            if (!popover.contains(event.target) && !trigger.contains(event.target)) {
-                this.closeActivePopover();
-            }
-        };
-        const reposition = () => this.positionPopover(trigger, popover);
-        this.activePopoverCleanup = () => {
-            popover.remove();
-            document.removeEventListener('click', closeOnOutsideClick, true);
-            window.removeEventListener('resize', reposition);
-            window.removeEventListener('scroll', reposition, true);
-            if (this.activePopover === popover) {
-                this.activePopover = null;
-                this.activePopoverTrigger = null;
-                this.activePopoverCleanup = null;
-            }
-        };
-        setTimeout(() => document.addEventListener('click', closeOnOutsideClick, true), 0);
-        window.addEventListener('resize', reposition, { passive: true });
-        window.addEventListener('scroll', reposition, { capture: true, passive: true });
-    },
-
-    closeActivePopover() {
-        if (typeof this.activePopoverCleanup === 'function') {
-            this.activePopoverCleanup();
-            return;
-        }
-        this.activePopover?.remove();
-        this.activePopover = null;
-        this.activePopoverTrigger = null;
-        this.activePopoverCleanup = null;
-    },
-
-    createVariableRow(variable, index, draft, onDelete) {
-        const row = document.createElement('div');
-        row.className = 'ocp-smart-vars-row';
-
-        const nameInput = document.createElement('input');
-        nameInput.type = 'text';
-        nameInput.placeholder = 'name';
-        nameInput.value = variable.name || '';
-        nameInput.addEventListener('input', () => {
-            draft.customVariables[index].name = nameInput.value;
-        });
-
-        const valueInput = document.createElement('textarea');
-        valueInput.rows = 2;
-        valueInput.placeholder = 'value or JavaScript';
-        valueInput.value = variable.value || '';
-        valueInput.addEventListener('input', () => {
-            draft.customVariables[index].value = valueInput.value;
-        });
-
-        const jsLabel = document.createElement('label');
-        jsLabel.className = 'ocp-smart-vars-js-toggle';
-        const jsToggle = document.createElement('input');
-        jsToggle.type = 'checkbox';
-        jsToggle.checked = variable.executeJavaScript === true;
-        jsToggle.addEventListener('change', () => {
-            draft.customVariables[index].executeJavaScript = jsToggle.checked;
-        });
-        const jsText = document.createElement('span');
-        jsText.textContent = 'JS';
-        jsLabel.appendChild(jsToggle);
-        jsLabel.appendChild(jsText);
-
-        const deleteButton = document.createElement('button');
-        deleteButton.type = 'button';
-        deleteButton.textContent = 'Delete';
-        deleteButton.addEventListener('click', onDelete);
-
-        row.appendChild(nameInput);
-        row.appendChild(valueInput);
-        row.appendChild(jsLabel);
-        row.appendChild(deleteButton);
-        return row;
-    },
-
-    positionPopover(trigger, popover) {
-        if (!trigger?.isConnected || !popover?.isConnected) return;
-        const rect = trigger.getBoundingClientRect();
-        const popoverRect = popover.getBoundingClientRect();
-        const padding = 10;
-        const left = Math.min(
-            window.innerWidth - popoverRect.width - padding,
-            Math.max(padding, rect.left)
-        );
-        const canOpenUp = rect.top > popoverRect.height + padding;
-        const top = canOpenUp
-            ? rect.top - popoverRect.height - 8
-            : Math.min(window.innerHeight - popoverRect.height - padding, rect.bottom + 8);
-        popover.style.left = `${left}px`;
-        popover.style.top = `${Math.max(padding, top)}px`;
-    },
-
     ensureStyles() {
         if (document.getElementById('ocp-smart-vars-styles')) return;
         const style = document.createElement('style');
         style.id = 'ocp-smart-vars-styles';
         style.textContent = `
-            .ocp-smart-vars-control {
-                display: flex;
-                align-items: center;
-                margin-top: 8px;
-                padding-left: 8px;
-            }
-            .ocp-smart-vars-trigger {
-                border: 1px solid rgba(127, 127, 127, 0.35);
-                border-radius: 6px;
-                background: rgba(127, 127, 127, 0.12);
-                color: inherit;
-                cursor: pointer;
-                font-size: 12px;
-                line-height: 1.2;
-                padding: 4px 8px;
-                white-space: nowrap;
-            }
-            .ocp-smart-vars-trigger.is-off {
-                opacity: 0.65;
-            }
-            .ocp-smart-vars-popover,
             .ocp-prompt-input-dialog {
                 position: fixed;
                 z-index: 2147483602;
@@ -690,45 +399,11 @@ window.MaxExtensionPromptVariables = {
                 border-radius: 8px;
                 font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             }
-            .ocp-smart-vars-popover {
-                width: min(520px, calc(100vw - 20px));
-                max-height: min(560px, calc(100vh - 20px));
-                overflow: auto;
-                padding: 12px;
-            }
-            .ocp-smart-vars-header,
             .ocp-prompt-input-title {
                 font-size: 14px;
                 font-weight: 700;
                 margin-bottom: 10px;
             }
-            .ocp-smart-vars-toggle,
-            .ocp-smart-vars-js-toggle {
-                display: inline-flex;
-                align-items: center;
-                gap: 6px;
-                font-size: 13px;
-            }
-            .ocp-smart-vars-syntax {
-                margin: 8px 0 10px;
-                padding: 8px;
-                border-radius: 6px;
-                background: rgba(17, 24, 39, 0.06);
-                font: 12px/1.45 ui-monospace, SFMono-Regular, Consolas, monospace;
-                overflow-wrap: anywhere;
-            }
-            .ocp-smart-vars-list {
-                display: grid;
-                gap: 8px;
-            }
-            .ocp-smart-vars-row {
-                display: grid;
-                grid-template-columns: minmax(92px, 0.7fr) minmax(150px, 1.3fr) auto auto;
-                gap: 6px;
-                align-items: center;
-            }
-            .ocp-smart-vars-row input[type="text"],
-            .ocp-smart-vars-row textarea,
             .ocp-prompt-input-field input {
                 box-sizing: border-box;
                 width: 100%;
@@ -739,17 +414,12 @@ window.MaxExtensionPromptVariables = {
                 font: inherit;
                 padding: 6px 8px;
             }
-            .ocp-smart-vars-row textarea {
-                resize: vertical;
-            }
-            .ocp-smart-vars-menu-actions,
             .ocp-prompt-input-actions {
                 display: flex;
                 justify-content: flex-end;
                 gap: 8px;
                 margin-top: 10px;
             }
-            .ocp-smart-vars-popover button,
             .ocp-prompt-input-dialog button {
                 border: 1px solid rgba(17, 24, 39, 0.18);
                 border-radius: 6px;
@@ -759,7 +429,6 @@ window.MaxExtensionPromptVariables = {
                 font: inherit;
                 padding: 6px 10px;
             }
-            .ocp-smart-vars-save,
             .ocp-prompt-input-actions button[type="submit"] {
                 background: #2563eb !important;
                 border-color: #2563eb !important;
@@ -803,23 +472,8 @@ window.MaxExtensionPromptVariables = {
         if (typeof window.showToast === 'function') {
             window.showToast(message, type, options);
         }
-    },
-
-    registerStorageListener() {
-        if (window.__OCP_promptVariablesStorageListenerRegistered || !chrome.storage?.onChanged) {
-            return;
-        }
-        window.__OCP_promptVariablesStorageListenerRegistered = true;
-        chrome.storage.onChanged.addListener((changes, namespace) => {
-            if (namespace !== 'local' || !changes[this.storageKey]) {
-                return;
-            }
-            this.refreshControls(this.normalizeSettings(changes[this.storageKey].newValue));
-        });
     }
 };
-
-window.MaxExtensionPromptVariables.registerStorageListener();
 
 /**
  * Namespace object containing functions related to creating and managing custom buttons.
@@ -1392,7 +1046,10 @@ window.MaxExtensionButtons = {
         flyout.style.cssText = `
             position: fixed;
             z-index: 2147483647;
-            width: 300px;
+            box-sizing: border-box;
+            width: min(300px, calc(100vw - 20px));
+            max-height: calc(100vh - 20px);
+            overflow: auto;
             padding: 12px;
             display: grid;
             gap: 10px;
@@ -1412,7 +1069,7 @@ window.MaxExtensionButtons = {
         `;
 
         const header = document.createElement('div');
-        header.style.cssText = 'display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 700;';
+        header.style.cssText = 'display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 700; cursor: move; user-select: none;';
 
         const title = document.createElement('span');
         title.textContent = isEditMode ? 'Edit button' : (hasCreatedButton() ? '+ Button created' : '+ Create button');
@@ -1534,20 +1191,81 @@ window.MaxExtensionButtons = {
         const rect = event?.target?.getBoundingClientRect?.();
         let x = rect ? rect.left : (event?.clientX || 24);
         let y = rect ? rect.bottom + 8 : (event?.clientY || 24);
-        x = Math.max(10, Math.min(window.innerWidth - 320, x));
-        y = Math.max(10, Math.min(window.innerHeight - 250, y));
-        flyout.style.left = `${Math.round(x)}px`;
-        flyout.style.top = `${Math.round(y)}px`;
+        const viewportPadding = 10;
+        const clampFlyoutPosition = (left, top) => {
+            const flyoutRect = flyout.getBoundingClientRect();
+            const width = flyoutRect.width || 300;
+            const height = flyoutRect.height || 250;
+            const maxLeft = Math.max(viewportPadding, window.innerWidth - width - viewportPadding);
+            const maxTop = Math.max(viewportPadding, window.innerHeight - height - viewportPadding);
+            return {
+                left: Math.round(Math.min(maxLeft, Math.max(viewportPadding, left))),
+                top: Math.round(Math.min(maxTop, Math.max(viewportPadding, top)))
+            };
+        };
+        const placeFlyout = (left, top) => {
+            const position = clampFlyoutPosition(left, top);
+            flyout.style.left = `${position.left}px`;
+            flyout.style.top = `${position.top}px`;
+        };
+        const clampCurrentPosition = () => {
+            const flyoutRect = flyout.getBoundingClientRect();
+            placeFlyout(flyoutRect.left, flyoutRect.top);
+        };
+        placeFlyout(x, y);
+
+        let dragState = null;
+        const onFlyoutPointerMove = (pointerEvent) => {
+            if (!dragState || pointerEvent.pointerId !== dragState.pointerId) {
+                return;
+            }
+            pointerEvent.preventDefault();
+            placeFlyout(
+                dragState.left + pointerEvent.clientX - dragState.clientX,
+                dragState.top + pointerEvent.clientY - dragState.clientY
+            );
+        };
+        const onFlyoutPointerUp = (pointerEvent = {}) => {
+            if (dragState && pointerEvent.pointerId && pointerEvent.pointerId !== dragState.pointerId) {
+                return;
+            }
+            dragState = null;
+            document.removeEventListener('pointermove', onFlyoutPointerMove, true);
+            document.removeEventListener('pointerup', onFlyoutPointerUp, true);
+            document.removeEventListener('pointercancel', onFlyoutPointerUp, true);
+        };
+
+        header.addEventListener('pointerdown', (pointerEvent) => {
+            if (pointerEvent.button !== 0 || pointerEvent.target?.closest?.('button')) {
+                return;
+            }
+            const flyoutRect = flyout.getBoundingClientRect();
+            dragState = {
+                pointerId: pointerEvent.pointerId,
+                clientX: pointerEvent.clientX,
+                clientY: pointerEvent.clientY,
+                left: flyoutRect.left,
+                top: flyoutRect.top
+            };
+            pointerEvent.preventDefault();
+            document.addEventListener('pointermove', onFlyoutPointerMove, true);
+            document.addEventListener('pointerup', onFlyoutPointerUp, true);
+            document.addEventListener('pointercancel', onFlyoutPointerUp, true);
+        });
 
         const closeFlyout = () => {
             flyout.style.opacity = '0';
             flyout.style.transform = 'scale(0.96)';
             setTimeout(() => flyout.remove(), 150);
             document.removeEventListener('keydown', onKeyDown, true);
+            window.removeEventListener('resize', clampCurrentPosition);
+            onFlyoutPointerUp();
         };
 
         flyout.__ocp_cleanup = () => {
             document.removeEventListener('keydown', onKeyDown, true);
+            window.removeEventListener('resize', clampCurrentPosition);
+            onFlyoutPointerUp();
         };
 
         const onKeyDown = (keyEvent) => {
@@ -1729,9 +1447,12 @@ window.MaxExtensionButtons = {
 
         closeButton.addEventListener('click', closeFlyout);
         document.addEventListener('keydown', onKeyDown, true);
+        window.addEventListener('resize', clampCurrentPosition, { passive: true });
         syncCreatedUi();
+        clampCurrentPosition();
 
         requestAnimationFrame(() => {
+            clampCurrentPosition();
             flyout.style.opacity = '1';
             flyout.style.transform = 'scale(1)';
         });
