@@ -40,6 +40,7 @@ window.MaxExtensionButtonEditMode = {
     origin: null,
     clickBlocker: null,
     pointerState: null,
+    doneButtonSelector: '[data-ocp-button-edit-done="true"]',
 
     toggle(container, origin) {
         if (this.active && this.container === container) {
@@ -59,9 +60,11 @@ window.MaxExtensionButtonEditMode = {
         this.container = container;
         this.origin = origin || (container.closest('#max-extension-floating-panel') ? 'panel' : 'inline');
         container.classList.add('ocp-button-edit-mode');
+        this.ensureDoneButton(container);
         this.decorateContainer(container);
         this.updateSettingsButtonHint(container, true);
-        this.__toast('Button edit mode: drag to reorder, Shift-click a button to edit text, click × to delete. Click Settings to exit.', 'info', 5500);
+        this.bindEscapeKey();
+        this.__toast('Button edit mode: drag to reorder, Shift-click a button to edit text, click × to delete. Click Done editing, Settings, or press Esc to exit.', 'info', 5500);
     },
 
     exit() {
@@ -69,6 +72,7 @@ window.MaxExtensionButtonEditMode = {
         const container = this.container;
         if (container) {
             container.classList.remove('ocp-button-edit-mode');
+            this.removeDoneButton(container);
             container.querySelectorAll('.ocp-button-delete-x').forEach(node => node.remove());
             container.querySelectorAll('[data-ocp-button-edit-index]').forEach(button => {
                 button.classList.remove('ocp-button-edit-item', 'ocp-button-edit-dragging');
@@ -92,6 +96,7 @@ window.MaxExtensionButtonEditMode = {
             document.removeEventListener('pointerup', this.__boundUp);
             document.removeEventListener('pointercancel', this.__boundUp);
         }
+        this.unbindEscapeKey();
         if (this.pointerState?.ghost) {
             this.pointerState.ghost.remove();
             if (this.pointerState.button) this.pointerState.button.style.visibility = '';
@@ -104,17 +109,23 @@ window.MaxExtensionButtonEditMode = {
     },
 
     syncContainer(container, origin) {
-        if (!this.active) return;
+        if (!this.active) {
+            this.removeDoneButton(container);
+            return;
+        }
         if (this.origin && origin && this.origin !== origin) return;
         this.container = container;
         this.origin = origin || this.origin;
         container.classList.add('ocp-button-edit-mode');
+        this.ensureDoneButton(container);
         this.decorateContainer(container);
         this.updateSettingsButtonHint(container, true);
+        this.bindEscapeKey();
     },
 
     decorateContainer(container) {
         if (!container) return;
+        this.ensureDoneButton(container);
         container.querySelectorAll('[data-ocp-button-edit-index]').forEach(button => {
             this.decorateButton(button);
         });
@@ -123,6 +134,7 @@ window.MaxExtensionButtonEditMode = {
             this.clickBlocker = (event) => {
                 if (!this.active) return;
                 if (event.target?.closest?.('.ocp-button-delete-x')) return;
+                if (event.target?.closest?.(this.doneButtonSelector)) return;
                 if (event.target?.closest?.('[data-ocp-settings-button="true"]')) return;
                 const editableButton = event.target?.closest?.('[data-ocp-button-edit-index]');
                 if (editableButton && event.shiftKey) {
@@ -139,6 +151,54 @@ window.MaxExtensionButtonEditMode = {
         }
         container.removeEventListener('click', this.clickBlocker, true);
         container.addEventListener('click', this.clickBlocker, true);
+    },
+
+    ensureDoneButton(container = this.container) {
+        if (!container || !this.active) return null;
+        let doneButton = container.querySelector(this.doneButtonSelector);
+        if (!doneButton) {
+            doneButton = document.createElement('button');
+            doneButton.type = 'button';
+            doneButton.className = 'ocp-button-edit-done';
+            doneButton.dataset.ocpButtonEditDone = 'true';
+            doneButton.textContent = 'Done editing';
+            doneButton.title = 'Exit button edit mode';
+            doneButton.setAttribute('aria-label', 'Done editing');
+            doneButton.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.exit();
+            });
+        }
+
+        if (container.firstElementChild !== doneButton) {
+            container.prepend(doneButton);
+        }
+        return doneButton;
+    },
+
+    removeDoneButton(container = this.container) {
+        if (!container) return;
+        container.querySelectorAll(this.doneButtonSelector).forEach(button => button.remove());
+    },
+
+    bindEscapeKey() {
+        if (this.__boundKeydown) return;
+        this.__boundKeydown = (event) => this.handleKeydown(event);
+        document.addEventListener('keydown', this.__boundKeydown, true);
+    },
+
+    unbindEscapeKey() {
+        if (!this.__boundKeydown) return;
+        document.removeEventListener('keydown', this.__boundKeydown, true);
+        this.__boundKeydown = null;
+    },
+
+    handleKeydown(event) {
+        if (!this.active || event.key !== 'Escape' || event.defaultPrevented || event.isComposing) return;
+        event.preventDefault();
+        event.stopPropagation();
+        this.exit();
     },
 
     decorateButton(button) {
@@ -214,7 +274,7 @@ window.MaxExtensionButtonEditMode = {
             if (isEditing) {
                 this.setSettingsButtonTooltip(
                     button,
-                    'Settings button\n• Click: exit individual button edit mode.\n• Drag buttons or separators: reorder them relative to each other.\n• Shift-click a button: edit its text.\n• Click ×: delete a button or separator.'
+                    'Settings button\n• Click: exit individual button edit mode.\n• Drag buttons or separators: reorder them relative to each other.\n• Shift-click a button: edit its text.\n• Click ×: delete a button or separator.\n• You can also click Done editing or press Esc to exit.'
                 );
             } else {
                 const defaultTitle = button.dataset.ocpSettingsDefaultTitle || 'Open extension settings';
@@ -825,7 +885,7 @@ window.MaxExtensionButtonsInit = {
                         '• Click: open OneClickPrompts settings in a new tab.',
                         '• Shift-click: move the whole place where OneClickPrompts injects all buttons.',
                         '• Ctrl+Shift-click: edit individual buttons and separators, then drag them relative to each other.',
-                        '• While editing: click Settings again to exit edit mode.'
+                        '• While editing: click Done editing, click Settings again, or press Esc to exit edit mode.'
                     ].join('\n');
                     const settingsButtonConfig = { ...def.config, text: 'Settings', tooltip: settingsButtonTooltip };
                     const settingsClickHandler = (event) => {

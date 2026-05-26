@@ -975,6 +975,42 @@
 }
 
 /* In-place button edit mode entered from Ctrl+Shift+Click on the Settings button. */
+.ocp-button-edit-done {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-height: 28px;
+    margin: 0 7px 5px 0;
+    padding: 4px 11px;
+    border: 1px solid rgba(16, 163, 127, 0.72);
+    border-radius: 8px;
+    background: rgba(16, 163, 127, 0.16);
+    color: inherit;
+    box-shadow: 0 0 0 1px rgba(16, 163, 127, 0.08);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0;
+    white-space: nowrap;
+    transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease, transform 100ms ease;
+    user-select: none;
+}
+
+.ocp-button-edit-done:hover,
+.ocp-button-edit-done:focus-visible {
+    border-color: rgba(16, 163, 127, 0.95);
+    background: rgba(16, 163, 127, 0.28);
+    box-shadow: 0 0 0 2px rgba(16, 163, 127, 0.18);
+    outline: none;
+}
+
+.ocp-button-edit-done:active {
+    transform: translateY(1px);
+}
+
 [id$="-custom-buttons-container"].ocp-button-edit-mode [data-ocp-button-edit-index] {
     position: relative;
     outline: 1px dashed rgba(122, 92, 200, 0.72);
