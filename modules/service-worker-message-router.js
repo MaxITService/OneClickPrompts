@@ -423,7 +423,7 @@ async function createCustomButtonFromEditorText(payload = {}) {
     const button = {
         icon: typeof payload.icon === 'string' && payload.icon.trim() ? payload.icon.trim() : '✨',
         text: rawText,
-        autoSend: payload.autoSend !== false
+        autoSend: payload.autoSend === true
     };
 
     profile.customButtons.push(button);

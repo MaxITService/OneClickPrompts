@@ -807,7 +807,7 @@ async function updateInterface(anchorElement = null) {
     // Clear input fields
     document.getElementById('buttonIcon').value = '';
     document.getElementById('buttonText').value = '';
-    document.getElementById('buttonAutoSendToggle').checked = true; // Reset to default checked
+    document.getElementById('buttonAutoSendToggle').checked = false; // Reset to default unchecked
     if (typeof refitButtonCreationInputs === 'function') {
         refitButtonCreationInputs();
     }

@@ -985,7 +985,7 @@ window.MaxExtensionFloatingPanel.saveManualCardAsPermanentButton = function (ind
     const newButton = {
         icon: emoji,
         text: text,
-        autoSend: true // Default to autosend for convenience
+        autoSend: false
     };
 
     window.globalMaxExtensionConfig.customButtons.push(newButton);

@@ -202,7 +202,6 @@ Current architectural reference for the OneClickPrompts Chrome extension (Manife
 - `Promo/`: marketing captures (screenshots, demo videos, PSD).
 - Manual test harness formerly in `tests.js` has been removed; manual browser verification aligns with repo policy.
 - `CI-CD.ps1`: Windows PowerShell deployment script documenting release steps.
-- `modules/SharedPrompt.js`: placeholder for future shared prompt functionality (currently unimplemented).
 
 ## 5. Core Feature Summary
 | Capability | Description | Primary Files |

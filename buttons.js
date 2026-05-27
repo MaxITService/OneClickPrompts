@@ -807,7 +807,7 @@ window.MaxExtensionButtons = {
                 button: {
                     icon: '✨',
                     text: '',
-                    autoSend: true
+                    autoSend: false
                 }
             });
             return { status: 'manual_entry', reason };
@@ -817,7 +817,7 @@ window.MaxExtensionButtons = {
             const response = await chrome.runtime.sendMessage({
                 type: 'createCustomButtonFromEditorText',
                 text,
-                autoSend: true
+                autoSend: false
             });
 
             if (!response?.success) {
@@ -853,7 +853,7 @@ window.MaxExtensionButtons = {
             button: {
                 icon: created?.button?.icon || '✨',
                 text: created?.button?.text || '',
-                autoSend: created?.button?.autoSend !== false
+                autoSend: created?.button?.autoSend === true
             }
         };
         const isEditMode = state.mode === 'edit';
@@ -990,7 +990,7 @@ window.MaxExtensionButtons = {
 
         const toggle = document.createElement('input');
         toggle.type = 'checkbox';
-        toggle.checked = created?.button?.autoSend !== false;
+        toggle.checked = created?.button?.autoSend === true;
         toggle.style.cssText = 'position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;';
 
         const toggleTrack = document.createElement('span');
@@ -1176,7 +1176,7 @@ window.MaxExtensionButtons = {
             state.lookupText = state.button.text || text;
             textInput.value = state.button.text || text;
             iconInput.value = state.button.icon || '✨';
-            toggle.checked = state.button.autoSend !== false;
+            toggle.checked = state.button.autoSend === true;
             syncToggleVisual();
             syncCreatedUi();
             window.MaxExtensionButtonsInit?.updateButtonsForProfileChange?.('inline');
