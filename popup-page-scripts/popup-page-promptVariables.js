@@ -56,6 +56,16 @@ async function saveSmartVariableSettings(settings) {
     return normalized;
 }
 
+async function saveSmartVariableEnabled(enabled) {
+    const savedSettings = await loadSmartVariableSettings();
+    const normalized = normalizeSmartVariableSettings({
+        ...savedSettings,
+        enabled: enabled === true
+    });
+    await chrome.storage.local.set({ [OCP_PROMPT_VARIABLES_STORAGE_KEY]: normalized });
+    return normalized;
+}
+
 function insertIntoButtonText(token) {
     const textarea = document.getElementById('buttonText');
     if (!textarea) {
@@ -191,9 +201,20 @@ async function initializeSmartVariablesPanel() {
     if (enabledToggle) {
         enabledToggle.checked = draft.enabled;
         enabledToggle.addEventListener('change', async () => {
-            draft.enabled = enabledToggle.checked;
-            draft = await saveSmartVariableSettings(draft);
-            showToast(`Smart variables ${draft.enabled ? 'enabled' : 'disabled'}.`, 'success', 1600);
+            const previousEnabled = draft.enabled;
+            const nextEnabled = enabledToggle.checked;
+            draft.enabled = nextEnabled;
+            try {
+                const savedSettings = await saveSmartVariableEnabled(nextEnabled);
+                draft.enabled = savedSettings.enabled;
+                enabledToggle.checked = draft.enabled;
+                showToast(`Smart variables ${draft.enabled ? 'enabled' : 'disabled'}.`, 'success', 1600);
+            } catch (error) {
+                draft.enabled = previousEnabled;
+                enabledToggle.checked = previousEnabled;
+                logToGUIConsole(`Error saving smart variables toggle: ${error.message}`);
+                showToast('Could not update smart variables toggle.', 'error');
+            }
         });
     }
 
