@@ -917,18 +917,6 @@ window.MaxExtensionButtons = {
 
         header.append(title, closeButton);
 
-        const preview = document.createElement('div');
-        preview.textContent = state.button.text || 'Enter button text below.';
-        preview.style.cssText = `
-            max-height: 72px;
-            overflow: hidden;
-            padding: 8px;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.08);
-            color: rgba(255, 255, 255, 0.84);
-            line-height: 1.3;
-        `;
-
         const textDetails = document.createElement('details');
         textDetails.open = isEditMode || !hasCreatedButton();
         textDetails.style.cssText = 'display: grid; gap: 8px;';
@@ -1051,7 +1039,7 @@ window.MaxExtensionButtons = {
             return hr;
         };
 
-        flyout.append(header, preview, makeSeparator(), textDetails, iconLabel, toggleLabel, makeSeparator(), createButton);
+        flyout.append(header, makeSeparator(), textDetails, iconLabel, toggleLabel, makeSeparator(), createButton);
         document.body.appendChild(flyout);
 
         const rect = event?.target?.getBoundingClientRect?.();
@@ -1144,7 +1132,6 @@ window.MaxExtensionButtons = {
             const createdNow = hasCreatedButton();
             title.textContent = isEditMode ? 'Edit button' : (createdNow ? '+ Button created' : '+ Create button');
             textSummary.textContent = createdNow ? 'Button text' : 'Button text required';
-            preview.textContent = state.button.text || 'Enter button text below.';
             createButton.style.display = createdNow && !isEditMode ? 'none' : '';
         };
 
