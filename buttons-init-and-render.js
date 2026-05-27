@@ -41,6 +41,7 @@ window.MaxExtensionButtonEditMode = {
     clickBlocker: null,
     pointerState: null,
     doneButtonSelector: '[data-ocp-button-edit-done="true"]',
+    flipDurationMs: 300,
 
     toggle(container, origin) {
         if (this.active && this.container === container) {
@@ -314,7 +315,7 @@ window.MaxExtensionButtonEditMode = {
             button.style.transition = 'none';
             button.style.transform = `translate(${dx}px, ${dy}px)`;
             requestAnimationFrame(() => {
-                button.style.transition = 'transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1)';
+                button.style.transition = `transform ${this.flipDurationMs}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
                 button.style.transform = '';
             });
         });
@@ -448,7 +449,7 @@ window.MaxExtensionButtonEditMode = {
     moveDraggedButton(clientX, clientY, draggedButton) {
         // Throttle: let the previous FLIP animation finish before starting a new reorder
         const now = performance.now();
-        if (this._lastReorderTime && now - this._lastReorderTime < 200) return;
+        if (this._lastReorderTime && now - this._lastReorderTime < this.flipDurationMs) return;
 
         const siblings = this.getEditableButtons().filter(button => button !== draggedButton);
         let target = null;
