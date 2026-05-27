@@ -555,7 +555,7 @@ const MANUAL_QUEUE_DEFAULT_COUNT = 6;
 
 /**
  * Initializes the Manual Queue Mode feature.
- * Creates the 6 button cards and sets up toggle behavior.
+ * Creates the manual queue cards and sets up toggle behavior.
  */
 window.MaxExtensionFloatingPanel.initializeManualQueueMode = function () {
     this.manualQueueModeButton = document.getElementById('max-extension-manual-queue-mode-btn');
@@ -1104,8 +1104,13 @@ window.MaxExtensionFloatingPanel.addAllValidManualCardsToQueue = function () {
 
     let addedCount = 0;
 
-    // Iterate through all 6 cards in order (1 to 6)
-    for (let i = 0; i < 6; i++) {
+    const cardCount = Math.min(
+        MANUAL_QUEUE_MAX_CARDS,
+        Math.max(this.manualQueueCardCount || 0, this.manualQueueCards.length)
+    );
+
+    // Iterate through all configured cards in order.
+    for (let i = 0; i < cardCount; i++) {
         const cardData = this.manualQueueCards[i];
         if (!cardData) continue;
 
