@@ -525,14 +525,14 @@ const OCPTooltip = (() => {
      */
     const handleMouseEnter = (event) => {
         const trigger = event.currentTarget;
-        const text = trigger.getAttribute('data-ocp-tooltip') || trigger.getAttribute('title');
+        const text = trigger.getAttribute('title') || trigger.getAttribute('data-ocp-tooltip');
         const anchorClientX = Number.isFinite(event?.clientX) ? event.clientX : null;
 
         if (!text) return;
 
         // Remove native title to prevent double tooltips
         if (trigger.hasAttribute('title')) {
-            trigger.setAttribute('data-ocp-tooltip', text);
+            trigger.setAttribute('data-ocp-tooltip', trigger.getAttribute('title'));
             trigger.removeAttribute('title');
         }
 
@@ -540,7 +540,13 @@ const OCPTooltip = (() => {
         clearTimeout(_showTimeout);
 
         _showTimeout = setTimeout(() => {
-            show(trigger, text, anchorClientX);
+            const latestText = trigger.getAttribute('title') || trigger.getAttribute('data-ocp-tooltip');
+            if (!latestText) return;
+            if (trigger.hasAttribute('title')) {
+                trigger.setAttribute('data-ocp-tooltip', latestText);
+                trigger.removeAttribute('title');
+            }
+            show(trigger, latestText, anchorClientX);
         }, OCP_TOOLTIP_SETTINGS.showDelayMs);
     };
 
