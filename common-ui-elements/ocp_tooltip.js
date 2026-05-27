@@ -77,6 +77,7 @@ const OCPTooltip = (() => {
     let _initialized = false;
     let _isPopupContext = false;
     let _isExtensionDocument = false;
+    let _hoveredTrigger = null;
 
     // Detect context (popup vs content script)
     const detectContext = () => {
@@ -518,6 +519,7 @@ const OCPTooltip = (() => {
         _tooltipEl.classList.remove('ocp-tooltip--visible');
         _tooltipEl.setAttribute('aria-hidden', 'true');
         _currentTrigger = null;
+        _hoveredTrigger = null;
     };
 
     /**
@@ -529,6 +531,7 @@ const OCPTooltip = (() => {
         const anchorClientX = Number.isFinite(event?.clientX) ? event.clientX : null;
 
         if (!text) return;
+        _hoveredTrigger = trigger;
 
         // Remove native title to prevent double tooltips
         if (trigger.hasAttribute('title')) {
@@ -540,6 +543,7 @@ const OCPTooltip = (() => {
         clearTimeout(_showTimeout);
 
         _showTimeout = setTimeout(() => {
+            if (_hoveredTrigger !== trigger && document.activeElement !== trigger) return;
             const latestText = trigger.getAttribute('title') || trigger.getAttribute('data-ocp-tooltip');
             if (!latestText) return;
             if (trigger.hasAttribute('title')) {
@@ -559,9 +563,13 @@ const OCPTooltip = (() => {
         if (from && to && from.contains && from.contains(to)) {
             return;
         }
+        if (_hoveredTrigger === from) {
+            _hoveredTrigger = null;
+        }
         clearTimeout(_showTimeout);
 
         _hideTimeout = setTimeout(() => {
+            if (_hoveredTrigger) return;
             hide();
         }, OCP_TOOLTIP_SETTINGS.hideDelayMs);
     };
