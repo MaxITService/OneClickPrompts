@@ -572,8 +572,14 @@ const OCPTooltip = (() => {
 
         // Remove native title if present
         if (element.hasAttribute('title')) {
-            if (!element.hasAttribute('data-ocp-tooltip')) {
-                element.setAttribute('data-ocp-tooltip', element.getAttribute('title'));
+            const titleText = element.getAttribute('title');
+            if (element.hasAttribute('data-ocp-tooltip-attached')) {
+                element.setAttribute('data-ocp-tooltip', titleText);
+                if (_currentTrigger === element) {
+                    updateText(element, titleText);
+                }
+            } else if (!element.hasAttribute('data-ocp-tooltip')) {
+                element.setAttribute('data-ocp-tooltip', titleText);
             }
             element.removeAttribute('title');
         }
