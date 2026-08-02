@@ -1,0 +1,376 @@
+// per-website-button-clicking-mechanics/buttons-clicking-chatgpt.js
+// This file provides functions to handle the send button clicking process for ChatGPT.
+
+'use strict';
+
+/**
+ * Processes the custom send button click for ChatGPT, handling both manual and autosend functionalities.
+ * @param {Event} event - The click event triggered by the send button.
+ * @param {string} customText - The custom text to be sent.
+ * @param {boolean} autoSend - Flag indicating whether autosend is enabled.
+ */
+async function processChatGPTCustomSendButtonClick(event, customText, autoSend) {
+    // Prevent default button behavior
+    event.preventDefault();
+    logConCgp('[buttons] Custom send button was clicked.');
+
+    // Locate the editor area using SelectorGuard
+    const editorArea = await window.OneClickPromptsSelectorGuard.findEditor();
+
+    if (!editorArea) {
+        logConCgp('[buttons] Editor area not found. Unable to proceed.');
+        // Toast handled by SelectorGuard/Detector
+        return;
+    }
+
+    const getComposerRoot = () => editorArea?.closest?.('form[data-type="unified-composer"], form') || document;
+
+    const getCurrentChatGPTActionButton = () => {
+        const root = getComposerRoot();
+        const candidates = Array.from(root.querySelectorAll('button#composer-submit-button, button[data-testid="send-button"], button[data-testid="stop-button"], button[aria-label]'));
+        return candidates.find((candidate) => {
+            if (!window.ButtonsClickingShared?.isVisibleInteractiveElement?.(candidate)) return false;
+            return candidate.id === 'composer-submit-button'
+                || candidate.getAttribute('data-testid') === 'send-button'
+                || candidate.getAttribute('data-testid') === 'stop-button';
+        }) || null;
+    };
+
+    const isChatGPTStopButtonLike = (btn) => {
+        if (!btn) return false;
+        const label = (
+            (btn.getAttribute('aria-label') || '') +
+            ' ' +
+            (btn.getAttribute('data-testid') || '') +
+            ' ' +
+            (btn.innerText || '')
+        ).toLowerCase();
+        return label.includes('stop streaming')
+            || label.includes('stop generating')
+            || label.includes('stop');
+    };
+
+    const isChatGPTSendButtonLike = (btn) => {
+        if (!btn) return false;
+        if (isChatGPTStopButtonLike(btn)) return false;
+        const label = (
+            (btn.getAttribute('aria-label') || '') +
+            ' ' +
+            (btn.getAttribute('data-testid') || '') +
+            ' ' +
+            (btn.innerText || '')
+        ).toLowerCase();
+        return label.includes('send prompt')
+            || label.includes('send message')
+            || label.includes('send');
+    };
+
+    const normalizeEditorText = (text) => String(text || '')
+        .replace(/\r\n?/g, '\n')
+        .replace(/\u00a0/g, ' ')
+        .replace(/[\u200b-\u200d\ufeff]/g, '')
+        .trim();
+
+    const readEditorText = (editor) => normalizeEditorText(
+        editor instanceof HTMLTextAreaElement
+            ? editor.value
+            : (editor.innerText || editor.textContent || '')
+    );
+
+    const hasChatGPTFinalResponseAction = () => {
+        const assistantMessages = Array.from(document.querySelectorAll(
+            '[data-message-author-role="assistant"], [data-message-role="assistant"], article[data-turn="assistant"], section[data-turn="assistant"]'
+        ));
+        const latestAssistant = assistantMessages.at(-1);
+        if (!latestAssistant) return false;
+
+        const turn = latestAssistant.closest(
+            'article[data-testid^="conversation-turn-"], section[data-testid^="conversation-turn-"], [data-message-author-role="assistant"], [data-message-role="assistant"]'
+        ) || latestAssistant;
+        if (turn.hasAttribute('data-message-complete')) return true;
+
+        const copyResponse = turn.querySelector(
+            'button[data-testid="copy-turn-action-button"], button[aria-label="Copy response"]'
+        );
+        return window.ButtonsClickingShared?.isVisibleInteractiveElement?.(copyResponse) === true;
+    };
+
+    const findChatGPTStopButton = () => {
+        const root = getComposerRoot();
+        const selectorCandidates = [
+            'button#composer-submit-button[data-testid="stop-button"]',
+            'button[data-testid="stop-button"]',
+            'button[aria-label="Stop streaming"]',
+            'button[aria-label="Stop generating"]',
+            'button[aria-label^="Stop" i]'
+        ];
+
+        const fromSelectors = selectorCandidates.flatMap((selector) => {
+            try {
+                return Array.from(root.querySelectorAll(selector));
+            } catch (_) {
+                return [];
+            }
+        });
+
+        return fromSelectors.find((candidate) => {
+            if (!window.ButtonsClickingShared?.isVisibleInteractiveElement?.(candidate)) return false;
+            return isChatGPTStopButtonLike(candidate);
+        }) || null;
+    };
+
+    const findChatGPTSendButton = async () => {
+        const root = getComposerRoot();
+        const selectorCandidates = [
+            'button#composer-submit-button[data-testid="send-button"]',
+            'button[data-testid="send-button"]',
+            'button[aria-label="Send prompt"]',
+            'button[aria-label="Send message"]',
+            'button[aria-label^="Send" i]',
+            'button[type="submit"]'
+        ];
+
+        const fromSelectors = selectorCandidates.flatMap((selector) => {
+            try {
+                return Array.from(root.querySelectorAll(selector));
+            } catch (_) {
+                return [];
+            }
+        });
+
+        const liveSend = fromSelectors.find((candidate) => {
+            if (!window.ButtonsClickingShared?.isVisibleInteractiveElement?.(candidate)) return false;
+            if (candidate.disabled || candidate.getAttribute('aria-disabled') === 'true') return false;
+            return isChatGPTSendButtonLike(candidate);
+        });
+
+        if (liveSend) {
+            return liveSend;
+        }
+
+        const guardBtn = await window.OneClickPromptsSelectorGuard.findSendButton();
+        if (!guardBtn || isChatGPTStopButtonLike(guardBtn)) {
+            return null;
+        }
+        return guardBtn;
+    };
+
+    // ----------------------------
+    // Helper Functions (Modernized)
+    // ----------------------------
+
+    /**
+     * Determines if the editor is in its initial state (contains placeholder text).
+     * @param {HTMLElement} element - The editor element.
+     * @returns {boolean} - True if in initial state, false otherwise.
+     */
+    const isEditorInInitialState = (element) => {
+        const placeholderElement = element.querySelector('p.placeholder');
+        const isInitial = !!placeholderElement;
+        logConCgp('[buttons] Editor initial state check:', isInitial);
+        return isInitial;
+    };
+
+    /**
+     * Inserts the whole text into ChatGPT's editor without per-character emulation.
+     * Handles both textarea and contenteditable editors in one place.
+     * @param {HTMLElement} editorElement - The editor element (textarea or contenteditable).
+     * @param {string} textToInsert - The text to insert.
+     * @param {boolean} replace - When true, treats editor as empty and inserts as fresh content; otherwise appends at the end.
+     */
+    const insertTextIntoChatGPTEditor = (editorElement, textToInsert, replace = false) => {
+        try {
+            // Textarea path (robust detection)
+            if (editorElement instanceof HTMLTextAreaElement) {
+                const existing = replace ? '' : (editorElement.value || '');
+                editorElement.focus();
+                editorElement.value = existing + textToInsert;
+                editorElement.dispatchEvent(new Event('input', { bubbles: true }));
+                editorElement.dispatchEvent(new Event('change', { bubbles: true }));
+                if (editorElement.setSelectionRange) {
+                    const end = editorElement.value.length;
+                    editorElement.setSelectionRange(end, end);
+                }
+                return true;
+            }
+
+            // contenteditable path
+            if (editorElement.isContentEditable || editorElement.getAttribute('contenteditable') === 'true') {
+                editorElement.focus();
+
+                // If replacing and editor looks empty or has placeholder, normalize minimal structure
+                const looksEmpty = editorElement.textContent.trim() === '' || !!editorElement.querySelector('p.placeholder');
+                if (replace && looksEmpty) {
+                    editorElement.innerHTML = '<p><br></p>';
+                }
+
+                // Move caret to the end and try a single operation insert
+                if (window.MaxExtensionUtils && typeof window.MaxExtensionUtils.moveCursorToEnd === 'function') {
+                    window.MaxExtensionUtils.moveCursorToEnd(editorElement);
+                } else {
+                    const range = document.createRange();
+                    range.selectNodeContents(editorElement);
+                    range.collapse(false);
+                    const sel = window.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                }
+
+                // First attempt: execCommand('insertText') — widely handled by editors
+                let inserted = false;
+                try {
+                    inserted = document.execCommand('insertText', false, textToInsert);
+                } catch (e) {
+                    inserted = false;
+                }
+
+                // Fallback: direct Range insertion of a text node
+                if (!inserted) {
+                    const selection = window.getSelection();
+                    if (selection && selection.rangeCount > 0) {
+                        const range = selection.getRangeAt(0);
+                        const textNode = document.createTextNode(textToInsert);
+                        range.insertNode(textNode);
+                        range.setStartAfter(textNode);
+                        range.collapse(true);
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                    } else {
+                        editorElement.appendChild(document.createTextNode(textToInsert));
+                    }
+                }
+
+                // Notify the framework/editor
+                editorElement.dispatchEvent(new Event('input', { bubbles: true }));
+                // Keep caret at the end for UX
+                if (window.MaxExtensionUtils && typeof window.MaxExtensionUtils.moveCursorToEnd === 'function') {
+                    window.MaxExtensionUtils.moveCursorToEnd(editorElement);
+                }
+                return true;
+            }
+
+            // Fallback — treat as generic node with textContent
+            const base = replace ? '' : (editorElement.textContent || '');
+            editorElement.textContent = base + textToInsert;
+            editorElement.dispatchEvent(new Event('input', { bubbles: true }));
+            return true;
+        } catch (err) {
+            logConCgp('[buttons][ChatGPT] insertTextIntoChatGPTEditor error:', err);
+            showToast('Failed to insert text.', 'error');
+            return false;
+        }
+    };
+
+    /**
+     * Handles the send process by initiating auto-send if enabled.
+     */
+    const handleSendButton = () => {
+        logConCgp('[buttons] handleSendButton called.');
+
+        if (autoSend && (event?.__fromDangerBroadcast || event?.__fromQueue || globalMaxExtensionConfig.globalAutoSendEnabled)) {
+            logConCgp('[buttons] Auto-send is enabled. Starting auto-send process.');
+            return startAutoSend(null, editorArea);
+        }
+        return Promise.resolve({ status: 'sent', reason: 'manual' });
+    };
+
+    /**
+     * Starts the auto-send interval to automatically click send buttons until the editor is empty.
+     * Ensures only one interval runs at a time.
+     * @param {HTMLElement} initialSendButton - The initial send button found.
+     * @param {HTMLElement} editor - The editor area element.
+     */
+    const startAutoSend = (_, editor) => {
+        logConCgp('[auto-send] startAutoSend called.');
+        const expectedEditorText = readEditorText(editor);
+
+        return ButtonsClickingShared.performAutoSend({
+            findButton: findChatGPTSendButton,
+            findStopButton: findChatGPTStopButton,
+            preClickValidation: () => {
+                const currentEditorText = readEditorText(editor);
+                const isExpectedPromptIntact = expectedEditorText.length > 0 && currentEditorText === expectedEditorText;
+                logConCgp('[auto-send] Editor validation:', {
+                    hasText: currentEditorText.length > 0,
+                    expectedLength: expectedEditorText.length,
+                    currentLength: currentEditorText.length,
+                    matchesExpectedPrompt: isExpectedPromptIntact
+                });
+                return isExpectedPromptIntact;
+            },
+            isBusy: (btn) => {
+                const busy = isChatGPTStopButtonLike(btn) || ButtonsClickingShared.isBusyStopButton(btn);
+                if (busy) {
+                    const detector = window.OneClickPromptsSelectorAutoDetector;
+                    const sendState = detector?.state?.sendButton;
+                    if (sendState) sendState.lastSeenAt = Date.now();
+                }
+                return busy;
+            },
+            stopConfirmationDelay: 180,
+            readyConfirmationDelay: 300,
+            postStopAbsenceDelay: 600,
+            postStopReadinessCheck: ({ stopAbsentForMs }) => {
+                // ChatGPT's final controls are a useful positive signal. If they are
+                // delayed or localized, a longer stable Stop-free window is the fallback.
+                return hasChatGPTFinalResponseAction() || stopAbsentForMs >= 1500;
+            },
+            clickAction: (btn) => {
+                const currentActionButton = getCurrentChatGPTActionButton();
+                const clickTarget = isChatGPTSendButtonLike(currentActionButton) ? currentActionButton : btn;
+
+                if (!clickTarget || !isChatGPTSendButtonLike(clickTarget) || isChatGPTStopButtonLike(clickTarget)) {
+                    logConCgp('[auto-send][ChatGPT] Click skipped because the current action is not a verified Send button.', clickTarget);
+                    return false;
+                }
+
+                MaxExtensionUtils.simulateClick(clickTarget);
+                return true;
+            }
+        }).then((result) => {
+            if (result.status !== 'sent' && result.status !== 'blocked_by_stop') {
+                if (result.status === 'not_found' && result.reason !== 'post-stop-missing-send') {
+                    showToast('Could not find the send button.', 'error');
+                }
+            }
+            return result;
+        });
+    };
+
+    /**
+     * Handles the entire process of inserting text and sending the message.
+     * This includes state detection, text insertion, and send button handling.
+     */
+    const handleMessageInsertion = async () => {
+        logConCgp('[buttons] handleMessageInsertion called.');
+        const initialState = isEditorInInitialState(editorArea);
+        let inserted = false;
+
+        if (initialState) {
+            // Insert whole text in one go (no per-character emulation)
+            logConCgp('[buttons][ChatGPT] Editor empty/placeholder. Inserting text (bulk).');
+            inserted = insertTextIntoChatGPTEditor(editorArea, customText, true);
+            logConCgp('[buttons][ChatGPT] Custom text inserted.');
+        } else {
+            logConCgp('[buttons][ChatGPT] Editor has content. Appending text (bulk insert).');
+            inserted = insertTextIntoChatGPTEditor(editorArea, customText, false);
+        }
+
+        if (!inserted) {
+            return { status: 'failed', reason: 'editor_insertion_failed' };
+        }
+
+        // Let ChatGPT commit its controlled-editor update before snapshotting the
+        // exact text that AutoSend is allowed to submit.
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        return handleSendButton();
+    };
+
+    // ----------------------------
+    // Start the message insertion and sending process
+    // ----------------------------
+    return await handleMessageInsertion();
+}
+
+// Expose the function globally
+window.processChatGPTCustomSendButtonClick = processChatGPTCustomSendButtonClick;

@@ -1,0 +1,119 @@
+/*
+common-ui-elements/ocp_toast.css
+Version: 1.0
+
+This file contains all styles related to toast notifications.
+It includes base styling for the container and individual toasts,
+type-specific coloring (success, error, info), and animations for
+showing and hiding toasts. It also includes dark theme overrides.
+*/
+
+/* ------------------------------------------------------------------------- */
+/* Toast Notification Styles                                                 */
+/* ------------------------------------------------------------------------- */
+.toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.toast {
+    background: #222;
+    /* neutral base; type classes override */
+    color: #fff;
+    /* readable on dark base */
+    padding: 12px 12px 12px 16px;
+    border-radius: 4px;
+    margin-top: 8px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    min-width: 240px;
+    max-width: 420px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+        "message close"
+        "actions actions";
+    align-items: start;
+    gap: 12px;
+}
+
+.toast-button-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+    grid-area: actions;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast-message {
+    grid-area: message;
+    line-height: 1.4;
+    margin-bottom: 6px;
+}
+
+.toast-action {
+    background: transparent;
+    border: 1px solid currentColor;
+    color: inherit;
+    border-radius: 3px;
+    padding: 6px 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.toast-action:hover {
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+}
+
+.toast-close {
+    background: transparent;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 4px 6px;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+    grid-area: close;
+    justify-self: end;
+}
+
+.toast-close:hover {
+    opacity: 1;
+}
+
+/* Toast type classes */
+.toast-success {
+    background: #4BB543;
+}
+
+.toast-error {
+    background: #FF3333;
+}
+
+.toast-info {
+    background: #2f2541;
+}
+
+
+/* ------------------------------------------------------------------------- */
+/* Dark Theme Overrides for Toasts                                           */
+/* ------------------------------------------------------------------------- */
+/* In dark mode, apply neutral background to base .toast unless it has one of the explicit type classes */
+body.dark-theme .toast:not(.toast-success):not(.toast-error):not(.toast-info) {
+    background: rgba(50, 50, 50, 0.9);
+    color: #eee;
+}

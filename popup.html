@@ -1,0 +1,2036 @@
+<!-- popup.html -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OneClickPrompts Options</title>
+    <!-- Base styles: Root variables, body, container, section, and headings -->
+    <link rel="stylesheet" href="/popup-page-styles/popup-base.css" />
+    <!--The styles related to menu - topmost section -->
+    <link rel="stylesheet" href="/popup-page-styles/menu.css" /> 
+    <!-- Layout styles: Row layouts, form controls, and profile action containers -->
+    <link rel="stylesheet" href="/popup-page-styles/popup-layout.css" />
+    <!-- Custom buttons: Button list container, button items, drag handles, and separators -->
+    <link rel="stylesheet" href="/popup-page-styles/popup-buttons.css" />
+    <!-- UI Components: Console, save status, export/import buttons, confirmation & error dialogs, and toast notifications -->
+    <link rel="stylesheet" href="/popup-page-styles/popup-components.css" />
+    <link rel="stylesheet" href="/popup-page-styles/modal.css" />
+    <link rel="stylesheet" href="/common-ui-elements/onclick-smooth-scroll-highlight.css" />
+    <!-- Toggle switch styles: iPhone-style toggle switches -->
+    <link rel="stylesheet" href="/common-ui-elements/toggle.css" />
+    <!-- Theme overrides: Dark mode styles -->
+    <link rel="stylesheet" href="/common-ui-elements/dark-theme.css" />
+    <link rel="stylesheet" href="/common-ui-elements/common-style.css" />
+    <!-- Toast notifications -->
+    <link rel="stylesheet" href="/common-ui-elements/ocp_toast.css" />
+    <!-- Ultramodern frosted glass tooltips -->
+    <link rel="stylesheet" href="/common-ui-elements/ocp_tooltip.css" />
+  </head>
+
+  <body>
+    <div class="container">
+      <!--Menu Section - Navigation with frosted glass buttons-->
+      <section class="section" id="menuSection">
+        <nav class="menu-nav menu-tabs" aria-label="Popup sections and actions">
+          <button
+            id="tab-buttonConfigurationSection"
+            class="menu-btn menu-tab-btn"
+            type="button"
+            role="tab"
+            aria-selected="true"
+            aria-controls="buttonConfigurationSection"
+            data-tab-target="buttonConfigurationSection"
+          >
+            <span class="menu-btn-icon">✨</span>Buttons
+          </button>
+          <button
+            id="tab-profileSection"
+            class="menu-btn menu-tab-btn"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="profileSection"
+            data-tab-target="profileSection"
+          >
+            <span class="menu-btn-icon">👤</span>Profile
+          </button>
+          <button
+            id="tab-settingsBackupPanel"
+            class="menu-btn menu-tab-btn"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="settingsBackupPanel"
+            data-tab-target="settingsBackupPanel"
+          >
+            <span class="menu-btn-icon">⚙️</span>Settings
+          </button>
+          <button
+            id="tab-modulesSection"
+            class="menu-btn menu-tab-btn"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="modulesSection"
+            data-tab-target="modulesSection"
+          >
+            <span class="menu-btn-icon">🧩</span>Modules
+          </button>
+          <button
+            id="tab-helpSection"
+            class="menu-btn menu-tab-btn"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="helpSection"
+            data-tab-target="helpSection"
+          >
+            <span class="menu-btn-icon">❓</span>Help
+          </button>
+          <button
+            id="tab-advancedSection"
+            class="menu-btn menu-tab-btn"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="advancedSection"
+            data-tab-target="advancedSection"
+          >
+            <span class="menu-btn-icon">🔧</span>Advanced
+          </button>
+          <button
+            id="tab-themeSection"
+            class="menu-btn menu-tab-btn"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="themeSection"
+            data-tab-target="themeSection"
+          >
+            <span class="menu-btn-icon">🎨</span>Theme
+          </button>
+          <button
+            id="tab-consoleSection"
+            class="menu-btn menu-tab-btn"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="consoleSection"
+            data-tab-target="consoleSection"
+          >
+            <span class="menu-btn-icon">🖥️</span>Console
+          </button>
+          <button id="open-in-tab-button" class="menu-btn menu-action-btn" type="button">
+            <span class="menu-btn-icon">↗️</span>Open me in Tab
+          </button>
+          <button id="toggle-width-button" class="menu-btn menu-action-btn is-hidden" type="button">
+            <span class="menu-btn-icon">↔️</span>Wider
+          </button>
+        </nav>
+        <div id="version" class="small-hoovering-text menu-version">Version<br>0.0.7.2</div>
+      </section>
+      
+      <!-- Button Configuration via button cards (buttons have their UI - each on card that is added dynamically) -->
+      <section
+        class="section tab-panel"
+        id="buttonConfigurationSection"
+        role="tabpanel"
+        aria-labelledby="tab-buttonConfigurationSection"
+      >
+        <div class="section-heading-row">
+          <h2 title="Here, each 'card' represents a button that will be injected into the chat interface and the text it will paste.">Button Configuration</h2>
+          <p id="buttonConfigProfileLabel" class="section-profile-label">Current profile: <span id="buttonConfigProfileName"></span></p>
+        </div>
+        <div id="versionContainer">
+          <p id="topExplanationText">
+            Your changes to the buttons will be saved automatically. Reload
+            website in case of troubles. Pressing "Shift" while pressing a key or button
+            changes its autosend behavior! <a href="#helpSection">Go to Help Section</a> 
+            <span class="settings-move-rainbow" title="An interface will appear, buttons in it will allow you to select a new position and save it. There is also option to automatically find where to put buttons in case of failure.">New feature: you can now move buttons by Shift-clicking on the Settings (⚙️) button.</span> More info in help. 
+            Author is dedicated to help you, if problems arise, contact me via email (forpphotos@gmail.com) or GitHub Discussions.
+          </p>
+        </div>
+        <div class="add-button-group">
+          <div class="row">
+            <input
+              type="text"
+              id="buttonIcon"
+              placeholder="✨"
+              class="emoji-input"
+              title="Button icon that will be clickable in the chat interface, or you may have text here or multiple emojis. (Emoji menu Win+. Or you may ask AI for them and copy)"
+              aria-label="Button icon"
+            />
+
+            <textarea
+              id="buttonText"
+              placeholder="Button Template Text To be Inserted"
+              class="text-input"
+              rows="1"
+              title="This will be inserting text into the chat input when the button is clicked, into textbox after your text"
+              aria-label="Button template text"
+            ></textarea>
+            <label
+              class="checkbox-row"
+              for="buttonAutoSendToggle"
+              title="If checked, clicking the new button will automatically send the prompt. This setting can be overridden by the global auto-send toggle below."
+            >
+              <input type="checkbox" id="buttonAutoSendToggle" />
+              <span>Auto-send</span>
+            </label>
+          </div>
+          <div class="row">
+            <button
+              id="addButton"
+              title="Add a new prompt button using the icon, text, and auto-send setting from above."
+            >
+              Add Button
+            </button>
+            <button
+              id="clearText"
+              title="Clear the icon and text fields for adding a new button."
+            >
+              Clear Text
+            </button>
+           
+          </div>
+        </div>
+        <div class="row">
+          <button
+            id="addSeparator"
+            title="Add a visual separator like this '|' to the button list to organize your prompts."
+          >
+            Add Separator → | ← like this
+          </button>
+           <button
+              id="addSettingsButton"
+              title="Add a special Settings button (default icon ⚙️).&#10;• Click: open OneClickPrompts settings in a new tab.&#10;• Shift-click: move where buttons are injected on the page.&#10;• Ctrl+Shift-click: edit individual buttons and separators in-place.&#10;• While editing: click Settings again to exit edit mode."
+            >
+              Add Settings Button ⚙️
+            </button>
+           <button
+              id="addCopyLastChatGPTResponseButton"
+              title="Add a special ChatGPT-only button (default icon 📋) that copies exactly the last ChatGPT response."
+            >
+              Add Copy Last ChatGPT Response Button 📋
+            </button>
+           <button
+              id="addQueueCurrentEditorButton"
+              title="Add a special Queue button (default icon ⏳) that queues the current editor text and sends it after the configured queue delay."
+            >
+              Add Queue Button ⏳
+            </button>
+           <button
+              id="addCreateButtonFromEditorButton"
+              title="Add a special + button that creates a normal prompt button from the current chat editor text."
+            >
+              Add + Button
+            </button>
+        </div>
+        <div id="buttonCardsList" data-draggable="true">
+          <!-- Button cards added dynamically here -->
+        </div>
+        <div
+          id="smartVariablesPanel"
+          class="smart-variables-panel collapsible"
+          aria-labelledby="smartVariablesHeading"
+        >
+          <div class="section-header smart-variables-header">
+            <h3 id="smartVariablesHeading">
+              Smart Variables
+              <span class="expand-text">(click to expand)</span>
+            </h3>
+            <span class="toggle-icon">▶</span>
+          </div>
+          <div class="section-content">
+            <div class="smart-variables-intro-row">
+              <p>Insert placeholders into button text. Values are resolved when the button is clicked.</p>
+              <label class="checkbox-row" for="smartVariablesEnabled">
+                <input type="checkbox" id="smartVariablesEnabled" />
+                <span>Enabled</span>
+              </label>
+            </div>
+
+            <div class="smart-variables-builtins" id="smartVariablesBuiltins"></div>
+
+            <div class="smart-variables-custom">
+              <div class="smart-variables-subheader">
+                <h4>Custom Variables</h4>
+                <button type="button" id="addSmartVariable">Add Variable</button>
+              </div>
+              <div id="smartVariablesCustomList" class="smart-variables-custom-list"></div>
+              <div class="smart-variables-actions">
+                <button type="button" id="saveSmartVariables">Save Variables</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside
+        id="sideDonateCreeper"
+        class="side-donate-creeper is-hidden"
+        aria-label="Small donation button"
+      >
+        <button
+          id="sideDonateButton"
+          class="side-donate-creeper__button"
+          type="button"
+          aria-expanded="false"
+          aria-controls="sideDonateTooltip"
+        >
+          <span aria-hidden="true">☕</span>
+          <span>Donate</span>
+        </button>
+        <div
+          id="sideDonateTooltip"
+          class="side-donate-creeper__tooltip"
+          role="dialog"
+          aria-hidden="true"
+        >
+          <p>I am just a tiny donate button. I will not block anything. Just crawling here quietly, sorry.</p>
+        </div>
+      </aside>
+
+      <!-- Profile Section -->
+      <section
+        class="section profile-section tab-panel"
+        id="profileSection"
+        role="tabpanel"
+        aria-labelledby="tab-profileSection"
+      >
+        <h2 title="The profile is containing set of buttons inside it. Profile changing allows you to use different sets of buttons for different tasks">Profile</h2>
+        <div class="row">
+          <label
+            for="profileSelect"
+            id="currentProfileLabel"
+            class="profile-context-label is-hidden"
+            >Your current profile:</label
+          >
+          <select
+            id="profileSelect"
+            title="Select profile"
+            aria-label="Select profile"
+          >
+            <option value="default">Default Profile</option>
+          </select>
+          <span id="currentProfileNameStatic" class="profile-name-static is-hidden" aria-live="polite"></span>
+          <button id="addProfile" title="Create a new, empty profile.">
+            Add Profile
+          </button>
+          <button
+            id="copyProfile"
+            title="Duplicate the current profile with all its buttons and settings to new profile that you will name."
+          >
+            Duplicate Current Profile To A New One
+          </button>
+          <button
+            id="deleteProfile"
+            class="danger"
+            title="Delete the currently selected profile. The 'Default' profile cannot be deleted."
+          >
+            Delete
+          </button>
+
+
+        </div>
+        <!-- Add Profile Input and Save/Cancel Buttons -->
+        <div
+          id="addProfileContainer"
+          class="profile-action-container is-hidden"
+        >
+          <label for="addProfileInput">Enter new profile name:</label>
+          <input
+            type="text"
+            id="addProfileInput"
+            placeholder="Enter profile name here"
+            title="New profile name"
+          />
+          <button
+            id="saveAddProfile"
+            title="Save the new profile with the name entered above."
+          >
+            Save
+          </button>
+          <button
+            id="cancelAddProfile"
+            class="danger"
+            title="Cancel creating a new profile and hide this input."
+          >
+            Cancel
+          </button>
+        </div>
+        <!-- Copy Profile Input and Save/Cancel Buttons -->
+        <div
+          id="copyProfileContainer"
+          class="profile-action-container is-hidden"
+        >
+          <label for="copyProfileInput">Enter duplicate profile name:</label>
+          <input
+            type="text"
+            id="copyProfileInput"
+            placeholder="Enter duplicate profile name here"
+          title="Name for the duplicated profile"
+        />
+        <button id="saveCopyProfile">Save</button>
+        <button id="cancelCopyProfile" class="danger">Cancel</button>
+        </div>
+
+        <!-- Backup Section -->
+        <section
+          class="section mt-16"
+          id="backupSection"
+        >
+          <h2>Backup &amp; Restore</h2>
+          <div class="row backup-options-row">
+            <div class="backup-option-field">
+              <label for="backupExportScope">What to export</label>
+              <select id="backupExportScope" title="Choose how much data to include in the backup file.">
+                <option value="currentProfile">Just current profile: current selection</option>
+                <option value="allProfiles">All profiles</option>
+                <option value="allProfilesAndAppSettings">All profiles and app settings</option>
+              </select>
+            </div>
+          </div>
+          <div class="text-inside-container mb-16">
+            <p>
+              Backups are exported and imported as JSON files.
+            </p>
+          </div>
+          <div class="row">
+            <button
+              id="exportProfile"
+              title="Download a JSON backup file using the selected scope."
+            >
+              Export Backup
+            </button>
+            <button
+              id="importProfile"
+              title="Import a JSON backup file."
+            >
+              Import Backup
+            </button>
+            <!-- Hidden file input for importing profile -->
+            <input
+              type="file"
+              id="importFileInput"
+              accept=".json,application/json"
+              class="visually-hidden"
+              title="Import profile file"
+              aria-label="Import profile file"
+            />
+          </div>
+          <!-- Confirmation Div -->
+            <div
+              id="confirmationDiv"
+              class="dialog dialog-confirmation is-hidden"
+            >
+            <p>
+              File loaded successfully, but a profile with the same name already
+              exists in the system. Do you want to overwrite the existing profile?
+            </p>
+            <button id="confirmOverwrite">Yes</button>
+            <button id="cancelOverwrite">No</button>
+          </div>
+          <!-- Error Message Div -->
+            <div id="errorDiv" class="dialog dialog-error is-hidden">
+            <p>
+              Error loading file. Please ensure the file contains a valid JSON backup.
+            </p>
+          </div>
+        </section>
+      </section>
+      <!-- ===== Settings  ===== -->
+      <div
+        class="tab-panel"
+        id="settingsBackupPanel"
+        role="tabpanel"
+        aria-labelledby="tab-settingsBackupPanel"
+      >
+      <section
+        class="section"
+        id="settingsSection"
+      >
+        <h2>Settings</h2>
+        <div class="row settings-linked-row">
+          <label
+            class="checkbox-row"
+            for="autoSendToggle"
+            id="autoSendToggleLabel"
+            title="Default for new sites. Each site remembers its own setting after you toggle it on the chat page. This only affects sites where you haven't changed the toggle yet."
+          >
+            <input type="checkbox" id="autoSendToggle" />
+            <span
+              >Auto-send (default for new sites)</span
+            >
+          </label>
+          <label
+            class="checkbox-row"
+            for="hideOnPageAutoSendToggle"
+            id="hideOnPageAutoSendToggleLabel"
+            title="This controls visibility of the on-page Auto-send checkbox near your injected button row."
+          >
+            <input type="checkbox" id="hideOnPageAutoSendToggle" />
+            <span>Hide Auto-send on-page control</span>
+          </label>
+        </div>
+        <div class="row settings-linked-row">
+          <label
+            class="checkbox-row"
+            for="shortcutsToggle"
+            id="shortcutsToggleLabel"
+            title="Default for new sites. Each site remembers its own setting after you toggle it on the chat page. This only affects sites where you haven't changed the toggle yet."
+          >
+            <input type="checkbox" id="shortcutsToggle" />
+            <span>Keyboard Shortcuts (default for new sites)</span>
+          </label>
+          <label
+            class="checkbox-row"
+            for="hideOnPageHotkeysToggle"
+            id="hideOnPageHotkeysToggleLabel"
+            title="This controls visibility of the on-page Hotkeys checkbox near your injected button row."
+          >
+            <input type="checkbox" id="hideOnPageHotkeysToggle" />
+            <span>Hide Hotkeys on-page control</span>
+          </label>
+        </div>
+        <div class="ui-scale-setting text-inside-container">
+          <div class="ui-scale-setting__controls">
+            <div class="ui-scale-setting__control">
+              <label for="uiScaleSlider">
+                Interface scale:
+                <strong id="uiScaleValue">100%</strong>
+              </label>
+              <input
+                id="uiScaleSlider"
+                type="range"
+                min="70"
+                max="200"
+                step="5"
+                value="100"
+                title="Scale both the floating panel and injected on-page button row for this profile."
+              />
+            </div>
+
+            <div class="ui-scale-setting__lock-container">
+              <button
+                id="uiScaleLockBtn"
+                class="ui-scale-lock-btn"
+                type="button"
+                title="Link scales (Enabled by default). Adjusting one slider will adjust the other to the same value."
+              >
+                <span class="lock-icon">🔗</span>
+                <span class="lock-text">Sliders linked</span>
+              </button>
+            </div>
+
+            <div class="ui-scale-setting__control">
+              <label for="tooltipScaleSlider">
+                Tooltip scale:
+                <strong id="tooltipScaleValue">100%</strong>
+              </label>
+              <input
+                id="tooltipScaleSlider"
+                type="range"
+                min="70"
+                max="200"
+                step="5"
+                value="100"
+                title="Scale only the frosted glass tooltip texts for this profile."
+              />
+            </div>
+          </div>
+          <div
+            id="uiScalePreview"
+            class="ui-scale-preview"
+            aria-label="Interface scale live preview"
+          >
+            <div class="ui-scale-preview__panel">
+              <div class="ui-scale-preview__header"></div>
+              <div class="ui-scale-preview__buttons">
+                <button type="button">🧠</button>
+                <button type="button">💡</button>
+                <button type="button">⚙️</button>
+              </div>
+            </div>
+            <div class="ui-scale-preview__row">
+              <button type="button">Auto</button>
+              <button type="button">Alt+1</button>
+              <button type="button">Queue</button>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <button
+            id="revertDefault"
+            class="danger"
+            title="Switch to the Default profile and wipe its buttons and settings. The current custom profile is left unchanged."
+          >
+            Change to Default Profile and Wipe It
+          </button>
+        </div>
+        <!-- Floating Window Settings -->
+        <div class="collapsible" id="floatingWindowSettingsSection">
+          <div class="section-header">
+            <h2>
+              Floating Window Settings 
+              <span class="expand-text">(click to expand)</span>
+            </h2>
+            <span class="toggle-icon">▶</span>
+          </div>
+          <div class="section-content">
+            <div class="row queue-setting-row">
+              <label
+                class="checkbox-row"
+                for="hideOnPageFloatingPanelToggle"
+                id="hideOnPageFloatingPanelToggleLabel"
+                title="Hide the floating panel on-page toggle button (🔼) for cleaner UI."
+              >
+                <input type="checkbox" id="hideOnPageFloatingPanelToggle" />
+                <span>Hide floating panel toggle button (🔼)</span>
+              </label>
+            </div>
+            <div id="panelPositionSettings">
+              <div class="subsection-header">
+                <h3>Panel Position & Reset (Floating Panel position is profile independent)</h3>
+              </div>
+              <div class="text-inside-container">
+                <p>
+                  Reset the position, size, and visibility of the floating panel.
+                  This can fix issues if the panel becomes stuck or invisible.
+                </p>
+              </div>
+              <div id="floatingWindowSitesList" class="floating-sites-list">
+                <!-- Site-specific reset buttons will be added here dynamically by js-->
+                <p class="empty-message is-hidden">
+                  No saved settings found for any website.
+                </p>
+              </div>
+              <div class="row mt-16">
+                <button
+                  id="resetAllFloatingWindowSettings"
+                  class="danger"
+                  title="Reset floating window settings for ALL websites."
+                >
+                  Reset settings for all websites
+                </button>
+              </div>
+            </div>
+            <hr class="section-divider">
+            <div id="advancedQueueSettings">
+              <div class="subsection-header">
+                <h3>Advanced Queue Settings (These settings will be individual for each profile.)</h3>
+              </div>
+              <div class="text-inside-container">
+                <p>
+                  Configure optional queue controls that apply to every profile. Random
+                  delay adds a slight positive offset to the base delay to help space
+                  requests. Hiding the activation toggle prevents enabling the queue
+                  from the floating panel.
+                </p>
+              </div>
+              <div class="row queue-setting-row">
+                <label
+                  class="checkbox-row"
+                  for="queueHideActivationToggle"
+                  title="Hide the queue activation toggle in the floating panel. This also turns queue mode off immediately."
+                >
+                  <input type="checkbox" id="queueHideActivationToggle" />
+                  <span>Hide queue activation toggle</span>
+                </label>
+              </div>
+              <div class="row queue-setting-row">
+                <label
+                  class="checkbox-row"
+                  for="queueRandomizeEnabled"
+                  title="Add a random positive offset to the queue delay based on the percentage below."
+                >
+                  <input type="checkbox" id="queueRandomizeEnabled" />
+                  <span>Enable random delay offset</span>
+                </label>
+              </div>
+              <div class="row queue-setting-row" id="queueRandomizePercentRow">
+                <label
+                  for="queueRandomizePercent"
+                  title="Maximum percentage of the base delay used as the random offset. Range: 1% to 100%."
+                >
+                  Random offset range (%)
+                </label>
+                <input
+                  type="number"
+                  id="queueRandomizePercent"
+                  min="1"
+                  max="100"
+                  step="1"
+                  value="5"
+                  title="Maximum percent of the base delay used as the random offset (1–100)."
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Tooltip Settings -->
+        <div class="collapsible" id="tooltipSettingsSection">
+          <div class="section-header">
+            <h2>
+              Tooltip Settings 
+              <span class="expand-text">(click to expand)</span>
+            </h2>
+            <span class="toggle-icon">▶</span>
+          </div>
+          <div class="section-content">
+            <div class="text-inside-container mb-16">
+              <p>
+                Configure the frosted glass tooltips that appear when hovering over buttons and elements.
+              </p>
+            </div>
+            <div class="row">
+              <div class="toggle-container">
+                <div class="toggle">
+                  <input
+                    type="checkbox"
+                    id="tooltipEnableToggle"
+                    class="toggle__input"
+                    aria-label="Enable frosted glass tooltips"
+                  />
+                  <label for="tooltipEnableToggle" class="toggle__label">
+                    <span class="toggle__emoji"></span>
+                    <span class="toggle__emoji"></span>
+                  </label>
+                </div>
+                <span class="switch-label">Enable frosted glass tooltips</span>
+              </div>
+            </div>
+            <!-- Settings visible when enabled -->
+            <div id="tooltipSettingsContainer" class="is-hidden ml-20">
+              <div class="row mt-16">
+                <label for="tooltipShowDelay" class="min-w-120"
+                  >Show delay (ms):</label
+                >
+                <input
+                  id="tooltipShowDelay"
+                  type="number"
+                  inputmode="numeric"
+                  step="50"
+                  min="0"
+                  max="5000"
+                  value="400"
+                  title="Time in milliseconds before tooltip appears after hover. 0 = instant."
+                  class="input-number-compact"
+                />
+                <button
+                  id="tooltipShowDelayReset"
+                  class="btn-compact"
+                  title="Reset to default (400ms)"
+                >
+                  Reset
+                </button>
+              </div>
+              <div class="row mt-16">
+                <label for="tooltipFontColor" class="min-w-120"
+                  >Text color:</label
+                >
+                <input
+                  id="tooltipFontColor"
+                  type="color"
+                  value="#ffffff"
+                  title="Custom tooltip text color. Leave default for theme-aware automatic coloring."
+                  class="input-color-compact"
+                />
+                <button
+                  id="tooltipFontColorReset"
+                  class="btn-compact"
+                  title="Reset to default (theme-aware automatic coloring)"
+                >
+                  Reset
+                </button>
+              </div>
+              <!-- Theme Override -->
+              <div class="row mt-16">
+                <label class="checkbox-row" for="tooltipThemeOverride">
+                  <input type="checkbox" id="tooltipThemeOverride" />
+                  <span>Override tooltip theme</span>
+                </label>
+              </div>
+              <div id="tooltipThemeRadioContainer" class="is-hidden ml-20 mt-8">
+                <div class="text-inside-container mb-8">
+                  <p>By default, tooltips follow page theme (if detected) or OS preference as fallback.</p>
+                </div>
+                <div>
+                  <label>
+                    <input
+                      type="radio"
+                      name="tooltipThemeChoice"
+                      value="dark"
+                      checked
+                    />
+                    Always Dark
+                  </label>
+                </div>
+                <div class="mt-8">
+                  <label>
+                    <input
+                      type="radio"
+                      name="tooltipThemeChoice"
+                      value="light"
+                    />
+                    Always Light
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      </div>
+
+      <!-- Console -->
+      <section
+        class="section tab-panel"
+        id="consoleSection"
+        role="tabpanel"
+        aria-labelledby="tab-consoleSection"
+      >
+        <h2>Console</h2>
+        <label
+          class="checkbox-row"
+          for="disableBrowserConsoleLogsToggle"
+        >
+          <input
+            type="checkbox"
+            id="disableBrowserConsoleLogsToggle"
+            aria-label="Disable browser console logs"
+          />
+          <span>Disable browser console logs from OneClickPrompts.</span>
+        </label>
+        <hr class="section-divider">
+        <div id="console" class="console"></div>
+      </section>
+
+      <!-- ===== Modules Section ===== -->
+      <section
+        class="section tab-panel"
+        id="modulesSection"
+        role="tabpanel"
+        aria-labelledby="tab-modulesSection"
+      >
+        <h2>Modules</h2>
+        <div class="section-content">
+          <!-- Cross-Chat Prompt Sharing Module -->
+          <!-- This is a nested collapsible module. It has its own .collapsible class and header. -->
+          <!-- Its functionality is managed by popup-page-modules-promptShare.js, but its collapsible behavior is managed centrally by popup-page-collapsible.js -->
+          <div class="collapsible" id="crossChatModule">
+            <div class="section-header subsection-header">
+              <h3>
+                Cross-Chat Prompt Sharing
+                <span class="expand-text">(click to expand)</span>
+              </h3>
+              <span class="toggle-icon">▶</span>
+            </div>
+            <div class="section-content" id="crossChatModuleContent">
+              <div class="toggle-container mb-16">
+                <div class="toggle">
+                  <input
+                    type="checkbox"
+                    id="crossChatModuleEnableToggle"
+                    class="toggle__input"
+                    aria-label="Enable Cross-Chat Prompt Sharing"
+                  />
+                  <label for="crossChatModuleEnableToggle" class="toggle__label">
+                    <span class="toggle__emoji"></span>
+                    <span class="toggle__emoji"></span>
+                  </label>
+                </div>
+                <span class="switch-label"
+                  >Enable Cross-Chat Prompt Sharing</span
+                >
+              </div>
+
+              <!-- Cross Chat Module Settings Settings - collapsed by default -->
+              <div id="crossChatModuleSettings" class="is-hidden">
+                <div class="text-inside-container mb-16">
+                  <p>
+                    This module streamlines your workflow when using multiple AI
+                    chat services.
+                  </p>
+                  <ul>
+                    <li>
+                      <strong>How it works:</strong> On a supported chat page
+                      (like ChatGPT), type a prompt and click the
+                      <strong class="emoji-font">📋</strong>
+                      button. Then, navigate to another chat page (like Claude)
+                      and click the
+                      <strong class="emoji-font">📥</strong>
+                      button to paste the same prompt.
+                    </li>
+                    <li>
+                      The prompt is stored globally, so you can copy it once and
+                      paste it on multiple different sites. Hovering over the
+                      <strong class="emoji-font">📥</strong>
+                      button on a chat page will show you the stored prompt in a
+                      tooltip.
+                    </li>
+                  </ul>
+                </div>
+                <div class="row">
+                  <label for="storedPromptDisplay">Stored Prompt:</label>
+                  <textarea
+                    id="storedPromptDisplay"
+                    class="selector-config-textarea"
+                    rows="4"
+                    readonly
+                    title="This read-only area shows the prompt that is currently saved in the extension's memory. Use the 'Refresh' button to update it."
+                    placeholder="No prompt has been saved."
+                  ></textarea>
+                </div>
+                <div class="row justify-end">
+                  <button
+                    id="refreshStoredPrompt"
+                    title="Manually fetch and display the currently stored prompt from memory. Useful if you've copied a new prompt in another tab and want to see it here."
+                  >
+                    Refresh
+                  </button>
+                  <button
+                    id="clearStoredPrompt"
+                    class="danger"
+                    title="Permanently deletes the prompt currently stored in memory. This cannot be undone."
+                  >
+                    Clear Stored Prompt
+                  </button>
+                </div>
+                <hr class="my-16" />
+                <h4>Settings</h4>
+                <fieldset
+                  class="crosschat-setting-group"
+                  id="crossChatAutosendGroup"
+                  aria-disabled="false"
+                >
+                  <legend>
+                    <div class="toggle-container">
+                      <div class="toggle">
+                        <input type="checkbox" id="crossChatHideStandardButtons" class="toggle__input" />
+                        <label for="crossChatHideStandardButtons" class="toggle__label">
+                          <span class="toggle__emoji"></span>
+                          <span class="toggle__emoji"></span>
+                        </label>
+                      </div>
+                      <span class="switch-label"
+                        >Hide standard Cross-Chat buttons</span
+                      >
+                    </div>
+                  </legend>
+                  <div
+                    class="row"
+                    title="If enabled, after you click the '📋 Copy' button on a chat page, the extension will also immediately 'send' the text in that same chat. This is useful for workflows where you want to send a prompt and simultaneously save it for use elsewhere."
+                  >
+                    <div class="toggle-container">
+                      <div class="toggle">
+                        <input type="checkbox" id="crossChatAutosendCopy" class="toggle__input" />
+                        <label for="crossChatAutosendCopy" class="toggle__label">
+                          <span class="toggle__emoji"></span>
+                          <span class="toggle__emoji"></span>
+                        </label>
+                      </div>
+                      <span class="switch-label">Autosend after 📋 Copy</span>
+                    </div>
+                  </div>
+                  <div
+                    class="row"
+                    title="If enabled, clicking the '📥 Paste & Send' button will not only paste the stored prompt into the chat input but also automatically trigger the send action, submitting it to the AI."
+                  >
+                    <div class="toggle-container">
+                      <div class="toggle">
+                        <input type="checkbox" id="crossChatAutosendPaste" class="toggle__input" />
+                        <label for="crossChatAutosendPaste" class="toggle__label">
+                          <span class="toggle__emoji"></span>
+                          <span class="toggle__emoji"></span>
+                        </label>
+                      </div>
+                      <span class="switch-label"
+                        >Autosend after 📥 Paste & Send</span
+                      >
+                    </div>
+                  </div>
+                </fieldset>
+                <div
+                  class="row"
+                  title="When enabled, a broadcast button appears on chat pages. Clicking it will immediately paste and send the current text to every other supported tab. Use with extreme caution."
+                >
+                  <div class="toggle-container">
+                    <div class="toggle">
+                      <input type="checkbox" id="crossChatDangerAutoSendAll" class="toggle__input" />
+                      <label for="crossChatDangerAutoSendAll" class="toggle__label">
+                        <span class="toggle__emoji"></span>
+                        <span class="toggle__emoji"></span>
+                      </label>
+                    </div>
+                    <span class="switch-label"
+                      >Add dangerous button ⬆️: Auto sent text you have in editor to all instances of chats</span
+                    >
+                  </div>
+                </div>
+                <div class="text-inside-container">
+                  <p>
+                    <strong>Warning:</strong> With this toggle enabled, the new
+                    broadcast button will immediately paste and send the current
+                    editor text across <em>every</em> compatible chat tab that
+                    accepts broadcasts. Messages can trigger on sites you have
+                    open in the background, spend credits, or interrupt a reply
+                    that is still generating. Double-check the text before you
+                    launch it.
+                  </p>
+                  <p>
+                    Shift-clicking the broadcast button toggles a shield icon.
+                    Tabs showing the shield will keep sending out prompts but
+                    will refuse automatic messages coming from other tabs until
+                    you shift-click again.
+                  </p>
+                </div>
+                <div
+                  class="row flex-column-start"
+                >
+                  <label>Button Placement:</label>
+                  <div
+                    class="mt-8"
+                    title="Places the 📋 and 📥 buttons before your other custom buttons. They will be assigned shortcuts Alt+1 and Alt+2."
+                  >
+                    <label>
+                      <input
+                        type="radio"
+                        name="crossChatButtonPlacement"
+                        value="before"
+                        checked
+                      />
+                      Inject Cross-Chat Buttons <strong>Before</strong> Other
+                      Custom Buttons
+                    </label>
+                  </div>
+                  <div
+                    title="Places the 📋 and 📥 buttons after all your other custom buttons. Their shortcuts will follow your last custom button."
+                  >
+                    <label>
+                      <input
+                        type="radio"
+                        name="crossChatButtonPlacement"
+                        value="after"
+                      />
+                      Inject Cross-Chat Buttons <strong>After</strong> Other
+                      Custom Buttons
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <br /><br />
+          <!-- Inline Profile Selector Settings - collapsed by default -->
+          <div class="collapsible" id="inlineProfileSelectorModule">
+            <div class="section-header subsection-header">
+              <h3>
+                Inline Profile Selector
+                <span class="expand-text">(click to expand)</span>
+              </h3>
+              <span class="toggle-icon">▶</span>
+            </div>
+            <div class="section-content" id="inlineProfileSelectorContent">
+              <div class="toggle-container mb-16">
+                <div class="toggle">
+                  <input
+                    type="checkbox"
+                    id="inlineProfileSelectorEnableToggle"
+                    class="toggle__input"
+                  />
+                  <label for="inlineProfileSelectorEnableToggle" class="toggle__label">
+                    <span class="toggle__emoji"></span>
+                    <span class="toggle__emoji"></span>
+                  </label>
+                </div>
+                <span class="switch-label"
+                  >Show profile selector in button row</span
+                >
+              </div>
+              <p class="text-inside-container">
+                The selector will appear among the custom buttons in the button
+                row, allowing you to switch the current profile quickly.
+              </p>
+
+              <!-- Settings visible when enabled -->
+              <div
+                id="inlineProfileSelectorSettingsContainer"
+                class="is-hidden ml-20"
+              >
+                <div class="text-inside-container mb-8">
+                  <p>
+                    Choose where the profile selector appears relative to your
+                    custom buttons.
+                  </p>
+                </div>
+                <div
+                  class="row flex-column-start"
+                >
+                  <label>Placement:</label>
+                  <div class="mt-8">
+                    <label>
+                      <input
+                        type="radio"
+                        name="inlineProfileSelectorPlacement"
+                        value="before"
+                        checked
+                      />
+                      Before custom buttons
+                    </label>
+                  </div>
+                  <div>
+                    <label>
+                      <input
+                        type="radio"
+                        name="inlineProfileSelectorPlacement"
+                        value="after"
+                      />
+                      After custom buttons
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <br /><br />
+          <!-- ChatGPT Token Approximator Settings - collapsed by default -->
+          <div class="collapsible" id="chatgptTokenApproximatorModule">
+            <div class="section-header subsection-header">
+              <h3>
+                Token Counter  (Approximator)
+                <span class="expand-text">(click to expand)</span>
+              </h3>
+              <span class="toggle-icon">▶</span>
+            </div>
+            <div class="section-content" id="tokenApproximatorContent">
+              <div class="toggle-container mb-16">
+                <div class="toggle">
+                  <input
+                    type="checkbox"
+                    id="chatgptTokenApproximatorEnableToggle"
+                    class="toggle__input"
+                  />
+                  <label for="chatgptTokenApproximatorEnableToggle" class="toggle__label">
+                    <span class="toggle__emoji"></span>
+                    <span class="toggle__emoji"></span>
+                  </label>
+                </div>
+                <span class="switch-label"
+                  >Enable ChatGPT Token Approximator</span
+                >
+              </div>
+              <!-- Description -->
+              <div class="text-inside-container mb-16">
+                <p>
+                  <strong>⚠️ For high performance computers only</strong> — gets
+                  slower with longer conversations!
+                </p>
+                <p>
+                  Estimates tokens locally in your browser. Shows
+                  <strong>T</strong> (thread) and <strong>E</strong> (editor)
+                  chips that auto-refresh and can be clicked. Results are rough,
+                  especially with code/non-latin characters.
+                  <strong
+                    >Token counter CANNOT count tokens in files you
+                    upload!</strong
+                  >
+                </p>
+                <p>
+                  <strong>Accuracy:</strong> English ±2k below ~10k tokens, ±10k
+                  above. Code/non-English: expect ~50% error. Beyond ~100k:
+                  directional only.
+                </p>
+                <p>
+                  <strong>Why care?</strong> Models degrade as context
+                  grows—knowing if you're at ~50k vs ~100k helps you decide to
+                  trim/chunk/summarize. Plus, after specific model token limit,
+                  chat may "forget" previous messages: this is not guaranteed,
+                  as web chats are "black box" - there might be some sort of RAG
+                  for previous messages, however, RAG is not as good as direct
+                  token input.
+                </p>
+                <p>
+                  For more information, check model limits/benchmarks (e.g.,
+                  <a
+                    href="https://github.com/adobe-research/NoLiMa"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    >NoLiMa</a
+                  >). For exact counts use the
+                  <a
+                    href="https://platform.openai.com/tokenizer"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    >official tokenizer</a
+                  >.
+                </p>
+
+                <p style="font-size: 0.8em; margin-top: 10px">
+                  <a
+                    href="https://github.com/NVIDIA/RULER"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    >View RULER token counting benchmark</a
+                  >
+                </p>
+                <p>         
+                  I recommend <strong> experimenting </strong>with different models to find the
+                  best one for your specific use case and language.
+                </p>
+              </div>
+
+              <!-- Settings (shown when enabled) -->
+              <div
+                id="tokenApproxSettingsContainer"
+                class="is-hidden ml-8"
+              >
+                <!-- Calibration Section -->
+                <div
+                  class="text-inside-container settings-box"
+                >
+                  <h4
+                    class="settings-box-header"
+                  >
+                    📊 Calibration
+                  </h4>
+                  <p class="text-sm text-muted mb-8">
+                    Scale all token counts up or down if they seem consistently
+                    off
+                  </p>
+                  <div class="row">
+                    <label for="tokenApproxCalibration" class="min-w-120"
+                      >Multiply counts by:</label
+                    >
+                    <input
+                      id="tokenApproxCalibration"
+                      type="number"
+                      inputmode="decimal"
+                      step="0.01"
+                      min="0.01"
+                      max="10"
+                      value="1.00"
+                      style="width: 100px"
+                      title="Multiplies all token estimates by this factor (default 1.00). Use values above 1.0 if counts seem consistently too low for your content, or below 1.0 if they're too high. Helpful for adjusting to your specific mix of languages, code, or writing style."
+                      aria-label="Calibration multiplier"
+                    />
+                  </div>
+                </div>
+
+                <!-- Display Options Section -->
+                <div
+                  class="text-inside-container settings-box"
+                >
+                  <h4
+                    class="settings-box-header"
+                  >
+                    👁️ What to Display
+                  </h4>
+
+                  <!-- Thread Counter Options -->
+                  <div class="mb-12">
+                    <p class="text-sm text-muted mb-8">
+                      Thread counter (T) shows tokens in entire conversation
+                    </p>
+                    <div class="ml-12">
+                      <div class="my-4">
+                        <label
+                          title="Shows one counter (T) that includes tokens from the entire conversation thread plus any active text editors. This gives you the total context size that would be sent to the AI, including your current draft."
+                        >
+                          <input
+                            type="radio"
+                            name="tokenApproxThreadMode"
+                            value="withEditors"
+                            checked
+                          />
+                          Thread + editors combined
+                        </label>
+                      </div>
+                      <div class="my-4">
+                        <label
+                          title="Shows one counter (T) that counts only the conversation thread, ignoring text in editors. Useful if you want to see just the conversation history without your current draft affecting the count."
+                        >
+                          <input
+                            type="radio"
+                            name="tokenApproxThreadMode"
+                            value="ignoreEditors"
+                          />
+                          Thread only (ignore editors)
+                        </label>
+                      </div>
+                      <div style="margin: 4px 0">
+                        <label
+                          title="Hides the thread counter completely if you only want to see editor token counts. Choose this if you only care about tracking tokens in your current draft text."
+                        >
+                          <input
+                            type="radio"
+                            name="tokenApproxThreadMode"
+                            value="hide"
+                          />
+                          Hide thread counter
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Editor Counter -->
+                  <div class="border-top-light pt-12">
+                    <label
+                      class="checkbox-row"
+                      for="tokenApproxShowEditorCounter"
+                    >
+                      <input
+                        type="checkbox"
+                        id="tokenApproxShowEditorCounter"
+                      />
+                      <span>Show separate editor counter (E)</span>
+                    </label>
+                    <p
+                      class="text-xs text-muted mt-4 ml-20"
+                    >
+                      Counts tokens only in active text editor
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Position Section -->
+                <div
+                  class="text-inside-container settings-box"
+                >
+                  <h4
+                    class="settings-box-header"
+                  >
+                    📍 Position
+                  </h4>
+                  <p class="text-sm text-muted mb-8">
+                    Where to display token counters relative to buttons
+                  </p>
+                  <div class="ml-12">
+                    <div class="my-6">
+                      <label
+                        title="Display token counters before your custom buttons"
+                      >
+                        <input
+                          type="radio"
+                          name="tokenApproxPlacement"
+                          value="before"
+                          id="tokenApproxPlacementBefore"
+                        />
+                        <strong>Before buttons</strong>
+                      </label>
+                    </div>
+                    <div style="margin: 6px 0">
+                      <label
+                        title="Display token counters after your custom buttons"
+                      >
+                        <input
+                          type="radio"
+                          name="tokenApproxPlacement"
+                          value="after"
+                          id="tokenApproxPlacementAfter"
+                        />
+                        <strong>After buttons</strong>
+                      </label>
+                    </div>
+                  </div>
+                  <!-- Hidden checkbox for compatibility with existing JavaScript -->
+
+                </div>
+
+                <!-- Enabled Websites Section -->
+                <div
+                  class="text-inside-container settings-box"
+                >
+                  <h4
+                    class="settings-box-header"
+                  >
+                    🌐 Enabled Websites
+                  </h4>
+                  <p style="margin: 0 0 8px 0; font-size: 0.9em; color: #666">
+                    Choose which websites show token counters
+                  </p>
+                  <div id="tokenApproxWebsitesList" style="margin-left: 12px">
+                    <!-- Site checkboxes will be populated by JavaScript -->
+                  </div>
+                </div>
+
+                <!-- Algorithm Section -->
+                <div
+                  class="text-inside-container settings-box"
+                >
+                  <h4
+                    class="settings-box-header"
+                  >
+                    ⚙️ Counting Algorithm
+                  </h4>
+                  <p style="margin: 0 0 8px 0; font-size: 0.9em; color: #666">
+                    Choose a token counting model for your needs
+                  </p>
+
+                  <div class="row" style="margin-bottom: 10px">
+                    <label
+                      for="tokenApproxCountingMethod"
+                      style="min-width: 100px"
+                      >Model:</label
+                    >
+                    <select
+                      id="tokenApproxCountingMethod"
+                      style="flex-grow: 1"
+                      title="Select which token counting model to use"
+                    >
+                      <option value="ultralight-state-machine">
+                        Ultralight State Machine (fastest, good accuracy)
+                      </option>
+                      <option value="single-regex-pass">
+                        Single Regex Pass (accurate, 30% slower)
+                      </option>
+                      <option value="simple">
+                        Simple 1:4 Ratio (very fast, less accurate)
+                      </option>
+                      <option value="advanced">
+                        Advanced Heuristics (original algorithm)
+                      </option>
+                      <option value="cpt-blend-mix">
+                        CPT Blend/Mix (variable accuracy, slowest)
+                      </option>
+                    </select>
+                  </div>
+
+
+
+                  <!-- Model descriptions in collapsible section -->
+                  <div class="model-details-container">
+                    <p
+                      class="model-details-toggle"
+                      id="tokenApproxShowModelDetails"
+                    >
+                      <span
+                        class="toggle-icon toggle-icon-symbol-replaced-with-graphic"
+                        >▶</span
+                      >
+                      Show model details
+                    </p>
+
+                    <div
+                      id="tokenApproxModelDetails"
+                      class="model-details-content"
+                    >
+                      <!-- Ultralight State Machine -->
+                      <div
+                        class="model-description"
+                      >
+                        <p>
+                          <strong>Ultralight State Machine</strong> ⭐
+                          <span style="color: #090">⚡ Fastest, good accuracy </span>
+                        </p>
+                        <p class="model-description-text">
+                          This scanner walks the string character by character,
+                          toggling an inWord flag to start a new token when
+                          word-like characters begin. Each CJK character and
+                          each separator symbol increments the token count,
+                          while spaces only reset the state. It aims for
+                          portability and speed without big regexes, sacrificing
+                          some nuance versus the blended model.
+                        </p>
+                      </div>
+
+                      <!-- Single Regex Pass -->
+                      <div
+                        class="model-description"
+                      >
+                        <p>
+                          <strong>Single Regex Pass</strong>
+                          <span style="color: #090">✓ Accurate</span>
+                        </p>
+                        <p class="model-description-text">
+                          A single Unicode regex matches letter sequences,
+                          numbers, individual CJK characters, or any
+                          non-whitespace symbol and returns the total matches as
+                          the token estimate. 30% slower than Ultralight state
+                          machine. The trade-off is coarse
+                          granularity—punctuation and symbols count as their own
+                          tokens, and there's no adjustment for code-heavy or
+                          CJK-heavy text.
+                        </p>
+                      </div>
+
+                      <!-- Simple 1:4 -->
+                      <div
+                        class="model-description"
+                      >
+                        <p>
+                          <strong>Simple 1:4 Ratio</strong>
+                          <span style="color: #f90">⚠️ Less accurate</span>
+                        </p>
+                        <p class="model-description-text">
+                          Simple approximation: 1 token ≈ 4 characters. Very
+                          fast and uses minimal CPU, but less accurate
+                          especially with code or non-English text. Good for
+                          modest machines or extremely long chats where speed
+                          matters more than precision.
+                        </p>
+                      </div>
+
+                      <!-- Advanced Heuristics -->
+                      <div
+                        class="model-description"
+                      >
+                        <p>
+                          <strong>Advanced Heuristics</strong>
+                          <span style="color: #e60">🐢 Slower, lowest accuracy, underestimates a lot.</span>
+                        </p>
+                        <p class="model-description-text">
+                          Uses intelligent heuristics that adapt to different
+                          content types (code, CJK text, etc.) for better
+                          accuracy. Can use significant CPU on very long
+                          conversations. Blends word-based and character-based
+                          estimates.
+                        </p>
+                      </div>
+
+                      <!-- CPT Blend/Mix -->
+                      <div
+                        class="model-description"
+                      >
+                        <p>
+                          <strong>CPT Blend/Mix</strong>
+                          <span style="color: rgb(131, 129, 0)">🐌 Slow, but sometimes good accuracy.</span>
+                        </p>
+                        <p class="model-description-text">
+                          Sometimes best accuracy, sometimes off. 70% slower
+                          than Ultralight state machine. It first normalizes the
+                          text and gets a word-based count, then computes a
+                          character-per-token estimate weighted by content type.
+                          Code-ish text and CJK are detected with targeted
+                          regexes to adjust CPT and to derive ratios. The final
+                          estimate blends the word and char counts with
+                          scenario-specific weights and clamps divergence.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Help Section -->
+      <section
+        class="section tab-panel"
+        id="helpSection"
+        role="tabpanel"
+        aria-labelledby="tab-helpSection"
+      >
+        <h2>Help</h2>
+        <div class="text-inside-container">
+          <p>Some information:</p>
+          <p>
+            ABSOLUTELY DO BACKUP YOUR PROFILE (in the place where "Profile" button leads to) IN CASE OF BROWSER REINSTALL, YOU MAY LOSE YOUR BUTTONS
+          </p>
+
+          <h3>Buttons & Hotkeys</h3>
+          <ul>
+            <li>
+              <strong>Autosend override:</strong> Pressing "Shift" while
+              pressing a key or button changes its autosend behavior! Works
+              both with clicks and keyboard shortcuts!
+            </li>
+            <li>
+              <strong>Keyboard shortcuts:</strong> Keyboard shortcuts can be
+              enabled in Settings section. Default shortcuts still show as
+              Alt+1 through Alt+0 so you can see that hotkeying is possible.
+            </li>
+            <li>
+              <strong>Editable hotkeys:</strong> Click the shortcut chip on a
+              button card to open the hotkey picker. It records Chrome-safe
+              shortcuts, validates reserved combinations, and warns before
+              moving a shortcut away from another button.
+            </li>
+            <li>
+              <strong>Add Settings button:</strong> You can add Settings button
+              (⚙️) by pressing the
+              <a href="#addSettingsButton" id="jumpToAddSettingsButton"
+                >"Add Settings button"</a
+              >
+              in Button Configuration. Shift-click that button on a chat page to
+              move where OneClickPrompts injects its buttons.
+            </li>
+            <li>
+              <strong>Copy Last ChatGPT Response button:</strong> Add this
+              special button from Button Configuration. It works only on ChatGPT
+              and tries ChatGPT's native Copy action first so formatting is as
+              exact as ChatGPT provides.
+            </li>
+            <li>
+              <strong>Create Button from editor:</strong> The special + button
+              creates a prompt button from the current editor text. If the
+              editor is empty or cannot be found, it opens the same creation
+              menu with a manual text box.
+            </li>
+            <li>
+              <strong>Move Buttons Container:</strong> If buttons are in a weird
+              place, hold Shift and click the Settings button (⚙️) to enter Move
+              Mode, then use the arrows to reposition them. In Move Mode, the
+              small × on the floating panel launcher (🔼) hides that launcher
+              for the current profile.
+            </li>
+            <li>
+              <strong>Edit buttons on-page:</strong> Ctrl+Shift-click the
+              Settings button (⚙️) on a chat page to make custom buttons and
+              separators shake. Drag buttons or separators to reorder them, or
+              Shift-click a normal button to edit its text. Click the small ×
+              to delete one; the toast Undo restores that specific deleted
+              button. Click Settings once again to leave edit mode.
+            </li>
+          </ul>
+
+          <h3>Floating Panel & Queue</h3>
+          <ul>
+            <li>
+              <strong>Floating panel:</strong> Click the 🔼 button on the chat
+              page to open the draggable floating panel. It can hold prompt
+              buttons, profile switching, and queue controls.
+            </li>
+            <li>
+              <strong>Interface scale:</strong> Use the Settings scale slider to
+              resize both the injected on-page buttons and the floating panel.
+              Scale is saved with the current profile.
+            </li>
+            <li>
+              <strong>Queue Feature:</strong> Queue sends multiple prompts
+              sequentially with a configurable delay. Configure delay and random
+              offset in Floating Window Settings. Use it responsibly and in
+              accordance with the website's Terms of Service.
+            </li>
+            <li>
+              <strong>Queue Button:</strong> Add the special Queue button (⏳)
+              from Button Configuration. It queues the current editor text,
+              clears the editor so you can write the next item, and sends after
+              the configured queue delay.
+            </li>
+            <li>
+              <strong>Queue controls in chat:</strong> When the Queue button
+              adds items, a small tab-like queue control appears at the bottom
+              of the injected button row. It mirrors the floating panel queue:
+              play/pause, skip, reset, progress, and queued items all operate on
+              the same shared queue.
+            </li>
+          </ul>
+
+          <h3>Setup & Safety</h3>
+          <ul>
+            <li>
+              <a href="#" id="openWelcomePage"
+                >Open Welcome page <b>with instructions</b> again</a
+              >
+            </li>
+            <li>
+              <strong>Backups:</strong> Export profiles you care about before
+              updates or experiments. Browser extension storage can be fragile,
+              and backups are the fastest way to recover your buttons.
+            </li>
+            <li>
+              <strong>Profiles:</strong> Use profiles for different workflows.
+              You can copy a profile before trying big changes.
+            </li>
+            <li>
+              Introducing changes faster than once in second causes saving
+              issues.
+            </li>
+          </ul>
+
+          <h3>Modules & Troubleshooting</h3>
+          <ul>
+            <li>
+              <strong>Cross-Chat Prompt Sharing:</strong> Enable it in Modules
+              to add 📋 and 📥 buttons. It lets you copy a prompt from one AI
+              chat and paste it into another without using the system clipboard.
+            </li>
+            <li>
+              <strong>Inline Profile Selector:</strong> Enable it in Modules by
+              toggling “Show profile selector in button row”. Choose placement
+              before or after custom buttons, then switch profiles directly from
+              the button row.
+            </li>
+            <li>In case of a problem: first step is to reload your browser.</li>
+            <li>
+              If buttons or auto-clicking stop working, go to Settings and open
+              "Advanced Selector Configuration". Turn on heuristics for the
+              editor, send button, and stop button. The extension will then try
+              to auto-detect the places where buttons are injected and where
+              clicks should happen, even if the website changed its structure.
+            </li>
+            <li>
+              In case something stopped working completely: websites often
+              change their structure. The extension may need selector updates,
+              and then it can take time for Google to approve a new version.
+            </li>
+            <li>
+              In case something is not working: try to use English version of
+              the websites. LLMs do not care about language, so you can use any
+              language you want in chat, while keeping interface language
+              English. I only test on English interfaces.
+            </li>
+            <li>
+              If buttons disappear, first refresh the page, then try Advanced
+              Selector Configuration and press "reset ALL Websites' Selectors".
+              If you are using floating window, also try "Reset Floating Window
+              Settings for all pages". You can open an issue on Github:
+              <a href="https://github.com/MaxITService/OneClickPrompts/issues"
+                >Issues page</a
+              >
+              or email me at forpphotos@gmail.com.
+            </li>
+            <li>
+              If absolutely nothing works: export needed profiles, uninstall the
+              extension, install it again, test with default profiles, then
+              import your saved profiles and test again.
+            </li>
+            <li>
+              <a href="https://github.com/MaxITService/OneClickPrompts"
+                >Github: you can provide code you want to see in app here.</a
+              >
+            </li>
+            <li class="help-donate-list-item">
+              <a
+                class="help-donate-button"
+                href="https://buymeacoffee.com/netstaff"
+                aria-label="Support OneClickPrompts on Buy Me a Coffee"
+              >
+                <span class="help-donate-button__spark" aria-hidden="true">✨</span>
+                <span class="help-donate-button__body">
+                  <span class="help-donate-button__title">Support OneClickPrompts</span>
+                  <span class="help-donate-button__subtitle">Buy me a coffee ☕</span>
+                </span>
+                <span class="help-donate-button__heart" aria-hidden="true">💛</span>
+              </a>
+            </li>
+            <li>
+              <a href="https://github.com/MaxITService/AIVORelay"
+                >Check out my speech-to-text app for Windows: AivoRelay</a
+              >
+            </li>
+            <li>
+              You may also read my article
+              <a href="https://medium.com/@maxim.fomins/ai-for-complete-beginners-guide-llms-f19c4b8a8a79"
+                >"AI for complete beginners"</a
+              >
+              - but if you are using my extension, you probably already know
+              everything from it - but maybe you know someone who would benefit
+              more from it.
+            </li>
+          </ul>
+                      <br> If you like this app, please rate it ⭐⭐⭐⭐⭐ on <a href="https://chromewebstore.google.com/detail/oneclickprompts/iiofmimaakhhoiablomgcjpilebnndbf">Chrome Web Store</a>!
+              Thank you!
+        </div>
+      </section>
+
+      <!-- ===== Advanced Selector Configuration ===== -->
+      <section
+        class="section tab-panel"
+        id="advancedSection"
+        role="tabpanel"
+        aria-labelledby="tab-advancedSection"
+      >
+        <h2>Advanced Selector Configuration</h2>
+        <div class="section-content">
+          <div class="text-inside-container">
+            <p>Selectors are pointers to locations on the page where buttons will be injected, where the text editor is located, and where the send button is for autosending behavior.
+            Select which website you want to edit selectors for.
+            When you edit values here, they will become the only source of selectors for the extension.
+            If an element is not found on the page, fallback mechanics will kick in.
+            Both the fallback mechanics and the "Move buttons" function save values here. </p>
+          </div>
+          <br />
+          <div class="row">
+            <select
+              id="selectorWebsiteSelect"
+              title="Select website for configuration"
+            >
+              <option value="ChatGPT">ChatGPT</option>
+              <option value="Claude">Claude</option>
+              <option value="Copilot">Copilot</option>
+              <option value="DeepSeek">DeepSeek</option>
+              <option value="AIStudio">AIStudio</option>
+              <option value="Grok">Grok</option>
+              <option value="Gemini">Gemini</option>
+              <option value="Perplexity">Perplexity</option>
+            </select>
+          </div>
+
+          <div class="row">
+            <label for="selectorConfig">Selector configuration:</label>
+            <textarea
+              id="selectorConfig"
+              class="selector-config-textarea"
+              spellcheck="false"
+              aria-label="Selector configuration"
+              title="Enter selector configuration"
+            ></textarea>
+          </div>
+          <div class="row">
+            <button
+              id="saveSelectors"
+              title="Save your custom CSS selectors for the selected website."
+            >
+              Save Selectors
+            </button>
+            <button
+              id="resetSelectors"
+              class="danger"
+              title="Revert the CSS selectors for the selected website to the extension's defaults."
+            >
+              Reset This Website's Selectors to Defaults
+            </button>
+            <button
+              id="resetAllSelectors"
+              class="danger"
+              title="Revert the CSS selectors for ALL websites to the extension's defaults."
+            >
+              Reset ALL Websites' Selectors
+            </button>
+          </div>
+          <br />
+          <label
+            class="checkbox-row advanced-notify-checkbox"
+            for="containerMissingNotifyCheckbox"
+          >
+            <input
+              type="checkbox"
+              id="containerMissingNotifyCheckbox"
+              aria-label="Notify me when OneClickPrompts cannot inject buttons"
+            />
+            <span>Notify me when extension cannot inject buttons (this may happen when either page updated by developers and there is nowhere to insert buttons, but it may also happen if you are in settings or just previewing the picture).</span>
+          </label>
+          <label
+            class="checkbox-row advanced-notify-checkbox"
+            for="autoFloatingFallbackCheckbox"
+          >
+            <input
+              type="checkbox"
+              id="autoFloatingFallbackCheckbox"
+              aria-label="If buttons cannot be injected, use fallback and enable floating panel"
+            />
+            <span>If extension could not find where to inject buttons, then do fallback and enable floating panel.</span>
+          </label>
+          <div class="toggle-container">
+            <div class="toggle">
+              <input
+                type="checkbox"
+                id="containerHeuristicsToggle"
+                class="toggle__input"
+                aria-label="Enable heuristics when the injection target is not found"
+              />
+              <label for="containerHeuristicsToggle" class="toggle__label">
+                <span class="toggle__emoji"></span>
+                <span class="toggle__emoji"></span>
+              </label>
+            </div>
+            <span class="switch-label">Use heuristics when injection target is not found</span>
+          </div>
+           <br />
+          <div class="toggle-container">
+            <div class="toggle">
+              <input
+                type="checkbox"
+                id="editorHeuristicsToggle"
+                class="toggle__input"
+                aria-label="Enable heuristics when the text editor is not found"
+              />
+              <label for="editorHeuristicsToggle" class="toggle__label">
+                <span class="toggle__emoji"></span>
+                <span class="toggle__emoji"></span>
+              </label>
+            </div>
+            <span class="switch-label">Use heuristics when editor is not found</span>
+          </div>
+           <br />
+          <div class="toggle-container">
+            <div class="toggle">
+              <input
+                type="checkbox"
+                id="sendButtonHeuristicsToggle"
+                class="toggle__input"
+                aria-label="Enable heuristics when the send button is not found"
+              />
+              <label for="sendButtonHeuristicsToggle" class="toggle__label">
+                <span class="toggle__emoji"></span>
+                <span class="toggle__emoji"></span>
+              </label>
+            </div>
+            <span class="switch-label">Use heuristics when send button is not found</span>
+          </div>
+           <br />
+          <div class="toggle-container">
+            <div class="toggle">
+              <input
+                type="checkbox"
+                id="stopButtonHeuristicsToggle"
+                class="toggle__input"
+                aria-label="Enable heuristics when the stop button is not found"
+              />
+              <label for="stopButtonHeuristicsToggle" class="toggle__label">
+                <span class="toggle__emoji"></span>
+                <span class="toggle__emoji"></span>
+              </label>
+            </div>
+            <span class="switch-label">Use heuristics when stop button is not found</span>
+          </div>
+           <br />
+          <!-- Collapsible Help Section -->
+          <div class="collapsible" id="advancedHelpSection">
+            <div class="section-header subsection-header">
+              <h3>Help <span class="expand-text">(click to expand)</span></h3>
+              <span class="toggle-icon">▶</span>
+            </div>
+            <div class="section-content">
+              <div class="text-inside-container">
+                <p>
+                  Configure custom CSS selectors for different AI chat
+                  platforms. Each selector type can have multiple fallback
+                  options defined as an array. The extension will use the first
+                  matching selector found on the page, with subsequent entries
+                  serving as fallbacks.
+                </p>
+                <ul>
+                  <li>
+                    <strong>Containers:</strong> The parent elements that
+                    contain the chat interface. These elements will host your
+                    custom buttons.
+                  </li>
+                  <li>
+                    <strong>Send Button:</strong> The submit buttons that send
+                    messages. For auto-sending buttons, the extension will
+                    automatically trigger these after inserting text.
+                  </li>
+                  <li>
+                    <strong>Stop Button:</strong> When you are trying to use button that autosends,
+                    but AI is typing, this safeguards against searching for send button.
+                  </li>
+                  <li>
+                    <strong>Editors:</strong> The text input areas where
+                    messages are composed. Note that the editor selector might
+                    need to be different for empty chats versus chats with
+                    existing messages.
+                  </li>
+                  <li>
+                    <strong>Container ID:</strong> A unique identifier for the
+                    extension's button container. This is primarily used for
+                    internal detection and troubleshooting - modification
+                    usually isn't necessary.
+                  </li>
+                  <li><strong>Thread:</strong> Thread is where token counter tries to count tokens. 
+                  If token coding doesn't work properly, you can try changing the thread selector.
+                  However, sometimes websites break this functionality beyond selecting specific selectors, so only I can fix it.
+                  If something is off, reset selectors for the specific site - but be careful: 
+                  the extension does not update defaults as fast as websites change, so default selectors may fail.</li>
+                  <li><strong>buttonsContainerId:</strong> buttonsContainerId is an internal identifier for the buttons container.
+                  You usually don't need to change it.</li>
+                </ul>
+                <p>
+                  Format: JSON array for containers/sendButtons/editors, string
+                  for buttonsContainerId
+                </p>
+                <p><strong>Auto-Detection (Heuristics)</strong></p>
+                <p>
+                  If something doesn't work on a website, enable the matching heuristic.
+                  The extension will try to find elements automatically.
+                </p>
+                <ul>
+                  <li>
+                    <strong>Editor:</strong> Can't insert text? Enable this.
+                    Searches for text input areas on the page.
+                  </li>
+                  <li>
+                    <strong>Send Button:</strong> Auto-send not working? Enable this.
+                    Searches for the Send button near the text input.
+                  </li>
+                  <li>
+                    <strong>Stop Button:</strong> Extension clicks Send while AI is typing?
+                    Enable this. Helps detect when AI is still generating a response.
+                  </li>
+                  <li>
+                    <strong>Injection Target:</strong> Buttons don't appear at all?
+                    Enable this. Searches for an alternative place to insert the extension's buttons.
+                  </li>
+                </ul>
+                <p>
+                  All heuristics are off by default. Turn them on only if you have problems.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <!-- ===== End Advanced Selector Configuration ===== -->
+
+      <!-- =====  Theme Section (Dark Theme Toggle) ===== -->
+      <section
+        class="section tab-panel"
+        id="themeSection"
+        role="tabpanel"
+        aria-labelledby="tab-themeSection"
+      >
+        <h2>Theme</h2>
+        <!-- iPhone-style toggle switch -->
+        <div class="toggle-container">
+          <div class="toggle toggle--large">
+            <input
+              type="checkbox"
+              id="darkThemeToggle"
+              class="toggle__input"
+              aria-label="Enable Dark Theme"
+            />
+            <label for="darkThemeToggle" class="toggle__label">
+              <span class="toggle__emoji">☀️</span>
+              <span class="toggle__emoji">🌙</span>
+            </label>
+          </div>
+          <span class="switch-label">Enable Dark Theme</span>
+        </div>
+      </section>
+      <!-- ===== End Theme Section ===== -->
+    </div>
+
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="log.js"></script>
+    <script src="utils.js"></script>
+    <script src="/common-ui-elements/ocp_toast.js"></script>
+    <!-- Frosted glass tooltip system -->
+    <script src="/common-ui-elements/ocp_tooltip.js"></script>
+    <script src="/popup-page-scripts/popup-page-visuals.js"></script>
+    <script src="/common-ui-elements/onclick-smooth-scroll-highlight.js"></script>
+    <!-- Menu navigation script for 3D tilt and ripple effects -->
+    <script src="/popup-page-scripts/menu.js"></script>
+    <script src="/popup-page-scripts/popup-page-tabs.js"></script>
+    <!-- NEW SCRIPT: Centralized handler for all collapsible sections -->
+    <script src="/popup-page-scripts/popup-page-collapsible.js"></script>
+    <script src="/popup-page-scripts/popup-page-modal.js"></script>
+    <script src="/popup-page-scripts/popup-page-profiles.js"></script>
+    <script src="/popup-page-scripts/popup-page-backup-handler.js"></script>
+    <script src="/popup-page-scripts/popup-page-promptVariables.js"></script>
+    <script src="/popup-page-scripts/popup-page-customButtons.js"></script>
+    <script src="/popup-page-scripts/popup-page-script.js"></script>
+    <!-- New Theme script for Dark Mode support -->
+    <script src="/popup-page-scripts/popup-page-theme.js"></script>
+    <!-- Advanced Selector Configuration script -->
+    <script src="/popup-page-scripts/popup-page-advanced.js"></script>
+    <!-- Floating Window Settings Handler script -->
+    <script src="/popup-page-scripts/popup-page-floating-window-handler.js"></script>
+    <!-- Cross-Chat Module UI handler script -->
+    <script src="/modules/popup-page-modules-promptShare.js"></script>
+    <!-- Inline Profile Selector UI handler script -->
+    <script src="/modules/popup-page-modules-inlineSelector.js"></script>
+    <!-- Token Approximator UI handler script -->
+    <script src="/modules/popup-page-modules-tokenApproximator.js"></script>
+    <!-- Tooltip Settings UI handler script -->
+    <script src="/modules/popup-page-modules-tooltip.js"></script>
+    <!-- (kept single include to avoid double init) -->
+  </body>
+</html>

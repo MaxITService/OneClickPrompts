@@ -1,0 +1,224 @@
+/*
+popup-base.css
+Version: 1.0
+
+This file is responsible for the base styles of the Max Extension Settings popup.
+It defines the overall visual foundation including root variables, global body styles,
+container centering, section styling, and heading (h2) styles.
+These rules set up the basic typography, spacing, and color scheme for the interface.
+*/
+
+
+/* ------------------------------------------------------------------------- */
+/* Global Body Styles                                                        */
+/* ------------------------------------------------------------------------- */
+html {
+    scrollbar-gutter: stable;
+}
+
+body {
+    margin: 0;
+    padding: 16px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg-color);
+    color: var(--text-color);
+    width: 100%;
+    box-sizing: border-box;
+    overflow-y: scroll;
+    scrollbar-gutter: stable;
+    transition: background-color var(--transition-duration) ease;
+}
+
+/* Hide version container when the user is adding or copying a profile, as this space is used for that functionality at that sequence */
+body:has(#addProfileContainer:not(.is-hidden)) #versionContainer,
+body:has(#copyProfileContainer:not(.is-hidden)) #versionContainer {
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+/* Show version container when not in profile add/copy mode */
+#versionContainer {
+    opacity: 1;
+    pointer-events: auto;
+    text-align: center;
+    transition: opacity 0.5s ease;
+}
+
+/* Version badge styling */
+#version {
+    position: absolute;
+    right: 16px;
+    bottom: 12px;
+    padding: 2px 8px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    color: var(--text-muted, #666666);
+    width: auto;
+    text-align: right;
+    font-weight: 600;
+    pointer-events: none;
+}
+
+.menu-version {
+    margin: 0;
+    white-space: nowrap;
+}
+
+/* Explanation text styling */
+#topExplanationText {
+    color: #666666;
+    width: 100%;
+    margin-bottom: 12px;
+    /* Reduces space below the paragraph, above the button */
+}
+
+.settings-move-rainbow {
+    display: inline-block;
+    background: linear-gradient(120deg, #ff6b6b, #f7d046, #5bd18a, #49a8ff, #a26bff, #ff6bf2, #ff6b6b);
+    background-size: 320% 320%;
+    background-position: 0% 50%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    font-weight: 700;
+    animation: settingsRainbowFlow 7s linear infinite;
+}
+
+@keyframes settingsRainbowFlow {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .settings-move-rainbow {
+        animation: none;
+        background-position: 50% 50%;
+    }
+}
+
+/* Notification text styling */
+#UserNotification {
+    text-align: center;
+    color: #be0000;
+    width: 100%;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Container & Section Styles                                                */
+/* ------------------------------------------------------------------------- */
+
+/* Container to Center Content */
+.container {
+    max-width: 800px;
+    min-width: 700px;
+    margin: 0 auto;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    scroll-behavior: smooth;
+    transition: max-width 0.4s ease-in-out;
+}
+
+.container.expanded {
+    max-width: 90%;
+}
+
+/* Sections Styling: Boxes that wrap content areas */
+.section {
+    margin-bottom: 24px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 16px;
+    background-color: #ffffff;
+    box-shadow: var(--box-shadow);
+    transition: box-shadow var(--transition-duration) ease, background-color var(--transition-duration) ease;
+}
+
+.section.profile-section {
+    position: relative;
+    margin-bottom: 24px;
+    padding-bottom: 10px;
+}
+
+.section:last-child {
+    margin-bottom: 0;
+}
+
+.tab-panel[hidden] {
+    display: none !important;
+}
+
+.tab-panel.is-active {
+    animation: tabPanelFadeIn 180ms ease-out;
+}
+
+/* Section Hover Effects: Enhance shadow and background on hover */
+.section:hover {
+    box-shadow: var(--box-shadow-hover);
+    background-color: #f2f2f2;
+    transition: box-shadow var(--transition-duration-release) ease, background-color var(--transition-duration-release) ease;
+}
+
+/* Additional text spacing within sections */
+.text-inside-container {
+    margin: 0 2rem;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Headings (h2) Styles                                                      */
+/* ------------------------------------------------------------------------- */
+
+/* Primary headings for each section */
+h2 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--primary-color);
+    transition: color var(--transition-duration) ease;
+}
+
+/* Eyebrow subtitle showing the active profile name under a section heading */
+.section-heading-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 0;
+}
+
+.section-profile-label {
+    margin: 0 0 16px 0;
+    font-size: 12px;
+    color: var(--text-muted, #888);
+    font-weight: 400;
+    white-space: nowrap;
+}
+
+/* Hover effect for headings for subtle feedback */
+h2:hover {
+    color: #6a4abd;
+    transition: color var(--transition-duration-release) ease;
+}
+
+@keyframes tabPanelFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

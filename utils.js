@@ -1,0 +1,887 @@
+// utils.js
+// Version: 1.1
+// Both backend and popup are using this file
+
+'use strict';
+
+window.MaxExtensionUtils = {
+    // Utility function to wait for an element to be present in the DOM
+    waitForElements: function (selectors, onSuccess, onFailure = null, maxAttempts = 50) {
+        if (!Array.isArray(selectors)) {
+            selectors = [selectors]; // Ensure selectors is an array
+        }
+        let attempts = 0;
+        let intervalId = null;
+        let observer = null;
+        let cancelled = false;
+        let completed = false;
+
+        const stopWatching = () => {
+            if (observer) {
+                observer.disconnect();
+                observer = null;
+            }
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+        };
+
+        const controller = {
+            cancel: () => {
+                if (cancelled || completed) {
+                    return;
+                }
+                cancelled = true;
+                stopWatching();
+            },
+            isCancelled: () => cancelled
+        };
+
+        const finishSuccess = (element) => {
+            if (cancelled || completed) {
+                return false;
+            }
+            completed = true;
+            stopWatching();
+            if (typeof onSuccess === 'function') {
+                onSuccess(element);
+            }
+            return true;
+        };
+
+        const finishFailure = () => {
+            if (cancelled || completed) {
+                return;
+            }
+            completed = true;
+            stopWatching();
+            logConCgp(`[utils] Elements ${selectors.join(', ')} not found after ${maxAttempts} attempts.`);
+            // Call onFailure callback if provided
+            if (typeof onFailure === 'function') {
+                onFailure(selectors);
+            }
+        };
+
+        const tryFindElement = () => {
+            if (cancelled || completed) {
+                return false;
+            }
+            const element = MaxExtensionUtils.pickUsableContainer(selectors);
+            if (element) {
+                return finishSuccess(element);
+            }
+            return false;
+        };
+
+        // Immediate attempt before setting up observers
+        if (tryFindElement()) {
+            return controller;
+        }
+
+        observer = new MutationObserver(() => {
+            tryFindElement();
+        });
+        observer.observe(document, { childList: true, subtree: true });
+
+        intervalId = setInterval(() => {
+            attempts++;
+            if (tryFindElement()) {
+                return;
+            }
+            if (attempts >= maxAttempts) {
+                finishFailure();
+            }
+        }, 150);
+
+        return controller;
+    },
+    // Function to simulate a comprehensive click event
+    simulateClick: function (element) {
+        const event = new MouseEvent('click', {
+            view: window,
+            bubbles: true,
+            cancelable: true,
+            buttons: 1
+        });
+        element.dispatchEvent(event);
+        logConCgp('[utils] simulateClick: Click event dispatched.', element);
+    },
+
+    /**
+     * Returns true when the element is not hidden/inert and can accept interaction.
+     * Helps avoid injecting UI into SSR placeholders (e.g., aria-hidden containers).
+     */
+    isElementUsableForInjection: function (element) {
+        if (!element) return false;
+        const hiddenAncestor = element.closest('[aria-hidden="true"], [inert]');
+        if (hiddenAncestor) return false;
+        const style = window.getComputedStyle(element);
+        if (!style) return false;
+        if (style.display === 'none' || style.visibility === 'hidden') return false;
+        if (style.opacity === '0' || style.pointerEvents === 'none') return false;
+        return true;
+    },
+
+    /**
+     * Finds the first usable container from the provided selectors.
+     * Prefers the most recently added node (reverse order) to dodge stale SSR clones.
+     */
+    pickUsableContainer: function (selectors) {
+        if (!Array.isArray(selectors)) {
+            selectors = [selectors];
+        }
+        let firstMatch = null;
+        for (const selector of selectors) {
+            if (!selector) continue;
+            let candidates;
+            try {
+                candidates = Array.from(document.querySelectorAll(selector)).reverse();
+            } catch (err) {
+                logConCgp('[utils] Skipping invalid selector while picking container:', selector, err?.message || err);
+                continue;
+            }
+            for (const candidate of candidates) {
+                if (!firstMatch) {
+                    firstMatch = candidate;
+                }
+                if (this.isElementUsableForInjection(candidate)) {
+                    return candidate;
+                }
+            }
+        }
+        return null;
+    },
+
+
+    // Function to move cursor to the end of a contenteditable element
+    moveCursorToEnd: function (contentEditableElement) {
+        contentEditableElement.focus();
+        if (typeof window.getSelection != "undefined" && typeof document.createRange != "undefined") {
+            const range = document.createRange();
+            range.selectNodeContents(contentEditableElement);
+            range.collapse(false);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+            logConCgp('[utils] Cursor moved to the end of the contenteditable element.');
+        } else if (typeof document.body.createTextRange != "undefined") {
+            const textRange = document.body.createTextRange();
+            textRange.moveToElementText(contentEditableElement);
+            textRange.collapse(false);
+            textRange.select();
+            logConCgp('[utils] Cursor moved to the end using TextRange.');
+        }
+    },
+
+    // Function to create a visual separator
+    createSeparator: function () {
+        const separator = document.createElement('div');
+        separator.style.cssText = `
+            width: 1px;
+            height: 24px;
+            background-color: #ccc;
+            margin: 0 8px;
+        `;
+        return separator;
+    },
+
+    // Function to simulate pasting text into a contenteditable element
+    simulatePaste: function (element, textToPaste) {
+        element.focus();
+        logConCgp('[utils] Attempting to simulate paste.');
+
+        // Ensure cursor is at the end
+        this.moveCursorToEnd(element);
+
+        // Create a DataTransfer object
+        const dataTransfer = new DataTransfer();
+        dataTransfer.setData('text/plain', textToPaste);
+
+        // Create and dispatch the paste event
+        const pasteEvent = new ClipboardEvent('paste', {
+            clipboardData: dataTransfer,
+            bubbles: true,
+            cancelable: true,
+            composed: true
+        });
+
+        element.dispatchEvent(pasteEvent);
+        logConCgp('[utils] Paste event dispatched with text:', textToPaste);
+
+        // Small delay might be needed for the editor to process the paste
+        setTimeout(() => {
+            this.moveCursorToEnd(element); // Ensure cursor is at the end after paste
+            logConCgp('[utils] Cursor moved to end after paste simulation.');
+        }, 50); // 50ms delay
+    }
+};
+
+/**
+ * InjectionTargetsOnWebsite
+ *
+ * Centralizes all selectors and identifiers for different websites.
+ * Currently implemented for ChatGPT and other sites. Other websites can be added as needed.
+ */
+class InjectionTargetsOnWebsite {
+    constructor() {
+        this.activeSite = this.identifyActiveWebsite();
+        this.initializeSelectors();
+    }
+
+    normalizeSelectors(current, fallback) {
+        const safeCurrent = (current && typeof current === 'object') ? current : {};
+        const safeFallback = (fallback && typeof fallback === 'object') ? fallback : {};
+
+        const normalizeList = (key) => {
+            if (Array.isArray(safeCurrent[key])) {
+                return safeCurrent[key].filter((selector) => typeof selector === 'string' && selector.trim().length > 0);
+            }
+            if (Array.isArray(safeFallback[key])) {
+                return safeFallback[key].filter((selector) => typeof selector === 'string' && selector.trim().length > 0);
+            }
+            return [];
+        };
+
+        const normalizeString = (key) => {
+            const currentValue = safeCurrent[key];
+            if (typeof currentValue === 'string' && currentValue.trim().length > 0) {
+                return currentValue.trim();
+            }
+            const fallbackValue = safeFallback[key];
+            if (typeof fallbackValue === 'string' && fallbackValue.trim().length > 0) {
+                return fallbackValue.trim();
+            }
+            return '';
+        };
+
+        const merged = { ...safeFallback, ...safeCurrent };
+        merged.containers = normalizeList('containers');
+        merged.sendButtons = normalizeList('sendButtons');
+        merged.editors = normalizeList('editors');
+        merged.stopButtons = normalizeList('stopButtons');
+        merged.buttonsContainerId = normalizeString('buttonsContainerId');
+        merged.threadRoot = normalizeString('threadRoot');
+        return merged;
+    }
+
+    /**
+     * Identifies the active website based on the current hostname.
+     * @returns {string} - The name of the active website (e.g., 'ChatGPT', 'Claude', 'Copilot', 'Unknown').
+     */
+    identifyActiveWebsite() {
+        const currentHostname = window.location.hostname;
+
+        if (currentHostname.includes('chat.openai.com') || currentHostname.includes('chatgpt.com')) {
+            return 'ChatGPT';
+        }
+        else if (currentHostname.includes('claude.ai')) { 
+            return 'Claude';
+        }
+        else if ( currentHostname.includes('copilot')) {
+            return 'Copilot';
+        }
+        else if (currentHostname.includes('chat.deepseek.com')) {
+            return 'DeepSeek';
+        } else if (currentHostname.includes('aistudio.google.com')) {
+            return 'AIStudio';
+        }
+        else if (currentHostname.includes('grok.com')) {
+            return 'Grok';
+        }
+        else if (currentHostname.includes('gemini.google.com')) { 
+            return 'Gemini';
+        }
+        else if (currentHostname.includes('perplexity.ai')) {
+            return 'Perplexity';
+        }
+        // More websites can be added here as needed
+        else {
+            return 'Unknown';
+        }
+    }
+
+    /**
+     * Initialize selectors by trying to load custom ones first, then falling back to defaults
+     */
+    async initializeSelectors() {
+        // Ensure we have a synchronous default ready before any async work
+        const defaultSelectors = this.getDefaultSelectors(this.activeSite);
+        this.selectors = defaultSelectors;
+        try {
+            // Try to get custom selectors first
+            const customSelectors = await this.getCustomSelectors(this.activeSite);
+            if (customSelectors) {
+                this.selectors = this.normalizeSelectors(customSelectors, defaultSelectors);
+                logConCgp(`[utils] Using custom selectors for ${this.activeSite}`);
+            } else {
+                this.selectors = defaultSelectors;
+                logConCgp(`[utils] Using default selectors for ${this.activeSite}`);
+            }
+        } catch (error) {
+            logConCgp(`[utils] Error loading selectors for ${this.activeSite}: ${error?.message || error}`);
+            this.selectors = defaultSelectors;
+        }
+    }
+
+    /**
+     * Attempts to retrieve custom selectors from storage
+     * @param {string} site - The name of the website
+     * @returns {Promise<Object|null>} - Custom selectors or null if not found
+     */
+    async getCustomSelectors(site) {
+        return new Promise((resolve) => {
+            chrome.runtime.sendMessage({
+                type: 'getCustomSelectors',
+                site: site
+            }, (response) => {
+                if (response && response.selectors) {
+                    resolve(response.selectors);
+                } else {
+                    resolve(null);
+                }
+            });
+        });
+    }
+
+    /**
+     * Retrieves the default selectors for the specified website.
+     * @param {string} site - The name of the website.
+     * @returns {Object} - An object containing the selectors for the site.
+     */
+    getDefaultSelectors(site) {
+        const selectors = {
+            ChatGPT: {
+                containers: [
+                    'form[data-type="unified-composer"] .\\[grid-area\\:footer\\]',
+                    'form[data-type="unified-composer"] > div.rounded-\\[28px\\]',
+                    'form[data-type="unified-composer"] > div:has(#prompt-textarea)',
+                    'form[data-type="unified-composer"]',
+                    'main.flex.flex-col.items-center'
+                ],
+                sendButtons: [
+                    'button#composer-submit-button[data-testid="send-button"]',
+                    'button[aria-label="Send prompt"]',
+                    'button[aria-label="Send message"]', // new main send button
+                    'button[data-testid="send-button"]', // legacy/testid fallback
+                    'button[type="submit"]', // generic fallback
+                    'button.send-button-class' // legacy fallback
+                ],
+                editors: [
+                    'div.ProseMirror#prompt-textarea[contenteditable="true"]', // new main editor
+                    'div.ProseMirror[contenteditable="true"]', // fallback
+                    'div[contenteditable="true"].ProseMirror', // fallback
+                    'div.ProseMirror', // legacy fallback
+                    'textarea',
+                ],
+                threadRoot: '#thread',
+                buttonsContainerId: 'chatgpt-custom-buttons-container',
+                stopButtons: [
+                    'button#composer-submit-button[data-testid="stop-button"]',
+                    'button[data-testid="stop-button"]',
+                    'button[aria-label="Stop streaming"]',
+                    'button[aria-label="Stop generating"]'
+                ]
+            },
+            Claude: {
+                containers: [
+                    'div:has(> div.tiptap.ProseMirror[contenteditable="true"][aria-label="Write your prompt to Claude"])',
+                    'div.flex.flex-col.bg-bg-000.rounded-2xl',
+                    'div.flex.flex-col.bg-bg-000.gap-1\\.5'
+                ],
+                sendButtons: [
+                    'button[aria-label="Send message"][class*="Button_claude"]', // new main send button with Claude-specific class
+                    'button[aria-label="Send message"].font-base-bold', // new send button with bold font class
+                    'button[aria-label="Send message"][type="button"]', // new send button generic
+                    'button.bg-accent-main-000.text-oncolor-100', // legacy accent button
+                    'button[type="button"].bg-accent-main-000', // legacy fallback
+                    'button[type="button"][aria-label="Send message"]', // generic fallback
+                ],
+                editors: ['div.ProseMirror[contenteditable="true"]'],
+                threadRoot: 'div.flex-1.max-w-3xl.mx-auto:has([data-testid="user-message"])',
+                buttonsContainerId: 'claude-custom-buttons-container',
+                stopButtons: [
+                    'button[aria-label="Stop response"]',
+                    'button[aria-label*="stop response" i]',
+                    'button[type="button"][aria-label*="stop" i]'
+                ]
+            },
+            Copilot: {
+                containers: [
+                    'div.w-expanded-composer.max-w-chat.bg-gradient-to-b',
+                    'div.relative.max-h-full.w-expanded-composer',
+                    'div.flex.grow.flex-col.overflow-hidden',
+                    'div.shadow-composer-input'
+                ],
+                editors: [
+                    'textarea#userInput.block.min-h-user-input.w-full',
+                    'textarea#userInput',
+                    'textarea.block.min-h-user-input',
+                    'textarea[placeholder="Message Copilot"]',
+                    'textarea'
+                ],
+                sendButtons: [
+                    'button[type="button"][data-testid="submit-button"]',
+                    'button[type="button"].rounded-submitButton[title="Submit message"]',
+                    'button[type="button"][title="Submit message"]',
+                    'button.rounded-submitButton',
+                    'button[type="submit"]',
+                ],
+                threadRoot: 'div.max-w-chat[data-content="conversation"]',
+                buttonsContainerId: 'copilot-custom-buttons-container',
+                stopButtons: [
+                    'button[title="Stop responding"]',
+                    'button[aria-label="Stop responding"]'
+                ]
+            },
+            DeepSeek: {
+                "buttonsContainerId": "deepseek-custom-buttons-container",
+                // Deepseek changes selectors frequently, the selectors here are basis for heuristic matching.
+                "containers": [
+                    "div._020ab5b",
+                    "div.ec4f5d61",
+                    "[class*=\"button-container\"]",
+                    "[class*=\"editor-footer\"]"
+                ],
+                "editors": [
+                    "textarea[placeholder=\"Message DeepSeek\"]",
+                    "textarea[aria-label*=\"Message\"]",
+                    "textarea[placeholder*=\"Message\"]",
+                    "[class*=\"chat-input\"] textarea",
+                    "[class*=\"chat-input\"] [contenteditable=\"true\"]",
+                    "textarea",
+                    "div[contenteditable=\"true\"]",
+                    "textarea._27c9245",
+                    "textarea.ds-scroll-area"
+                ],
+                "sendButtons": [
+                    ".bf38813a .ds-icon-button.ds-icon-button--sizing-container:not([aria-disabled=\"true\"])",
+                    "div.ec4f5d61 .bf38813a .ds-icon-button.ds-icon-button--sizing-container:last-of-type:not([aria-disabled=\"true\"])",
+                    "div.ec4f5d61 .bf38813a .ds-icon-button._7436101.ds-icon-button--sizing-container:not([aria-disabled=\"true\"])",
+                    ".bf38813a .ds-icon-button._7436101:not([aria-disabled=\"true\"])"
+                ],
+                "threadRoot": ".ds-scroll-area:has(.ds-message), .scrollable:has(textarea, [contenteditable=\"true\"])",
+                "stopButtons": [
+                    ".bf38813a .ds-icon-button:has(svg rect)",
+                    ".bf38813a .ds-icon-button:has(svg path[d*=\"4.88\"])",
+                    ".bf38813a .ds-icon-button:has(svg path[d*=\"4.88C23.68\"])",
+                    "[aria-label=\"Stop generating\"]"
+                ]
+            },
+            AIStudio: {
+                containers: [
+                    'div.prompt-input-wrapper',
+                    'div.prompt-input-wrapper-container',
+                    'section.text-and-attachments-wrapper',
+                    'section.chunk-editor-main',
+                    'footer',
+                    'ms-chunk-editor-menu',
+                    'body > app-root > div > div > div.layout-wrapper > div > span > ms-prompt-switcher > ms-chunk-editor > section > footer'
+                ],
+                sendButtons: [
+                    'ms-run-button button[type="submit"]', // Most specific - custom element + submit button
+                    'button.run-button[type="submit"]', // Specific class + type
+                    'button[aria-label="Run"][type="submit"]', // Aria-label + type
+                    'ms-run-button button', // Custom element fallback
+                    'button.run-button', // Class-based fallback
+                    'button[aria-label="Run"]', // Aria-label fallback
+                    'button[type="submit"]', // Generic submit button
+                    'footer > div.input-wrapper > div:nth-child(3) > run-button > button' // Legacy specific path
+                ],
+                editors: [
+                    'textarea[aria-label="Enter a prompt"]',
+                    'textarea[aria-label="Type something or tab to choose an example prompt"]',
+                    'textarea[aria-label*="Type something"]',
+                    'ms-autosize-textarea textarea',
+                    'ms-autosize-textarea textarea.v3-font-body'
+                ],
+                buttonsContainerId: 'aistudio-custom-buttons-container',
+                stopButtons: [
+                    'button[aria-label="Stop generating"]',
+                    'button[aria-label="Cancel"]'
+                ]
+            },
+            Grok: {
+                containers: [
+                    'form.bottom-0.w-full.text-base.flex.flex-col.gap-2.items-center.justify-center.relative.z-10',
+                    'form.w-full.flex-col.items-center.justify-center',
+                    'form[method][class*="gap-2"][class*="flex-col"]'
+                ],
+                sendButtons: [
+                    'button[type="submit"][aria-label="Submit"]:not([disabled])', // new button with aria-label, not disabled
+                    'button[type="submit"][aria-label="Submit"]', // new button with aria-label
+                    'form.bottom-0.w-full.text-base.flex.flex-col.gap-2.items-center.justify-center.relative.z-10 button[type="submit"]', // legacy specific
+                    'form button[type="submit"].group', // legacy with group class
+                    'form button[type="submit"]' // generic fallback
+                ],
+
+                editors: [
+                    'div.tiptap.ProseMirror[contenteditable="true"]', // new TipTap editor (most specific)
+                    'div.ProseMirror[contenteditable="true"]', // ProseMirror generic
+                    'div[contenteditable="true"][translate="no"]', // with translate attribute
+                    'textarea[aria-label="Ask Grok anything"]', // legacy textarea (most specific)
+                    'textarea.w-full.text-fg-primary[aria-label="Ask Grok anything"]', // legacy textarea with classes
+                    'textarea.w-full.text-fg-primary.px-2.leading-7', // legacy textarea
+                    'textarea[dir="auto"][aria-label="Ask Grok anything"]', // legacy textarea with dir
+                    'form.chat-form textarea[aria-label="Ask Grok anything"]', // legacy contextual
+                    'textarea.w-full.text-fg-primary.bg-transparent.focus\\:outline-none', // legacy textarea
+                    'textarea.w-full.text-fg-primary', // legacy textarea generic
+                    'div[contenteditable="true"]', // generic contenteditable fallback
+                    'textarea' // last resort
+                ],
+                threadRoot: '.w-full.h-full.overflow-y-auto.overflow-x-hidden.scrollbar-gutter-stable.flex.flex-col.items-center.px-gutter',
+                buttonsContainerId: 'grok-custom-buttons-container',
+                stopButtons: [
+                    'button[aria-label="Stop model response"]',
+                    'button:has(svg path[d^="M4 9.2"])'
+                ]
+            },
+            Gemini: {
+                containers: [
+                    'chat-window input-container',
+                    'input-container',
+                    'main'
+                ],
+                sendButtons: [
+                    'button.send-button[aria-label="Send message"]',
+                    'button[aria-label="Send message"][aria-disabled="false"]',
+                    'input-container button[aria-label="Send message"]'
+                ],
+                editors: [
+                    'div.ql-editor[contenteditable="true"]',
+                    'rich-textarea div.ql-editor'
+                ],
+                threadRoot: 'infinite-scroller[data-test-id="chat-history-container"]',
+                buttonsContainerId: 'gemini-custom-buttons-container',
+                stopButtons: [
+                    'button[aria-label="Stop response"]',
+                    'button[aria-label="Stop generating"]'
+                ]
+            },
+            Perplexity: {
+                containers: [
+                    "div.bg-raised.w-full.outline-none",
+                    'div.bg-raised…grid grid-cols-3',
+                    'div:has(#ask-input)[class*="grid"]',
+                    'div:has(#ask-input)[class*="composer"]'
+                ],
+                sendButtons: [
+                    'button[data-testid="submit-button"][aria-label="Submit"]',
+                    'button[data-testid="submit-button"]',
+                    'button[type="button"][aria-label="Submit"]',
+                    'button[aria-label="Submit"]'
+                ],
+                editors: [
+                    'div#ask-input[contenteditable="true"]',
+                    'div[contenteditable="true"][data-lexical-editor="true"]',
+                    'div[contenteditable="true"]'
+                ],
+                threadRoot: 'div.relative.border-subtlest.ring-subtlest.divide-subtlest.bg-base',
+                buttonsContainerId: 'perplexity-custom-buttons-container',
+                stopButtons: [
+                    'button[aria-label="Stop"]',
+                    'button[data-testid="stop-button"]'
+                ]
+            }
+        };
+        return selectors[site] || {};
+    }
+}
+
+// Instantiate and expose the InjectionTargetsOnWebsite globally
+window.InjectionTargetsOnWebsite = new InjectionTargetsOnWebsite();
+
+/**
+ * Shared hotkey helpers for popup capture and injected-page dispatch.
+ * The stored shape is intentionally small and serializable in profile JSON:
+ * { combo: "ctrl+shift+keyk", label: "Ctrl+Shift+K", code: "KeyK", ...modifiers }
+ */
+window.MaxExtensionHotkeys = {
+    modifierKeys: new Set(['Control', 'Shift', 'Alt', 'Meta']),
+
+    chromeReservedCombos: new Set([
+        'ctrl+keyd',
+        'ctrl+keyf',
+        'ctrl+keyh',
+        'ctrl+keyj',
+        'ctrl+keyl',
+        'ctrl+keyn',
+        'ctrl+keyo',
+        'ctrl+keyp',
+        'ctrl+keyr',
+        'ctrl+keys',
+        'ctrl+keyt',
+        'ctrl+keyu',
+        'ctrl+keyw',
+        'ctrl+digit1',
+        'ctrl+digit2',
+        'ctrl+digit3',
+        'ctrl+digit4',
+        'ctrl+digit5',
+        'ctrl+digit6',
+        'ctrl+digit7',
+        'ctrl+digit8',
+        'ctrl+digit9',
+        'ctrl+shift+keyi',
+        'ctrl+shift+keyj',
+        'ctrl+shift+keyn',
+        'ctrl+shift+keyt',
+        'alt+arrowleft',
+        'alt+arrowright',
+        'alt+f4',
+        'meta+keyd',
+        'meta+keyl',
+        'meta+keyr',
+        'meta+keyt',
+        'meta+keyw'
+    ]),
+
+    normalizeStoredHotkey(hotkey) {
+        if (!hotkey || typeof hotkey !== 'object' || typeof hotkey.combo !== 'string') {
+            return null;
+        }
+        return {
+            combo: hotkey.combo,
+            label: hotkey.label || this.labelFromCombo(hotkey.combo),
+            code: hotkey.code || '',
+            key: hotkey.key || '',
+            altKey: !!hotkey.altKey,
+            ctrlKey: !!hotkey.ctrlKey,
+            shiftKey: !!hotkey.shiftKey,
+            metaKey: !!hotkey.metaKey
+        };
+    },
+
+    fromLegacyShortcutKey(shortcutKey) {
+        const number = Number(shortcutKey);
+        if (!Number.isInteger(number) || number < 1 || number > 10) {
+            return null;
+        }
+        const digit = number === 10 ? 0 : number;
+        return {
+            combo: `alt+digit${digit}`,
+            label: `Alt+${digit}`,
+            code: `Digit${digit}`,
+            key: String(digit),
+            altKey: true,
+            ctrlKey: false,
+            shiftKey: false,
+            metaKey: false,
+            isDefault: true
+        };
+    },
+
+    fromKeyboardEvent(event) {
+        if (!event || this.modifierKeys.has(event.key)) {
+            return {
+                hotkey: null,
+                valid: false,
+                reason: 'Press a normal key together with Ctrl, Alt, or Cmd/Win.'
+            };
+        }
+
+        const code = this.normalizeCode(event);
+        if (!code) {
+            return {
+                hotkey: null,
+                valid: false,
+                reason: 'That key cannot be used as a shortcut.'
+            };
+        }
+
+        const hotkey = {
+            combo: this.buildCombo({
+                code,
+                altKey: event.altKey,
+                ctrlKey: event.ctrlKey,
+                shiftKey: event.shiftKey,
+                metaKey: event.metaKey
+            }),
+            label: this.buildLabel({
+                code,
+                altKey: event.altKey,
+                ctrlKey: event.ctrlKey,
+                shiftKey: event.shiftKey,
+                metaKey: event.metaKey
+            }),
+            code,
+            key: event.key,
+            altKey: event.altKey,
+            ctrlKey: event.ctrlKey,
+            shiftKey: event.shiftKey,
+            metaKey: event.metaKey
+        };
+
+        const validation = this.validate(hotkey);
+        return { hotkey, ...validation };
+    },
+
+    normalizeCode(event) {
+        const code = event.code || '';
+        if (/^(Key[A-Z]|Digit[0-9]|Numpad[0-9]|F([1-9]|1[0-9]|2[0-4]))$/.test(code)) {
+            return code.toLowerCase();
+        }
+
+        const namedCodes = new Set([
+            'ArrowUp',
+            'ArrowDown',
+            'ArrowLeft',
+            'ArrowRight',
+            'Home',
+            'End',
+            'PageUp',
+            'PageDown',
+            'Insert',
+            'Delete',
+            'Backspace',
+            'Enter',
+            'Space',
+            'Tab',
+            'Minus',
+            'Equal',
+            'BracketLeft',
+            'BracketRight',
+            'Backslash',
+            'Semicolon',
+            'Quote',
+            'Comma',
+            'Period',
+            'Slash',
+            'Backquote'
+        ]);
+
+        if (namedCodes.has(code)) {
+            return code.toLowerCase();
+        }
+
+        return '';
+    },
+
+    validate(hotkey) {
+        const normalized = this.normalizeStoredHotkey(hotkey);
+        if (!normalized) {
+            return { valid: false, reason: 'Press a shortcut first.' };
+        }
+
+        if (!normalized.ctrlKey && !normalized.altKey && !normalized.metaKey) {
+            return {
+                valid: false,
+                reason: 'Chrome page shortcuts need Ctrl, Alt, or Cmd/Win plus a normal key.'
+            };
+        }
+
+        return { valid: true, reason: '' };
+    },
+
+    buildCombo({ code, altKey, ctrlKey, shiftKey, metaKey }) {
+        const parts = [];
+        if (ctrlKey) parts.push('ctrl');
+        if (altKey) parts.push('alt');
+        if (shiftKey) parts.push('shift');
+        if (metaKey) parts.push('meta');
+        parts.push(String(code || '').toLowerCase());
+        return parts.join('+');
+    },
+
+    buildLabel({ code, altKey, ctrlKey, shiftKey, metaKey }) {
+        const parts = [];
+        if (ctrlKey) parts.push('Ctrl');
+        if (altKey) parts.push('Alt');
+        if (shiftKey) parts.push('Shift');
+        if (metaKey) parts.push('Cmd/Win');
+        parts.push(this.codeToLabel(code));
+        return parts.join('+');
+    },
+
+    codeToLabel(code) {
+        const normalized = String(code || '').toLowerCase();
+        if (normalized.startsWith('key')) return normalized.slice(3).toUpperCase();
+        if (normalized.startsWith('digit')) return normalized.slice(5);
+        if (normalized.startsWith('numpad')) return `Num ${normalized.slice(6)}`;
+        if (/^f([1-9]|1[0-9]|2[0-4])$/.test(normalized)) return normalized.toUpperCase();
+
+        const labels = {
+            arrowup: 'Up',
+            arrowdown: 'Down',
+            arrowleft: 'Left',
+            arrowright: 'Right',
+            pageup: 'PageUp',
+            pagedown: 'PageDown',
+            space: 'Space',
+            bracketleft: '[',
+            bracketright: ']',
+            backslash: '\\',
+            semicolon: ';',
+            quote: "'",
+            comma: ',',
+            period: '.',
+            slash: '/',
+            backquote: '`',
+            minus: '-',
+            equal: '='
+        };
+
+        return labels[normalized] || normalized;
+    },
+
+    labelFromCombo(combo) {
+        const parts = String(combo || '').split('+');
+        const code = parts[parts.length - 1] || '';
+        const modifiers = {
+            ctrlKey: parts.includes('ctrl'),
+            altKey: parts.includes('alt'),
+            shiftKey: parts.includes('shift'),
+            metaKey: parts.includes('meta')
+        };
+        return this.buildLabel({ code, ...modifiers });
+    },
+
+    eventMatchesHotkey(event, hotkey) {
+        const parsed = this.fromKeyboardEvent(event);
+        return !!parsed.valid && parsed.hotkey.combo === hotkey.combo;
+    }
+};
+
+/**
+ * Shared UI scale helpers for popup settings and injected UI.
+ * The source of truth is the active profile's `uiScale` value.
+ */
+window.MaxExtensionUiScale = {
+    min: 0.7,
+    max: 2,
+    step: 0.05,
+
+    normalize(value, fallback = 1) {
+        const numeric = Number(value);
+        const base = Number.isFinite(numeric) ? numeric : fallback;
+        const stepped = Math.round(base / this.step) * this.step;
+        return Math.min(this.max, Math.max(this.min, Number(stepped.toFixed(2))));
+    },
+
+    getFromConfig(config = window.globalMaxExtensionConfig) {
+        return this.normalize(config?.uiScale, 1);
+    },
+
+    getTooltipFromConfig(config = window.globalMaxExtensionConfig) {
+        return this.normalize(config?.tooltipScale ?? config?.uiScale, 1);
+    },
+
+    toPercent(scale) {
+        return Math.round(this.normalize(scale) * 100);
+    },
+
+    applyToInlineContainer(container, config = window.globalMaxExtensionConfig) {
+        if (!container) return;
+        const scale = this.getFromConfig(config);
+        container.style.transform = '';
+        container.style.transformOrigin = '';
+        container.style.zoom = scale === 1 ? '' : String(scale);
+        container.dataset.ocpUiScale = String(scale);
+    },
+
+    resetInlineContainer(container) {
+        if (!container) return;
+        container.style.zoom = '';
+        delete container.dataset.ocpUiScale;
+    }
+};

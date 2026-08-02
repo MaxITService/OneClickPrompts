@@ -1,0 +1,192 @@
+/*
+popup-layout.css
+Version: 1.0
+
+This file is responsible for the layout-related styles of the Max Extension Settings popup.
+It defines the row layouts, form controls, and profile action container styles.
+These rules ensure proper spacing and alignment for input fields, textareas, selects,
+and the various buttons used in profile actions.
+*/
+
+/* ------------------------------------------------------------------------- */
+/* Row Layouts for Inputs and Buttons                                        */
+/* ------------------------------------------------------------------------- */
+
+/* Layout for grouping elements horizontally with wrap and gap */
+.row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+/* Keep paired settings on one logical line while allowing graceful wrapping on narrow windows. */
+.settings-linked-row {
+    align-items: center;
+    gap: 12px;
+    flex-wrap: nowrap;
+}
+
+.settings-linked-row .checkbox-row {
+    flex: 1 1 320px;
+    min-width: 280px;
+}
+
+.advanced-notify-checkbox {
+    display: block;
+    margin-bottom: 12px;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Form Controls: Inputs, Textareas, and Selects                             */
+/* ------------------------------------------------------------------------- */
+
+/* Standard styling for text inputs, textareas, and select boxes */
+input[type="text"],
+textarea,
+select {
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 14px;
+    box-sizing: border-box;
+    resize: none;
+    overflow: hidden;
+    transition: border-color var(--transition-duration) ease, box-shadow var(--transition-duration) ease;
+    background: #ffffff;
+    color: var(--text-color);
+}
+
+/* Focus state for inputs to improve accessibility and visibility */
+input[type="text"]:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(122, 92, 200, 0.1);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Specific Input Field Styles                                               */
+/* ------------------------------------------------------------------------- */
+
+/* Emoji input: Narrow input designed for displaying emojis, now a textarea */
+.emoji-input {
+    /* JS will expand it based on content. */
+    min-width: 40px;
+    max-width: 200px;
+    text-align: center;
+    /* Crucial: prevent this element from being squished or grown by its flex sibling */
+    flex-grow: 0;
+    flex-shrink: 0;
+    /* Make it behave like a single-line input */
+    white-space: pre;
+    /* Use pre to respect spaces and prevent wrapping */
+    overflow-wrap: normal;
+}
+
+/* Text input: Flexible input for longer text entries */
+.text-input {
+    flex: 1;
+    min-height: 40px;
+    line-height: 1.2;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Profile Action Containers                                                 */
+/* ------------------------------------------------------------------------- */
+
+/* Container for profile actions (e.g., add, copy, delete profile) */
+.profile-action-container {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    margin-bottom: 16px;
+    align-items: center;
+}
+
+/* Ensure text inputs within profile action containers fill available space */
+.profile-action-container input[type="text"] {
+    flex: 1;
+}
+
+/* Styling for buttons within profile action containers */
+.profile-action-container button {
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--primary-color);
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background var(--transition-duration) ease, transform 0.2s ease, color var(--transition-duration) ease;
+}
+
+/* Hover effect for profile action buttons */
+.profile-action-container button:hover {
+    background: #6a4abd;
+}
+
+/* Disabled state styling for buttons */
+.profile-action-container button:disabled {
+    background: #cccccc;
+    cursor: not-allowed;
+}
+
+/* Label for providing context to the profile selector when it's disabled */
+.profile-context-label {
+    align-self: center;
+    margin-right: 8px;
+    font-weight: 500;
+}
+
+/* Plain-text profile name shown in place of the dropdown during add/copy mode */
+.profile-name-static {
+    align-self: center;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Section Divider                                                          */
+/* ------------------------------------------------------------------------- */
+
+.section-divider {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 16px 0;
+    width: 100%;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Queue Settings                                                           */
+/* ------------------------------------------------------------------------- */
+
+.queue-setting-row {
+    align-items: center;
+    gap: 12px;
+}
+
+.backup-options-row {
+    align-items: flex-end;
+    gap: 16px;
+}
+
+.backup-option-field {
+    display: flex;
+    flex: 1 1 260px;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.backup-option-field label {
+    font-weight: 600;
+}
+
+.backup-option-field select {
+    width: 100%;
+}
+
+#queueRandomizePercent {
+    width: 100px;
+}

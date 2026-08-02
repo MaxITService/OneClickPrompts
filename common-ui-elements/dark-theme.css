@@ -1,0 +1,422 @@
+/*
+popup-theme.css
+Version: 1.0
+
+This file provides dark mode overrides for the Max Extension Settings popup.
+It adjusts colors, backgrounds, borders, and other visual elements to better suit a dark theme.
+Key areas:
+- Global overrides on body.dark-theme for base colors.
+- Adjustments for buttons, sections, inputs, and other UI components.
+- Specific overrides for dynamic button items, toast notifications, danger buttons,
+  versionContainer text, and links.
+*/
+
+/* ------------------------------------------------------------------------- */
+/* Global Dark Theme Overrides                                               */
+/* ------------------------------------------------------------------------- */
+body.dark-theme {
+    --primary-color: #9a79d3;
+    /* Violet used for primary elements in dark mode */
+    --danger-color: #d16c6c;
+    --border-color: #444;
+    --bg-color: #222;
+    --text-color: #eee;
+    --separator-color: #666;
+    --primary-color-faded: rgba(154, 121, 211, 0.1);
+    --hover-bg-color: #333;
+    --section-header-bg: #2a2a2a;
+    --manual-bg: #1e1e1e;
+    --code-bg: #252525;
+    --text-muted: #888;
+    --button-lift-glass-bg: rgba(40, 54, 70, 0.82);
+    --button-lift-glass-tint: rgba(91, 209, 138, 0.32);
+    --button-lift-glass-highlight: rgba(255, 255, 255, 0.18);
+    --button-lift-glass-shadow: 0 16px 34px rgba(0, 0, 0, 0.45);
+    --button-lift-glass-outline: rgba(91, 209, 138, 0.58);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Dark Theme Overrides for Buttons and Sections                             */
+/* ------------------------------------------------------------------------- */
+body.dark-theme button {
+    background: #333;
+    color: #eee;
+    border-color: #555;
+    color-scheme: dark;
+}
+
+body.dark-theme .section {
+    background-color: #2a2a2a;
+    border-color: #444;
+    box-shadow: none;
+}
+
+body.dark-theme input[type="text"],
+body.dark-theme textarea,
+body.dark-theme select {
+    background: #333;
+    color: #eee;
+    border-color: #555;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Dark Theme Overrides for Danger Buttons                                   */
+/* ------------------------------------------------------------------------- */
+/* Ensure that buttons with the 'danger' class retain a red (danger) styling */
+body.dark-theme button.danger {
+    background: var(--danger-color);
+    color: #fff;
+    border-color: var(--danger-color);
+}
+
+body.dark-theme button.danger:hover {
+    background: #b85c5c;
+    border-color: #b85c5c;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Dark Theme Overrides for Dynamic Prompt Dialogs                           */
+/* ------------------------------------------------------------------------- */
+body.dark-theme .dialog {
+    background-color: #333;
+    /* Dark background for dialogs */
+    color: #fff;
+    /* Light text for dialogs */
+    border: 1px solid #555;
+    /* Dark border */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    padding: 1em;
+    /* Consistent spacing */
+    border-radius: 4px;
+    /* Rounded corners */
+}
+
+body.dark-theme .dialog button {
+    background-color: #444;
+    /* Dark button background */
+    color: #fff;
+    /* Light button text */
+    border: 1px solid #666;
+    /* Button border */
+    padding: 0.5em 1em;
+    /* Button padding */
+    border-radius: 4px;
+    /* Rounded corners */
+    cursor: pointer;
+}
+
+/* Button hover states for dialogs */
+body.dark-theme .dialog button:hover {
+    background-color: #555;
+    border-color: #777;
+}
+
+/* Override for confirmation dialogs in dark theme to enable blinking */
+body.dark-theme .dialog-confirmation {
+    background-color: rgba(154, 121, 211, 0.1);
+    /* Faint primary color */
+    border-color: var(--primary-color);
+    --blink-bg-color: rgba(154, 121, 211, 0.25);
+    /* Brighter faint primary color for blink */
+}
+
+/* ------------------------------------------------------------------------- */
+/* Additional Dark Theme Overrides for Miscellaneous Components                */
+/* ------------------------------------------------------------------------- */
+body.dark-theme .checkbox-row {
+    color: #eee;
+}
+
+body.dark-theme .console {
+    background: #111;
+    color: #ccc;
+}
+
+/* Ensure the button list uses a dark background in dark mode */
+body.dark-theme #buttonCardsList {
+    background-color: #333;
+}
+
+body.dark-theme .smart-variables-panel {
+    color: var(--text-color);
+}
+
+body.dark-theme .smart-variable-builtin {
+    background: rgba(154, 121, 211, 0.12);
+    border-color: #555;
+}
+
+body.dark-theme .smart-variables-custom {
+    border-top-color: #444;
+}
+
+body.dark-theme .smart-variables-empty {
+    border-color: #555;
+    color: var(--text-muted);
+}
+
+body.dark-theme .smart-variables-custom-row input[type="text"],
+body.dark-theme .smart-variables-custom-row textarea {
+    background: #333;
+    color: #eee;
+    border-color: #555;
+}
+
+/* Override Export/Import buttons to use primary color in dark mode */
+body.dark-theme #exportProfile,
+body.dark-theme #importProfile {
+    background: var(--primary-color);
+    color: #fff;
+    border-color: var(--primary-color);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Dark Theme Overrides for Dynamic Button Items                             */
+/* ------------------------------------------------------------------------- */
+body.dark-theme .button-item:not(.dragging) {
+    background: #333 !important;
+    /* Dark background for button items */
+    border-color: #555 !important;
+    /* Darker border */
+    color: #eee !important;
+    /* Light text color */
+}
+
+body.dark-theme .button-item.separator-item {
+    background: #444 !important;
+    /* Slightly lighter than .button-item for separators */
+    border-color: #555 !important;
+    color: #ccc !important;
+}
+
+/* Ensure that any internal elements within button items also adapt */
+body.dark-theme .button-item .drag-handle,
+body.dark-theme .button-item input,
+body.dark-theme .button-item textarea,
+body.dark-theme .button-item label,
+body.dark-theme .button-item .shortcut-indicator {
+    color: #eee !important;
+    background: transparent !important;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Dark Theme Overrides for Dragged Button Items                             */
+/* ------------------------------------------------------------------------- */
+/* Dragged item to have a green highlight in dark mode */
+/* Dragged item to have a green highlight in dark mode */
+body.dark-theme .button-item.dragging {
+    /* Remove background from parent */
+    background: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    box-shadow: 0 8px 26px rgba(0, 0, 0, 0.35);
+
+    /* Ensure text is dark for contrast on the light glass */
+    color: #020617 !important;
+}
+
+/* Apply glass effect to pseudo-element in dark mode too */
+body.dark-theme .button-item.dragging::before {
+    background: rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(4px);
+}
+
+body.dark-theme .button-item.dragging textarea,
+body.dark-theme .button-item.dragging .text-input,
+body.dark-theme .button-item.dragging .emoji-input {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    color: #020617 !important;
+}
+
+body.dark-theme .button-item.dragging .drag-handle,
+body.dark-theme .button-item.dragging label,
+body.dark-theme .button-item.dragging .shortcut-indicator {
+    color: #020617 !important;
+}
+
+/* Undo/delete pending state in dark theme */
+body.dark-theme .delete-button.undo-state {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #0d0b12;
+}
+
+body.dark-theme .delete-button.undo-state:hover {
+    background: color-mix(in srgb, var(--primary-color) 85%, #ffffff 15%);
+    border-color: color-mix(in srgb, var(--primary-color) 85%, #ffffff 15%);
+    color: #0d0b12;
+}
+
+body.dark-theme .button-item.pending-delete {
+    border-color: var(--primary-color);
+    background: rgba(154, 121, 211, 0.18);
+    color: #f5f2ff;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Version Container and Links           */
+/* ------------------------------------------------------------------------- */
+/* Make the versionContainer text light */
+body.dark-theme #versionContainer {
+    color: var(--text-color);
+}
+
+/* All links in dark theme super light blue */
+body.dark-theme a {
+    color: #add8e6;
+}
+
+body.dark-theme a:hover {
+    color: #9acfea;
+}
+
+body.dark-theme .floating-sites-list {
+    background-color: #333;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Dark Theme Overrides for Collapsible Premium Animation                    */
+/* ------------------------------------------------------------------------- */
+
+/* Section header - dark glass effect */
+body.dark-theme .collapsible .section-header {
+    background: linear-gradient(135deg,
+            rgba(42, 42, 48, 0.95) 0%,
+            rgba(38, 38, 44, 0.9) 50%,
+            rgba(34, 34, 40, 0.95) 100%);
+    border-color: rgba(154, 121, 211, 0.1);
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.2),
+        0 1px 2px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Header hover state in dark mode */
+body.dark-theme .collapsible .section-header:hover {
+    background: linear-gradient(135deg,
+            rgba(52, 50, 62, 0.98) 0%,
+            rgba(48, 46, 58, 0.95) 50%,
+            rgba(44, 42, 54, 0.98) 100%);
+    border-color: rgba(154, 121, 211, 0.25);
+    box-shadow:
+        0 4px 20px rgba(154, 121, 211, 0.15),
+        0 2px 8px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Expanded header in dark mode */
+body.dark-theme .collapsible.expanded .section-header {
+    background: linear-gradient(135deg,
+            rgba(154, 121, 211, 0.12) 0%,
+            rgba(154, 121, 211, 0.06) 50%,
+            rgba(154, 121, 211, 0.08) 100%);
+    border-color: rgba(154, 121, 211, 0.2);
+}
+
+/* Toggle icon in dark mode */
+body.dark-theme .toggle-icon {
+    background: linear-gradient(135deg,
+            rgba(154, 121, 211, 0.15) 0%,
+            rgba(154, 121, 211, 0.08) 100%);
+}
+
+body.dark-theme .toggle-icon::before,
+body.dark-theme .toggle-icon::after {
+    background: linear-gradient(90deg,
+            var(--primary-color, #9a79d3) 0%,
+            rgba(154, 121, 211, 0.8) 100%);
+}
+
+body.dark-theme .collapsible .section-header:hover .toggle-icon {
+    background: linear-gradient(135deg,
+            rgba(154, 121, 211, 0.25) 0%,
+            rgba(154, 121, 211, 0.15) 100%);
+    box-shadow: 0 0 12px rgba(154, 121, 211, 0.3);
+}
+
+body.dark-theme .collapsible.expanded .toggle-icon {
+    background: linear-gradient(135deg,
+            rgba(154, 121, 211, 0.3) 0%,
+            rgba(154, 121, 211, 0.2) 100%);
+    box-shadow:
+        0 0 15px rgba(154, 121, 211, 0.35),
+        inset 0 0 4px rgba(154, 121, 211, 0.15);
+}
+
+/* Section content in dark mode */
+body.dark-theme .collapsible>.section-content {
+    background: linear-gradient(180deg,
+            rgba(32, 32, 38, 0.98) 0%,
+            rgba(28, 28, 34, 0.96) 50%,
+            rgba(26, 26, 32, 0.98) 100%);
+    border-color: rgba(154, 121, 211, 0.12);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.25),
+        0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+body.dark-theme .collapsible.expanded>.section-content {
+    box-shadow:
+        0 16px 48px rgba(154, 121, 211, 0.12),
+        0 4px 16px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+/* Gradient overlay in dark mode */
+body.dark-theme .collapsible>.section-content::before {
+    background: linear-gradient(135deg,
+            rgba(154, 121, 211, 0.1) 0%,
+            rgba(154, 121, 211, 0.03) 30%,
+            transparent 60%);
+}
+
+/* Shimmer effects in dark mode */
+body.dark-theme .collapsible .section-header::before {
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.08) 50%,
+            transparent 100%);
+}
+
+body.dark-theme .collapsible>.section-content::after {
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.12) 50%,
+            transparent 100%);
+}
+
+/* Expand text in dark mode */
+body.dark-theme .expand-text {
+    color: var(--text-muted, #888);
+}
+
+body.dark-theme .collapsible .section-header:hover .expand-text {
+    color: var(--primary-color, #9a79d3);
+}
+
+/* Dark theme overrides for slider lock button */
+body.dark-theme .ui-scale-lock-btn {
+    border-color: var(--border-color);
+    background: linear-gradient(180deg, #33333b 0%, #2a2a30 100%);
+    color: var(--text-color);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+body.dark-theme .ui-scale-lock-btn:hover {
+    border-color: var(--primary-color);
+    background: linear-gradient(180deg, #444052 0%, #3a3648 100%);
+    box-shadow: 0 2px 8px rgba(154, 121, 211, 0.25);
+}
+
+body.dark-theme .ui-scale-lock-btn.is-unlocked {
+    border-color: #444;
+    opacity: 0.6;
+    background: linear-gradient(180deg, #2a2a2e 0%, #222226 100%);
+}
+
+body.dark-theme .ui-scale-lock-btn.is-unlocked:hover {
+    opacity: 1;
+    border-color: var(--danger-color);
+    background: linear-gradient(180deg, #4c2c2c 0%, #3f2222 100%);
+    box-shadow: 0 2px 8px rgba(209, 108, 108, 0.25);
+}

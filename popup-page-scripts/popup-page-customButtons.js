@@ -1,0 +1,1548 @@
+// popup-page-customButtons.js
+// The extension adds custom buttons to webpage, and needs to manage them via the popup page.
+// This file contains functions to create, update, delete custom buttons and separators, that will
+// be used in the actual web page, but this popup manages their existance and position, by representing them
+// as cards in  <div id="buttonCardsList" ...> </div>
+// This file creates elements that represent custom buttons (card like elements)
+// Button cards contain: emoji input, text input, auto-send toggle, delete button, that are
+// used to create custom buttons for the extension.
+// and separators for mostly visual funciton (separatprs behave like button cards with less stuff)
+// separator cards contain: visuals, delete button.
+// version: 1.1
+
+// -------------------------
+// Special constants
+// -------------------------
+const SETTINGS_BUTTON_MAGIC_TEXT = '%OCP_APP_SETTINGS_SYSTEM_BUTTON%';
+const COPY_LAST_CHATGPT_RESPONSE_BUTTON_MAGIC_TEXT = '%OCP_COPY_LAST_CHATGPT_RESPONSE_SYSTEM_BUTTON%';
+const QUEUE_CURRENT_EDITOR_BUTTON_MAGIC_TEXT = '%OCP_QUEUE_CURRENT_EDITOR_SYSTEM_BUTTON%';
+const CREATE_BUTTON_FROM_EDITOR_MAGIC_TEXT = '%OCP_CREATE_BUTTON_FROM_EDITOR_SYSTEM_BUTTON%';
+const DELETE_UNDO_DURATION_MS = 2000;
+
+// Tracks buttons that are waiting out their undo window before deletion.
+// Keyed by the button object reference so reorders/edits keep the link intact.
+const pendingButtonDeletions = new Map();
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+/**
+ * Gets the Cross-Chat module settings.
+ * @returns {Promise<Object>} - The Cross-Chat module settings.
+ */
+async function getCrossChatSettings() {
+    try {
+        const response = await chrome.runtime.sendMessage({ type: 'getCrossChatModuleSettings' });
+        return response && response.settings
+            ? response.settings
+            : { enabled: false, placement: 'after', hideStandardButtons: false, dangerAutoSendAll: false };
+    } catch (error) {
+        console.error('Error fetching Cross-Chat settings:', error);
+        return { enabled: false, placement: 'after', hideStandardButtons: false, dangerAutoSendAll: false }; // Default fallback
+    }
+}
+
+// -------------------------
+// Create Button Element - this is start of everything, there can be zero to infinite buttons
+// -------------------------
+
+/**
+ * Creates a button element for the button list.
+ * @param {Object} button - The button data from the profile.
+ * @param {number} index - The index of the button in the customButtons array.
+ * @returns {HTMLElement} - The button item element.
+ */
+function createButtonCardElement(button, index, crossChatSettings = null) {
+    const buttonItem = document.createElement('div');
+    buttonItem.className = 'button-item';
+    buttonItem.dataset.index = index;
+    buttonItem.draggable = true; // The entire card is the draggable target.
+    buttonItem.__buttonDataRef = button; // Keep reference for undo timers across renders.
+
+    if (button.separator) {
+        buttonItem.classList.add('separator-item');
+        buttonItem.innerHTML = `
+            <div class="separator-line"></div>
+            <span class="separator-text">Separator</span>
+            <div class="separator-line"></div>
+            <button class="delete-button danger">Delete</button>
+        `;
+    } else {
+        const isSettingsButton = (button.text === SETTINGS_BUTTON_MAGIC_TEXT);
+        const isCopyLastChatGPTResponseButton = (button.text === COPY_LAST_CHATGPT_RESPONSE_BUTTON_MAGIC_TEXT);
+        const isQueueCurrentEditorButton = (button.text === QUEUE_CURRENT_EDITOR_BUTTON_MAGIC_TEXT);
+        const isCreateButtonFromEditorButton = (button.text === CREATE_BUTTON_FROM_EDITOR_MAGIC_TEXT);
+        const isSystemButton = isSettingsButton || isCopyLastChatGPTResponseButton || isQueueCurrentEditorButton || isCreateButtonFromEditorButton;
+
+        const systemButtonMeta = getSystemButtonMeta(button.text);
+        const systemButtonText = systemButtonMeta.text;
+        const systemButtonTitle = systemButtonMeta.title;
+
+        const textElementHTML = isSystemButton
+            ? `<div class="text-input" title="${systemButtonTitle}">${systemButtonText}</div>`
+            : `<textarea class="text-input" rows="1">${button.text}</textarea>`;
+
+        const autoSendHTML = !isSystemButton
+            ? `<div class="autosend-line"><label class="checkbox-row"><input type="checkbox" class="autosend-toggle" ${button.autoSend ? 'checked' : ''}><span>Auto-send</span></label></div>`
+            : '';
+
+        const queueDelayHTML = isQueueCurrentEditorButton
+            ? '<div class="queue-delay-line" title="Uses the shared Queue Delay setting">Delay: shared queue setting</div>'
+            : '';
+
+        // Calculate hotkey with consideration for CrossChat buttons and separators
+        let hotkeyHintHTML = '';
+        if (!button.separator) {
+            const hotkeyInfo = getButtonHotkeyInfo(button, index, crossChatSettings);
+            const hotkeyClass = hotkeyInfo.isCustom ? ' shortcut-picker-button-custom' : '';
+            const hotkeyTitle = hotkeyInfo.isCustom
+                ? `Custom shortcut: ${hotkeyInfo.label}. Click to change.`
+                : hotkeyInfo.hotkey
+                    ? `Default shortcut: ${hotkeyInfo.label}. Click to customize.`
+                    : 'Click to set a custom shortcut.';
+            const safeHotkeyLabel = escapeHtml(hotkeyInfo.label);
+            hotkeyHintHTML = `
+                <div class="shortcut-line">
+                    <button
+                        type="button"
+                        class="shortcut-picker-button${hotkeyClass}"
+                        data-hotkey-picker="true"
+                        title="${escapeHtml(hotkeyTitle)}"
+                    >${safeHotkeyLabel}</button>
+                </div>`;
+        }
+
+        const metaSeparatorHTML = ((autoSendHTML || queueDelayHTML) && hotkeyHintHTML)
+            ? `<div class="meta-separator"></div>`
+            : '';
+
+        buttonItem.innerHTML = `
+            <div class="drag-handle">&#9776;</div>
+            <textarea class="emoji-input" rows="1">${button.icon}</textarea>
+            ${textElementHTML}
+            <div class="meta-block">
+                ${autoSendHTML}
+                ${queueDelayHTML}
+                ${metaSeparatorHTML}
+                ${hotkeyHintHTML}
+            </div>
+            <button class="delete-button danger">Delete</button>
+        `;
+
+        if (isSettingsButton) {
+            buttonItem.setAttribute('data-system', 'settings');
+            buttonItem.classList.add('settings-button-card');
+        } else if (isCopyLastChatGPTResponseButton) {
+            buttonItem.setAttribute('data-system', 'copy-last-chatgpt-response');
+            buttonItem.classList.add('settings-button-card');
+        } else if (isQueueCurrentEditorButton) {
+            buttonItem.setAttribute('data-system', 'queue-current-editor');
+            buttonItem.classList.add('settings-button-card');
+        } else if (isCreateButtonFromEditorButton) {
+            buttonItem.setAttribute('data-system', 'create-button-from-editor');
+            buttonItem.classList.add('settings-button-card');
+        }
+    }
+
+    return buttonItem;
+}
+
+
+/**
+ * Updates the list of custom button cards in the buttonCardsList.
+ * @param {boolean} [restoreScroll=true] - Whether to restore the scroll position after updating.
+ */
+async function updatebuttonCardsList(restoreScroll = true) {
+    // Get Cross-Chat module settings
+    const crossChatSettings = await getCrossChatSettings();
+
+    // Clean up any pending deletions that no longer exist in the profile
+    pendingButtonDeletions.forEach((state, buttonRef) => {
+        if (!currentProfile.customButtons.includes(buttonRef)) {
+            clearPendingDeletionState(buttonRef);
+        }
+    });
+
+    // Capture scroll position to prevent jumping
+    const scrollPos = {
+        top: window.pageYOffset || document.documentElement.scrollTop,
+        left: window.pageXOffset || document.documentElement.scrollLeft
+    };
+
+    buttonCardsList.innerHTML = ''; // This already removes old listeners
+    if (currentProfile.customButtons && currentProfile.customButtons.length > 0) {
+        currentProfile.customButtons.forEach((button, index) => {
+            const buttonElement = createButtonCardElement(button, index, crossChatSettings);
+            buttonCardsList.appendChild(buttonElement);
+        });
+    } else {
+        const emptyMessage = document.createElement('div');
+        emptyMessage.textContent = 'No custom buttons. Add buttons using the buttons above.';
+        emptyMessage.className = 'empty-message';
+        buttonCardsList.appendChild(emptyMessage);
+    }
+
+    // After updating the list, attach event listeners
+    textareaSaverAndResizerFunc();
+    attachEmojiInputListeners();
+    attachAutoSendToggleListeners();
+    reapplyPendingDeletionUI();
+
+    // Restore scroll position only if requested
+    if (restoreScroll) {
+        window.scrollTo(scrollPos.left, scrollPos.top);
+    }
+
+    // Deferred resize pass: when switching profiles the sync resize above runs
+    // before the browser has computed layout, so scrollHeight is wrong (too small).
+    // One rAF gives the browser one frame to settle, then we re-measure correctly.
+    requestAnimationFrame(() => {
+        refitButtonCardLayouts();
+    });
+}
+
+// -------------------------
+// management section for buttons, where user can add button card with:
+//  specific emoji, text, auto-send toggle or clear it and start over.
+
+/**
+ * Clears the text in the button text input field. Used only for adding new button.
+ */
+function clearText() {
+    document.getElementById('buttonText').value = '';
+    logToGUIConsole('Cleared button text input.');
+    document.getElementById('buttonIcon').value = '';
+    refitButtonCreationInputs();
+    showToast('Button text cleared', 'info');
+}
+
+/**
+ * Adds a new custom button and related card to the current profile.
+ * @param {MouseEvent} [event] - The click event, used for visual feedback around the cursor.
+ */
+async function addButton(event) {
+    const icon = document.getElementById('buttonIcon').value || '✨';
+    const text = document.getElementById('buttonText').value || 'New Button';
+    const autoSend = document.getElementById('buttonAutoSendToggle').checked;
+
+    const newButton = {
+        icon: icon,
+        text: text,
+        autoSend: autoSend
+    };
+    currentProfile.customButtons.push(newButton);
+
+    if (!(await saveCurrentProfile())) {
+        const rollbackIndex = currentProfile.customButtons.indexOf(newButton);
+        if (rollbackIndex !== -1) currentProfile.customButtons.splice(rollbackIndex, 1);
+        return;
+    }
+    updatebuttonCardsList();
+    logToGUIConsole('Added new button');
+
+    // --- Visual Feedback ---
+    showToast('Button added', 'success');
+    if (event) {
+        // This function is in popup-page-visuals.js
+        showMouseEffect(event);
+    }
+}
+
+
+// Section for managing buttons and separators, where user can add, delete, move or update them.
+/**
+ * Adds a separator to the current profile.
+ */
+async function addSeparator() {
+    const separator = { separator: true };
+    currentProfile.customButtons.push(separator);
+    if (!(await saveCurrentProfile())) {
+        const rollbackIndex = currentProfile.customButtons.indexOf(separator);
+        if (rollbackIndex !== -1) currentProfile.customButtons.splice(rollbackIndex, 1);
+        return;
+    }
+    updatebuttonCardsList();
+    logToGUIConsole('Added separator');
+}
+
+/**
+ * Deletes a button at a specified index.
+ * @param {number} index - The index of the button to delete.
+ */
+async function deleteButton(index) {
+    const [deletedButton] = currentProfile.customButtons.splice(index, 1);
+    if (!(await saveCurrentProfile())) {
+        if (deletedButton) currentProfile.customButtons.splice(index, 0, deletedButton);
+        return;
+    }
+    updatebuttonCardsList();
+    logToGUIConsole('Deleted button');
+}
+
+/**
+ * Deletes a button by reference instead of index (stable across reorders).
+ * @param {Object} buttonRef - The button object to delete.
+ */
+async function deleteButtonByReference(buttonRef) {
+    const index = currentProfile.customButtons.indexOf(buttonRef);
+    if (index === -1) return;
+    await deleteButton(index);
+}
+
+/**
+ * Applies the undo visual state on a card's delete button.
+ * @param {HTMLElement} buttonItem
+ * @param {number} [remainingMs=DELETE_UNDO_DURATION_MS]
+ */
+function setUndoVisualState(buttonItem, remainingMs = DELETE_UNDO_DURATION_MS) {
+    if (!buttonItem) return;
+    const deleteBtn = buttonItem.querySelector('.delete-button');
+    if (!deleteBtn) return;
+    const secondsLeft = Math.max(1, Math.ceil(remainingMs / 1000));
+    deleteBtn.textContent = `Undo (${secondsLeft})`;
+    deleteBtn.classList.add('undo-state');
+    buttonItem.classList.add('pending-delete');
+    buttonItem.draggable = false;
+}
+
+/**
+ * Clears the undo visual state from a card's delete button.
+ * @param {HTMLElement} buttonItem
+ */
+function clearUndoVisualState(buttonItem) {
+    if (!buttonItem) return;
+    const deleteBtn = buttonItem.querySelector('.delete-button');
+    if (!deleteBtn) return;
+    deleteBtn.textContent = 'Delete';
+    deleteBtn.classList.remove('undo-state');
+    buttonItem.classList.remove('pending-delete');
+    buttonItem.draggable = true;
+}
+
+/**
+ * Retrieves the button data object from a card element.
+ * @param {HTMLElement} buttonItem
+ * @returns {Object|null}
+ */
+function getButtonDataFromCard(buttonItem) {
+    if (!buttonItem) return null;
+    if (buttonItem.__buttonDataRef) return buttonItem.__buttonDataRef;
+    const index = parseInt(buttonItem.dataset.index);
+    if (Number.isNaN(index) || !currentProfile.customButtons[index]) return null;
+    return currentProfile.customButtons[index];
+}
+
+/**
+ * Starts the undo countdown for a button deletion or undoes it if already pending.
+ * @param {HTMLElement} buttonItem
+ */
+function startUndoableDeletion(buttonItem) {
+    const buttonData = getButtonDataFromCard(buttonItem);
+    if (!buttonData) return;
+
+    if (pendingButtonDeletions.has(buttonData)) {
+        undoPendingDeletion(buttonData, buttonItem);
+        return;
+    }
+
+    const expiresAt = Date.now() + DELETE_UNDO_DURATION_MS;
+    const timeoutId = setTimeout(() => {
+        void finalizePendingDeletion(buttonData, 'timeout');
+    }, DELETE_UNDO_DURATION_MS);
+    const intervalId = setInterval(() => {
+        const pending = pendingButtonDeletions.get(buttonData);
+        if (!pending) return;
+        const remainingMs = pending.expiresAt - Date.now();
+        if (remainingMs <= 0) return;
+        setUndoVisualState(pending.buttonItem, remainingMs);
+    }, 500);
+
+    pendingButtonDeletions.set(buttonData, {
+        expiresAt,
+        timeoutId,
+        intervalId,
+        buttonItem
+    });
+
+    setUndoVisualState(buttonItem);
+}
+
+/**
+ * Clears timers for a pending deletion and optionally removes it from the map.
+ * @param {Object} buttonData
+ * @param {boolean} [remove=true]
+ */
+function clearPendingDeletionState(buttonData, remove = true) {
+    const pending = pendingButtonDeletions.get(buttonData);
+    if (!pending) return;
+    clearTimeout(pending.timeoutId);
+    clearInterval(pending.intervalId);
+    if (remove) {
+        pendingButtonDeletions.delete(buttonData);
+    }
+}
+
+/**
+ * Cancels a pending deletion.
+ * @param {Object} buttonData
+ * @param {HTMLElement} [cardOverride]
+ */
+function undoPendingDeletion(buttonData, cardOverride = null) {
+    const pending = pendingButtonDeletions.get(buttonData);
+    if (!pending) return;
+    clearPendingDeletionState(buttonData);
+    clearUndoVisualState(cardOverride || pending.buttonItem);
+}
+
+/**
+ * Finalizes a pending deletion immediately.
+ * @param {Object} buttonData
+ * @param {string} [reason='timeout']
+ */
+async function finalizePendingDeletion(buttonData, reason = 'timeout') {
+    const pending = pendingButtonDeletions.get(buttonData);
+    if (pending) {
+        clearPendingDeletionState(buttonData);
+    }
+    await deleteButtonByReference(buttonData);
+}
+
+/**
+ * Re-applies undo states after the list is re-rendered.
+ */
+function reapplyPendingDeletionUI() {
+    if (!buttonCardsList || pendingButtonDeletions.size === 0) return;
+    const now = Date.now();
+    const items = Array.from(buttonCardsList.querySelectorAll('.button-item'));
+
+    pendingButtonDeletions.forEach((pending, buttonData) => {
+        const matchingItem = items.find(item => item.__buttonDataRef === buttonData);
+        if (!matchingItem) return;
+        pending.buttonItem = matchingItem;
+        const remainingMs = pending.expiresAt - now;
+        if (remainingMs <= 0) {
+            void finalizePendingDeletion(buttonData, 'expired');
+        } else {
+            setUndoVisualState(matchingItem, remainingMs);
+        }
+    });
+}
+
+/**
+ * Adds the special Settings system button. It opens the extension settings in a new tab
+ * (the click behavior is handled at injection time). The text is a reserved magic constant
+ * and is not editable in the UI. Users may change the icon; autoSend is not applicable.
+ * @param {MouseEvent} [event]
+ */
+async function addSettingsButton(event) {
+    const icon = document.getElementById('buttonIcon').value || '⚙️';
+    const text = SETTINGS_BUTTON_MAGIC_TEXT;
+    const autoSend = false;
+
+    // Prevent duplicates
+    const exists = (currentProfile.customButtons || []).some(b => b && !b.separator && b.text === text);
+    if (exists) {
+        showToast('Settings Button already exists in this profile.', 'info');
+        return;
+    }
+
+    const newButton = { icon, text, autoSend };
+    currentProfile.customButtons.push(newButton);
+    if (!(await saveCurrentProfile())) {
+        const rollbackIndex = currentProfile.customButtons.indexOf(newButton);
+        if (rollbackIndex !== -1) currentProfile.customButtons.splice(rollbackIndex, 1);
+        return;
+    }
+    updatebuttonCardsList();
+    logToGUIConsole('Added Settings system button');
+    showToast('Settings Button added', 'success');
+    if (event) showMouseEffect(event);
+}
+
+/**
+ * Adds the special ChatGPT copy-last-response system button. The click behavior
+ * is handled at injection time. The text is a reserved magic constant and is
+ * not editable in the UI. Users may change the icon; autoSend is not applicable.
+ * @param {MouseEvent} [event]
+ */
+async function addCopyLastChatGPTResponseButton(event) {
+    const icon = document.getElementById('buttonIcon').value || '📋';
+    const text = COPY_LAST_CHATGPT_RESPONSE_BUTTON_MAGIC_TEXT;
+    const autoSend = false;
+
+    // Prevent duplicates
+    const exists = (currentProfile.customButtons || []).some(b => b && !b.separator && b.text === text);
+    if (exists) {
+        showToast('Copy Last ChatGPT Response Button already exists in this profile.', 'info');
+        return;
+    }
+
+    const newButton = { icon, text, autoSend };
+    currentProfile.customButtons.push(newButton);
+    if (!(await saveCurrentProfile())) {
+        const rollbackIndex = currentProfile.customButtons.indexOf(newButton);
+        if (rollbackIndex !== -1) currentProfile.customButtons.splice(rollbackIndex, 1);
+        return;
+    }
+    updatebuttonCardsList();
+    logToGUIConsole('Added Copy Last ChatGPT Response system button');
+    showToast('Copy Last ChatGPT Response Button added', 'success');
+    if (event) showMouseEffect(event);
+}
+
+/**
+ * Adds the special Queue system button. The click behavior is handled at
+ * injection time. Users may change the icon; autoSend is not applicable.
+ * @param {MouseEvent} [event]
+ */
+async function addQueueCurrentEditorButton(event) {
+    const icon = document.getElementById('buttonIcon').value || '⏳';
+    const text = QUEUE_CURRENT_EDITOR_BUTTON_MAGIC_TEXT;
+    const autoSend = false;
+
+    const exists = (currentProfile.customButtons || []).some(b => b && !b.separator && b.text === text);
+    if (exists) {
+        showToast('Queue Button already exists in this profile.', 'info');
+        return;
+    }
+
+    const newButton = { icon, text, autoSend };
+    currentProfile.customButtons.push(newButton);
+    if (!(await saveCurrentProfile())) {
+        const rollbackIndex = currentProfile.customButtons.indexOf(newButton);
+        if (rollbackIndex !== -1) currentProfile.customButtons.splice(rollbackIndex, 1);
+        return;
+    }
+    updatebuttonCardsList();
+    logToGUIConsole('Added Queue system button');
+    showToast('Queue Button added', 'success');
+    if (event) showMouseEffect(event);
+}
+
+/**
+ * Adds the special + system button. Runtime click reads the current editor text
+ * and creates a normal custom button from it in the active profile.
+ * @param {MouseEvent} [event]
+ */
+async function addCreateButtonFromEditorButton(event) {
+    const icon = document.getElementById('buttonIcon').value || '✨';
+    const text = CREATE_BUTTON_FROM_EDITOR_MAGIC_TEXT;
+    const autoSend = false;
+
+    const exists = (currentProfile.customButtons || []).some(b => b && !b.separator && b.text === text);
+    if (exists) {
+        showToast('+ Button already exists in this profile.', 'info');
+        return;
+    }
+
+    const newButton = { icon, text, autoSend };
+    currentProfile.customButtons.push(newButton);
+    if (!(await saveCurrentProfile())) {
+        const rollbackIndex = currentProfile.customButtons.indexOf(newButton);
+        if (rollbackIndex !== -1) currentProfile.customButtons.splice(rollbackIndex, 1);
+        return;
+    }
+    updatebuttonCardsList();
+    logToGUIConsole('Added + system button');
+    showToast('+ Button added', 'success');
+    if (event) showMouseEffect(event);
+}
+
+function getSystemButtonMeta(text) {
+    if (text === SETTINGS_BUTTON_MAGIC_TEXT) {
+        return {
+            text: 'Open app settings | Shift-Click this button to move location where buttons are injected',
+            title: 'This button opens the extension settings - this exact page you are seeing right now - in a new tab. Alternatively, Shift-click opens menu, that allows to move location, where buttons are injected. You can move it or remove it.'
+        };
+    }
+
+    if (text === COPY_LAST_CHATGPT_RESPONSE_BUTTON_MAGIC_TEXT) {
+        return {
+            text: 'Copy last ChatGPT response | Only active on ChatGPT',
+            title: 'This button copies exactly the last ChatGPT response. It only works on ChatGPT pages and uses ChatGPT native copy when available. You can move it or remove it.'
+        };
+    }
+
+    if (text === QUEUE_CURRENT_EDITOR_BUTTON_MAGIC_TEXT) {
+        return {
+            text: 'Queue current editor text | Sends after configured delay',
+            title: 'Click: queue the editor text, clear it, and start or continue the timer. Click again to append without resetting it. Shift+Click: queue without starting a stopped queue.'
+        };
+    }
+
+    if (text === CREATE_BUTTON_FROM_EDITOR_MAGIC_TEXT) {
+        return {
+            text: 'Create button from current editor text',
+            title: 'This button reads the current chat editor text and creates a new normal prompt button from it in the active profile. It does not clear the editor.'
+        };
+    }
+
+    return { text: '', title: '' };
+}
+
+/**
+ * Gets the effective hotkey label shown in the popup.
+ * Explicit per-button hotkeys win; otherwise the legacy Alt+1..0 position hint is shown.
+ * @param {Object} button
+ * @param {number} index
+ * @param {Object|null} crossChatSettings
+ * @returns {{hotkey: Object|null, label: string, isCustom: boolean}}
+ */
+function getButtonHotkeyInfo(button, index, crossChatSettings) {
+    const explicitHotkey = window.MaxExtensionHotkeys?.normalizeStoredHotkey(button.hotkey);
+    if (explicitHotkey) {
+        return { hotkey: explicitHotkey, label: explicitHotkey.label, isCustom: true };
+    }
+
+    const fallbackIndex = getLegacyShortcutKeyForButtonIndex(index, crossChatSettings);
+    const fallbackHotkey = window.MaxExtensionHotkeys?.fromLegacyShortcutKey(fallbackIndex);
+    if (fallbackHotkey && isComboUsedByExplicitHotkey(fallbackHotkey.combo, index)) {
+        return { hotkey: null, label: 'Set hotkey', isCustom: false };
+    }
+    if (fallbackHotkey) {
+        return { hotkey: fallbackHotkey, label: fallbackHotkey.label, isCustom: false };
+    }
+
+    return { hotkey: null, label: 'Set hotkey', isCustom: false };
+}
+
+/**
+ * Reproduces runtime legacy shortcut numbering for popup display.
+ * @param {number} index
+ * @param {Object|null} crossChatSettings
+ * @returns {number|null}
+ */
+function getLegacyShortcutKeyForButtonIndex(index, crossChatSettings) {
+    let nonSeparatorButtonsCount = 0;
+    for (let i = 0; i < index; i++) {
+        if (!currentProfile.customButtons[i].separator) {
+            nonSeparatorButtonsCount++;
+        }
+    }
+
+    let shift = 0;
+    if (crossChatSettings && crossChatSettings.enabled && crossChatSettings.placement === 'before' && !crossChatSettings.hideStandardButtons) {
+        shift = 2;
+    }
+
+    const hotkeyIndex = nonSeparatorButtonsCount + shift;
+    if (hotkeyIndex < 10) {
+        return hotkeyIndex + 1;
+    }
+    return null;
+}
+
+function findExplicitHotkeyConflict(combo, exceptIndex) {
+    return currentProfile.customButtons.findIndex((button, index) => {
+        if (index === exceptIndex || !button || button.separator) return false;
+        const hotkey = window.MaxExtensionHotkeys?.normalizeStoredHotkey(button.hotkey);
+        return hotkey?.combo === combo;
+    });
+}
+
+function isComboUsedByExplicitHotkey(combo, exceptIndex) {
+    return findExplicitHotkeyConflict(combo, exceptIndex) !== -1;
+}
+
+function findGeneratedHotkeyConflict(combo, exceptIndex, crossChatSettings) {
+    const crossChatButtonsBefore =
+        crossChatSettings
+        && crossChatSettings.enabled
+        && crossChatSettings.placement === 'before'
+        && !crossChatSettings.hideStandardButtons;
+
+    if (crossChatButtonsBefore) {
+        const copyHotkey = window.MaxExtensionHotkeys?.fromLegacyShortcutKey(1);
+        const pasteHotkey = window.MaxExtensionHotkeys?.fromLegacyShortcutKey(2);
+        if (copyHotkey?.combo === combo) {
+            return { type: 'generated', label: 'Cross-Chat Copy button' };
+        }
+        if (pasteHotkey?.combo === combo) {
+            return { type: 'generated', label: 'Cross-Chat Paste button' };
+        }
+    }
+
+    for (let index = 0; index < currentProfile.customButtons.length; index++) {
+        if (index === exceptIndex) continue;
+        const button = currentProfile.customButtons[index];
+        if (!button || button.separator || window.MaxExtensionHotkeys?.normalizeStoredHotkey(button.hotkey)) continue;
+        const fallbackIndex = getLegacyShortcutKeyForButtonIndex(index, crossChatSettings);
+        const fallbackHotkey = window.MaxExtensionHotkeys?.fromLegacyShortcutKey(fallbackIndex);
+        if (fallbackHotkey?.combo === combo) {
+            return {
+                type: 'generated',
+                label: describeButtonForConflict(button, index)
+            };
+        }
+    }
+
+    return null;
+}
+
+function describeButtonForConflict(button, index) {
+    const icon = button?.icon ? `${button.icon} ` : '';
+    const text = button?.text || `button ${index + 1}`;
+    if (text === SETTINGS_BUTTON_MAGIC_TEXT) return `${icon}Settings button`;
+    if (text === COPY_LAST_CHATGPT_RESPONSE_BUTTON_MAGIC_TEXT) return `${icon}Copy last ChatGPT response button`;
+    if (text === QUEUE_CURRENT_EDITOR_BUTTON_MAGIC_TEXT) return `${icon}Queue button`;
+    return `${icon}${text.length > 60 ? `${text.slice(0, 57)}...` : text}`;
+}
+
+async function saveHotkeyForButton(index, hotkey) {
+    if (!currentProfile?.customButtons?.[index]) return false;
+
+    if (!hotkey) {
+        const previousHotkey = currentProfile.customButtons[index].hotkey;
+        delete currentProfile.customButtons[index].hotkey;
+        if (!(await saveCurrentProfile())) {
+            if (previousHotkey === undefined) {
+                delete currentProfile.customButtons[index].hotkey;
+            } else {
+                currentProfile.customButtons[index].hotkey = previousHotkey;
+            }
+            return false;
+        }
+        await updatebuttonCardsList(false);
+        logToGUIConsole(`Cleared shortcut for button at index ${index}`);
+        showToast('Shortcut cleared.', 'success');
+        return true;
+    }
+
+    const validation = window.MaxExtensionHotkeys?.validate(hotkey);
+    if (!validation?.valid) {
+        showToast(validation?.reason || 'Invalid shortcut.', 'error');
+        return false;
+    }
+
+    const previousHotkey = currentProfile.customButtons[index].hotkey;
+    const conflictIndex = findExplicitHotkeyConflict(hotkey.combo, index);
+    let conflictingHotkey;
+    if (conflictIndex !== -1) {
+        const conflictButton = currentProfile.customButtons[conflictIndex];
+        conflictingHotkey = conflictButton.hotkey;
+        const confirmed = await window.OCPModal.show({
+            title: 'Shortcut conflict',
+            text: `${hotkey.label} is already assigned to ${describeButtonForConflict(conflictButton, conflictIndex)}. Move it to this button instead?`,
+            confirmText: 'Move shortcut',
+            cancelText: 'Cancel',
+            type: 'confirm'
+        });
+
+        if (!confirmed) {
+            return false;
+        }
+
+        delete conflictButton.hotkey;
+    }
+
+    const crossChatSettings = await getCrossChatSettings();
+    const generatedConflict = findGeneratedHotkeyConflict(hotkey.combo, index, crossChatSettings);
+    if (generatedConflict) {
+        const confirmed = await window.OCPModal.show({
+            title: 'Generated shortcut conflict',
+            text: `${hotkey.label} is currently generated for ${generatedConflict.label}. Use it here and disable that generated shortcut?`,
+            confirmText: 'Use here',
+            cancelText: 'Cancel',
+            type: 'confirm'
+        });
+
+        if (!confirmed) {
+            return false;
+        }
+    }
+
+    currentProfile.customButtons[index].hotkey = hotkey;
+    if (!(await saveCurrentProfile())) {
+        if (previousHotkey === undefined) {
+            delete currentProfile.customButtons[index].hotkey;
+        } else {
+            currentProfile.customButtons[index].hotkey = previousHotkey;
+        }
+        if (conflictIndex !== -1) {
+            if (conflictingHotkey === undefined) {
+                delete currentProfile.customButtons[conflictIndex].hotkey;
+            } else {
+                currentProfile.customButtons[conflictIndex].hotkey = conflictingHotkey;
+            }
+        }
+        return false;
+    }
+    await updatebuttonCardsList(false);
+    logToGUIConsole(`Saved shortcut ${hotkey.label} for button at index ${index}`);
+    showToast(`Shortcut saved: ${hotkey.label}`, 'success');
+    return true;
+}
+
+function openHotkeyPicker(buttonItem) {
+    const index = parseInt(buttonItem?.dataset.index, 10);
+    if (Number.isNaN(index) || !currentProfile?.customButtons?.[index]) return;
+
+    const button = currentProfile.customButtons[index];
+    let pendingHotkey = window.MaxExtensionHotkeys?.normalizeStoredHotkey(button.hotkey);
+    let validationMessage = pendingHotkey ? '' : 'Press Ctrl, Alt, or Cmd/Win plus a key.';
+
+    const overlay = document.createElement('div');
+    overlay.className = 'hotkey-picker-overlay';
+    overlay.innerHTML = `
+        <div class="hotkey-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="hotkeyPickerTitle">
+            <h3 id="hotkeyPickerTitle">Choose Shortcut</h3>
+            <div class="hotkey-picker-target">${escapeHtml(describeButtonForConflict(button, index))}</div>
+            <div class="hotkey-capture-box" tabindex="0">
+                <span class="hotkey-capture-value">${escapeHtml(pendingHotkey?.label || 'Press shortcut')}</span>
+                <div class="hotkey-warning-message" style="display: none;">Are you sure?</div>
+            </div>
+            <p class="hotkey-picker-message">${escapeHtml(validationMessage)}</p>
+            
+            <div class="hotkey-picker-help">
+                <h4>💡 Supported Examples</h4>
+                <div class="hotkey-help-examples">
+                    <span><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></span>
+                    <span><kbd>Alt</kbd>+<kbd>Q</kbd></span>
+                    <span><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>H</kbd></span>
+                </div>
+                <p>Press your desired combination of modifier keys (<kbd>Ctrl</kbd>, <kbd>Alt</kbd>, <kbd>Shift</kbd>, or <kbd>Cmd/Win</kbd>) and a standard key to map it.</p>
+            </div>
+
+            <div class="hotkey-picker-actions">
+                <button type="button" class="hotkey-picker-clear">Clear</button>
+                <button type="button" class="hotkey-picker-cancel">Cancel</button>
+                <button type="button" class="hotkey-picker-save" ${pendingHotkey ? '' : 'disabled'}>Save</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const dialog = overlay.querySelector('.hotkey-picker-dialog');
+    const captureBox = overlay.querySelector('.hotkey-capture-box');
+    const valueEl = overlay.querySelector('.hotkey-capture-value');
+    const messageEl = overlay.querySelector('.hotkey-picker-message');
+    const saveButton = overlay.querySelector('.hotkey-picker-save');
+    const clearButton = overlay.querySelector('.hotkey-picker-clear');
+    const cancelButton = overlay.querySelector('.hotkey-picker-cancel');
+
+    const close = () => {
+        document.removeEventListener('keydown', onKeyDown, true);
+        overlay.remove();
+    };
+
+    const SYSTEM_EDITING_COMBOS = {
+        'ctrl+keyc': 'Copy',
+        'ctrl+keyv': 'Paste',
+        'ctrl+keyx': 'Cut',
+        'ctrl+keya': 'Select All',
+        'ctrl+keyz': 'Undo',
+        'ctrl+keyy': 'Redo'
+    };
+
+    const updatePendingHotkey = (result) => {
+        pendingHotkey = result.hotkey;
+        valueEl.textContent = result.hotkey?.label || 'Press shortcut';
+        
+        let isConflict = false;
+        let conflictTitle = '';
+        if (result.valid && pendingHotkey?.combo) {
+            const combo = pendingHotkey.combo;
+            if (SYSTEM_EDITING_COMBOS[combo]) {
+                isConflict = true;
+                conflictTitle = `This combination conflicts with the standard system ${SYSTEM_EDITING_COMBOS[combo]} shortcut and will override standard browser editing functionality on chat pages.`;
+            } else if (window.MaxExtensionHotkeys?.chromeReservedCombos?.has(combo)) {
+                isConflict = true;
+                conflictTitle = `This combination is a Chrome reserved shortcut and may conflict with or override default browser functions.`;
+            }
+        }
+
+        const warningEl = overlay.querySelector('.hotkey-warning-message');
+        if (isConflict) {
+            captureBox.classList.add('hotkey-capture-box-conflict');
+            warningEl.style.display = 'block';
+            warningEl.setAttribute('title', conflictTitle);
+        } else {
+            captureBox.classList.remove('hotkey-capture-box-conflict');
+            warningEl.style.display = 'none';
+            warningEl.removeAttribute('title');
+        }
+
+        messageEl.textContent = result.reason || 'Shortcut looks good.';
+        messageEl.classList.toggle('hotkey-picker-error', !result.valid);
+
+        saveButton.disabled = !result.valid;
+    };
+
+    const onKeyDown = (event) => {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            close();
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        updatePendingHotkey(window.MaxExtensionHotkeys.fromKeyboardEvent(event));
+    };
+
+    document.addEventListener('keydown', onKeyDown, true);
+
+    saveButton.addEventListener('click', async () => {
+        if (!pendingHotkey) return;
+        document.removeEventListener('keydown', onKeyDown, true);
+        const saved = await saveHotkeyForButton(index, pendingHotkey);
+        if (saved) {
+            close();
+        } else {
+            document.addEventListener('keydown', onKeyDown, true);
+            captureBox.focus();
+        }
+    });
+    clearButton.addEventListener('click', async () => {
+        document.removeEventListener('keydown', onKeyDown, true);
+        const saved = await saveHotkeyForButton(index, null);
+        if (saved) {
+            close();
+        } else {
+            document.addEventListener('keydown', onKeyDown, true);
+            captureBox.focus();
+        }
+    });
+    cancelButton.addEventListener('click', close);
+    overlay.addEventListener('mousedown', (event) => {
+        if (!dialog.contains(event.target)) {
+            close();
+        }
+    });
+
+    if (pendingHotkey) {
+        updatePendingHotkey({ hotkey: pendingHotkey, valid: true, reason: '' });
+    }
+
+    requestAnimationFrame(() => {
+        overlay.classList.add('is-visible');
+        captureBox.focus();
+    });
+}
+
+
+// -------------------------
+// Drag and Drop Functionality
+// -------------------------
+
+let dragOrigin = null; // Stores the initial target of a mousedown/pointerdown event.
+let isDragging = false;
+let draggedItem = null;
+let lastDragPosition = null;
+let autoScrollVelocity = { x: 0, y: 0 };
+let autoScrollRAF = null;
+let autoScrollLastTs = 0;
+
+/**
+ * Captures the initial element clicked before a potential drag starts.
+ * This is crucial for the veto logic in handleDragStart.
+ * @param {PointerEvent} e
+ */
+function handlePointerDown(e) {
+    dragOrigin = e.target;
+}
+
+function handleDragStart(e) {
+    // --- Veto Logic ---
+    // Check if the drag gesture originated inside an interactive element.
+    // If so, prevent the drag from starting to allow normal interaction (e.g., text selection).
+    if (dragOrigin?.closest('input, textarea, button, label')) {
+        e.preventDefault();
+        return;
+    }
+
+    // --- Drag Initialization ---
+    const buttonItem = e.target.closest('.button-item');
+    if (buttonItem) {
+        isDragging = true;
+        draggedItem = buttonItem;
+        buttonItem.classList.add('dragging');
+        document.body.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+
+        const img = new Image();
+        img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
+        e.dataTransfer.setDragImage(img, 0, 0);
+    }
+}
+
+function stopAutoScrollLoop() {
+    if (autoScrollRAF) {
+        cancelAnimationFrame(autoScrollRAF);
+        autoScrollRAF = null;
+    }
+    autoScrollVelocity = { x: 0, y: 0 };
+    autoScrollLastTs = 0;
+}
+
+function calculateAutoScrollVelocity() {
+    if (!isDragging || !draggedItem || !lastDragPosition) {
+        return { x: 0, y: 0 };
+    }
+
+    const scrollThreshold = 220;
+    const maxScrollSpeed = 2000; // px per second
+    const slowdownZone = 320; // px distance over which we ease into a stop near list boundaries
+    const viewportPadding = 172; // keep a small cushion so the dragged card is fully visible
+    const { innerWidth, innerHeight } = window;
+    const { x, y } = lastDragPosition;
+
+    const calcSpeed = (distanceToEdge, threshold, sign) => {
+        if (distanceToEdge >= threshold) return 0;
+        const normalized = (threshold - distanceToEdge) / threshold; // 0..1
+        const eased = Math.pow(normalized, 0.35);
+        return sign * maxScrollSpeed * eased;
+    };
+
+    let scrollY = calcSpeed(y, scrollThreshold, -1);
+    const distanceFromBottom = innerHeight - y;
+    scrollY = distanceFromBottom < scrollThreshold ? calcSpeed(distanceFromBottom, scrollThreshold, 1) : scrollY;
+
+    let scrollX = calcSpeed(x, scrollThreshold, -1);
+    const distanceFromRight = innerWidth - x;
+    scrollX = distanceFromRight < scrollThreshold ? calcSpeed(distanceFromRight, scrollThreshold, 1) : scrollX;
+
+    const listRect = buttonCardsList ? buttonCardsList.getBoundingClientRect() : null;
+    if (listRect) {
+        const hiddenBelowRaw = listRect.bottom - innerHeight;
+        const hiddenAboveRaw = -listRect.top;
+        const hiddenBelow = hiddenBelowRaw + viewportPadding;
+        const hiddenAbove = hiddenAboveRaw + viewportPadding;
+
+        if (scrollY > 0) {
+            if (hiddenBelow <= 0) {
+                scrollY = 0;
+            } else if (hiddenBelow < slowdownZone) {
+                const factor = Math.pow(Math.min(hiddenBelow / slowdownZone, 1), 1.25);
+                scrollY *= factor;
+            }
+        } else if (scrollY < 0) {
+            if (hiddenAbove <= 0) {
+                scrollY = 0;
+            } else if (hiddenAbove < slowdownZone) {
+                const factor = Math.pow(Math.min(hiddenAbove / slowdownZone, 1), 1.25);
+                scrollY *= factor;
+            }
+        }
+    }
+
+    return { x: scrollX, y: scrollY };
+}
+
+function autoScrollStep(timestamp) {
+    if (!isDragging) {
+        stopAutoScrollLoop();
+        return;
+    }
+
+    autoScrollVelocity = calculateAutoScrollVelocity();
+    if (autoScrollVelocity.x === 0 && autoScrollVelocity.y === 0) {
+        stopAutoScrollLoop();
+        return;
+    }
+
+    if (!autoScrollLastTs) {
+        autoScrollLastTs = timestamp;
+    }
+
+    const dtMs = Math.min(32, timestamp - autoScrollLastTs);
+    autoScrollLastTs = timestamp;
+
+    const dx = autoScrollVelocity.x * (dtMs / 1000);
+    const dy = autoScrollVelocity.y * (dtMs / 1000);
+
+    if (dx !== 0 || dy !== 0) {
+        window.scrollBy({ left: dx, top: dy, behavior: 'auto' });
+    }
+
+    autoScrollRAF = requestAnimationFrame(autoScrollStep);
+}
+
+function autoScroll(e) {
+    lastDragPosition = { x: e.clientX, y: e.clientY };
+
+    autoScrollVelocity = calculateAutoScrollVelocity();
+    if (autoScrollVelocity.x === 0 && autoScrollVelocity.y === 0) {
+        stopAutoScrollLoop();
+        return;
+    }
+
+    if (!autoScrollRAF) {
+        autoScrollRAF = requestAnimationFrame(autoScrollStep);
+    }
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    if (!isDragging || !draggedItem) return; // Added check for draggedItem
+
+    e.dataTransfer.dropEffect = 'move';
+    autoScroll(e);
+
+    const listRect = buttonCardsList ? buttonCardsList.getBoundingClientRect() : null;
+    let target = e.target.closest('.button-item');
+    let bounding = target ? target.getBoundingClientRect() : null;
+    let forcePosition = null; // 'before' | 'after' to override midpoint logic when outside list
+
+    if ((!target || target === draggedItem) && listRect) {
+        const firstChild = buttonCardsList.firstElementChild;
+        const lastChild = buttonCardsList.lastElementChild;
+        if (e.clientY < listRect.top && firstChild) {
+            target = firstChild;
+            bounding = firstChild.getBoundingClientRect();
+            forcePosition = 'before';
+        } else if (e.clientY > listRect.bottom && lastChild) {
+            target = lastChild;
+            bounding = lastChild.getBoundingClientRect();
+            forcePosition = 'after';
+        }
+    }
+
+    // --- Important: Do nothing if the target is the dragged item itself OR if there is no target ---
+    if (!target || target === draggedItem || !bounding) return;
+
+    const parent = target.parentNode;
+    // --- Get ALL child elements BEFORE the DOM change ---
+    const children = Array.from(parent.children);
+
+    // --- FLIP: First - Record the starting positions ---
+    const firstPositions = new Map();
+    let firstDraggedRect = null; // Store draggedItem's initial position
+
+    children.forEach(child => {
+        const rect = child.getBoundingClientRect();
+        if (child === draggedItem) {
+            firstDraggedRect = rect; // Record initial position of dragged item
+        } else {
+            firstPositions.set(child, rect); // Record for background items
+        }
+    });
+
+    // --- Perform the DOM change (your existing code) ---
+    const offsetY = e.clientY - bounding.top;
+    const isBefore = forcePosition
+        ? forcePosition === 'before'
+        : offsetY < bounding.height / 2;
+
+    const currentNextSibling = draggedItem.nextSibling;
+    const currentPreviousSibling = draggedItem.previousSibling;
+
+    let domChanged = false; // Flag to track if DOM was actually modified
+    if (isBefore) {
+        if (target !== currentNextSibling) {
+            parent.insertBefore(draggedItem, target);
+            domChanged = true;
+        }
+    } else {
+        if (target !== currentPreviousSibling) {
+            parent.insertBefore(draggedItem, target.nextSibling);
+            domChanged = true;
+        }
+    }
+    // --- END of DOM change ---
+
+    // --- Only proceed with animations if the DOM actually changed ---
+    if (domChanged) {
+        // --- FLIP: Last, Invert, Play for BACKGROUND items ---
+        children.forEach(child => {
+            if (child !== draggedItem && firstPositions.has(child)) {
+                const firstRect = firstPositions.get(child);
+                const lastRect = child.getBoundingClientRect(); // Last
+
+                const deltaX = firstRect.left - lastRect.left;
+                const deltaY = firstRect.top - lastRect.top;
+
+                if (deltaX !== 0 || deltaY !== 0) {
+                    child.style.transition = 'transform 0s'; // Invert (No transition)
+                    child.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+                    child.offsetWidth; // Force reflow
+
+                    child.style.transition = 'transform 420ms ease-in-out'; // Play (slower for visibility)
+                    child.style.transform = '';
+
+                    child.addEventListener('transitionend', () => {
+                        child.style.transition = '';
+                    }, { once: true });
+                } else {
+                    child.style.transition = '';
+                    child.style.transform = '';
+                }
+            }
+        });
+
+        // --- FLIP: Last, Invert, Play for DRAGGED item, it moves to new position smoothly --- 
+        if (firstDraggedRect) {
+            const lastDraggedRect = draggedItem.getBoundingClientRect();
+
+            // Calculate delta based on the TOP-LEFT corner
+            const deltaDraggedX = firstDraggedRect.left - lastDraggedRect.left;
+            const deltaDraggedY = firstDraggedRect.top - lastDraggedRect.top;
+
+            // Define the transform states explicitly
+            const invertTransform = `translate(${deltaDraggedX}px, ${deltaDraggedY}px) scale(0.8)`;
+            const playTransform = 'scale(0.8)'; // Target state (scaled, at natural position)
+
+            // Check if the element's calculated position actually needs to change
+            if (deltaDraggedX !== 0 || deltaDraggedY !== 0) {
+                // Invert: Apply transform immediately, ensuring NO transition happens
+                draggedItem.style.transition = 'none'; // Explicitly disable transitions
+                draggedItem.style.transform = invertTransform;
+
+                // Force reflow is crucial here
+                draggedItem.offsetWidth;
+
+                // Play: Enable transition ONLY for the transform property,
+                // and set the target transform state.
+                // Faster catch-up so the card keeps closer to the cursor while staying smooth.
+                draggedItem.style.transition = 'transform 200ms cubic-bezier(0.25, 0.85, 0.35, 1)';
+                draggedItem.style.transform = playTransform;
+
+                // Cleanup will implicitly happen on the next dragover or dragend.
+
+            } else {
+                // If DOM position didn't change, ensure it still has the correct base dragging transform
+                // and importantly, ensure no transition is active from a previous interrupted move.
+                draggedItem.style.transition = 'none'; // Remove any potentially active transition
+                draggedItem.style.transform = playTransform; // Ensure the scale(0.8) is applied
+            }
+        }
+
+    } // end if(domChanged)
+}
+
+async function handleDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!isDragging || !draggedItem) return;
+    await finalizeDrag();
+}
+
+function handleDragEnd(e) {
+    if (isDragging && draggedItem) {
+        finalizeDrag();
+    }
+    // Always reset the drag origin on drag end.
+    dragOrigin = null;
+}
+
+async function finalizeDrag() {
+    const dropTargetElement = draggedItem;
+    const dropStartRect = dropTargetElement ? dropTargetElement.getBoundingClientRect() : null;
+    const dropOriginalIndex = dropTargetElement ? parseInt(dropTargetElement.dataset.index) : null;
+
+    isDragging = false;
+    if (dropTargetElement) {
+        dropTargetElement.classList.remove('dragging');
+    }
+
+    document.body.classList.remove('dragging');
+    stopAutoScrollLoop();
+    // Removed clearInterval call as scrollInterval is unused.
+
+    const newOrder = Array.from(buttonCardsList.children).map(child => parseInt(child.dataset.index));
+    const previousOrder = [...currentProfile.customButtons];
+    currentProfile.customButtons = newOrder.map(index => previousOrder[index]);
+
+    const saved = await saveCurrentProfile();
+    if (!saved) {
+        currentProfile.customButtons = previousOrder;
+    }
+    draggedItem = null;
+
+    await updatebuttonCardsList();
+
+    if (!saved) return false;
+    logToGUIConsole('Reordered buttons');
+
+    if (!dropStartRect || dropOriginalIndex === null) return true;
+
+    const targetIndex = newOrder.indexOf(dropOriginalIndex);
+    if (targetIndex === -1) return true;
+
+    const newElement = buttonCardsList.querySelector(`.button-item[data-index="${targetIndex}"]`);
+    if (!newElement) return true;
+
+    const dropEndRect = newElement.getBoundingClientRect();
+    const deltaX = dropStartRect.left - dropEndRect.left;
+    const deltaY = dropStartRect.top - dropEndRect.top;
+
+    // FLIP: move from the dragged position (scaled down) into its final slot and scale up.
+    newElement.style.transition = 'none';
+    newElement.style.transformOrigin = 'top left';
+    newElement.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(0.8)`;
+    newElement.offsetWidth; // force reflow before playing the animation
+    newElement.style.transition = 'transform 400ms cubic-bezier(0.22, 1, 0.36, 1)';
+    newElement.style.transform = 'translate(0, 0) scale(1)';
+    newElement.addEventListener('transitionend', () => {
+        newElement.style.transition = '';
+        newElement.style.transform = '';
+        newElement.style.transformOrigin = '';
+    }, { once: true });
+    return true;
+}
+
+
+// -------------------------
+// Section that controls what happens inside cards of buttons and separators:
+/**
+ * Adds an input listener to a textarea (by its ID) so that its height
+ * dynamically adjusts to fit its content.
+ *
+ * @param {string} textareaId - The ID of the textarea element.
+ */
+function textareaInputAreaResizerFun(textareaId) {
+    const textarea = document.getElementById(textareaId);
+    if (!textarea) {
+        console.error(`Textarea with id "${textareaId}" not found.`);
+        return;
+    }
+
+    textarea.style.overflowY = 'hidden';
+    textarea.style.resize = 'none';
+
+    const resizeTextarea = (preventScrollRestoration = false) => {
+        resizeVerticalTextarea(textarea, preventScrollRestoration);
+    };
+
+    if (textarea.dataset.ocpVerticalResizeBound !== 'true') {
+        textarea.addEventListener('input', () => resizeTextarea(false));
+        textarea.dataset.ocpVerticalResizeBound = 'true';
+    }
+
+    resizeTextarea(true);
+}
+
+/**
+ * Resizes a textarea vertically to fit its content.
+ * @param {HTMLTextAreaElement} textarea The textarea to resize.
+ */
+/**
+ * Resizes a textarea vertically to fit its content while preserving the scroll position.
+ * This prevents the page from scrolling when the textarea is resized.
+ * @param {HTMLTextAreaElement} textarea The textarea to resize.
+ */
+function resizeVerticalTextarea(textarea, preventScrollRestoration = false) {
+    if (!textarea) return;
+
+    // Save current scroll position
+    const scrollPos = {
+        top: window.pageYOffset || document.documentElement.scrollTop,
+        left: window.pageXOffset || document.documentElement.scrollLeft
+    };
+
+    // Measure from zero height so scrollHeight reflects the full content height
+    // even while layout is still settling after profile switches or sibling resizes.
+    const previousOverflowY = textarea.style.overflowY;
+    textarea.style.overflowY = 'hidden';
+    textarea.style.height = '0px';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+    textarea.style.overflowY = previousOverflowY;
+
+    // Restore scroll position
+    if (!preventScrollRestoration) {
+        window.scrollTo(scrollPos.left, scrollPos.top);
+    }
+}
+
+/**
+ * Fits an emoji input to its content width and optionally re-fits its paired textarea.
+ * @param {HTMLInputElement|HTMLTextAreaElement|null} inputElement The emoji field to size.
+ * @param {boolean} [preventScroll=false] Whether to skip restoring the window scroll position.
+ */
+function resizeEmojiInputWidth(inputElement, preventScroll = false) {
+    if (!inputElement) return;
+
+    inputElement.style.overflowX = 'hidden';
+    inputElement.style.whiteSpace = 'nowrap';
+    inputElement.style.width = '1px';
+
+    const bufferPx = 6;
+    const desired = inputElement.scrollWidth + bufferPx;
+
+    // Respect CSS max-width if present
+    const computed = getComputedStyle(inputElement);
+    const maxW = computed.maxWidth;
+    let finalWidth = desired;
+    if (maxW && maxW !== 'none') {
+        const maxNum = parseFloat(maxW);
+        if (!Number.isNaN(maxNum)) {
+            finalWidth = Math.min(desired, maxNum);
+        }
+    } else {
+        // Provide a reasonable cap for plain inputs if no CSS max-width is set
+        finalWidth = Math.min(desired, 200);
+    }
+
+    inputElement.style.width = `${finalWidth}px`;
+    const centerUntilPx = 100;
+    inputElement.style.textAlign = finalWidth <= centerUntilPx ? 'center' : 'left';
+
+    // Width changes of the emoji field alter the space left for the paired prompt textarea.
+    const buttonItem = inputElement.closest('.button-item');
+    if (buttonItem) {
+        const mainTextarea = buttonItem.querySelector('.text-input');
+        resizeVerticalTextarea(mainTextarea, preventScroll);
+    }
+}
+
+/**
+ * Re-fits the static "add new button" inputs after programmatic updates or tab restores.
+ */
+function refitButtonCreationInputs() {
+    const buttonIconInput = document.getElementById('buttonIcon');
+    const buttonTextInput = document.getElementById('buttonText');
+
+    resizeEmojiInputWidth(buttonIconInput, true);
+    resizeVerticalTextarea(buttonTextInput, true);
+}
+
+/**
+ * Re-fits all rendered button cards after hidden updates become visible again.
+ */
+function refitButtonCardLayouts() {
+    const buttonCardsListElement = document.getElementById('buttonCardsList');
+    if (!buttonCardsListElement) return;
+
+    buttonCardsListElement.querySelectorAll('textarea.emoji-input').forEach((inputElement) => {
+        resizeEmojiInputWidth(inputElement, true);
+    });
+
+    buttonCardsListElement.querySelectorAll('textarea.text-input').forEach((textarea) => {
+        resizeVerticalTextarea(textarea, true);
+    });
+}
+
+/**
+ * Attaches input listeners to emoji textareas for horizontal resizing and data saving.
+ * Crucially, it also triggers a vertical resize on the sibling main text area.
+ */
+function attachEmojiInputListeners() {
+    // Select both: the "Add new button" single-line input (#buttonIcon) and per-item emoji textareas
+    const allEmojiInputs = document.querySelectorAll('#buttonIcon, #buttonCardsList textarea.emoji-input');
+
+    allEmojiInputs.forEach((inputElement) => {
+        const resizeSelf = (preventScroll = false) => {
+            resizeEmojiInputWidth(inputElement, preventScroll);
+        };
+
+        if (inputElement.dataset.ocpEmojiListenersAttached === 'true') {
+            resizeSelf(true);
+            return;
+        }
+
+        inputElement.dataset.ocpEmojiListenersAttached = 'true';
+
+        // Manual autoscroll while selecting without showing scrollbars
+        let selecting = false;
+        let autoScrollRAF = null;
+        let lastMouseX = 0;
+
+        const autoScrollWhileSelecting = () => {
+            if (!selecting) return;
+            const rect = inputElement.getBoundingClientRect();
+            const threshold = 12;
+            const speed = 12;
+
+            if (lastMouseX > rect.right - threshold) {
+                inputElement.scrollLeft += speed;
+            } else if (lastMouseX < rect.left + threshold) {
+                inputElement.scrollLeft -= speed;
+            }
+            autoScrollRAF = requestAnimationFrame(autoScrollWhileSelecting);
+        };
+
+        inputElement.addEventListener('mousedown', (e) => {
+            selecting = true;
+            lastMouseX = e.clientX;
+            if (autoScrollRAF) cancelAnimationFrame(autoScrollRAF);
+            autoScrollRAF = requestAnimationFrame(autoScrollWhileSelecting);
+        });
+        inputElement.addEventListener('mousemove', (e) => {
+            if (!selecting) return;
+            lastMouseX = e.clientX;
+        });
+        const endSelection = () => {
+            selecting = false;
+            if (autoScrollRAF) {
+                cancelAnimationFrame(autoScrollRAF);
+                autoScrollRAF = null;
+            }
+        };
+        inputElement.addEventListener('mouseup', endSelection);
+        inputElement.addEventListener('mouseleave', endSelection);
+        document.addEventListener('mouseup', endSelection, { once: true });
+
+        inputElement.addEventListener('input', () => {
+            // Persist only when editing within a card
+            const buttonItem = inputElement.closest('.button-item');
+            if (buttonItem) {
+                const index = parseInt(buttonItem.dataset.index);
+                currentProfile.customButtons[index].icon = inputElement.value;
+                debouncedSaveCurrentProfile();
+            }
+            resizeSelf();
+        });
+
+        inputElement.addEventListener('blur', () => {
+            inputElement.scrollLeft = 0;
+        });
+
+        inputElement.addEventListener('change', () => {
+            inputElement.scrollLeft = 0;
+        });
+
+        // Initial sizing
+        resizeSelf(true);
+    });
+}
+
+
+/**
+ * Attaches listeners to auto-send toggle inputs to update button settings.
+ * Modified to use debouncedSaveCurrentProfile() for throttled saving.
+ */
+function attachAutoSendToggleListeners() {
+    const autoSendToggles = buttonCardsList.querySelectorAll('input.autosend-toggle');
+    autoSendToggles.forEach(toggle => {
+        toggle.addEventListener('change', () => {
+            const buttonItem = toggle.closest('.button-item');
+            const index = parseInt(buttonItem.dataset.index);
+            currentProfile.customButtons[index].autoSend = toggle.checked;
+            debouncedSaveCurrentProfile();
+            logToGUIConsole(`Updated auto-send for button at index ${index} to ${toggle.checked}`);
+        });
+    });
+}
+
+/**
+ * Automatically resizes textareas based on their content and attaches input listeners for saving.
+ * Uses the resizeVerticalTextarea helper for resizing logic.
+ */
+function textareaSaverAndResizerFunc() {
+    const textareas = buttonCardsList.querySelectorAll('textarea.text-input');
+    textareas.forEach(textarea => {
+        // Perform an initial resize to fit existing content.
+        resizeVerticalTextarea(textarea, true);
+
+        textarea.addEventListener('input', () => {
+            // Resize the textarea vertically as the user types.
+            resizeVerticalTextarea(textarea);
+
+            // Update the corresponding button text in the data model.
+            const buttonItem = textarea.closest('.button-item');
+            const index = parseInt(buttonItem.dataset.index);
+            currentProfile.customButtons[index].text = textarea.value;
+
+            // Use debounced save to throttle saving.
+            debouncedSaveCurrentProfile();
+        });
+    });
+}

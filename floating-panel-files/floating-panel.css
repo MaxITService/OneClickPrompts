@@ -1,0 +1,1198 @@
+/* floating-panel-files/floating-panel.css */
+/* Main Panel Container */
+#max-extension-floating-panel {
+    position: fixed;
+    border: 1px solid #444;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    z-index: 10000;
+    overflow: hidden;
+    resize: both;
+    pointer-events: auto;
+    color: rgba(255, 255, 255, 0.9);
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+    /* Create a dedicated stacking context so our internal z-index ordering is predictable */
+    isolation: isolate;
+    /* MDN: forces a new stacking context */
+}
+
+/* Panel Header */
+#max-extension-floating-panel-header {
+    padding: 4px 8px;
+    cursor: move;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+    overflow: hidden;
+    /* Smooth collapse/expand */
+    transition: height 0.3s ease-in-out, min-height 0.3s ease-in-out, padding 0.3s ease-in-out;
+    height: 28px;
+    min-height: 28px;
+    /* Explicit height is crucial for animation */
+}
+
+/* Collapsed state for the header */
+#max-extension-floating-panel-header.collapsed {
+    /* Remove header from layout completely */
+    height: 0;
+    min-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    cursor: default;
+    /* No move cursor when collapsed */
+    pointer-events: none;
+    /* Allow clicks to pass through header area */
+}
+
+#max-extension-panel-title {
+    font-weight: bold;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.9);
+    transition: opacity 0.2s ease-out, max-width 0.3s ease-in-out, margin-right 0.3s ease-in-out;
+    max-width: 1000px;
+    /* Some large value for transition */
+    white-space: nowrap;
+    overflow: hidden;
+    margin-right: 8px;
+    /* Space between title and buttons */
+}
+
+#max-extension-floating-panel-header.collapsed #max-extension-panel-title {
+    opacity: 0;
+    max-width: 0;
+    margin-right: 0;
+}
+
+/* Header controls: float above content and remain clickable even when header is collapsed */
+#max-extension-panel-header-controls {
+    position: absolute;
+    /* Overlay inside the fixed panel container */
+    top: 5px;
+    right: 5px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    pointer-events: auto;
+    /* Ensure buttons capture clicks */
+    /* Must be above ANY child inside the panel; use very high index inside our isolated context */
+    z-index: 2147483647;
+}
+
+/* Header option buttons */
+#max-extension-panel-transparency-btn {
+    background: none;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0 3px;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Popover container for transparency slider */
+#max-extension-transparency-popover,
+#max-extension-random-percent-popover {
+    position: absolute;
+    /* Positioned relative to header-controls overlay */
+    top: 26px;
+    /* Below the header controls row */
+    right: 0;
+    background-color: rgba(30, 30, 30, 0.95);
+    border: 1px solid rgba(100, 100, 100, 0.5);
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: rgba(255, 255, 255, 0.95);
+    min-width: 220px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.max-extension-popover-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.max-extension-popover-label {
+    font-size: 12px;
+}
+
+#max-extension-transparency-slider {
+    width: 100%;
+}
+
+#max-extension-random-percent-slider {
+    width: 100%;
+}
+
+.max-extension-inline-queue-controls {
+    display: none;
+    width: 100%;
+    margin-top: 4px;
+    border-top: 1px solid rgba(128, 128, 128, 0.35);
+    padding-top: 6px;
+    color: inherit;
+    font-family: inherit;
+}
+
+.max-extension-inline-queue-controls.is-active {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.max-extension-inline-queue-controls.is-dismissed {
+    display: none;
+}
+
+.max-extension-inline-queue-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.max-extension-inline-queue-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-start;
+    border: 1px solid rgba(128, 128, 128, 0.45);
+    border-radius: 6px 6px 0 0;
+    padding: 3px 8px;
+    font-size: 12px;
+    background: rgba(60, 60, 60, 0.08);
+}
+
+.max-extension-inline-queue-count {
+    min-width: 18px;
+    border-radius: 999px;
+    padding: 1px 5px;
+    text-align: center;
+    background: rgba(122, 92, 200, 0.18);
+    font-weight: 700;
+}
+
+.max-extension-inline-queue-delay-editor {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1 1 360px;
+    min-width: 190px;
+    font-size: 11px;
+}
+
+.max-extension-inline-queue-delay-label,
+.max-extension-inline-queue-delay-unit {
+    opacity: 0.72;
+}
+
+.max-extension-inline-queue-delay-input {
+    box-sizing: border-box;
+    width: 76px;
+    min-width: 64px;
+    border: 1px solid rgba(128, 128, 128, 0.42);
+    border-radius: 5px;
+    padding: 3px 5px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: right;
+}
+
+.max-extension-inline-queue-delay-slider {
+    flex: 1 1 260px;
+    min-width: 100px;
+    accent-color: rgb(122, 92, 200);
+    cursor: pointer;
+}
+
+.max-extension-inline-queue-close {
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 1px solid rgba(128, 128, 128, 0.4);
+    border-radius: 5px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    font-size: 20px;
+    line-height: 1;
+    opacity: 0.75;
+}
+
+.max-extension-inline-queue-close:hover {
+    background: rgba(180, 70, 70, 0.22);
+    border-color: rgba(230, 120, 120, 0.7);
+    opacity: 1;
+}
+
+.max-extension-inline-queue-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px;
+}
+
+.max-extension-inline-queue-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-height: 28px;
+    position: relative;
+}
+
+.max-extension-inline-queue-actions {
+    display: inline-flex;
+    gap: 4px;
+}
+
+.max-extension-inline-queue-actions button,
+.max-extension-inline-queue-items .max-extension-queued-item {
+    border: 1px solid rgba(128, 128, 128, 0.35);
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 5px 7px;
+}
+
+.max-extension-inline-queue-actions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.max-extension-inline-queue-status {
+    grid-column: 1 / -1;
+    display: none;
+    font-size: 11px;
+}
+
+.max-extension-inline-queue-progress-container {
+    grid-column: 1 / -1;
+    display: none;
+    height: 3px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(128, 128, 128, 0.22);
+    cursor: pointer;
+}
+
+.max-extension-inline-queue-progress-bar {
+    width: 0%;
+    height: 100%;
+    background: rgba(122, 92, 200, 0.8);
+}
+
+/* Container for the footer controls */
+#max-extension-panel-footer-controls {
+    position: absolute;
+    /* Position relative to the main panel */
+    bottom: 5px;
+    /* Visual placement */
+    right: 5px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    pointer-events: auto;
+    /* Ensure this layer receives pointer events */
+    /* Keep this very high too, so play nice with any queued overlays in content */
+    z-index: 2147483646;
+}
+
+/* New collapse button */
+#max-extension-panel-collapse-btn {
+    background: none;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0 3px;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.9);
+    transition: transform 0.3s ease-in-out;
+}
+
+#max-extension-panel-collapse-btn.collapsed {
+    transform: rotate(180deg);
+}
+
+/* New collapse button for the footer */
+#max-extension-panel-collapse-footer-btn {
+    background: none;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0 3px;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.9);
+    transition: transform 0.3s ease-in-out;
+}
+
+#max-extension-panel-collapse-footer-btn.collapsed {
+    transform: rotate(180deg);
+}
+
+#max-extension-panel-close-btn {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 0 3px;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Panel Content Area */
+#max-extension-floating-panel-content {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-content: flex-start;
+}
+
+/* No extra padding when header is collapsed — header is removed from flow and
+   header controls float above content, so content can use the full height. */
+
+/* When footer is collapsed, reserve a thin click-safe strip for the controls.
+   This prevents the queue section from overlaying the control buttons' hit area. */
+#max-extension-floating-panel.has-collapsed-footer #max-extension-queue-section {
+    padding-bottom: 24px;
+    /* Should be >= visual height of controls strip */
+    position: relative;
+}
+
+/* Queue section also needs protection from header controls overlay when collapsed */
+#max-extension-floating-panel.has-collapsed-header #max-extension-queue-section {
+    position: relative;
+    /* Ensure proper stacking context */
+    z-index: 1;
+    /* Keep queue below controls but above base content */
+    /* No extra margin — we don't want to consume vertical space when header is collapsed */
+}
+
+/* Queue Section */
+#max-extension-queue-section {
+    padding: 6px 8px;
+    border-top: 1px solid rgba(100, 100, 100, 0.3);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    user-select: none;
+}
+
+#max-extension-queue-section .controls-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+/* When toggle is in footer, hide only the placeholder, not the entire controls */
+#max-extension-queue-toggle-placeholder {
+    display: block;
+}
+
+/* Adjust queue section layout when toggle is moved to footer */
+#max-extension-queue-section.toggle-in-footer .controls-container {
+    justify-content: flex-end;
+    /* Align controls to the right when toggle is gone */
+}
+
+#max-extension-queue-section .expandable-queue-controls {
+    display: contents;
+    /* Ensures children are treated as direct children of the flex container */
+}
+
+#max-extension-queue-section .delay-container {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    min-width: 190px;
+}
+
+#max-extension-queue-section .queue-delay-value-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+#max-extension-queue-section .random-delay-container {
+    position: relative;
+}
+
+#max-extension-random-percent-popover.random-percent-popover {
+    z-index: 2147483647;
+}
+
+#max-extension-queue-section .delay-container label {
+    font-size: 12px;
+}
+
+#max-extension-queue-toggle-placeholder .queue-toggle-disabled-note {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px dashed rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
+    padding: 4px 8px;
+}
+
+#max-extension-queue-toggle-placeholder .toggle-container label,
+.queue-toggle-footer-container .toggle-container label {
+    white-space: nowrap;
+}
+
+#max-extension-queue-section .random-delay-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    padding: 0 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 12px;
+    font-size: 11px;
+    cursor: pointer;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.9);
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#max-extension-queue-section .random-delay-badge:hover {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+#max-extension-queue-section .random-delay-badge.random-disabled {
+    opacity: 0.75;
+}
+
+#max-extension-queue-section .random-delay-badge.random-enabled {
+    background: rgba(46, 204, 113, 0.2);
+    border-color: rgba(46, 204, 113, 0.55);
+}
+
+#max-extension-delay-unit-toggle {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-decoration: underline;
+    display: inline;
+}
+
+#max-extension-delay-unit-toggle:hover {
+    opacity: 0.8;
+}
+
+#max-extension-queue-delay-input {
+    min-width: 50px;
+    /* Set a minimum width so it doesn't get too small */
+    max-width: 100px;
+    /* Set a maximum width to prevent breaking the layout */
+    background-color: rgba(80, 80, 80, 1);
+    color: white;
+    border: 1px solid #666;
+    border-radius: 4px;
+    padding: 2px 4px;
+    font-size: 12px;
+}
+
+#max-extension-queue-delay-slider {
+    width: 100%;
+    min-width: 180px;
+    height: 5px;
+    margin: 2px 0 0;
+    accent-color: #4f9ee8;
+    cursor: pointer;
+}
+
+#max-extension-queue-section .action-buttons-container {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+#max-extension-queue-section .action-buttons-container button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background-color: rgba(40, 90, 140, 0.7);
+    border: 1px solid rgba(90, 140, 200, 0.65);
+    border-radius: 6px;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    color: rgba(255, 255, 255, 0.95);
+    transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+}
+
+#max-extension-queue-section .action-buttons-container button:hover:not(:disabled) {
+    background-color: rgba(50, 110, 170, 0.85);
+    box-shadow: 0 0 6px rgba(80, 140, 210, 0.45);
+    transform: translateY(-1px);
+}
+
+#max-extension-queue-section .action-buttons-container button:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+#max-extension-queue-section .action-buttons-container button:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+    box-shadow: none;
+}
+
+/* TOS Warning Section */
+#max-extension-queue-tos-warning {
+    background-color: rgba(150, 0, 0, 0.2);
+    border: 1px solid red;
+    border-radius: 4px;
+    padding: 10px;
+    margin-top: 8px;
+    /* Ensure the warning stays visually above the queue items and progress bar within this isolated panel */
+    position: relative;
+    z-index: 2;
+}
+
+#max-extension-queue-tos-warning .warning-text {
+    color: #ffcccc;
+    margin: 0 0 10px 0;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+#max-extension-queue-tos-warning .tos-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#max-extension-queue-tos-warning .tos-buttons button {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    text-align: center;
+    width: 100%;
+}
+
+#max-extension-queue-tos-warning .tos-buttons button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+#max-extension-queue-display {
+    min-height: 30px;
+    background-color: rgba(30, 30, 30, 0.7);
+    border: 1px dashed rgba(100, 100, 100, 0.5);
+    border-radius: 4px;
+    padding: 6px;
+    display: none;
+    /* Initially hidden */
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    position: relative;
+}
+
+.max-extension-queued-item {
+    background-color: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    padding: 2px 4px;
+    font-size: 18px;
+    cursor: grab;
+    touch-action: none;
+    line-height: 1;
+    transition: background-color 0.2s, transform 0.18s ease;
+    will-change: transform;
+}
+
+.max-extension-queued-item:hover {
+    background-color: rgba(255, 0, 0, 0.3);
+}
+
+.max-extension-queue-drag-active .max-extension-queued-item {
+    transition: background-color 0.2s, transform 0.18s ease;
+}
+
+.max-extension-queued-item--dragging {
+    cursor: grabbing;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.35);
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.max-extension-queued-item--placeholder {
+    border: 1px dashed rgba(255, 255, 255, 0.4);
+    background-color: rgba(255, 255, 255, 0.08);
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.max-extension-queue-automation-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+    align-items: center;
+}
+
+.max-extension-queue-option-button {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(160, 120, 220, 0.35);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.95);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 30px;
+    font-size: 18px;
+    line-height: 1;
+    padding: 2px;
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+    vertical-align: middle;
+}
+
+.max-extension-queue-option-button:hover {
+    background-color: rgba(220, 200, 255, 0.18);
+    transform: translateY(-1px);
+}
+
+.max-extension-queue-option-button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(190, 150, 255, 0.9);
+}
+
+.max-extension-queue-option-button.active {
+    background-color: rgba(160, 90, 255, 0.32);
+    border-color: rgba(210, 170, 255, 0.95);
+    box-shadow: 0 0 10px rgba(190, 120, 255, 0.55);
+}
+
+.max-extension-queue-finished-indicator {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    padding: 0 12px;
+    margin-left: 6px;
+    border-radius: 10px;
+    border: 1px solid rgba(46, 204, 113, 0.6);
+    background-color: rgba(46, 204, 113, 0.22);
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    cursor: default;
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+    box-shadow: 0 0 8px rgba(46, 204, 113, 0.35);
+}
+
+#max-extension-queue-progress-container {
+    height: 4px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+    overflow: hidden;
+    display: none;
+    cursor: pointer;
+    /* Hidden by default */
+}
+
+#max-extension-queue-progress-bar {
+    height: 100%;
+    width: 100%;
+    background-color: white;
+    border-radius: 2px;
+}
+
+
+/* Profile Switcher Footer */
+#max-extension-profile-switcher {
+    padding: 4px 30px 4px 8px;
+    /* Make space on the right for collapse button */
+    display: flex;
+    justify-content: flex-start;
+    /* Align profile selector to the left */
+    align-items: center;
+    border-top: 1px solid rgba(100, 100, 100, 0.3);
+    cursor: move;
+    gap: 8px;
+    /* Added for collapse functionality */
+    overflow: hidden;
+    transition: height 0.3s ease-in-out, padding 0.3s ease-in-out, border-color 0.3s ease-in-out;
+    height: 32px;
+    /* Explicit height is crucial for animation */
+    position: relative;
+    /* Ensure stacking context for children opacity transitions */
+}
+
+/* Collapsed state for the footer */
+#max-extension-profile-switcher.collapsed {
+    height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-top-color: transparent;
+    cursor: default;
+    pointer-events: none;
+}
+
+#max-extension-profile-switcher.collapsed>* {
+    opacity: 0;
+    transition: opacity 0.1s ease-out;
+}
+
+/* Profile elements container */
+.profile-elements-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#max-extension-profile-switcher div {
+    /* Label */
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+#max-extension-profile-selector {
+    background-color: rgba(60, 60, 60, 1);
+    color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(100, 100, 100, 0.5);
+    border-radius: 4px;
+    padding: 0px 3px;
+    font-size: 11px;
+    line-height: 1.2;
+    cursor: pointer;
+    min-width: 120px;
+}
+
+/* Queue toggle in footer */
+.queue-toggle-footer-container {
+    display: none;
+    margin-right: 16px;
+}
+
+.queue-toggle-footer-container .toggle-container {
+    margin-top: 0 !important;
+    padding-left: 0 !important;
+    margin-right: auto !important;
+}
+
+.queue-toggle-footer-container label {
+    font-size: 12px !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+
+
+/* Responsive behavior for queue section */
+@media (min-width: 400px) {
+    #max-extension-queue-section .controls-container {
+        /* Will be hidden by JavaScript when toggle is moved to footer */
+    }
+}
+
+/* Prevent dragging on queue toggle elements */
+.queue-toggle-footer-container * {
+    pointer-events: auto;
+}
+
+.queue-toggle-footer-container input,
+.queue-toggle-footer-container label {
+    cursor: pointer;
+}
+
+
+/* This rule ensures the up/down arrows (number input spinners) are visible on the queue delay input */
+#max-extension-queue-delay-input {
+    appearance: textfield;
+}
+
+/*without this there are no up and down arrows next to number imput */
+#max-extension-queue-delay-input::-webkit-inner-spin-button,
+#max-extension-queue-delay-input::-webkit-outer-spin-button {
+    -webkit-appearance: auto;
+    opacity: 1;
+    margin: 0;
+}
+
+/* Style all checkboxes inside your panel */
+#max-extension-floating-panel input[type="checkbox"] {
+    accent-color: #444;
+    /* Modern browsers support this */
+    background-color: rgba(60, 60, 60, 1);
+    border: 1px solid #888;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+/* ========== Manual Queue Mode Styles ========== */
+
+/* When manual queue mode is active, show scrollbar always */
+#max-extension-floating-panel-content.manual-queue-expanded {
+    overflow-y: scroll !important;
+}
+
+/* Buttons area - where regular buttons are moved */
+#max-extension-buttons-area {
+    display: contents;
+    /* Let buttons flow normally */
+}
+
+/* Manual Queue Section Container */
+#max-extension-manual-queue-section {
+    width: 100%;
+    margin-top: 4px;
+}
+
+/* Divider between buttons and manual cards */
+.manual-queue-divider {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(160, 120, 220, 0.5) 20%,
+            rgba(160, 120, 220, 0.5) 80%,
+            transparent 100%);
+    margin: 8px 0;
+}
+
+/* Manual Queue Cards Container */
+#max-extension-manual-queue-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+}
+
+/* Individual Manual Button Card */
+.manual-queue-card {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(160, 120, 220, 0.25);
+    border-radius: 6px;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.manual-queue-card:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: rgba(160, 120, 220, 0.4);
+}
+
+/* Add button in card */
+.manual-queue-card-add-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    background-color: rgba(46, 204, 113, 0.2);
+    border: 1px solid rgba(46, 204, 113, 0.5);
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.95);
+    transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+    flex-shrink: 0;
+}
+
+.manual-queue-card-add-btn:hover {
+    background-color: rgba(46, 204, 113, 0.35);
+    transform: translateY(-1px);
+    box-shadow: 0 0 6px rgba(46, 204, 113, 0.4);
+}
+
+.manual-queue-card-add-btn:active {
+    transform: scale(0.95);
+}
+
+/* Emoji input in card */
+.manual-queue-card-emoji {
+    width: 36px;
+    min-width: 36px;
+    height: 26px;
+    padding: 2px 4px;
+    background-color: rgba(80, 80, 80, 0.8);
+    border: 1px solid rgba(100, 100, 100, 0.5);
+    border-radius: 4px;
+    font-size: 14px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.95);
+    flex-shrink: 0;
+}
+
+.manual-queue-card-emoji:focus {
+    outline: none;
+    border-color: rgba(160, 120, 220, 0.7);
+    box-shadow: 0 0 4px rgba(160, 120, 220, 0.4);
+}
+
+/* Text input in card - flexible width, auto-resizing textarea */
+.manual-queue-card-text {
+    flex: 1;
+    min-width: 80px;
+    min-height: 26px;
+    height: auto;
+    padding: 4px 6px;
+    background-color: rgba(80, 80, 80, 0.8);
+    border: 1px solid rgba(100, 100, 100, 0.5);
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: inherit;
+    color: rgba(255, 255, 255, 0.95);
+    line-height: 1.4;
+    resize: none;
+    overflow: hidden;
+}
+
+.manual-queue-card-text:focus {
+    outline: none;
+    border-color: rgba(160, 120, 220, 0.7);
+    box-shadow: 0 0 4px rgba(160, 120, 220, 0.4);
+}
+
+.manual-queue-card-text::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+/* Manual queue mode button active state */
+#max-extension-manual-queue-mode-btn.active {
+    background-color: rgba(160, 90, 255, 0.32);
+    border-color: rgba(210, 170, 255, 0.95);
+    box-shadow: 0 0 10px rgba(190, 120, 255, 0.55);
+}
+
+/* Manual Queue Control Card - thin card with +/- buttons */
+.manual-queue-control-card {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 6px;
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(160, 120, 220, 0.15);
+    border-radius: 6px;
+    margin-top: 2px;
+}
+
+.manual-queue-control-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 20px;
+    background-color: rgba(160, 120, 220, 0.15);
+    border: 1px solid rgba(160, 120, 220, 0.35);
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 1;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.85);
+    transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.manual-queue-control-btn:hover:not(:disabled) {
+    background-color: rgba(160, 120, 220, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 0 6px rgba(160, 120, 220, 0.4);
+}
+
+.manual-queue-control-btn:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.manual-queue-control-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+/* Add button specific styling */
+.manual-queue-control-add {
+    background-color: rgba(46, 204, 113, 0.15);
+    border-color: rgba(46, 204, 113, 0.35);
+}
+
+.manual-queue-control-add:hover:not(:disabled) {
+    background-color: rgba(46, 204, 113, 0.3);
+    box-shadow: 0 0 6px rgba(46, 204, 113, 0.4);
+}
+
+/* Remove button specific styling */
+.manual-queue-control-remove {
+    background-color: rgba(231, 76, 60, 0.15);
+    border-color: rgba(231, 76, 60, 0.35);
+}
+
+.manual-queue-control-remove:hover:not(:disabled) {
+    background-color: rgba(231, 76, 60, 0.3);
+    box-shadow: 0 0 6px rgba(231, 76, 60, 0.4);
+}
+
+/* In-place button edit mode entered from Ctrl+Shift+Click on the Settings button. */
+.ocp-button-edit-done {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-height: 28px;
+    margin: 0 7px 5px 0;
+    padding: 4px 11px;
+    border: 1px solid rgba(16, 163, 127, 0.72);
+    border-radius: 8px;
+    background: rgba(16, 163, 127, 0.16);
+    color: inherit;
+    box-shadow: 0 0 0 1px rgba(16, 163, 127, 0.08);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0;
+    white-space: nowrap;
+    transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease, transform 100ms ease;
+    user-select: none;
+}
+
+.ocp-button-edit-done:hover,
+.ocp-button-edit-done:focus-visible {
+    border-color: rgba(16, 163, 127, 0.95);
+    background: rgba(16, 163, 127, 0.28);
+    box-shadow: 0 0 0 2px rgba(16, 163, 127, 0.18);
+    outline: none;
+}
+
+.ocp-button-edit-done:active {
+    transform: translateY(1px);
+}
+
+[id$="-custom-buttons-container"].ocp-button-edit-mode [data-ocp-button-edit-index] {
+    position: relative;
+    outline: 1px dashed rgba(122, 92, 200, 0.72);
+    border-radius: 6px;
+    animation: ocp-button-edit-shake 760ms ease-in-out infinite;
+    touch-action: none;
+}
+
+[id$="-custom-buttons-container"].ocp-button-edit-mode [data-ocp-button-edit-index]:nth-of-type(2n) {
+    animation-delay: -180ms;
+}
+
+[id$="-custom-buttons-container"].ocp-button-edit-mode [data-ocp-button-edit-index]:nth-of-type(3n) {
+    animation-delay: -320ms;
+}
+
+[id$="-custom-buttons-container"].ocp-button-edit-mode [data-ocp-button-edit-kind="separator"] {
+    min-width: 18px;
+    width: 18px;
+    height: 28px;
+    margin: 0 8px;
+    border: 1px dashed rgba(122, 92, 200, 0.5);
+    background-clip: content-box;
+    box-sizing: border-box;
+    cursor: grab;
+}
+
+[id$="-custom-buttons-container"].ocp-button-edit-mode .ocp-button-edit-dragging {
+    animation: none;
+    cursor: grabbing;
+    opacity: 0.82;
+    z-index: 2147483647;
+}
+
+.ocp-button-delete-x {
+    position: absolute;
+    top: -7px;
+    right: -7px;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    min-height: 16px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    border-radius: 50%;
+    background: #d93025;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.ocp-button-delete-x:hover,
+.ocp-button-delete-x:focus-visible {
+    background: #ff4b3e;
+    transform: scale(1.08);
+}
+
+@keyframes ocp-button-edit-shake {
+    0%,
+    100% {
+        translate: 0 0;
+        rotate: -0.6deg;
+    }
+
+    25% {
+        translate: 0 -0.5px;
+        rotate: 0.8deg;
+    }
+
+    50% {
+        translate: 0.5px 0;
+        rotate: -0.2deg;
+    }
+
+    75% {
+        translate: -0.5px 0.5px;
+        rotate: 0.6deg;
+    }
+}
+
+/* Animation for queue ticking emoji rotation */
+@keyframes ocp-emoji-slow-rotate {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+body.ocp-queue-ticking .ocp-queue-system-button {
+    animation: ocp-emoji-slow-rotate 12s linear infinite !important;
+    display: inline-block !important; /* Ensure transform applies correctly */
+}

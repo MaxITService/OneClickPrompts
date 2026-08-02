@@ -1,0 +1,226 @@
+/*
+toggle.css
+Version: 2.1
+
+This file is responsible for styling the Glassmorphic toggle switches used in the popup interface.
+It replaces the old iPhone-style switches.
+*/
+
+/* ------------------------------------------------------------------------- */
+/* Toggle Switch Container                                                   */
+/* ------------------------------------------------------------------------- */
+.toggle-container,
+.switch-container {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding-left: 10px;
+    position: relative;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Glassmorphic Toggle Base                                                  */
+/* ------------------------------------------------------------------------- */
+.toggle {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 72px;
+    /* ~10% wider than previous upscale */
+    height: 40px;
+    /* ~10% taller than previous upscale */
+    box-sizing: border-box;
+    padding: 4.5px;
+    /* Recentered padding for fixed-size thumb */
+    border: none;
+    border-radius: 99em;
+    background-color: color-mix(in srgb, #bbbbbc 12%, transparent);
+    backdrop-filter: blur(10px) saturate(150%);
+    -webkit-backdrop-filter: blur(10px) saturate(150%);
+    /* Shadows kept proportionally subtle after upscaling */
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+        inset 1px 1.5px 0px -1px rgba(255, 255, 255, 0.9),
+        inset -1px -1px 0px -1px rgba(255, 255, 255, 0.8),
+        inset -1.5px -4px 1px -3px rgba(255, 255, 255, 0.6),
+        inset -0.1px -0.5px 2px 0px rgba(0, 0, 0, 0.12),
+        inset -1px 1.5px 0px -1px rgba(0, 0, 0, 0.2),
+        inset 0px 1.5px 2px -1px rgba(0, 0, 0, 0.2),
+        inset 1px -3px 1px -2px rgba(0, 0, 0, 0.1),
+        0px 0.5px 2.5px 0px rgba(0, 0, 0, 0.1),
+        0px 3px 8px 0px rgba(0, 0, 0, 0.08);
+    transition: background-color 500ms cubic-bezier(0.4, 0, 0.2, 1),
+        box-shadow 500ms cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+    /* Prevent shrinking in flex containers */
+}
+
+/* Purple glow layer - synchronized with toggle animation */
+.toggle::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 99em;
+    background-color: rgba(154, 121, 211, 0.25);
+    box-shadow: inset 0 0 0 1px rgba(154, 121, 211, 0.4),
+        inset 1px 1.5px 0px -1px rgba(176, 155, 217, 0.8),
+        inset -1px -1px 0px -1px rgba(154, 121, 211, 0.6),
+        0 0 15px rgba(154, 121, 211, 0.5),
+        0px 3px 8px 0px rgba(154, 121, 211, 0.3);
+    opacity: 0;
+    transition: opacity 500ms cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.toggle::after {
+    content: "";
+    position: absolute;
+    left: 4.5px;
+    top: 4.5px;
+    display: block;
+    width: 31px;
+    /* 30% wider than v2.1 */
+    height: 31px;
+    /* 30% taller than v2.1 */
+    border-radius: 50%;
+    background-color: color-mix(in srgb, #bbbbbc 36%, transparent);
+    z-index: 0;
+    /* Shadows kept proportionally subtle after upscaling */
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+        inset 1px 0.5px 0px -0.5px rgba(255, 255, 255, 0.9),
+        inset -1px -0.5px 0px -0.5px rgba(255, 255, 255, 0.8),
+        inset -1px -3px 1px -2.5px rgba(255, 255, 255, 0.6),
+        inset -0.5px 1px 1.5px -0.5px rgba(0, 0, 0, 0.2),
+        inset 0px -2px 1px -1px rgba(0, 0, 0, 0.1),
+        0px 1.5px 3px 0px rgba(0, 0, 0, 0.08);
+    transition: background-color 500ms cubic-bezier(0.4, 0, 0.2, 1),
+        box-shadow 500ms cubic-bezier(0.4, 0, 0.2, 1),
+        translate 500ms cubic-bezier(0.4, 0, 0.2, 1),
+        transform 500ms ease;
+}
+
+.toggle:has(input:checked)::after {
+    translate: 32px 0;
+    /* Travel scaled to larger track while keeping thumb size */
+    animation: scaleToggle 440ms ease;
+}
+
+@keyframes scaleToggle {
+    0% {
+        transform: scaleX(1);
+    }
+
+    50% {
+        transform: scaleX(1.15);
+    }
+
+    100% {
+        transform: scaleX(1);
+    }
+}
+
+.toggle__input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle__label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+    flex-wrap: nowrap;
+}
+
+.toggle__emoji {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1 0 0;
+    height: 100%;
+    font-size: 18px;
+    /* Keep icon size; adjust centering instead of size */
+    transition: all 200ms cubic-bezier(0.5, 0, 0, 1);
+    line-height: 1em;
+    box-sizing: border-box;
+    transform: translateY(-0.5px);
+    /* Nudge to optically center emojis like ☀️/🌙 */
+}
+
+.toggle__label:hover .toggle__emoji {
+    transform: translateY(-2px) scale(1.15);
+}
+
+/* All toggles use #9a79d3 when checked */
+.toggle:has(input:checked)::before {
+    opacity: 1;
+}
+
+.toggle:has(input:checked)::after {
+    background-color: rgba(154, 121, 211, 0.5);
+    /* Scaled down shadows */
+    box-shadow: inset 0 0 0 1px rgba(176, 155, 217, 0.4),
+        inset 1px 0.5px 0px -0.5px rgba(200, 185, 225, 0.9),
+        0 0 10px rgba(154, 121, 211, 0.6),
+        0px 1.5px 3px 0px rgba(154, 121, 211, 0.4);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Switch Label Styling (Text next to toggle)                                */
+/* ------------------------------------------------------------------------- */
+.switch-label {
+    font-size: 16px;
+    color: var(--text-color);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Large Toggle Variant (+40%)                                               */
+/* ------------------------------------------------------------------------- */
+.toggle.toggle--large {
+    width: 101px;
+    height: 56px;
+    padding: 6.5px;
+}
+
+.toggle.toggle--large::after {
+    width: 43px;
+    height: 43px;
+    left: 6.5px;
+    top: 6.5px;
+}
+
+.toggle.toggle--large:has(input:checked)::after {
+    translate: 45px 0;
+}
+
+/* Emoji styling for large toggle */
+.toggle.toggle--large .toggle__emoji {
+    font-size: 25px;
+    transform-origin: center center;
+}
+
+/* Separate styling for Sun (left) and Moon (right) to ensure perfect centering */
+/* Sun Emoji */
+.toggle.toggle--large .toggle__emoji:first-child {
+    transform: translateY(-1.5px);
+}
+
+.toggle.toggle--large .toggle__label .toggle__emoji:first-child:hover {
+    transform: translateY(-1.5px) scale(1.15);
+}
+
+/* Moon Emoji */
+.toggle.toggle--large .toggle__emoji:last-child {
+    transform: translateY(-1.5px);
+}
+
+.toggle.toggle--large .toggle__label .toggle__emoji:last-child:hover {
+    transform: translateY(-1.5px) scale(1.15);
+}

@@ -1,0 +1,103 @@
+/* modal.css */
+/* Premium Modal Overlay Styles */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.modal-overlay.is-visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background: var(--bg-color, #ffffff);
+    color: var(--text-color, #333333);
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    max-width: 400px;
+    width: 90%;
+    transform: scale(0.9);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border: 1px solid var(--border-color, #e0e0e0);
+    text-align: center;
+}
+
+.modal-overlay.is-visible .modal-content {
+    transform: scale(1);
+}
+
+.modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--primary-color, #7a5cc8);
+}
+
+.modal-body {
+    font-size: 1rem;
+    margin-bottom: 24px;
+    line-height: 1.5;
+    color: var(--text-color);
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+
+.modal-btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.modal-btn-confirm {
+    background-color: var(--primary-color, #7a5cc8);
+    color: white;
+}
+
+.modal-btn-confirm:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
+.modal-btn-cancel {
+    background-color: transparent;
+    color: var(--text-muted, #666);
+    border: 1px solid var(--border-color, #ccc);
+}
+
+.modal-btn-cancel:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--text-color);
+}
+
+.modal-type-error .modal-title {
+    color: var(--danger-color, #dc3545);
+}
+
+.modal-type-error .modal-btn-confirm {
+    background-color: var(--danger-color, #dc3545);
+}
+
+/* Dark theme support automatically handled via CSS variables if defined in root/dark-theme.css */

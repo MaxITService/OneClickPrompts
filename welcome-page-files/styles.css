@@ -1,0 +1,120 @@
+/* Base styles for the Welcome page */
+body {
+  margin: 0;
+  padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-size: var(--font-base);
+  line-height: var(--lh-normal);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* Container */
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Styles for sections/boxes */
+.section {
+  margin-bottom: 24px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 16px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Headings */
+h1,
+h2 {
+  color: var(--primary-color);
+  margin-bottom: 16px;
+  line-height: var(--lh-tight);
+}
+
+h1 {
+  font-size: var(--font-2xl);
+  border-bottom: 2px solid var(--primary-color);
+  padding-bottom: 10px;
+  text-align: center;
+}
+
+h2 {
+  font-size: var(--font-xl);
+}
+
+/* Paragraphs and lists */
+p {
+  font-size: var(--font-base);
+  margin-bottom: 16px;
+}
+
+ul {
+  list-style: disc;
+  margin: 16px 0;
+  padding-left: 22px;
+  font-size: var(--font-base);
+}
+
+li {
+  margin-bottom: 10px;
+}
+
+ol {
+  margin: 16px 0;
+  padding-left: 22px;
+  font-size: var(--font-base);
+}
+
+/* Image styles */
+img {
+  max-width: 100%;
+  display: block;
+  margin: 16px auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+/* Instruction styles */
+.instruction {
+  margin-bottom: 24px;
+}
+
+.instruction img {
+  margin: 10px 0;
+}
+
+/* Logo styles in the header */
+.logo {
+  height: 50px;
+  display: block;
+  margin: 0 auto 10px;
+}
+
+/* Dark theme */
+body.dark-theme {
+  --bg-color: #222;
+  --text-color: #eee;
+  --primary-color: #9a79d3;
+  background: var(--bg-color);
+  color: var(--text-color);
+}
+
+body.dark-theme .section {
+  background-color: #333;
+  border-color: #444;
+  box-shadow: none;
+}
+
+body.dark-theme h1,
+body.dark-theme h2 {
+  color: var(--primary-color);
+}
+
+body.dark-theme a {
+  color: #add8e6;
+}

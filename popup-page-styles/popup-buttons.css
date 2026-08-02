@@ -1,0 +1,702 @@
+/*
+popup-buttons.css
+Version: 1.1
+
+This file is responsible for:
+1. Base Button Styling: Generic styling for all <button> elements within the popup interface.
+2. Custom Button Section: Styles for the custom buttons area including the button list container,
+   individual custom button items (with hover and dragging effects), drag handles, and separator items.
+*/
+
+
+/* input for creating new buttons */
+
+.text-input {
+    overflow: hidden;
+    resize: none;
+}
+
+:root {
+    --button-lift-glass-bg: rgba(255, 255, 255, 0.42);
+    --button-lift-glass-tint: rgba(91, 209, 138, 0.36);
+    --button-lift-glass-highlight: rgba(255, 255, 255, 0.72);
+    --button-lift-glass-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+    --button-lift-glass-outline: rgba(91, 209, 138, 0.5);
+}
+
+
+/* ------------------------------------------------------------------------- */
+/* 1. Base Button Styling for All Buttons                                   */
+/* ------------------------------------------------------------------------- */
+
+/* Generic styling for all buttons */
+button {
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: #ffffff;
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: 14px;
+    transition: background var(--transition-duration) ease,
+        transform 0.2s ease,
+        color var(--transition-duration) ease;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Hover state for buttons */
+button:hover {
+    background: #e6e6e6;
+}
+
+/* Active state for buttons */
+button:active {
+    transform: scale(0.98);
+}
+
+/* Special styling for buttons with the "danger" class */
+button.danger {
+    color: var(--danger-color);
+    border-color: var(--danger-color);
+    background: #ffffff;
+}
+
+button.danger:hover {
+    background: #f8d7da;
+}
+
+.delete-button.undo-state {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #ffffff;
+}
+
+.delete-button.undo-state:hover {
+    background: color-mix(in srgb, var(--primary-color) 90%, #ffffff 10%);
+    border-color: color-mix(in srgb, var(--primary-color) 90%, #ffffff 10%);
+}
+
+.button-item.pending-delete {
+    border-color: var(--primary-color);
+    background: var(--primary-color-faded, #f3ecff);
+}
+
+
+
+
+/* ------------------------------------------------------------------------- */
+/* 2. Custom Buttons Section                                                 */
+/* ------------------------------------------------------------------------- */
+
+/* Group for the "Add Button" form controls */
+.add-button-group {
+    border: 1px dashed var(--primary-color);
+    padding: 12px;
+    margin-bottom: 16px;
+    border-radius: 8px;
+    background-color: var(--primary-color-faded);
+}
+
+/* Adjust margins for rows inside the group to avoid double margins */
+.add-button-group .row {
+    margin-bottom: 8px;
+}
+
+/* Remove margin from the last row inside the group */
+.add-button-group .row:last-child {
+    margin-bottom: 0;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Smart Variables Panel                                                     */
+/* ------------------------------------------------------------------------- */
+.smart-variables-panel {
+    color: var(--text-color);
+    margin: 12px 0 16px;
+}
+
+.smart-variables-subheader,
+.smart-variables-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.smart-variables-header h3,
+.smart-variables-subheader h4 {
+    margin: 0;
+    color: var(--primary-color);
+}
+
+.smart-variables-intro-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.smart-variables-intro-row p {
+    margin: 4px 0 0;
+    color: var(--text-muted, #666);
+    font-size: 13px;
+}
+
+.smart-variables-builtins {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 8px;
+    margin: 12px 0;
+}
+
+.smart-variable-builtin {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 8px;
+    background: var(--primary-color-faded, #f5f0ff);
+    color: var(--text-color);
+}
+
+.smart-variable-builtin code {
+    font-family: Consolas, monospace;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.smart-variable-builtin span {
+    display: block;
+    color: var(--text-muted, #666);
+    font-size: 12px;
+    line-height: 1.35;
+    margin-top: 3px;
+}
+
+.smart-variable-builtin button,
+.smart-variables-custom-row button {
+    padding: 6px 10px;
+    font-size: 12px;
+}
+
+.smart-variables-custom {
+    border-top: 1px solid var(--border-color);
+    padding-top: 12px;
+}
+
+.smart-variables-custom-list {
+    display: grid;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.smart-variables-custom-row {
+    display: grid;
+    grid-template-columns: minmax(120px, 0.75fr) minmax(180px, 1.25fr) auto auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.smart-variables-custom-row input[type="text"],
+.smart-variables-custom-row textarea {
+    box-sizing: border-box;
+    width: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-color);
+    background: var(--bg-color);
+    font: inherit;
+    padding: 6px 8px;
+}
+
+.smart-variables-custom-row textarea {
+    min-height: 38px;
+    resize: vertical;
+}
+
+.smart-variables-empty {
+    border: 1px dashed var(--border-color);
+    border-radius: 6px;
+    color: var(--text-muted, #666);
+    padding: 10px;
+    text-align: center;
+}
+
+.smart-variables-actions {
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+@media (max-width: 620px) {
+    .smart-variables-intro-row,
+    .smart-variables-subheader {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .smart-variable-builtin,
+    .smart-variables-custom-row {
+        grid-template-columns: 1fr;
+    }
+
+    .smart-variable-builtin button,
+    .smart-variables-custom-row button {
+        justify-self: start;
+    }
+}
+
+/* Container for the custom button list */
+#buttonCardsList {
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 8px;
+    min-height: 50px;
+    background-color: #ffffff;
+    transition: background-color var(--transition-duration) ease;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
+    flex: 1 1 auto;
+    scroll-behavior: smooth;
+    transform-style: preserve-3d;
+}
+
+/* Styles for individual custom button items */
+.button-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    margin: 4px 0;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: #ffffff;
+    cursor: grab;
+    position: relative;
+    /* Set initial scale to 1 and enable a smooth transition */
+    transform: scale(1);
+    transition: transform 0.9s ease, background-color 0.9s ease, box-shadow 0.4s ease;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    perspective: 1000px;
+    isolation: isolate;
+}
+
+/*
+ * Override the parent's 'grab' cursor for interactive children.
+ * This ensures that users see the correct cursor (e.g., text, pointer)
+ * over elements they can interact with, improving the UI's affordance.
+ */
+.button-item>input,
+.button-item>textarea,
+.button-item>button,
+.button-item>label {
+    cursor: auto;
+}
+
+/* Hover effect for button items */
+.button-item:hover {
+    background-color: var(--hover-bg-color);
+}
+
+/* Styling when a button item is being dragged */
+/* Styling when a button item is being dragged */
+/* Styling when a button item is being dragged */
+.button-item.dragging {
+    transform: scale(0.8);
+
+    /* Remove background/filter from parent to avoid distorting content */
+    background: transparent;
+
+    /* Shadow and border */
+    box-shadow: 0 8px 26px rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+
+    cursor: grabbing;
+    z-index: 3;
+    /* overflow: visible allows the liquid edges to show, but hidden keeps it contained. 
+       User wanted "liquid glass", usually implies some edge distortion. 
+       However, keeping hidden prevents layout spill. Let's try hidden first as per original. */
+    overflow: hidden;
+
+    opacity: 1;
+    will-change: transform;
+}
+
+/* The liquid glass background layer */
+.button-item.dragging::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    z-index: -1;
+    /* Behind content */
+
+    /* Glass Effect */
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+/* Inner shine effect */
+.button-item.dragging::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    box-shadow:
+        inset 2px 2px 3px rgba(255, 255, 255, 0.7),
+        inset -3px -3px 6px rgba(255, 255, 255, 0.4);
+    border-radius: inherit;
+    /* Stacking order: 
+       -1: Glass Background (::before)
+        2: Shine Effect (::after)
+        5: Text & Inputs (Content)
+    */
+    z-index: 2;
+}
+
+.button-item.dragging textarea,
+.button-item.dragging .text-input,
+.button-item.dragging .emoji-input {
+    /* Make inputs slightly more transparent during drag to blend */
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #000;
+    /* Ensure text remains visible */
+}
+
+/* Ensure content sits on top of the distorted background */
+.button-item.dragging>* {
+    position: relative;
+    z-index: 5;
+}
+
+/* Special styling for the Settings button card */
+.settings-button-card {
+    /* More conservative padding adjustment */
+    padding: 2px 8px;
+}
+
+.settings-button-card>.text-input {
+    /* This is a div, not a textarea. Make it look like a label. */
+    background-color: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Center text horizontally */
+    color: var(--text-muted, #666);
+    font-size: 16px;
+    /* Make text bigger */
+    font-style: normal;
+    /* Remove italic */
+    font-weight: 500;
+    /* Medium weight for better visibility */
+    cursor: default;
+    /* Not grab/text */
+    padding: 6px;
+    /* Moderate padding */
+    border: 1px solid transparent;
+    /* Maintain layout alignment with bordered textareas */
+    box-shadow: none;
+    text-align: center;
+    /* Ensure text is centered */
+    width: 100%;
+    /* Ensure it takes full width for proper centering */
+}
+
+/* Ensure hotkey text in settings card is properly centered */
+.settings-button-card .shortcut-line {
+    text-align: center;
+    margin: 0 auto;
+    display: block;
+    width: 100%;
+}
+
+/* Adjust space between elements in settings card for better hotkey positioning */
+.settings-button-card.button-item {
+    gap: 8px;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Meta block: stacks autosend + hotkey vertically                           */
+/* ------------------------------------------------------------------------- */
+.button-item .meta-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* Center content horizontally */
+    gap: 2px;
+}
+
+.button-item .shortcut-line {
+    line-height: 1.2;
+    text-align: center;
+    /* Center hotkey text */
+    width: 100%;
+    /* Ensure the text centers within the full width */
+}
+
+.button-item .shortcut-picker-button {
+    border: 1px solid var(--border-color, #d0d0d0);
+    border-radius: 4px;
+    background: var(--button-secondary-bg, transparent);
+    color: var(--text-muted, #666);
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+    line-height: 1.2;
+    padding: 3px 7px;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.button-item .shortcut-picker-button:hover {
+    color: var(--text-color, #333);
+    border-color: var(--primary-color, #7a5cc8);
+}
+
+.button-item .shortcut-picker-button-custom {
+    color: var(--primary-color, #7a5cc8);
+    font-weight: 600;
+}
+
+.hotkey-picker-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.48);
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity 180ms ease;
+}
+
+.hotkey-picker-overlay.is-visible {
+    opacity: 1;
+}
+
+.hotkey-picker-dialog {
+    width: min(420px, 100%);
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 8px;
+    background: var(--bg-color, #fff);
+    color: var(--text-color, #333);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
+    padding: 20px;
+    text-align: center;
+}
+
+.hotkey-picker-dialog h3 {
+    margin: 0 0 10px;
+    color: var(--primary-color, #7a5cc8);
+}
+
+.hotkey-picker-target {
+    margin-bottom: 14px;
+    color: var(--text-muted, #666);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.hotkey-capture-box {
+    border: 1px dashed var(--primary-color, #7a5cc8);
+    border-radius: 6px;
+    padding: 18px 12px;
+    outline: none;
+    background: rgba(122, 92, 200, 0.08);
+}
+
+.hotkey-capture-value {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.hotkey-picker-message {
+    min-height: 20px;
+    margin: 12px 0 16px;
+    color: var(--text-muted, #666);
+    font-size: 13px;
+}
+
+.hotkey-picker-error {
+    color: var(--danger-color, #dc3545);
+}
+
+.hotkey-picker-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.hotkey-picker-actions button {
+    border-radius: 6px;
+    border: 1px solid var(--border-color, #ccc);
+    padding: 8px 14px;
+    cursor: pointer;
+}
+
+.hotkey-picker-save {
+    background: var(--primary-color, #7a5cc8);
+    border-color: var(--primary-color, #7a5cc8);
+    color: #fff;
+}
+
+.hotkey-picker-save:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* Subtle divider between auto-send row and the hotkey hint.
+   Only rendered when both elements are present (set in JS). */
+.button-item .meta-separator {
+    width: 60%;
+    height: 1px;
+    background-color: var(--border-color, #d0d0d0);
+    opacity: 0.55;
+    border-radius: 1px;
+    align-self: center;
+    margin: 1px 0;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Drag Handle Styling                                                       */
+/* ------------------------------------------------------------------------- */
+
+/* Visual affordance for dragging custom button items */
+.drag-handle {
+    padding: 0 8px;
+    display: flex;
+    align-items: center;
+    font-size: 18px;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Separator Styles                                                          */
+/* ------------------------------------------------------------------------- */
+
+/* Special styles for separator items within the button list */
+.button-item.separator-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 8px 0;
+    padding: 8px;
+    background: #dcdcdc;
+    border: none;
+    cursor: move;
+    transition: background-color var(--transition-duration) ease;
+}
+
+.button-item.separator-item:hover {
+    background: #c0c0c0;
+}
+
+.button-item.separator-item.dragging {
+    opacity: 0.7;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Small Button Variant                                                      */
+/* ------------------------------------------------------------------------- */
+button.small {
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
+/* Hotkey Picker Dialog Helper & Examples */
+.hotkey-picker-help {
+    margin: 16px 0;
+    padding: 12px;
+    border-radius: 6px;
+    background: rgba(122, 92, 200, 0.03);
+    border: 1px solid rgba(122, 92, 200, 0.1);
+    text-align: left;
+}
+
+.hotkey-picker-help h4 {
+    margin: 0 0 8px 0;
+    font-size: 12px;
+    color: var(--primary-color, #7a5cc8);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.hotkey-help-examples {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.hotkey-help-examples span {
+    font-size: 11px;
+    color: var(--text-muted, #666);
+    background: rgba(0, 0, 0, 0.03);
+    padding: 2px 4px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.hotkey-picker-help p {
+    margin: 0;
+    font-size: 11px;
+    color: var(--text-muted, #666);
+    line-height: 1.45;
+}
+
+kbd {
+    background-color: var(--bg-color, #fff);
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 4px;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+    color: var(--text-color, #333);
+    display: inline-block;
+    font-family: inherit;
+    font-size: 10px;
+    line-height: 1.2;
+    margin: 0 1px;
+    padding: 1px 4px;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+/* Hotkey Capture Box - Conflict Alert Styles */
+.hotkey-capture-box.hotkey-capture-box-conflict {
+    border-color: var(--danger-color, #dc3545) !important;
+    background: rgba(220, 53, 69, 0.04) !important;
+    animation: hotkey-shake 0.3s ease;
+}
+
+.hotkey-warning-message {
+    font-size: 11px;
+    color: var(--danger-color, #dc3545);
+    font-weight: 600;
+    margin-top: 5px;
+    cursor: help;
+    display: inline-block;
+    background: rgba(220, 53, 69, 0.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(220, 53, 69, 0.15);
+}
+
+@keyframes hotkey-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+}

@@ -1,0 +1,1716 @@
+// buttons-init-and-render.js
+// Version: 1.0
+//
+// Documentation:
+// Initialization and rendering of the *entire* buttons row for target containers (inline chat area
+// or the floating panel). Prevents duplicates, composes all button types, and appends global toggles.
+//
+// What this module renders (in order):
+//  1) Floating panel toggle (for inline containers only, if the panel feature exists)
+//  2) Inline Profile Selector — optional, position configurable ("before" or "after")
+//  3) A unified list of buttons:
+//     - Cross-Chat buttons ("Copy", "Paste") placed "before" or "after" based on globalCrossChatConfig
+//     - Custom buttons from globalMaxExtensionConfig.customButtons (honors separators)
+//     - Numeric shortcuts (1–10) assigned to the first 10 non-separator buttons when enabled
+//  4) Global toggles appended last: "Auto-send" and "Hotkeys"
+//
+// Functions:
+// - createAndInsertCustomElements(targetContainer): Creates the container, renders everything once, and inserts it.
+//   Uses a dynamic id from InjectionTargetsOnWebsite to avoid duplication.
+// - generateAndAppendAllButtons(container, isPanel): Main renderer for all buttons + optional controls.
+// - generateAndAppendToggles(container): Appends Auto-send and Hotkeys toggles and wires them to global config.
+// - updateButtonsForProfileChange(origin): Scoped re-render — only "panel" or only "inline".
+// - createInlineProfileSelector(): Builds the inline profile <select>, loads profile list, styles for theme,
+//   blocks event bubbling on hostile SPAs, and triggers a partial refresh on change.
+//
+// Notes:
+// - Cross-Chat placement and autosend behavior is driven by window.globalCrossChatConfig.
+// - Shortcut keys appear in tooltips; Shift+click inversion happens in processCustomSendButtonClick.
+//
+// Usage:
+// Ensure `buttons.js`, `utils.js`, and `init.js` are loaded first. Include in `content_scripts` so it runs
+// on the target pages. This module only performs DOM composition; click routing is in buttons.js.
+//
+// Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS. This one too!
+'use strict';
+
+window.MaxExtensionButtonEditMode = {
+    active: false,
+    container: null,
+    origin: null,
+    clickBlocker: null,
+    pointerState: null,
+    doneButtonSelector: '[data-ocp-button-edit-done="true"]',
+    flipDurationMs: 300,
+
+    toggle(container, origin) {
+        if (this.active && this.container === container) {
+            this.exit();
+            return;
+        }
+        this.enter(container, origin);
+    },
+
+    enter(container, origin) {
+        if (!container) return;
+        if (this.active) {
+            this.exit();
+        }
+
+        this.active = true;
+        this.container = container;
+        this.origin = origin || (container.closest('#max-extension-floating-panel') ? 'panel' : 'inline');
+        container.classList.add('ocp-button-edit-mode');
+        this.ensureDoneButton(container);
+        this.decorateContainer(container);
+        this.updateSettingsButtonHint(container, true);
+        this.bindEscapeKey();
+        this.__toast('Button edit mode: drag to reorder, Shift-click a button to edit text, click × to delete. Click Done editing, Settings, or press Esc to exit.', 'info', 5500);
+    },
+
+    exit() {
+        if (!this.active) return;
+        const container = this.container;
+        if (container) {
+            container.classList.remove('ocp-button-edit-mode');
+            this.removeDoneButton(container);
+            container.querySelectorAll('.ocp-button-delete-x').forEach(node => node.remove());
+            container.querySelectorAll('[data-ocp-button-edit-index]').forEach(button => {
+                button.classList.remove('ocp-button-edit-item', 'ocp-button-edit-dragging');
+                button.style.transform = '';
+                button.style.transition = '';
+                button.style.zIndex = '';
+                button.style.visibility = '';
+                if (button.__ocpEditPointerDown) {
+                    button.removeEventListener('pointerdown', button.__ocpEditPointerDown);
+                    delete button.__ocpEditPointerDown;
+                }
+                delete button.dataset.ocpEditDecorated;
+            });
+            this.updateSettingsButtonHint(container, false);
+        }
+        if (this.clickBlocker && container) {
+            container.removeEventListener('click', this.clickBlocker, true);
+        }
+        if (this.__boundMove) document.removeEventListener('pointermove', this.__boundMove);
+        if (this.__boundUp) {
+            document.removeEventListener('pointerup', this.__boundUp);
+            document.removeEventListener('pointercancel', this.__boundUp);
+        }
+        this.unbindEscapeKey();
+        if (this.pointerState?.ghost) {
+            this.pointerState.ghost.remove();
+            if (this.pointerState.button) this.pointerState.button.style.visibility = '';
+        }
+        this.active = false;
+        this.container = null;
+        this.origin = null;
+        this.clickBlocker = null;
+        this.pointerState = null;
+    },
+
+    syncContainer(container, origin) {
+        if (!this.active) {
+            this.removeDoneButton(container);
+            return;
+        }
+        if (this.origin && origin && this.origin !== origin) return;
+        this.container = container;
+        this.origin = origin || this.origin;
+        container.classList.add('ocp-button-edit-mode');
+        this.ensureDoneButton(container);
+        this.decorateContainer(container);
+        this.updateSettingsButtonHint(container, true);
+        this.bindEscapeKey();
+    },
+
+    decorateContainer(container) {
+        if (!container) return;
+        this.ensureDoneButton(container);
+        container.querySelectorAll('[data-ocp-button-edit-index]').forEach(button => {
+            this.decorateButton(button);
+        });
+
+        if (!this.clickBlocker) {
+            this.clickBlocker = (event) => {
+                if (!this.active) return;
+                if (event.target?.closest?.('.ocp-button-delete-x')) return;
+                if (event.target?.closest?.(this.doneButtonSelector)) return;
+                if (event.target?.closest?.('[data-ocp-settings-button="true"]')) return;
+                const editableButton = event.target?.closest?.('[data-ocp-button-edit-index]');
+                if (editableButton && event.shiftKey) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    void this.openButtonTextEditor(event, editableButton);
+                    return;
+                }
+                if (editableButton) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+            };
+        }
+        container.removeEventListener('click', this.clickBlocker, true);
+        container.addEventListener('click', this.clickBlocker, true);
+    },
+
+    ensureDoneButton(container = this.container) {
+        if (!container || !this.active) return null;
+        let doneButton = container.querySelector(this.doneButtonSelector);
+        if (!doneButton) {
+            doneButton = document.createElement('button');
+            doneButton.type = 'button';
+            doneButton.className = 'ocp-button-edit-done';
+            doneButton.dataset.ocpButtonEditDone = 'true';
+            doneButton.textContent = 'Done editing';
+            doneButton.title = 'Exit button edit mode';
+            doneButton.setAttribute('aria-label', 'Done editing');
+            doneButton.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.exit();
+            });
+        }
+
+        if (container.firstElementChild !== doneButton) {
+            container.prepend(doneButton);
+        }
+        return doneButton;
+    },
+
+    removeDoneButton(container = this.container) {
+        if (!container) return;
+        container.querySelectorAll(this.doneButtonSelector).forEach(button => button.remove());
+    },
+
+    bindEscapeKey() {
+        if (this.__boundKeydown) return;
+        this.__boundKeydown = (event) => this.handleKeydown(event);
+        document.addEventListener('keydown', this.__boundKeydown, true);
+    },
+
+    unbindEscapeKey() {
+        if (!this.__boundKeydown) return;
+        document.removeEventListener('keydown', this.__boundKeydown, true);
+        this.__boundKeydown = null;
+    },
+
+    handleKeydown(event) {
+        if (!this.active || event.key !== 'Escape' || event.defaultPrevented || event.isComposing) return;
+        event.preventDefault();
+        event.stopPropagation();
+        this.exit();
+    },
+
+    decorateButton(button) {
+        if (!button || button.dataset.ocpEditDecorated === 'true') return;
+        button.dataset.ocpEditDecorated = 'true';
+        button.classList.add('ocp-button-edit-item');
+
+        const deleteButton = document.createElement('span');
+        deleteButton.setAttribute('role', 'button');
+        deleteButton.tabIndex = 0;
+        deleteButton.className = 'ocp-button-delete-x';
+        deleteButton.textContent = '×';
+        deleteButton.title = 'Delete this button or separator';
+        deleteButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            this.deleteButton(button);
+        });
+        deleteButton.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            event.stopPropagation();
+            this.deleteButton(button);
+        });
+        button.appendChild(deleteButton);
+
+        button.__ocpEditPointerDown = (event) => this.handlePointerDown(event, button);
+        button.addEventListener('pointerdown', button.__ocpEditPointerDown);
+    },
+
+    canEditButtonText(buttonConfig) {
+        if (!buttonConfig || buttonConfig.separator) return false;
+        return typeof buttonConfig.text === 'string' && !buttonConfig.text.startsWith('%OCP_');
+    },
+
+    async openButtonTextEditor(event, button) {
+        const index = Number(button?.dataset?.ocpButtonEditIndex);
+        const config = window.globalMaxExtensionConfig;
+        const buttonConfig = Number.isInteger(index) && Array.isArray(config?.customButtons)
+            ? config.customButtons[index]
+            : null;
+
+        if (!this.canEditButtonText(buttonConfig)) {
+            this.__toast('This button cannot be text-edited here.', 'info', 2200);
+            return;
+        }
+
+        try {
+            const { currentProfile } = await chrome.storage.local.get('currentProfile');
+            const profileName = currentProfile || window.globalMaxExtensionConfig?.PROFILE_NAME;
+            if (!profileName) {
+                throw new Error('Missing current profile name');
+            }
+            window.MaxExtensionButtons?.__showCreatedButtonFlyout?.(event, {
+                success: true,
+                mode: 'edit',
+                profileName,
+                buttonIndex: index,
+                button: this.cloneButtonConfig(buttonConfig)
+            });
+        } catch (error) {
+            logConCgp('[ButtonEditMode] Failed to open button editor:', error?.message || error);
+            this.__toast('Could not open button editor.', 'error');
+        }
+    },
+
+    updateSettingsButtonHint(container = this.container, isEditing = this.active) {
+        if (!container) return;
+        container.querySelectorAll('[data-ocp-settings-button="true"]').forEach(button => {
+            if (!button.dataset.ocpSettingsDefaultTitle) {
+                button.dataset.ocpSettingsDefaultTitle = button.getAttribute('data-ocp-tooltip') || button.getAttribute('title') || '';
+            }
+            if (isEditing) {
+                this.setSettingsButtonTooltip(
+                    button,
+                    'Settings button\n• Click: exit individual button edit mode.\n• Drag buttons or separators: reorder them relative to each other.\n• Shift-click a button: edit its text.\n• Click ×: delete a button or separator.\n• You can also click Done editing or press Esc to exit.'
+                );
+            } else {
+                const defaultTitle = button.dataset.ocpSettingsDefaultTitle || 'Open extension settings';
+                this.setSettingsButtonTooltip(button, defaultTitle);
+            }
+        });
+    },
+
+    setSettingsButtonTooltip(button, text) {
+        if (!button) return;
+        button.setAttribute('data-ocp-tooltip', text);
+        button.setAttribute('aria-label', text);
+        if (button.hasAttribute('data-ocp-tooltip-attached')) {
+            button.removeAttribute('title');
+        } else {
+            button.setAttribute('title', text);
+        }
+    },
+
+    getEditableButtons() {
+        if (!this.container) return [];
+        return Array.from(this.container.querySelectorAll('[data-ocp-button-edit-index]'));
+    },
+
+    captureRects() {
+        return new Map(this.getEditableButtons().map(button => [button, button.getBoundingClientRect()]));
+    },
+
+    playFlip(beforeRects) {
+        this.getEditableButtons().forEach(button => {
+            const before = beforeRects.get(button);
+            if (!before) return;
+            const after = button.getBoundingClientRect();
+            const dx = before.left - after.left;
+            const dy = before.top - after.top;
+            if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
+            button.style.transition = 'none';
+            button.style.transform = `translate(${dx}px, ${dy}px)`;
+            requestAnimationFrame(() => {
+                button.style.transition = `transform ${this.flipDurationMs}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
+                button.style.transform = '';
+            });
+        });
+    },
+
+    handlePointerDown(event, button) {
+        if (!this.active || event.button !== 0) return;
+        if (event.target?.closest?.('.ocp-button-delete-x')) return;
+        if (!button.dataset.ocpButtonEditIndex) return;
+
+        const index = Number(button.dataset.ocpButtonEditIndex);
+        if (!Number.isInteger(index)) return;
+
+        // Capture initial rect so the button can follow the cursor from the grab point
+        const rect = button.getBoundingClientRect();
+        const layoutWidth = button.offsetWidth || rect.width;
+        const layoutHeight = button.offsetHeight || rect.height;
+        this.pointerState = {
+            button,
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            lastX: event.clientX,
+            lastY: event.clientY,
+            dragging: false,
+            originalIndex: index,
+            offsetX: event.clientX - rect.left,
+            offsetY: event.clientY - rect.top,
+            layoutWidth,
+            layoutHeight,
+            visualScaleX: layoutWidth ? rect.width / layoutWidth : 1,
+            visualScaleY: layoutHeight ? rect.height / layoutHeight : 1,
+            ghost: null
+        };
+
+        // Use document-level listeners so events are never lost (no setPointerCapture needed)
+        if (!this.__boundMove) this.__boundMove = (e) => this.handlePointerMove(e);
+        if (!this.__boundUp) this.__boundUp = (e) => this.handlePointerUp(e);
+        document.addEventListener('pointermove', this.__boundMove);
+        document.addEventListener('pointerup', this.__boundUp);
+        document.addEventListener('pointercancel', this.__boundUp);
+    },
+
+    handlePointerMove(event) {
+        const state = this.pointerState;
+        if (!state || state.pointerId !== event.pointerId) return;
+        state.lastX = event.clientX;
+        state.lastY = event.clientY;
+        const distance = Math.hypot(event.clientX - state.startX, event.clientY - state.startY);
+        if (!state.dragging && distance < 5) return;
+
+        if (!state.dragging) {
+            state.dragging = true;
+            state.button.classList.add('ocp-button-edit-dragging');
+            // SCALING NOTE: The buttons container may have a CSS transform applied
+            // by MaxExtensionUiScale (e.g. transform:scale(...)). When any ancestor
+            // has a transform, `position:fixed` becomes relative to that ancestor
+            // instead of the viewport, while event.clientX/Y remain in viewport
+            // coords — causing a position mismatch (button flies off-screen).
+            // Solution: append the ghost to document.body which has no transforms,
+            // so `position:fixed` + `left/top` work in true viewport coordinates.
+            // The ghost keeps the source element's layout size, then receives the
+            // measured visual scale so its text/icon does not shrink while dragged.
+            // The original button stays hidden in-flow so DOM reordering works
+            // naturally and siblings reflow correctly for FLIP animations.
+            const ghost = state.button.cloneNode(true);
+            ghost.querySelectorAll('.ocp-button-delete-x').forEach(n => n.remove());
+            const btnRect = state.button.getBoundingClientRect();
+            ghost.style.cssText = `
+                position: fixed;
+                left: ${btnRect.left}px;
+                top: ${btnRect.top}px;
+                width: ${state.layoutWidth}px;
+                height: ${state.layoutHeight}px;
+                margin: 0;
+                pointer-events: none;
+                z-index: 2147483647;
+                opacity: 0.82;
+                cursor: grabbing;
+                animation: none;
+                outline: 2px solid #8b5cf6;
+                outline-offset: 2px;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.35), 0 0 0 4px rgba(139,92,246,0.22);
+                border-radius: 6px;
+                transform: scale(${state.visualScaleX}, ${state.visualScaleY});
+                transform-origin: 0 0;
+            `;
+            document.body.appendChild(ghost);
+            state.ghost = ghost;
+            state.button.style.visibility = 'hidden';
+        }
+
+        event.preventDefault();
+        // Ghost positioning uses viewport coords (event.clientX/Y) directly.
+        // getBoundingClientRect() also returns viewport coords, so offsetX/Y
+        // (computed from the initial rect) are consistent regardless of scaling.
+        state.ghost.style.left = `${event.clientX - state.offsetX}px`;
+        state.ghost.style.top = `${event.clientY - state.offsetY}px`;
+        // moveDraggedButton uses clientX/Y to compare against sibling rects
+        // (also viewport coords via getBoundingClientRect), so scaling is
+        // transparent — no manual scale compensation needed.
+        this.moveDraggedButton(event.clientX, event.clientY, state.button);
+    },
+
+    handlePointerUp(event) {
+        const state = this.pointerState;
+        if (!state || state.pointerId !== event.pointerId) return;
+        const button = state.button;
+
+        document.removeEventListener('pointermove', this.__boundMove);
+        document.removeEventListener('pointerup', this.__boundUp);
+        document.removeEventListener('pointercancel', this.__boundUp);
+
+        if (state.dragging) {
+            event.preventDefault();
+            event.stopPropagation();
+            if (state.ghost) state.ghost.remove();
+            button.classList.remove('ocp-button-edit-dragging');
+            // Clear any residual FLIP animation before restoring visibility
+            button.style.transform = '';
+            button.style.transition = '';
+            button.style.visibility = '';
+            button.__ocpSuppressNextClick = true;
+            setTimeout(() => { button.__ocpSuppressNextClick = false; }, 0);
+            this.saveOrderFromDom();
+        }
+
+        this.pointerState = null;
+    },
+
+    moveDraggedButton(clientX, clientY, draggedButton) {
+        // Throttle: let the previous FLIP animation finish before starting a new reorder
+        const now = performance.now();
+        if (this._lastReorderTime && now - this._lastReorderTime < this.flipDurationMs) return;
+
+        const siblings = this.getEditableButtons().filter(button => button !== draggedButton);
+        let target = null;
+        let insertAfter = false;
+        let bestDistance = Infinity;
+
+        siblings.forEach(button => {
+            const rect = button.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            const distance = Math.hypot(clientX - cx, clientY - cy);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                target = button;
+                insertAfter = clientY > cy || (Math.abs(clientY - cy) < rect.height / 2 && clientX > cx);
+            }
+        });
+
+        if (!target) return;
+
+        // Skip if the button is already in the correct position (no DOM change needed)
+        if (insertAfter && target.nextElementSibling === draggedButton) return;
+        if (!insertAfter && draggedButton.nextElementSibling === target) return;
+
+        this._lastReorderTime = now;
+        const beforeRects = this.captureRects();
+        if (insertAfter) {
+            target.after(draggedButton);
+        } else {
+            target.before(draggedButton);
+        }
+        this.playFlip(beforeRects);
+    },
+
+    getEditableSlots() {
+        const buttons = Array.isArray(window.globalMaxExtensionConfig?.customButtons)
+            ? window.globalMaxExtensionConfig.customButtons
+            : [];
+        return buttons.map((_, index) => index);
+    },
+
+    async saveOrderFromDom() {
+        const config = window.globalMaxExtensionConfig;
+        if (!config || !Array.isArray(config.customButtons)) return;
+        const order = this.getEditableButtons()
+            .map(button => Number(button.dataset.ocpButtonEditIndex))
+            .filter(Number.isInteger);
+        const slots = this.getEditableSlots();
+        if (order.length !== slots.length) return;
+
+        const previous = [...config.customButtons];
+        const reordered = order.map(index => previous[index]).filter(Boolean);
+        slots.forEach((slot, offset) => {
+            config.customButtons[slot] = reordered[offset];
+        });
+        this.updateDomIndexesFromSlots(slots);
+        await this.saveCurrentProfileConfig();
+    },
+
+    updateDomIndexesFromSlots(slots) {
+        this.getEditableButtons().forEach((button, offset) => {
+            if (Number.isInteger(slots[offset])) {
+                button.dataset.ocpButtonEditIndex = String(slots[offset]);
+            }
+        });
+    },
+
+    async deleteButton(button) {
+        const index = Number(button?.dataset?.ocpButtonEditIndex);
+        const config = window.globalMaxExtensionConfig;
+        if (!Number.isInteger(index) || !Array.isArray(config?.customButtons) || !config.customButtons[index]) {
+            return;
+        }
+
+        const deletedButton = this.cloneButtonConfig(config.customButtons[index]);
+        const previousNeighborRef = config.customButtons[index - 1] || null;
+        const nextNeighborRef = config.customButtons[index + 1] || null;
+        const previousNeighbor = this.cloneButtonConfig(config.customButtons[index - 1]);
+        const nextNeighbor = this.cloneButtonConfig(config.customButtons[index + 1]);
+        const deletedProfileName = await this.getCurrentProfileName();
+        const deleteOrigin = this.origin;
+        const beforeRects = this.captureRects();
+        config.customButtons.splice(index, 1);
+        button.remove();
+        this.getEditableButtons().forEach(candidate => {
+            const current = Number(candidate.dataset.ocpButtonEditIndex);
+            if (Number.isInteger(current) && current > index) {
+                candidate.dataset.ocpButtonEditIndex = String(current - 1);
+            }
+        });
+        this.playFlip(beforeRects);
+        const saved = await this.saveCurrentProfileConfig();
+        if (!saved) {
+            config.customButtons.splice(index, 0, deletedButton);
+            window.MaxExtensionButtonsInit?.updateButtonsForProfileChange?.(deleteOrigin);
+            return;
+        }
+        this.showDeleteUndoToast({
+            deletedButton,
+            previousNeighborRef,
+            previousNeighbor,
+            nextNeighborRef,
+            nextNeighbor,
+            originalIndex: index,
+            profileName: deletedProfileName,
+            origin: deleteOrigin
+        });
+    },
+
+    cloneButtonConfig(button) {
+        if (!button) return null;
+        try {
+            return structuredClone(button);
+        } catch (_) {
+            try {
+                return JSON.parse(JSON.stringify(button));
+            } catch (error) {
+                logConCgp('[ButtonEditMode] Failed to clone button config:', error?.message || error);
+                return { ...button };
+            }
+        }
+    },
+
+    serializeButtonConfig(button) {
+        if (!button) return '';
+        try {
+            return JSON.stringify(button);
+        } catch (_) {
+            return '';
+        }
+    },
+
+    findButtonConfigIndex(button) {
+        const buttons = window.globalMaxExtensionConfig?.customButtons;
+        if (!Array.isArray(buttons) || !button) return -1;
+        const serialized = this.serializeButtonConfig(button);
+        if (!serialized) return -1;
+        return buttons.findIndex(candidate => this.serializeButtonConfig(candidate) === serialized);
+    },
+
+    getButtonConfigRefIndex(button) {
+        const buttons = window.globalMaxExtensionConfig?.customButtons;
+        if (!button) return -1;
+        return Array.isArray(buttons) ? buttons.indexOf(button) : -1;
+    },
+
+    getUndoInsertionIndex({ previousNeighborRef, previousNeighbor, nextNeighborRef, nextNeighbor, originalIndex }) {
+        const buttons = window.globalMaxExtensionConfig?.customButtons;
+        if (!Array.isArray(buttons)) return -1;
+
+        const nextRefIndex = this.getButtonConfigRefIndex(nextNeighborRef);
+        if (nextRefIndex !== -1) {
+            return nextRefIndex;
+        }
+
+        const nextIndex = this.findButtonConfigIndex(nextNeighbor);
+        if (nextIndex !== -1) {
+            return nextIndex;
+        }
+
+        const previousRefIndex = this.getButtonConfigRefIndex(previousNeighborRef);
+        if (previousRefIndex !== -1) {
+            return previousRefIndex + 1;
+        }
+
+        const previousIndex = this.findButtonConfigIndex(previousNeighbor);
+        if (previousIndex !== -1) {
+            return previousIndex + 1;
+        }
+
+        return Math.max(0, Math.min(originalIndex, buttons.length));
+    },
+
+    showDeleteUndoToast({ deletedButton, previousNeighborRef, previousNeighbor, nextNeighborRef, nextNeighbor, originalIndex, profileName, origin }) {
+        const label = deletedButton?.separator ? 'Separator deleted.' : 'Button deleted.';
+        this.__toast(label, 'success', {
+            duration: 6000,
+            customButtons: [
+                {
+                    text: 'Undo',
+                    title: 'Restore this deleted button',
+                    className: 'toast-action-primary',
+                    onClick: async () => {
+                        const currentProfileName = await this.getCurrentProfileName();
+                        if (profileName && currentProfileName && currentProfileName !== profileName) {
+                            this.__toast('Switch back to the original profile before undoing this deletion.', 'warning', 4500);
+                            return false;
+                        }
+
+                        const buttons = window.globalMaxExtensionConfig?.customButtons;
+                        if (!Array.isArray(buttons)) {
+                            this.__toast('Could not undo: profile buttons are unavailable.', 'error');
+                            return false;
+                        }
+
+                        const insertionIndex = this.getUndoInsertionIndex({
+                            previousNeighborRef,
+                            previousNeighbor,
+                            nextNeighborRef,
+                            nextNeighbor,
+                            originalIndex
+                        });
+                        if (insertionIndex < 0) {
+                            this.__toast('Could not undo button deletion.', 'error');
+                            return false;
+                        }
+
+                        buttons.splice(insertionIndex, 0, this.cloneButtonConfig(deletedButton));
+                        const saved = await this.saveCurrentProfileConfig();
+                        if (!saved) {
+                            buttons.splice(insertionIndex, 1);
+                            return false;
+                        }
+
+                        window.MaxExtensionButtonsInit?.updateButtonsForProfileChange?.(origin);
+                        this.__toast(deletedButton?.separator ? 'Separator restored.' : 'Button restored.', 'success', 1800);
+                        return true;
+                    }
+                }
+            ]
+        });
+    },
+
+    async getCurrentProfileName() {
+        try {
+            const { currentProfile } = await chrome.storage.local.get('currentProfile');
+            return currentProfile || window.globalMaxExtensionConfig?.PROFILE_NAME || '';
+        } catch (_) {
+            return window.globalMaxExtensionConfig?.PROFILE_NAME || '';
+        }
+    },
+
+    async saveCurrentProfileConfig() {
+        try {
+            const profileName = await this.getCurrentProfileName();
+            if (!profileName) {
+                throw new Error('Missing current profile name');
+            }
+            const response = await chrome.runtime.sendMessage({
+                type: 'saveConfig',
+                profileName,
+                config: window.globalMaxExtensionConfig
+            });
+            if (response?.success !== true) {
+                throw new Error(response?.error || 'The service worker rejected the profile save.');
+            }
+            return true;
+        } catch (error) {
+            this.__toast('Could not save button edit.', 'error');
+            logConCgp('[ButtonEditMode] Save failed:', error?.message || error);
+            return false;
+        }
+    },
+
+    __toast(message, type = 'info', options = 3000) {
+        if (typeof window.showToast === 'function') {
+            window.showToast(message, type, options);
+        }
+    }
+};
+
+/**
+ * Namespace object containing initialization functions for custom buttons and toggles.
+ */
+window.MaxExtensionButtonsInit = {
+    /**
+     * Creates and appends toggle switches to the specified container.
+     * @param {HTMLElement} container - The DOM element to which toggles will be appended.
+     */
+    generateAndAppendToggles: function (container) {
+        const hideAutoSendToggle = !!globalMaxExtensionConfig.hideOnPageAutoSendToggle;
+        const hideHotkeysToggle = !!globalMaxExtensionConfig.hideOnPageHotkeysToggle;
+
+        if (!hideAutoSendToggle) {
+            const autoSendToggle = MaxExtensionInterface.createToggle(
+                'auto-send-toggle',
+                'Auto-send',
+                globalMaxExtensionConfig.globalAutoSendEnabled,
+                (state) => {
+                    globalMaxExtensionConfig.globalAutoSendEnabled = state;
+                    window.MaxExtensionButtons?.refreshCustomButtonAutoSendTooltips?.();
+                }
+            );
+            autoSendToggle.title = "If unchecked, this will disable all autosend for all buttons. For this tab only.";
+            container.appendChild(autoSendToggle);
+            logConCgp('[init] Auto-send toggle has been created and appended.');
+        } else {
+            logConCgp('[init] Auto-send toggle rendering skipped by profile setting hideOnPageAutoSendToggle.');
+        }
+
+        if (!hideHotkeysToggle) {
+            const hotkeysToggle = MaxExtensionInterface.createToggle(
+                'hotkeys-toggle',
+                'Hotkeys',
+                globalMaxExtensionConfig.enableShortcuts,
+                (state) => {
+                    globalMaxExtensionConfig.enableShortcuts = state;
+                }
+            );
+            hotkeysToggle.title = "If unchecked this will disable all hotkeys so your keyboard will never trigger any button pushes. For this tab only.";
+            container.appendChild(hotkeysToggle);
+            logConCgp('[init] Hotkeys toggle has been created and appended.');
+        } else {
+            logConCgp('[init] Hotkeys toggle rendering skipped by profile setting hideOnPageHotkeysToggle.');
+        }
+
+    },
+
+    /**
+     * Creates and appends custom send buttons to the specified container.
+     * @param {HTMLElement} container - The DOM element to which custom buttons will be appended.
+     * @param {boolean} isPanel - Flag indicating if the container is the floating panel.
+     */
+    generateAndAppendAllButtons: async function (container, isPanel) {
+        if (isPanel) {
+            window.MaxExtensionUiScale?.resetInlineContainer(container);
+        } else {
+            window.MaxExtensionUiScale?.applyToInlineContainer(container);
+        }
+
+        const SETTINGS_BUTTON_MAGIC_TEXT = '%OCP_APP_SETTINGS_SYSTEM_BUTTON%';
+        const COPY_LAST_CHATGPT_RESPONSE_BUTTON_MAGIC_TEXT = '%OCP_COPY_LAST_CHATGPT_RESPONSE_SYSTEM_BUTTON%';
+        const QUEUE_CURRENT_EDITOR_BUTTON_MAGIC_TEXT = '%OCP_QUEUE_CURRENT_EDITOR_SYSTEM_BUTTON%';
+        const CREATE_BUTTON_FROM_EDITOR_MAGIC_TEXT = '%OCP_CREATE_BUTTON_FROM_EDITOR_SYSTEM_BUTTON%';
+        // --- Create a unified list of all buttons to be rendered ---
+        const allButtonDefs = [];
+        let nonSeparatorCount = 0;
+
+        if (!Array.isArray(window?.globalMaxExtensionConfig?.customButtons)) {
+            const fallbackOrigin = isPanel ? 'panel' : 'inline';
+            logConCgp(`[init] Button generation halted: globalMaxExtensionConfig.customButtons unavailable (origin: ${fallbackOrigin}).`);
+            this.__scheduleRefreshRetry(fallbackOrigin, 'Config unavailable during generation');
+            return;
+        }
+
+        const explicitHotkeyCombos = new Set(
+            globalMaxExtensionConfig.customButtons
+                .map(config => window.MaxExtensionHotkeys?.normalizeStoredHotkey(config?.hotkey)?.combo)
+                .filter(Boolean)
+        );
+
+        const crossChatConfig = window.globalCrossChatConfig || {};
+        const crossChatEnabled = !!crossChatConfig.enabled;
+        const hideStandardCrossChatButtons = !!crossChatConfig.hideStandardButtons;
+        const crossChatPlacement = crossChatConfig.placement === 'before' ? 'before' : 'after';
+        const dangerButtonActive = crossChatEnabled && !!crossChatConfig.dangerAutoSendAll;
+
+        const crossChatButtonTypes = [];
+        if (crossChatEnabled) {
+            if (!hideStandardCrossChatButtons) {
+                crossChatButtonTypes.push('copy', 'paste');
+            }
+            if (dangerButtonActive) {
+                crossChatButtonTypes.push('broadcast');
+            }
+        }
+
+        const appendCrossChatButtons = () => {
+            crossChatButtonTypes.forEach(type => allButtonDefs.push({ type }));
+        };
+
+        // 1. Add Cross-Chat buttons if they should be placed 'before'
+        if (crossChatEnabled && crossChatPlacement === 'before') {
+            appendCrossChatButtons();
+        }
+
+        // 2. Add standard custom buttons
+        globalMaxExtensionConfig.customButtons.forEach((config, profileIndex) => {
+            allButtonDefs.push({ type: 'custom', config: config, profileIndex });
+        });
+
+        // 3. Add Cross-Chat buttons if they should be placed 'after'
+        if (crossChatEnabled && crossChatPlacement === 'after') {
+            appendCrossChatButtons();
+        }
+
+        // --- Render all buttons from the unified list ---
+
+        // Add floating panel toggle first, if applicable
+        if (window.MaxExtensionFloatingPanel && !isPanel && !globalMaxExtensionConfig.hideOnPageFloatingPanelToggle) {
+            const floatingPanelToggleButton = window.MaxExtensionFloatingPanel.createPanelToggleButton();
+            container.appendChild(floatingPanelToggleButton);
+            logConCgp('[init] Floating panel toggle button has been created and appended for inline container.');
+        } else if (!isPanel && globalMaxExtensionConfig.hideOnPageFloatingPanelToggle) {
+            logConCgp('[init] Floating panel toggle button rendering skipped by profile setting hideOnPageFloatingPanelToggle.');
+        }
+
+        // Inline Profile Selector BEFORE buttons
+        if (window.globalInlineSelectorConfig?.enabled && window.globalInlineSelectorConfig.placement === 'before' && !isPanel) {
+            if (typeof this.createInlineProfileSelector === 'function') {
+                const selectorElBefore = await this.createInlineProfileSelector();
+                if (selectorElBefore) {
+                    container.appendChild(selectorElBefore);
+                    logConCgp('[init] Inline Profile Selector appended before buttons.');
+                }
+            }
+        }
+
+        // Process the unified list to create and append buttons
+        allButtonDefs.forEach((def, index) => {
+            // Handle separators from custom buttons
+            if (def.type === 'custom' && def.config.separator) {
+                const separatorElement = MaxExtensionUtils.createSeparator();
+                if (Number.isInteger(def.profileIndex)) {
+                    separatorElement.dataset.ocpButtonEditIndex = String(def.profileIndex);
+                    separatorElement.dataset.ocpButtonEditKind = 'separator';
+                    separatorElement.title = 'Separator. Ctrl+Shift-click Settings to reorder or delete.';
+                }
+                container.appendChild(separatorElement);
+                logConCgp('[init] Separator element has been created and appended.');
+                return; // Skip to next item
+            }
+
+            // Assign a shortcut key if enabled and available
+            let shortcutKey = null;
+            if (globalMaxExtensionConfig.enableShortcuts && nonSeparatorCount < 10) {
+                shortcutKey = nonSeparatorCount + 1;
+            }
+            const explicitHotkey = def.type === 'custom'
+                ? window.MaxExtensionHotkeys?.normalizeStoredHotkey(def.config?.hotkey)
+                : null;
+            const fallbackHotkey = explicitHotkey
+                ? null
+                : window.MaxExtensionHotkeys?.fromLegacyShortcutKey(shortcutKey);
+            if (!explicitHotkey && fallbackHotkey && explicitHotkeyCombos.has(fallbackHotkey.combo)) {
+                shortcutKey = null;
+            }
+
+            let buttonElement;
+            if (def.type === 'copy' || def.type === 'paste' || def.type === 'broadcast') {
+                const appliedShortcut = def.type === 'broadcast' ? null : shortcutKey;
+                buttonElement = MaxExtensionButtons.createCrossChatButton(def.type, appliedShortcut);
+            } else { // 'custom' button type
+                if (def.config.text === SETTINGS_BUTTON_MAGIC_TEXT) {
+                    // Special handling for the settings button.
+                    const settingsButtonTooltip = [
+                        'Settings button',
+                        '• Click: open OneClickPrompts settings in a new tab.',
+                        '• Shift-click: move the whole place where OneClickPrompts injects all buttons.',
+                        '• Ctrl+Shift-click: edit individual buttons and separators, then drag them relative to each other.',
+                        '• While editing: click Done editing, click Settings again, or press Esc to exit edit mode.'
+                    ].join('\n');
+                    const settingsButtonConfig = { ...def.config, text: 'Settings', tooltip: settingsButtonTooltip };
+                    const settingsClickHandler = (event) => {
+                        if (event?.currentTarget?.__ocpSuppressNextClick) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            event.currentTarget.__ocpSuppressNextClick = false;
+                            return;
+                        }
+
+                        const container = event?.target?.closest?.('[id$="-custom-buttons-container"]');
+                        const editOrigin = container?.closest?.('#max-extension-floating-panel') ? 'panel' : 'inline';
+
+                        if (window.MaxExtensionButtonEditMode?.active && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            window.MaxExtensionButtonEditMode.exit();
+                            return;
+                        }
+
+                        if (event && event.shiftKey && (event.ctrlKey || event.metaKey)) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            if (window.MaxExtensionButtonEditMode && typeof window.MaxExtensionButtonEditMode.toggle === 'function') {
+                                window.MaxExtensionButtonEditMode.toggle(container, editOrigin);
+                            }
+                            return;
+                        }
+
+                        // Shift+Click: Move/Save Container Feature
+                        if (event && event.shiftKey) {
+                            if (window.MaxExtensionContainerMover && typeof window.MaxExtensionContainerMover.handleShiftClick === 'function') {
+                                window.MaxExtensionContainerMover.handleShiftClick(event);
+                            } else {
+                                logConCgp('[buttons-init] ContainerMover module not loaded.');
+                            }
+                            return;
+                        }
+
+                        // Normal Click: Open Settings
+                        // Send a message to the service worker to open the settings page.
+                        // This avoids the popup blocker (ERR_BLOCKED_BY_CLIENT).
+                        chrome.runtime.sendMessage({ type: 'openSettingsPage' });
+                    };
+                    buttonElement = MaxExtensionButtons.createCustomSendButton(settingsButtonConfig, index, settingsClickHandler, shortcutKey);
+                    buttonElement.dataset.ocpSettingsButton = 'true';
+                    buttonElement.dataset.ocpSettingsDefaultTitle = settingsButtonTooltip;
+                    window.MaxExtensionButtonEditMode?.setSettingsButtonTooltip(buttonElement, settingsButtonTooltip);
+                } else if (def.config.text === COPY_LAST_CHATGPT_RESPONSE_BUTTON_MAGIC_TEXT) {
+                    const isChatGPT = window?.InjectionTargetsOnWebsite?.activeSite === 'ChatGPT';
+                    const copyLastResponseButtonConfig = {
+                        ...def.config,
+                        text: 'Copy last ChatGPT response',
+                        tooltip: isChatGPT
+                            ? 'Copy the last ChatGPT response exactly. Uses ChatGPT native copy when available.'
+                            : 'Only active on ChatGPT.'
+                    };
+                    const copyLastResponseClickHandler = (event) => {
+                        if (window.MaxExtensionButtons && typeof window.MaxExtensionButtons.copyLastChatGPTResponse === 'function') {
+                            window.MaxExtensionButtons.copyLastChatGPTResponse(event);
+                        }
+                    };
+                    buttonElement = MaxExtensionButtons.createCustomSendButton(
+                        copyLastResponseButtonConfig,
+                        index,
+                        copyLastResponseClickHandler,
+                        isChatGPT ? shortcutKey : null
+                    );
+                    if (!isChatGPT) {
+                        buttonElement.disabled = true;
+                        buttonElement.style.cursor = 'not-allowed';
+                        buttonElement.style.opacity = '0.45';
+                    }
+                } else if (def.config.text === QUEUE_CURRENT_EDITOR_BUTTON_MAGIC_TEXT) {
+                    const queueButtonConfig = {
+                        ...def.config,
+                        text: 'Queue current editor text',
+                        tooltip: 'Click: queue text and start timer. Shift+Click: queue without starting.'
+                    };
+                    const queueClickHandler = (event) => {
+                        if (window.MaxExtensionButtons && typeof window.MaxExtensionButtons.queueCurrentEditorText === 'function') {
+                            void window.MaxExtensionButtons.queueCurrentEditorText(event).catch((error) => {
+                                logConCgp('[buttons][queue] Queue button failed:', error?.message || error);
+                                window.showToast?.('Queue failed. Reload the extension and refresh this page.', 'error');
+                            });
+                        }
+                    };
+                    buttonElement = MaxExtensionButtons.createCustomSendButton(queueButtonConfig, index, queueClickHandler, shortcutKey);
+                    buttonElement.classList.add('ocp-queue-system-button');
+                } else if (def.config.text === CREATE_BUTTON_FROM_EDITOR_MAGIC_TEXT) {
+                    const createButtonConfig = {
+                        ...def.config,
+                        text: 'Create button from current editor text',
+                        tooltip: 'Create a normal prompt button from the current editor text in the active profile.'
+                    };
+                    const createClickHandler = (event) => {
+                        if (window.MaxExtensionButtons && typeof window.MaxExtensionButtons.createButtonFromEditorText === 'function') {
+                            window.MaxExtensionButtons.createButtonFromEditorText(event);
+                        }
+                    };
+                    buttonElement = MaxExtensionButtons.createCustomSendButton(createButtonConfig, index, createClickHandler, shortcutKey);
+                } else {
+                    buttonElement = MaxExtensionButtons.createCustomSendButton(def.config, index, processCustomSendButtonClick, shortcutKey);
+                }
+
+                if (Number.isInteger(def.profileIndex) && buttonElement) {
+                    buttonElement.dataset.ocpButtonEditIndex = String(def.profileIndex);
+                    if (window.MaxExtensionPromptVariables?.shouldShineButton?.(def.config, def.profileIndex)) {
+                        window.MaxExtensionPromptVariables.applyShine(buttonElement);
+                    }
+                }
+            }
+
+            container.appendChild(buttonElement);
+            if (def.type !== 'broadcast') {
+                nonSeparatorCount++;
+            }
+            logConCgp(`[init] Button ${nonSeparatorCount} (${def.type}) has been created and appended.`);
+        });
+
+        // Inline Profile Selector AFTER buttons
+        if (window.globalInlineSelectorConfig?.enabled && window.globalInlineSelectorConfig.placement === 'after' && !isPanel) {
+            if (typeof this.createInlineProfileSelector === 'function') {
+                const selectorElAfter = await this.createInlineProfileSelector();
+                if (selectorElAfter) {
+                    container.appendChild(selectorElAfter);
+                    logConCgp('[init] Inline Profile Selector appended after buttons.');
+                }
+            }
+        }
+
+        // --- Add toggles at the very end, always after everything else ---
+        this.generateAndAppendToggles(container);
+
+        if (!isPanel && window.MaxExtensionFloatingPanel && typeof window.MaxExtensionFloatingPanel.ensureInlineQueueControls === 'function') {
+            window.MaxExtensionFloatingPanel.ensureInlineQueueControls(container);
+        }
+
+        window.MaxExtensionButtonEditMode?.syncContainer(container, isPanel ? 'panel' : 'inline');
+    },
+
+    /**
+     * Creates and inserts custom buttons and toggles into the target container element.
+     * @param {HTMLElement} targetContainer - The DOM element where custom elements will be inserted.
+     */
+    createAndInsertCustomElements: function (targetContainer) {
+        // Prevent duplication across SPA re-renders by reusing or moving the existing container if present
+        const containerId = window.InjectionTargetsOnWebsite.selectors.buttonsContainerId;
+        let existingContainer = document.getElementById(containerId);
+        const isPanel = targetContainer.id === 'max-extension-floating-panel-content' || targetContainer.id === 'max-extension-buttons-area';
+
+        // If multiple containers with the same id exist (should not happen), keep the first and remove the rest
+        try {
+            const dups = Array.from(document.querySelectorAll(`[id="${containerId}"]`));
+            if (dups.length > 1) {
+                const [keep, ...extras] = dups;
+                extras.forEach(el => {
+                    try { el.remove(); } catch (_) { }
+                });
+                existingContainer = keep;
+                logConCgp(`[init] Detected and removed ${extras.length} duplicate container(s) with id ${containerId}.`);
+            }
+        } catch (_) { /* safe best-effort cleanup */ }
+
+        // If a container already exists, prefer moving it to the new target instead of creating a new one
+        if (existingContainer) {
+            if (existingContainer.parentElement !== targetContainer) {
+                try {
+                    targetContainer.appendChild(existingContainer); // This moves the node
+                    logConCgp('[init] Moved existing custom buttons container to a new target container.');
+                } catch (err) {
+                    logConCgp('[init] Failed moving existing container, will re-create instead:', err?.message || err);
+                    existingContainer = null; // Fallback to recreation below
+                }
+            } else {
+                logConCgp('[init] Custom buttons container already exists in this target. Reusing it.');
+            }
+            if (isPanel) {
+                window.MaxExtensionUiScale?.resetInlineContainer(existingContainer);
+            } else {
+                window.MaxExtensionUiScale?.applyToInlineContainer(existingContainer);
+            }
+        }
+
+        // If we do not have a reusable container, create a fresh one
+        if (!existingContainer) {
+            const customElementsContainer = document.createElement('div');
+            customElementsContainer.id = containerId; // where to insert buttons
+            customElementsContainer.style.cssText = `
+                display: flex;
+                justify-content: flex-start;
+                flex-wrap: wrap;
+                gap: 8px;
+                padding: 8px;
+                width: 100%;
+                z-index: 1000;
+            `;
+
+            // Append custom send buttons, passing the context.
+            // Note: toggles are appended within generateAndAppendAllButtons() at the very end
+            this.generateAndAppendAllButtons(customElementsContainer, isPanel);
+
+            targetContainer.appendChild(customElementsContainer);
+            logConCgp('[init] Custom elements have been inserted into the DOM.');
+            return;
+        }
+
+        // If a reusable container exists but is empty (e.g., after SPA wipe), re-render its contents
+        if (existingContainer && existingContainer.children.length === 0) {
+            this.generateAndAppendAllButtons(existingContainer, isPanel);
+            logConCgp('[init] Existing container was empty; regenerated buttons and toggles.');
+        }
+    },
+
+    /**
+     * Updates all buttons and toggles in response to a profile change.
+     * Requires an `origin` parameter to specify which UI to update:
+     *  - 'panel'  => only update the floating panel UI
+     *  - 'inline' => only update the inline buttons UI
+     */
+    __refreshRetryState: {
+        inline: { count: 0, timer: null },
+        panel: { count: 0, timer: null }
+    },
+
+    __resetRefreshRetry(origin) {
+        const state = this.__refreshRetryState[origin];
+        if (!state) return;
+        if (state.timer) {
+            clearTimeout(state.timer);
+            state.timer = null;
+        }
+        state.count = 0;
+    },
+
+    __scheduleRefreshRetry(origin, reason) {
+        const state = this.__refreshRetryState[origin];
+        if (!state) {
+            logConCgp(`[init] Refresh retry skipped for unknown origin '${origin}'.`);
+            return false;
+        }
+        if (state.timer) {
+            logConCgp(`[init] Refresh retry already scheduled for ${origin}. Reason: ${reason}`);
+            return true;
+        }
+        if (state.count >= 5) {
+            logConCgp(`[init] Refresh retry limit reached for ${origin}. Last reason: ${reason}`);
+            return false;
+        }
+        state.count += 1;
+        const delay = 60 * state.count;
+        state.timer = setTimeout(() => {
+            state.timer = null;
+            try {
+                this.updateButtonsForProfileChange(origin);
+            } catch (err) {
+                logConCgp(`[init] Refresh retry threw for ${origin}:`, err?.message || err);
+            }
+        }, delay);
+        logConCgp(`[init] Scheduled refresh retry #${state.count} for ${origin} (${delay}ms). Reason: ${reason}`);
+        return true;
+    },
+
+    updateButtonsForProfileChange: function (origin) {
+        if (!origin) {
+            logConCgp('[init] Warning: updateButtonsForProfileChange called without origin parameter. No action taken.');
+            return;
+        }
+
+        // If origin is 'panel', only update the floating panel
+        if (origin === 'panel') {
+            if (window.MaxExtensionFloatingPanel && window.MaxExtensionFloatingPanel.panelElement) {
+                if (typeof window.MaxExtensionFloatingPanel.updatePanelFromSettings === 'function') {
+                    window.MaxExtensionFloatingPanel.updatePanelFromSettings();
+                }
+                const buttonsArea = document.getElementById('max-extension-buttons-area');
+                if (buttonsArea) {
+                    const panelVisible = !!window.MaxExtensionFloatingPanel.isPanelVisible;
+                    const containerId = window?.InjectionTargetsOnWebsite?.selectors?.buttonsContainerId || null;
+                    const selector = containerId ? `#${CSS.escape(containerId)}` : null;
+                    let panelButtonsContainer = selector ? buttonsArea.querySelector(selector) : null;
+
+                    if (!panelVisible && !panelButtonsContainer) {
+                        logConCgp('[init] Panel refresh skipped because panel is hidden and contains no buttons.');
+                        return;
+                    }
+
+                    if (panelButtonsContainer) {
+                        if (!Array.isArray(window?.globalMaxExtensionConfig?.customButtons)) {
+                            this.__scheduleRefreshRetry('panel', 'Config unavailable');
+                            return;
+                        }
+                        panelButtonsContainer.innerHTML = '';
+                        this.generateAndAppendAllButtons(panelButtonsContainer, true);
+                        logConCgp('[init] Updated buttons in floating panel for profile change (panel origin).');
+                        this.__resetRefreshRetry('panel');
+                    } else {
+                        if (!panelVisible) {
+                            logConCgp('[init] Panel container absent while hidden; skipping recreation to preserve inline buttons.');
+                            return;
+                        }
+                        buttonsArea.innerHTML = '';
+                        this.createAndInsertCustomElements(buttonsArea);
+                        logConCgp('[init] Recreated floating panel button container after profile change (panel origin).');
+                        this.__resetRefreshRetry('panel');
+                    }
+                }
+            }
+            return;
+        }
+
+        // If origin is 'inline', only update the inline/original container
+        if (origin === 'inline') {
+            const selectors = window?.InjectionTargetsOnWebsite?.selectors;
+            const containerId = selectors?.buttonsContainerId;
+
+            if (!containerId) {
+                logConCgp('[init] Inline refresh skipped because buttonsContainerId is unavailable. Attempting selector reinitialization.');
+                const maybeInitializer = window?.InjectionTargetsOnWebsite && window.InjectionTargetsOnWebsite.initializeSelectors;
+                if (typeof maybeInitializer === 'function') {
+                    try {
+                        if (!this.__inlineSelectorRetryScheduled) {
+                            this.__inlineSelectorRetryScheduled = true;
+                            const maybePromise = maybeInitializer.call(window.InjectionTargetsOnWebsite);
+                            if (maybePromise && typeof maybePromise.then === 'function') {
+                                maybePromise.then(() => {
+                                    logConCgp('[init] Retrying inline refresh after selector reinitialization.');
+                                    try {
+                                        window.MaxExtensionButtonsInit.updateButtonsForProfileChange('inline');
+                                    } catch (retryErr) {
+                                        logConCgp('[init] Retry inline refresh failed:', retryErr?.message || retryErr);
+                                    }
+                                }).catch((err) => {
+                                    logConCgp('[init] Selector reinitialization failed:', err?.message || err);
+                                }).finally(() => {
+                                    this.__inlineSelectorRetryScheduled = false;
+                                });
+                            } else {
+                                this.__inlineSelectorRetryScheduled = false;
+                            }
+                        } else {
+                            logConCgp('[init] Inline selector reinitialization already scheduled; skipping duplicate request.');
+                        }
+                    } catch (err) {
+                        this.__inlineSelectorRetryScheduled = false;
+                        logConCgp('[init] Error invoking initializeSelectors during inline refresh:', err?.message || err);
+                    }
+                }
+                return;
+            }
+
+            const originalContainer = document.getElementById(containerId);
+            if (originalContainer) {
+                if (!Array.isArray(window?.globalMaxExtensionConfig?.customButtons)) {
+                    this.__scheduleRefreshRetry('inline', 'Config unavailable');
+                    return;
+                }
+                originalContainer.innerHTML = '';
+                const isInsidePanel = !!originalContainer.closest('#max-extension-floating-panel-content');
+                this.generateAndAppendAllButtons(originalContainer, isInsidePanel);
+                logConCgp('[init] Updated buttons in original container for profile change (inline origin).');
+                this.__resetRefreshRetry('inline');
+                return;
+            }
+
+            const containerSelectors = Array.isArray(selectors?.containers) ? selectors.containers : [];
+            for (const selector of containerSelectors) {
+                if (!selector) {
+                    continue;
+                }
+                let target = null;
+                try {
+                    target = document.querySelector(selector);
+                } catch (err) {
+                    logConCgp('[init] Skipping invalid container selector during inline refresh.', { selector, error: err?.message || err });
+                    continue;
+                }
+                if (target) {
+                    logConCgp(`[init] Inline container missing; reinserting via selector '${selector}'.`);
+                    if (!Array.isArray(window?.globalMaxExtensionConfig?.customButtons)) {
+                        this.__scheduleRefreshRetry('inline', 'Config unavailable before reinsertion');
+                        return;
+                    }
+                    this.createAndInsertCustomElements(target);
+                    this.__resetRefreshRetry('inline');
+                    return;
+                }
+            }
+
+            logConCgp('[init] Inline refresh could not locate a valid target container.');
+            return;
+        }
+
+        logConCgp(`[init] Warning: updateButtonsForProfileChange called with unknown origin '${origin}'. No action taken.`);
+    }
+};
+
+/**
+ * Builds a custom inline profile selector dropdown shared by all supported sites.
+ * Optional overrides allow site-specific tweaks without duplicating logic.
+ * @param {HTMLElement} container
+ * @param {string[]} profileNames
+ * @param {string} currentProfile
+ * @param {(selected: string) => void} onSwitch
+ * @param {boolean} isDarkTheme
+ * @param {object} [options]
+ */
+window.MaxExtensionButtonsInit.createUnifiedProfileSelector = function (container, profileNames, currentProfile, onSwitch, isDarkTheme, options) {
+    const config = options && typeof options === 'object' ? options : {};
+    const containerStyles = config.containerStyles && typeof config.containerStyles === 'object' ? config.containerStyles : null;
+    const triggerStyleOverrides = config.triggerStyles && typeof config.triggerStyles === 'object' ? config.triggerStyles : null;
+    const menuStyleOverrides = config.menuStyles && typeof config.menuStyles === 'object' ? config.menuStyles : null;
+    const uniqueSuffix = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+    const optionIdPrefix = `ocp-profile-option-${uniqueSuffix}`;
+
+    container.setAttribute('data-ocp-profile-selector', 'true');
+    container.style.position = 'relative';
+    if (!container.style.pointerEvents) {
+        container.style.pointerEvents = 'auto';
+    }
+    if (containerStyles) {
+        Object.assign(container.style, containerStyles);
+    }
+
+    let activeProfile = currentProfile && profileNames.includes(currentProfile)
+        ? currentProfile
+        : profileNames[0];
+
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.title = 'Switch active profile';
+    trigger.id = `ocp-profile-trigger-${uniqueSuffix}`;
+    trigger.style.cssText = `
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border-radius: 6px;
+        border: 1px solid ${isDarkTheme ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)'};
+        background: ${isDarkTheme ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'};
+        color: inherit;
+        font-size: 13px;
+        cursor: pointer;
+        transition: background 120ms ease, border-color 120ms ease;
+    `;
+    trigger.setAttribute('aria-haspopup', 'listbox');
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.setAttribute('data-ocp-profile-trigger', 'true');
+
+    if (triggerStyleOverrides) {
+        Object.assign(trigger.style, triggerStyleOverrides);
+    }
+
+    trigger.addEventListener('mouseenter', () => {
+        trigger.style.background = isDarkTheme ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.1)';
+    });
+    trigger.addEventListener('mouseleave', () => {
+        trigger.style.background = isDarkTheme ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+    });
+
+    const triggerLabel = document.createElement('span');
+    triggerLabel.textContent = activeProfile || 'Profiles';
+
+    const triggerChevron = document.createElement('span');
+    triggerChevron.textContent = '\u25BE';
+    triggerChevron.style.opacity = '0.8';
+    triggerChevron.setAttribute('aria-hidden', 'true');
+
+    trigger.appendChild(triggerLabel);
+    trigger.appendChild(triggerChevron);
+
+    // Menu creation - NOT appended to container initially
+    const menu = document.createElement('div');
+    menu.style.cssText = `
+        position: fixed;
+        display: none;
+        flex-direction: column;
+        gap: 4px;
+        padding: 6px;
+        border-radius: 8px;
+        background: ${isDarkTheme ? 'rgba(24, 24, 24, 0.95)' : 'rgba(255, 255, 255, 0.98)'};
+        border: 1px solid ${isDarkTheme ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'};
+        box-shadow: 0 10px 24px rgba(0,0,0,0.25);
+        max-height: 280px;
+        overflow-y: auto;
+        z-index: 2147483601;
+        min-width: 180px;
+    `;
+    menu.setAttribute('role', 'listbox');
+    menu.setAttribute('data-ocp-profile-menu', 'true');
+    menu.setAttribute('aria-labelledby', trigger.id);
+    menu.tabIndex = -1;
+
+    if (menuStyleOverrides) {
+        Object.assign(menu.style, menuStyleOverrides);
+    }
+
+    const optionMeta = [];
+
+    const applyActiveStyles = (button, checkmark, isActive) => {
+        button.style.background = isActive
+            ? (isDarkTheme ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)')
+            : 'transparent';
+        button.style.fontWeight = isActive ? '600' : '400';
+        button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        checkmark.style.opacity = isActive ? '1' : '0';
+    };
+
+    profileNames.forEach((name, index) => {
+        const optionButton = document.createElement('button');
+        optionButton.type = 'button';
+        optionButton.title = name;
+        optionButton.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            border: none;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+            padding: 6px 10px;
+            border-radius: 6px;
+            text-align: left;
+            font-size: 13px;
+            transition: background 120ms ease;
+        `;
+        optionButton.dataset.profile = name;
+        optionButton.setAttribute('role', 'option');
+        optionButton.setAttribute('id', `${optionIdPrefix}-${index}`);
+        optionButton.tabIndex = -1;
+
+        optionButton.addEventListener('mouseenter', () => {
+            optionButton.style.background = isDarkTheme ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
+        });
+        optionButton.addEventListener('mouseleave', () => {
+            const isActive = optionButton.dataset.profile === activeProfile;
+            optionButton.style.background = isActive
+                ? (isDarkTheme ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)')
+                : 'transparent';
+        });
+
+        const labelSpan = document.createElement('span');
+        labelSpan.textContent = name;
+        labelSpan.style.flex = '1';
+
+        const checkmark = document.createElement('span');
+        checkmark.textContent = '\u2713';
+        checkmark.style.opacity = '0';
+        checkmark.style.marginLeft = '8px';
+        checkmark.style.transition = 'opacity 120ms ease';
+        checkmark.setAttribute('aria-hidden', 'true');
+
+        optionButton.appendChild(labelSpan);
+        optionButton.appendChild(checkmark);
+
+        optionButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (name === activeProfile) {
+                toggleMenu(false);
+                return;
+            }
+            setActiveProfile(name);
+            toggleMenu(false);
+            onSwitch?.(name);
+        });
+
+        optionButton.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                optionButton.click();
+            }
+        });
+
+        optionMeta.push({ optionButton, checkmark, name, id: optionButton.id });
+        menu.appendChild(optionButton);
+    });
+
+    const setActiveProfile = (name) => {
+        activeProfile = name;
+        triggerLabel.textContent = name;
+        trigger.setAttribute('aria-label', `Active profile: ${name}`);
+        let activeOptionId = '';
+        optionMeta.forEach(({ optionButton, checkmark, name: candidate, id }) => {
+            const isActive = candidate === activeProfile;
+            applyActiveStyles(optionButton, checkmark, isActive);
+            if (isActive) {
+                activeOptionId = id;
+            }
+        });
+        if (activeOptionId) {
+            menu.setAttribute('aria-activedescendant', activeOptionId);
+        } else {
+            menu.removeAttribute('aria-activedescendant');
+        }
+    };
+
+    const focusOptionByIndex = (index) => {
+        if (!optionMeta.length) {
+            return;
+        }
+        const normalized = (index + optionMeta.length) % optionMeta.length;
+        const target = optionMeta[normalized];
+        if (target) {
+            target.optionButton.focus({ preventScroll: true });
+        }
+    };
+
+    const focusActiveOption = () => {
+        const activeIndex = optionMeta.findIndex(({ name }) => name === activeProfile);
+        if (activeIndex >= 0) {
+            focusOptionByIndex(activeIndex);
+        }
+    };
+
+    let isMenuOpen = false;
+
+    const updatePosition = () => {
+        if (!isMenuOpen || !trigger.isConnected) return;
+
+        const rect = trigger.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const spaceBelow = viewportHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        const neededHeight = Math.min(280, optionMeta.length * 36 + 20); // Approx height
+
+        // Reset positioning
+        menu.style.top = 'auto';
+        menu.style.bottom = 'auto';
+        menu.style.left = rect.left + 'px';
+
+        // Smart positioning logic
+        if (spaceBelow >= neededHeight || spaceBelow > spaceAbove) {
+            // Open down
+            menu.style.top = (rect.bottom + 4) + 'px';
+            menu.style.maxHeight = (spaceBelow - 10) + 'px';
+        } else {
+            // Open up
+            menu.style.bottom = (viewportHeight - rect.top + 4) + 'px';
+            menu.style.maxHeight = (spaceAbove - 10) + 'px';
+        }
+    };
+
+    const onDocumentClick = (event) => {
+        if (!menu.contains(event.target) && !trigger.contains(event.target)) {
+            toggleMenu(false);
+        }
+    };
+
+    const onDocumentKeydown = (event) => {
+        if (event.key === 'Escape') {
+            toggleMenu(false);
+        }
+    };
+
+    const onWindowResizeOrScroll = () => {
+        if (isMenuOpen) {
+            toggleMenu(false);
+        }
+    };
+
+    const onMenuKeyDown = (event) => {
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            const currentIndex = optionMeta.findIndex(({ optionButton }) => optionButton === document.activeElement);
+            const delta = event.key === 'ArrowDown' ? 1 : -1;
+            const fallbackIndex = optionMeta.findIndex(({ name }) => name === activeProfile);
+            const targetIndex = currentIndex >= 0 ? currentIndex + delta : fallbackIndex;
+            focusOptionByIndex(targetIndex);
+        } else if (event.key === 'Home') {
+            event.preventDefault();
+            focusOptionByIndex(0);
+        } else if (event.key === 'End') {
+            event.preventDefault();
+            focusOptionByIndex(optionMeta.length - 1);
+        }
+    };
+
+    menu.addEventListener('keydown', onMenuKeyDown);
+
+    const toggleMenu = (forceState) => {
+        const nextState = typeof forceState === 'boolean' ? forceState : !isMenuOpen;
+        if (nextState === isMenuOpen) {
+            return;
+        }
+
+        isMenuOpen = nextState;
+        trigger.setAttribute('aria-expanded', isMenuOpen ? 'true' : 'false');
+
+        if (isMenuOpen) {
+            document.body.appendChild(menu);
+            menu.style.display = 'flex';
+            updatePosition();
+            focusActiveOption();
+
+            document.addEventListener('click', onDocumentClick, true);
+            document.addEventListener('keydown', onDocumentKeydown, true);
+            window.addEventListener('resize', onWindowResizeOrScroll, { passive: true });
+            window.addEventListener('scroll', onWindowResizeOrScroll, { capture: true, passive: true });
+        } else {
+            menu.style.display = 'none';
+            if (menu.parentNode) {
+                menu.parentNode.removeChild(menu);
+            }
+
+            document.removeEventListener('click', onDocumentClick, true);
+            document.removeEventListener('keydown', onDocumentKeydown, true);
+            window.removeEventListener('resize', onWindowResizeOrScroll);
+            window.removeEventListener('scroll', onWindowResizeOrScroll, { capture: true });
+
+            if (trigger.isConnected) {
+                trigger.focus({ preventScroll: true });
+            }
+        }
+    };
+
+    const stopPropagationEvents = ['pointerdown', 'mousedown', 'mouseup', 'touchstart', 'touchend'];
+    stopPropagationEvents.forEach((eventName) => {
+        trigger.addEventListener(eventName, (event) => {
+            event.stopPropagation();
+        });
+        menu.addEventListener(eventName, (event) => {
+            event.stopPropagation();
+        });
+    });
+
+    menu.addEventListener('click', (event) => {
+        event.stopPropagation();
+    });
+
+    trigger.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        toggleMenu();
+    });
+
+    trigger.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            toggleMenu();
+        } else if (event.key === 'Escape') {
+            toggleMenu(false);
+        } else if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            toggleMenu(true);
+            focusActiveOption();
+        }
+    });
+
+    setActiveProfile(activeProfile);
+    container.appendChild(trigger);
+    // Note: menu is not appended to container, it's appended to body on open.
+};
+
+// --- Helper to create Inline Profile Selector element ---
+/**
+ * Creates and returns a DOM element for the inline profile selector.
+ * @returns {Promise<HTMLElement|null>}
+ */
+window.MaxExtensionButtonsInit.createInlineProfileSelector = async function () {
+    try {
+        const container = document.createElement('div');
+        container.style.display = 'flex';
+        container.style.alignItems = 'center';
+        container.style.gap = '4px';
+        container.style.marginRight = '8px';
+        // Load profiles and current profile
+        const profilesResponse = await chrome.runtime.sendMessage({ type: 'listProfiles' });
+        const { currentProfile } = await chrome.storage.local.get('currentProfile');
+        const profileNames = Array.isArray(profilesResponse?.profiles) ? profilesResponse.profiles : [];
+        if (!profileNames.length) {
+            return null;
+        }
+
+        const activeSite = window?.InjectionTargetsOnWebsite?.activeSite || 'Unknown';
+        const isDarkTheme = document.body.classList.contains('dark-theme') ||
+            document.documentElement.classList.contains('dark-theme') ||
+            window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+        const handleProfileSwitch = (selected) => {
+            if (!selected) return;
+            chrome.runtime.sendMessage({ type: 'switchProfile', profileName: selected, origin: 'inline' }, (response) => {
+                if (response && response.config) {
+                    if (typeof window.__OCP_partialRefreshUI === 'function') {
+                        window.__OCP_partialRefreshUI(response.config, 'inline');
+                    } else if (typeof window.__OCP_nukeAndRefresh === 'function') {
+                        window.__OCP_nukeAndRefresh(response.config, 'inline');
+                    } else if (window.MaxExtensionButtonsInit && typeof window.MaxExtensionButtonsInit.updateButtonsForProfileChange === 'function') {
+                        window.globalMaxExtensionConfig = response.config;
+                        window.MaxExtensionButtonsInit.updateButtonsForProfileChange('inline');
+                    }
+                }
+            });
+        };
+
+        const dropdownOptions = {};
+        if (activeSite === 'Perplexity') {
+            dropdownOptions.containerStyles = {
+                pointerEvents: 'auto',
+                zIndex: '2147483600'
+            };
+            dropdownOptions.menuStyles = {
+                zIndex: '2147483601'
+            };
+        }
+
+        MaxExtensionButtonsInit.createUnifiedProfileSelector(
+            container,
+            profileNames,
+            currentProfile,
+            handleProfileSwitch,
+            isDarkTheme,
+            dropdownOptions
+        );
+        return container;
+    } catch (err) {
+        logConCgp('[init] Error creating inline profile selector:', err?.message || err);
+        return null;
+    }
+};
+
+// Profile change messaging is handled centrally in init.js to avoid duplicate listeners.
