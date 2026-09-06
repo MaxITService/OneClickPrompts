@@ -92,6 +92,8 @@ window.MaxExtensionFloatingPanel.syncQueueUiFromState = function (options = {}) 
             this.__queueUiSyncRequested = false;
 
             const queueEnabled = Boolean(window.globalMaxExtensionConfig?.enableQueueMode);
+            // Rendering must not publish another queue update through the manual section.
+            this.updateManualQueueAvailability?.(queueEnabled, { notify: false });
             const queueModeInput = this.queueModeToggle?.querySelector('input');
             if (queueModeInput) queueModeInput.checked = queueEnabled;
             document.body?.classList.toggle('ocp-queue-ticking', queueEnabled && this.isQueueRunning);
@@ -102,7 +104,6 @@ window.MaxExtensionFloatingPanel.syncQueueUiFromState = function (options = {}) 
             this.updateInlineQueueControlsVisibility?.();
             this.syncQueueProgressFromState?.();
             this.renderQueueStatusFromState?.();
-            this.updateManualQueueAvailability?.(queueEnabled);
         } while (this.__queueUiSyncRequested);
     } finally {
         this.__queueUiSyncInProgress = false;
@@ -659,16 +660,17 @@ window.MaxExtensionFloatingPanel.initializeManualQueueMode = function () {
  * Enables or hides manual queue UI based on queue toggle state.
  * Remembers prior expansion so it can be restored when re-enabled.
  * @param {boolean} queueEnabled
+ * @param {{notify?: boolean}} options Controls notification when synchronizing an existing render.
  */
-window.MaxExtensionFloatingPanel.updateManualQueueAvailability = function (queueEnabled) {
+window.MaxExtensionFloatingPanel.updateManualQueueAvailability = function (queueEnabled, { notify = true } = {}) {
     if (!this.manualQueueModeButton || !this.manualQueueSection) return;
 
     this.manualQueueModeButton.disabled = !queueEnabled;
 
     if (!queueEnabled) {
-        this.manualQueueWasExpandedBeforeDisable = Boolean(this.manualQueueExpanded);
+        this.manualQueueWasExpandedBeforeDisable ||= Boolean(this.manualQueueExpanded);
         if (this.manualQueueExpanded && typeof this.hideManualQueueSection === 'function') {
-            this.hideManualQueueSection();
+            this.hideManualQueueSection({ notify });
         } else {
             this.manualQueueSection.style.display = 'none';
             this.manualQueueModeButton.classList.remove('active');
@@ -682,7 +684,7 @@ window.MaxExtensionFloatingPanel.updateManualQueueAvailability = function (queue
     if (this.manualQueueWasExpandedBeforeDisable || this.manualQueueExpanded) {
         this.manualQueueWasExpandedBeforeDisable = false;
         if (typeof this.showManualQueueSection === 'function') {
-            this.showManualQueueSection();
+            this.showManualQueueSection({ notify });
         }
     }
 };
@@ -787,8 +789,9 @@ window.MaxExtensionFloatingPanel.toggleManualQueueMode = function () {
 
 /**
  * Shows the manual queue section with cards.
+ * @param {{notify?: boolean}} options Rendering callers suppress runtime notifications.
  */
-window.MaxExtensionFloatingPanel.showManualQueueSection = function () {
+window.MaxExtensionFloatingPanel.showManualQueueSection = function ({ notify = true } = {}) {
     this.manualQueueExpanded = true;
     this.manualQueueSection.style.display = 'block';
     this.manualQueueModeButton.classList.add('active');
@@ -799,13 +802,14 @@ window.MaxExtensionFloatingPanel.showManualQueueSection = function () {
     }
 
     // Update play button tooltip to reflect manual mode
-    this.queueRuntime?.notifyState({ renderItems: false });
+    if (notify) this.queueRuntime?.notifyState({ renderItems: false });
 };
 
 /**
  * Hides the manual queue section.
+ * @param {{notify?: boolean}} options Rendering callers suppress runtime notifications.
  */
-window.MaxExtensionFloatingPanel.hideManualQueueSection = function () {
+window.MaxExtensionFloatingPanel.hideManualQueueSection = function ({ notify = true } = {}) {
     this.manualQueueExpanded = false;
     this.manualQueueSection.style.display = 'none';
     this.manualQueueModeButton.classList.remove('active');
@@ -816,7 +820,7 @@ window.MaxExtensionFloatingPanel.hideManualQueueSection = function () {
     }
 
     // Update play button tooltip to reflect normal mode
-    this.queueRuntime?.notifyState({ renderItems: false });
+    if (notify) this.queueRuntime?.notifyState({ renderItems: false });
 };
 
 /**

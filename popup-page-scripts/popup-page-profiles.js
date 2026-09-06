@@ -89,7 +89,6 @@ async function switchProfile(profileName) {
             const profileSelect = document.getElementById('profileSelect');
             await updateInterface(profileSelect);
             logToGUIConsole(`Switched to profile: ${profileName}`);
-            updateSaveStatus();
             return true;
         } else {
             throw new Error(`Unable to retrieve configuration after switching to profile "${profileName}".`);
