@@ -6,6 +6,7 @@
 (() => {
     const QUEUE_INSTANCE_SESSION_KEY = 'ocpQueueInstanceId.v1';
     const QUEUE_SNAPSHOT_SCHEMA_VERSION = 1;
+    const MAX_TIMEOUT_MS = 2 ** 31 - 1;
 
     // One dispatch owns its cancellation signal and the exact draft it inserted.
     class QueueSendContext {
@@ -276,6 +277,9 @@
         scheduleRemaining(totalDurationMs, remainingMs, onElapsed, options = {}) {
             const totalMs = Math.max(0, Number(totalDurationMs) || 0);
             const safeRemainingMs = Math.min(totalMs, Math.max(0, Number(remainingMs) || 0));
+            if (!Number.isSafeInteger(Math.ceil(totalMs)) || !Number.isFinite(safeRemainingMs)) {
+                throw new RangeError('Queue delay must be a finite duration within the safe integer range.');
+            }
             return this.#transaction('schedule-remaining', (queue) => {
                 this.#clearTimer(queue);
                 queue.timerStartTime = Date.now() - (totalMs - safeRemainingMs);
@@ -285,19 +289,35 @@
                 queue.isQueueRunning = true;
                 queue.queueStatus = null;
 
-                const timerId = setTimeout(() => {
-                    if (queue.queueTimerId !== timerId) return;
-                    queue.queueTimerId = null;
-                    queue.remainingTimeOnPause = 0;
-                    queue.queuePhase = 'sending';
-                    queue.isQueueRunning = true;
-                    this.notifyState({ renderItems: false });
-                    Promise.resolve(onElapsed?.()).catch((error) => {
-                        logConCgp('[queue-runtime] Scheduled dispatch failed:', error?.message || error);
-                    });
-                }, safeRemainingMs);
-                queue.queueTimerId = timerId;
-                return timerId;
+                // Browser timers use a signed 32-bit delay. Keep the full countdown
+                // in queue state and arm bounded chunks until its deadline is reached.
+                const deadline = Date.now() + safeRemainingMs;
+                const armTimer = (delayMs) => {
+                    const timerId = setTimeout(() => {
+                        if (queue.queueTimerId !== timerId) return;
+                        const timeLeft = Math.max(0, deadline - Date.now());
+                        if (timeLeft > 0) {
+                            armTimer(timeLeft);
+                            return;
+                        }
+                        queue.queueTimerId = null;
+                        queue.remainingTimeOnPause = 0;
+                        queue.queuePhase = 'sending';
+                        queue.isQueueRunning = true;
+                        const generation = queue.queueGeneration;
+                        this.notifyState({ renderItems: false });
+                        Promise.resolve().then(() => {
+                            if (queue.queueGeneration === generation && queue.queuePhase === 'sending' && queue.isQueueRunning) {
+                                return onElapsed?.();
+                            }
+                        }).catch((error) => {
+                            logConCgp('[queue-runtime] Scheduled dispatch failed:', error?.message || error);
+                        });
+                    }, Math.min(MAX_TIMEOUT_MS, Math.ceil(delayMs)));
+                    queue.queueTimerId = timerId;
+                    return timerId;
+                };
+                return armTimer(safeRemainingMs);
             }, { renderItems: false, ...options });
         }
 

@@ -164,14 +164,15 @@ window.MaxExtensionFloatingPanel.removeFromQueue = function (index) {
 window.MaxExtensionFloatingPanel.getQueueBaseDelayMs = function () {
     const config = window.globalMaxExtensionConfig || {};
     const unit = (config.queueDelayUnit === 'sec') ? 'sec' : 'min';
+    const { min, max } = this.getQueueDelayBounds(unit);
     if (unit === 'sec') {
         const secondsValue = Number(config.queueDelaySeconds);
         const seconds = Number.isFinite(secondsValue) ? secondsValue : 60;
-        return Math.max(10, seconds) * 1000;
+        return Math.min(max, Math.max(min, seconds)) * 1000;
     }
     const minutesValue = Number(config.queueDelayMinutes);
     const minutes = Number.isFinite(minutesValue) ? minutesValue : 1;
-    return Math.max(1, minutes) * 60 * 1000;
+    return Math.min(max, Math.max(min, minutes)) * 60 * 1000;
 };
 
 /**
@@ -191,7 +192,7 @@ window.MaxExtensionFloatingPanel.getQueueDelayWithRandomMs = function (options =
     let percent = Number.isFinite(percentValue) ? percentValue : 5;
 
     if (config.queueRandomizeEnabled) {
-        percent = Math.max(0, percent);
+        percent = Math.min(100, Math.max(0, percent));
         const maxOffsetMs = Math.round(baseMs * (percent / 100));
         if (maxOffsetMs > 0) {
             offsetMs = Math.floor(Math.random() * (maxOffsetMs + 1));
