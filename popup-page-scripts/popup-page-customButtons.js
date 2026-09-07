@@ -24,6 +24,7 @@ const DELETE_UNDO_DURATION_MS = 2000;
 const pendingButtonDeletions = new Map();
 let buttonCardLayoutFrame = null;
 let buttonSearchProfileName = null;
+let buttonCardRenderVersion = 0;
 
 function applyButtonSearch() {
     const search = document.getElementById('buttonSearch');
@@ -118,6 +119,7 @@ function createButtonCardElement(button, index, crossChatSettings = null) {
     buttonItem.dataset.index = index;
     buttonItem.draggable = true; // The entire card is the draggable target.
     buttonItem.__buttonDataRef = button; // Keep reference for undo timers across renders.
+    buttonItem.__profileRef = currentProfile;
 
     if (button.separator) {
         buttonItem.classList.add('separator-item');
@@ -221,8 +223,11 @@ function createButtonCardElement(button, index, crossChatSettings = null) {
  * @param {boolean} [restoreScroll=true] - Whether to restore the scroll position after updating.
  */
 async function updatebuttonCardsList(restoreScroll = true) {
+    const profile = currentProfile;
+    const renderVersion = ++buttonCardRenderVersion;
     // Get Cross-Chat module settings
     const crossChatSettings = await getCrossChatSettings();
+    if (currentProfile !== profile || renderVersion !== buttonCardRenderVersion) return;
 
     // Clean up any pending deletions that no longer exist in the profile
     pendingButtonDeletions.forEach((state, buttonRef) => {
@@ -249,6 +254,7 @@ async function updatebuttonCardsList(restoreScroll = true) {
         emptyMessage.className = 'empty-message';
         cardsFragment.appendChild(emptyMessage);
     }
+    buttonCardsList.querySelectorAll('textarea.emoji-input').forEach(input => input.__ocpEndSelection?.());
     buttonCardsList.replaceChildren(cardsFragment);
 
     // After updating the list, attach event listeners
@@ -426,11 +432,9 @@ function clearUndoVisualState(buttonItem) {
  * @returns {Object|null}
  */
 function getButtonDataFromCard(buttonItem) {
-    if (!buttonItem) return null;
-    if (buttonItem.__buttonDataRef) return buttonItem.__buttonDataRef;
-    const index = parseInt(buttonItem.dataset.index);
-    if (Number.isNaN(index) || !currentProfile.customButtons[index]) return null;
-    return currentProfile.customButtons[index];
+    if (!buttonItem?.isConnected || buttonItem.__profileRef !== currentProfile) return null;
+    const button = buttonItem.__buttonDataRef;
+    return currentProfile.customButtons.includes(button) ? button : null;
 }
 
 /**
@@ -1583,6 +1587,8 @@ function attachEmojiInputListeners(resizeInitially = true) {
             lastMouseX = e.clientX;
             if (autoScrollRAF) cancelAnimationFrame(autoScrollRAF);
             autoScrollRAF = requestAnimationFrame(autoScrollWhileSelecting);
+            document.addEventListener('mouseup', endSelection);
+            window.addEventListener('blur', endSelection);
         });
         inputElement.addEventListener('mousemove', (e) => {
             if (!selecting) return;
@@ -1590,6 +1596,8 @@ function attachEmojiInputListeners(resizeInitially = true) {
         });
         const endSelection = () => {
             selecting = false;
+            document.removeEventListener('mouseup', endSelection);
+            window.removeEventListener('blur', endSelection);
             if (autoScrollRAF) {
                 cancelAnimationFrame(autoScrollRAF);
                 autoScrollRAF = null;
@@ -1597,14 +1605,15 @@ function attachEmojiInputListeners(resizeInitially = true) {
         };
         inputElement.addEventListener('mouseup', endSelection);
         inputElement.addEventListener('mouseleave', endSelection);
-        document.addEventListener('mouseup', endSelection, { once: true });
+        inputElement.__ocpEndSelection = endSelection;
 
         inputElement.addEventListener('input', () => {
             // Persist only when editing within a card
             const buttonItem = inputElement.closest('.button-item');
             if (buttonItem) {
-                const index = parseInt(buttonItem.dataset.index);
-                currentProfile.customButtons[index].icon = inputElement.value;
+                const button = getButtonDataFromCard(buttonItem);
+                if (!button) return;
+                button.icon = inputElement.value;
                 debouncedSaveCurrentProfile();
             }
             resizeSelf();
@@ -1631,11 +1640,15 @@ function attachEmojiInputListeners(resizeInitially = true) {
 function attachAutoSendToggleListeners() {
     const autoSendToggles = buttonCardsList.querySelectorAll('input.autosend-toggle');
     autoSendToggles.forEach(toggle => {
+        if (toggle.dataset.ocpSaveBound === 'true') return;
+        toggle.dataset.ocpSaveBound = 'true';
         toggle.addEventListener('change', () => {
             const buttonItem = toggle.closest('.button-item');
-            const index = parseInt(buttonItem.dataset.index);
-            currentProfile.customButtons[index].autoSend = toggle.checked;
+            const button = getButtonDataFromCard(buttonItem);
+            if (!button) return;
+            button.autoSend = toggle.checked;
             debouncedSaveCurrentProfile();
+            const index = currentProfile.customButtons.indexOf(button);
             logToGUIConsole(`Updated auto-send for button at index ${index} to ${toggle.checked}`);
         });
     });
@@ -1650,6 +1663,8 @@ function textareaSaverAndResizerFunc(resizeInitially = true) {
     textareas.forEach(textarea => {
         // Perform an initial resize to fit existing content.
         if (resizeInitially) resizeVerticalTextarea(textarea, true);
+        if (textarea.dataset.ocpSaveBound === 'true') return;
+        textarea.dataset.ocpSaveBound = 'true';
 
         textarea.addEventListener('input', () => {
             // Resize the textarea vertically as the user types.
@@ -1657,8 +1672,9 @@ function textareaSaverAndResizerFunc(resizeInitially = true) {
 
             // Update the corresponding button text in the data model.
             const buttonItem = textarea.closest('.button-item');
-            const index = parseInt(buttonItem.dataset.index);
-            currentProfile.customButtons[index].text = textarea.value;
+            const button = getButtonDataFromCard(buttonItem);
+            if (!button) return;
+            button.text = textarea.value;
 
             // Use debounced save to throttle saving.
             debouncedSaveCurrentProfile();
