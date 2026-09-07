@@ -3,6 +3,7 @@
 // Instructions for AI: do not remove comments! MUST NOT REMOVE COMMENTS.
 
 'use strict';
+let backupImportInProgress = false;
 
 function sendRuntimeMessage(message) {
     return new Promise((resolve, reject) => {
@@ -51,8 +52,8 @@ function slugifyFilenamePart(value) {
     if (typeof value !== 'string') {
         return 'backup';
     }
-    const trimmed = value.trim().toLowerCase();
-    const slug = trimmed.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '');
+    const trimmed = value.normalize('NFKC').trim().toLowerCase();
+    const slug = trimmed.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '').slice(0, 80).replace(/-+$/g, '');
     return slug || 'backup';
 }
 
@@ -242,6 +243,7 @@ function summarizeImportResult(result) {
 
 // Function to handle the file input change event
 async function handleImportProfile(event) {
+    if (backupImportInProgress) return;
     const file = event.target.files[0];
     if (!file) {
         logToGUIConsole('No file selected for import.');
@@ -249,13 +251,22 @@ async function handleImportProfile(event) {
     }
 
     logToGUIConsole(`Selected file for import: ${file.name}`);
+    backupImportInProgress = true;
+    const importButton = document.getElementById('importProfile');
+    const wasDisabled = importButton.disabled;
+    importButton.disabled = true;
+    const errorPanel = document.getElementById('errorDiv');
+    errorPanel?.classList.add('is-hidden');
+    let stage = 'read';
 
     try {
         const fileText = await file.text();
+        stage = 'parse';
         const parsedPayload = parseBackupText(fileText);
         const incomingProfileNames = extractIncomingProfileNames(parsedPayload);
         logToGUIConsole(`Parsed backup payload successfully. Incoming profiles: ${incomingProfileNames.join(', ') || 'none'}.`);
 
+        stage = 'prepare';
         const existingProfilesResponse = await sendRuntimeMessage({ type: 'listProfiles' });
         const existingProfiles = Array.isArray(existingProfilesResponse?.profiles) ? existingProfilesResponse.profiles : [];
         const collisions = incomingProfileNames.filter((profileName) => existingProfiles.includes(profileName));
@@ -268,22 +279,26 @@ async function handleImportProfile(event) {
         }
 
         const result = await withProfileTransition(async () => {
+            stage = 'write';
             const importResponse = await sendRuntimeMessage({
                 type: 'applyBackupPayload',
                 payload: parsedPayload,
                 options: { overwriteExisting },
             });
 
-            const importedResult = importResponse && importResponse.result ? importResponse.result : {
-                importedProfiles: [],
-                skippedProfiles: [],
-                appSettingsApplied: false,
-            };
+            if (importResponse?.success !== true || !importResponse.result) {
+                throw new Error('The extension did not confirm the import result.');
+            }
+            const importedResult = importResponse.result;
 
+            stage = 'refresh';
             await refreshPopupAfterImport(importedResult);
             return importedResult;
         });
-        if (!result) return;
+        if (!result) {
+            showToast('Import did not start. Finish the current profile operation and try again.', 'info');
+            return;
+        }
 
         const summary = summarizeImportResult(result);
         const importedCount = Array.isArray(result.importedProfiles) ? result.importedProfiles.length : 0;
@@ -297,10 +312,22 @@ async function handleImportProfile(event) {
     } catch (error) {
         console.error('Error importing backup:', error);
         logToGUIConsole(`Error importing backup: ${error.message}`);
-        document.getElementById('errorDiv')?.classList.remove('is-hidden');
-        showToast('Failed to import backup. Please check the JSON file.', 'error');
+        const explanations = {
+            read: 'The backup file could not be read. Select an accessible local file.',
+            parse: 'The backup is empty or contains invalid JSON. Export a new backup or correct the file.',
+            prepare: 'The extension could not prepare the import. Reopen settings and try again.',
+            write: 'The import could not be completed. Some changes may already have been saved; check your profiles before retrying.',
+            refresh: 'The backup was imported, but settings could not refresh. Reopen settings to view it; importing again is unnecessary.'
+        };
+        const message = `${explanations[stage]} Details: ${error.message || String(error)}`;
+        const errorText = errorPanel?.querySelector('p');
+        if (errorText) errorText.textContent = message;
+        errorPanel?.classList.remove('is-hidden');
+        showToast(explanations[stage], 'error', 10000);
     } finally {
         event.target.value = '';
+        backupImportInProgress = false;
+        importButton.disabled = wasDisabled;
     }
 }
 
