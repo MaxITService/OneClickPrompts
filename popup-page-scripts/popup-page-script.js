@@ -1016,6 +1016,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Button management
+    initializeButtonSearch();
     document.getElementById('addButton').addEventListener('click', e => addButton(e));
     document.getElementById('clearText').addEventListener('click', clearText);
     document.getElementById('addSeparator').addEventListener('click', addSeparator);

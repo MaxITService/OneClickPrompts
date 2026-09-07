@@ -250,6 +250,39 @@ button.danger:hover {
 }
 
 /* Container for the custom button list */
+.button-search-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+#buttonSearch {
+    flex: 1;
+    min-width: 160px;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-color);
+    color: var(--text-color);
+    font: inherit;
+}
+
+#buttonSearch:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+#buttonSearchStatus {
+    font-size: 12px;
+    color: var(--text-muted, #666);
+}
+
+#buttonCardsList > .button-item[hidden] {
+    display: none;
+}
+
 #buttonCardsList {
     border: 1px solid var(--border-color);
     border-radius: 4px;

@@ -23,6 +23,59 @@ const DELETE_UNDO_DURATION_MS = 2000;
 // Keyed by the button object reference so reorders/edits keep the link intact.
 const pendingButtonDeletions = new Map();
 let buttonCardLayoutFrame = null;
+let buttonSearchProfileName = null;
+
+function applyButtonSearch() {
+    const search = document.getElementById('buttonSearch');
+    const query = (search?.value || '').normalize('NFKC').toLocaleLowerCase().trim();
+    let visibleCount = 0;
+    let buttonCount = 0;
+    buttonCardsList.querySelectorAll('.button-item').forEach(card => {
+        const button = card.__buttonDataRef;
+        if (!button) return;
+        if (!button.separator) buttonCount++;
+        const searchText = `${button.icon || ''} ${button.text || ''} ${getSystemButtonMeta(button.text).text || ''}`
+            .normalize('NFKC').toLocaleLowerCase();
+        const matches = !query || (!button.separator && searchText.includes(query));
+        card.hidden = !matches;
+        // Reordering a partial list obscures where hidden buttons would be placed.
+        card.draggable = !query && !pendingButtonDeletions.has(button);
+        if (matches && !button.separator) visibleCount++;
+    });
+    document.getElementById('buttonSearchStatus').textContent = query
+        ? `${visibleCount} of ${buttonCount} buttons · Clear search to reorder`
+        : `${buttonCount} buttons`;
+    document.getElementById('buttonSearchEmpty').classList.toggle('is-hidden', !query || visibleCount > 0);
+}
+
+function scheduleButtonCardLayout() {
+    if (buttonCardLayoutFrame !== null) cancelAnimationFrame(buttonCardLayoutFrame);
+    buttonCardLayoutFrame = requestAnimationFrame(() => {
+        buttonCardLayoutFrame = null;
+        refitButtonCardLayouts();
+    });
+}
+
+function initializeButtonSearch() {
+    const search = document.getElementById('buttonSearch');
+    const refresh = () => {
+        applyButtonSearch();
+        scheduleButtonCardLayout();
+    };
+    search.addEventListener('input', refresh);
+    document.getElementById('clearButtonSearch').addEventListener('click', () => {
+        search.value = '';
+        refresh();
+        search.focus();
+    });
+    search.addEventListener('keydown', event => {
+        if (event.key !== 'Escape' || !search.value) return;
+        event.preventDefault();
+        event.stopPropagation();
+        search.value = '';
+        refresh();
+    });
+}
 
 function escapeHtml(value) {
     return String(value ?? '')
@@ -200,6 +253,11 @@ async function updatebuttonCardsList(restoreScroll = true) {
     attachEmojiInputListeners(false);
     attachAutoSendToggleListeners();
     reapplyPendingDeletionUI();
+    if (buttonSearchProfileName !== currentProfile.PROFILE_NAME) {
+        document.getElementById('buttonSearch').value = '';
+        buttonSearchProfileName = currentProfile.PROFILE_NAME;
+    }
+    applyButtonSearch();
 
     // Restore scroll position only if requested
     if (restoreScroll) {
@@ -207,11 +265,7 @@ async function updatebuttonCardsList(restoreScroll = true) {
     }
 
     // Fit the complete list together once it is attached, coalescing rapid rebuilds.
-    if (buttonCardLayoutFrame !== null) cancelAnimationFrame(buttonCardLayoutFrame);
-    buttonCardLayoutFrame = requestAnimationFrame(() => {
-        buttonCardLayoutFrame = null;
-        refitButtonCardLayouts();
-    });
+    scheduleButtonCardLayout();
 }
 
 // -------------------------
@@ -329,7 +383,7 @@ function clearUndoVisualState(buttonItem) {
     deleteBtn.textContent = 'Delete';
     deleteBtn.classList.remove('undo-state');
     buttonItem.classList.remove('pending-delete');
-    buttonItem.draggable = true;
+    buttonItem.draggable = !document.getElementById('buttonSearch')?.value.trim();
 }
 
 /**

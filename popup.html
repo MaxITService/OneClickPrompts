@@ -226,6 +226,13 @@
               Add + Button
             </button>
         </div>
+        <div class="button-search-row">
+          <label for="buttonSearch">Find buttons</label>
+          <input id="buttonSearch" type="search" placeholder="Search prompt text or icon" aria-controls="buttonCardsList" />
+          <button id="clearButtonSearch" type="button">Clear</button>
+          <span id="buttonSearchStatus" role="status" aria-live="polite"></span>
+        </div>
+        <p id="buttonSearchEmpty" class="is-hidden">No matching buttons. Clear the search to show all buttons.</p>
         <div id="buttonCardsList" data-draggable="true">
           <!-- Button cards added dynamically here -->
         </div>
