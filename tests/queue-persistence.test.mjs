@@ -46,6 +46,20 @@ test('invalid journals cannot overwrite a valid saved queue', async () => {
     assert.equal(local.data[`${prefix}${instanceId}`].items[0].text, 'keep');
 });
 
+test('non-finite and unsafe journal counters cannot replace a valid recovery snapshot', async () => {
+    const { api, local } = await setup();
+    const { instanceId } = await api.claimQueuePersistenceContext({}, sender);
+    await api.saveQueuePersistenceSnapshot({ instanceId, snapshot: journal('keep') }, sender);
+    for (const field of ['timerDurationMs', 'timerRemainingMs', 'nextQueueItemId', 'savedAt']) {
+        for (const value of [Infinity, NaN, Number.MAX_SAFE_INTEGER + 1, -1]) {
+            const snapshot = { ...journal('invalid'), [field]: value };
+            const response = await api.saveQueuePersistenceSnapshot({ instanceId, snapshot }, sender);
+            assert.equal(response.success, false, `${field}=${value} must be rejected`);
+        }
+    }
+    assert.equal(local.data[`${prefix}${instanceId}`].items[0].text, 'keep');
+});
+
 test('cleanup reads only queue journals and concurrent claims perform one sweep', async () => {
     const old = { ...journal('expired'), savedAt: Date.now() - 8 * 86_400_000 };
     const { api, local } = await setup({

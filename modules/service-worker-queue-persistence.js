@@ -96,7 +96,7 @@ function sanitizeSnapshot(value, expectedOrigin = null) {
     if (typeof value.origin !== 'string' || (expectedOrigin && value.origin !== expectedOrigin)) return null;
 
     const savedAt = Number(value.savedAt);
-    if (!Number.isFinite(savedAt) || savedAt <= 0) return null;
+    if (!Number.isSafeInteger(savedAt) || savedAt <= 0) return null;
 
     const rawItems = Array.isArray(value.items) ? value.items : [];
     const items = rawItems.map(sanitizeQueueItem);
@@ -109,10 +109,15 @@ function sanitizeSnapshot(value, expectedOrigin = null) {
     if (inFlightItem) queueIds.push(inFlightItem.queueId);
     if (new Set(queueIds).size !== queueIds.length) return null;
 
-    const timerDurationMs = Math.max(0, Number(value.timerDurationMs) || 0);
+    const timerDurationMs = Number(value.timerDurationMs ?? 0);
+    const remainingMs = Number(value.timerRemainingMs ?? 0);
+    const nextQueueItemId = Number(value.nextQueueItemId ?? 1);
+    if (![timerDurationMs, remainingMs].every(duration => Number.isFinite(duration)
+        && duration >= 0 && duration <= Number.MAX_SAFE_INTEGER)) return null;
+    if (!Number.isSafeInteger(nextQueueItemId) || nextQueueItemId < 1) return null;
     const timerRemainingMs = Math.min(
         timerDurationMs,
-        Math.max(0, Number(value.timerRemainingMs) || 0)
+        remainingMs
     );
 
     return {
@@ -121,7 +126,7 @@ function sanitizeSnapshot(value, expectedOrigin = null) {
         savedAt,
         items,
         inFlightItem,
-        nextQueueItemId: Math.max(1, Math.floor(Number(value.nextQueueItemId) || 1)),
+        nextQueueItemId,
         timerDurationMs,
         timerRemainingMs,
         status: sanitizeStatus(value.status)

@@ -134,3 +134,61 @@ test('successful import followed by a refresh failure reports that data was alre
     assert.equal(document.getElementById('importProfile').disabled, false);
     assert.equal(target.value, '');
 });
+
+test('cancelling the second shortcut confirmation leaves both buttons unchanged', async t => {
+    const shortcut = { combo: 'alt+keyq', label: 'Alt+Q' };
+    const first = { text: 'owner', icon: 'A', hotkey: shortcut };
+    const second = { text: 'target', icon: 'B' };
+    const { w, writes } = await popup(t, [first, second]);
+    w.MaxExtensionHotkeys = {
+        validate: () => ({ valid: true }), normalizeStoredHotkey: value => value,
+        fromLegacyShortcutKey: index => index === 1 ? shortcut : null
+    };
+    const answers = [true, false];
+    w.OCPModal = { show: async () => answers.shift() };
+    assert.equal(await w.saveHotkeyForButton(1, shortcut), false);
+    assert.equal(answers.length, 0);
+    assert.equal(first.hotkey, shortcut);
+    assert.equal(second.hotkey, undefined);
+    assert.equal(writes.length, 0);
+});
+
+test('a shortcut confirmation cannot edit the wrong button after the list changes', async t => {
+    const shortcut = { combo: 'alt+keyq', label: 'Alt+Q' };
+    const first = { text: 'owner', icon: 'A', hotkey: shortcut };
+    const second = { text: 'target', icon: 'B' };
+    const { w, writes } = await popup(t, [first, second]);
+    w.MaxExtensionHotkeys = {
+        validate: () => ({ valid: true }), normalizeStoredHotkey: value => value,
+        fromLegacyShortcutKey: () => null
+    };
+    w.OCPModal = { show: async () => {
+        w.currentProfile.customButtons.reverse();
+        return true;
+    } };
+    w.findGeneratedHotkeyConflict = () => null;
+    assert.equal(await w.saveHotkeyForButton(1, shortcut), false);
+    assert.equal(first.hotkey, shortcut);
+    assert.equal(second.hotkey, undefined);
+    assert.equal(writes.length, 0);
+});
+
+test('a confirmed shortcut transfer is saved once and a rejected save rolls it back', async t => {
+    const shortcut = { combo: 'alt+keyq', label: 'Alt+Q' };
+    const first = { text: 'owner', icon: 'A', hotkey: shortcut };
+    const second = { text: 'target', icon: 'B' };
+    const { w, writes } = await popup(t, [first, second]);
+    w.MaxExtensionHotkeys = {
+        validate: () => ({ valid: true }), normalizeStoredHotkey: value => value,
+        fromLegacyShortcutKey: () => null
+    };
+    w.OCPModal = { show: async () => true };
+    assert.equal(await w.saveHotkeyForButton(second, shortcut), true);
+    assert.equal(first.hotkey, undefined);
+    assert.equal(second.hotkey, shortcut);
+    assert.equal(writes.length, 1);
+    w.saveCurrentProfile = async () => false;
+    assert.equal(await w.saveHotkeyForButton(first, shortcut), false);
+    assert.equal(first.hotkey, undefined);
+    assert.equal(second.hotkey, shortcut);
+});

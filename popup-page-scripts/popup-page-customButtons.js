@@ -749,7 +749,7 @@ function isComboUsedByExplicitHotkey(combo, exceptIndex) {
     return findExplicitHotkeyConflict(combo, exceptIndex) !== -1;
 }
 
-function findGeneratedHotkeyConflict(combo, exceptIndex, crossChatSettings) {
+function findGeneratedHotkeyConflict(combo, exceptIndex, crossChatSettings, releasingButton = null) {
     const crossChatButtonsBefore =
         crossChatSettings
         && crossChatSettings.enabled
@@ -770,7 +770,7 @@ function findGeneratedHotkeyConflict(combo, exceptIndex, crossChatSettings) {
     for (let index = 0; index < currentProfile.customButtons.length; index++) {
         if (index === exceptIndex) continue;
         const button = currentProfile.customButtons[index];
-        if (!button || button.separator || window.MaxExtensionHotkeys?.normalizeStoredHotkey(button.hotkey)) continue;
+        if (!button || button.separator || (button !== releasingButton && window.MaxExtensionHotkeys?.normalizeStoredHotkey(button.hotkey))) continue;
         const fallbackIndex = getLegacyShortcutKeyForButtonIndex(index, crossChatSettings);
         const fallbackHotkey = window.MaxExtensionHotkeys?.fromLegacyShortcutKey(fallbackIndex);
         if (fallbackHotkey?.combo === combo) {
@@ -793,38 +793,33 @@ function describeButtonForConflict(button, index) {
     return `${icon}${text.length > 60 ? `${text.slice(0, 57)}...` : text}`;
 }
 
-async function saveHotkeyForButton(index, hotkey) {
-    if (!currentProfile?.customButtons?.[index]) return false;
+async function saveHotkeyForButton(buttonOrIndex, hotkey) {
+    const profile = currentProfile;
+    const button = typeof buttonOrIndex === 'number' ? profile?.customButtons?.[buttonOrIndex] : buttonOrIndex;
+    const index = profile?.customButtons?.indexOf(button) ?? -1;
+    if (index === -1) return false;
 
-    if (!hotkey) {
-        const previousHotkey = currentProfile.customButtons[index].hotkey;
-        delete currentProfile.customButtons[index].hotkey;
-        if (!(await saveCurrentProfile())) {
-            if (previousHotkey === undefined) {
-                delete currentProfile.customButtons[index].hotkey;
-            } else {
-                currentProfile.customButtons[index].hotkey = previousHotkey;
-            }
+    const originalButtons = [...profile.customButtons];
+    const originalHotkeys = originalButtons.map(entry => entry.hotkey);
+    const isUnchanged = () => {
+        const unchanged = currentProfile === profile
+            && profile.customButtons.length === originalButtons.length
+            && profile.customButtons.every((entry, position) => entry === originalButtons[position] && entry.hotkey === originalHotkeys[position]);
+        if (!unchanged) showToast('Buttons or shortcuts changed. Reopen the shortcut picker and try again.', 'info');
+        return unchanged;
+    };
+
+    if (hotkey) {
+        const validation = window.MaxExtensionHotkeys?.validate(hotkey);
+        if (!validation?.valid) {
+            showToast(validation?.reason || 'Invalid shortcut.', 'error');
             return false;
         }
-        await updatebuttonCardsList(false);
-        logToGUIConsole(`Cleared shortcut for button at index ${index}`);
-        showToast('Shortcut cleared.', 'success');
-        return true;
     }
 
-    const validation = window.MaxExtensionHotkeys?.validate(hotkey);
-    if (!validation?.valid) {
-        showToast(validation?.reason || 'Invalid shortcut.', 'error');
-        return false;
-    }
-
-    const previousHotkey = currentProfile.customButtons[index].hotkey;
-    const conflictIndex = findExplicitHotkeyConflict(hotkey.combo, index);
-    let conflictingHotkey;
-    if (conflictIndex !== -1) {
-        const conflictButton = currentProfile.customButtons[conflictIndex];
-        conflictingHotkey = conflictButton.hotkey;
+    const conflictIndex = hotkey ? findExplicitHotkeyConflict(hotkey.combo, index) : -1;
+    const conflictButton = conflictIndex === -1 ? null : originalButtons[conflictIndex];
+    if (conflictButton) {
         const confirmed = await window.OCPModal.show({
             title: 'Shortcut conflict',
             text: `${hotkey.label} is already assigned to ${describeButtonForConflict(conflictButton, conflictIndex)}. Move it to this button instead?`,
@@ -833,56 +828,53 @@ async function saveHotkeyForButton(index, hotkey) {
             type: 'confirm'
         });
 
-        if (!confirmed) {
-            return false;
-        }
-
-        delete conflictButton.hotkey;
+        if (!confirmed || !isUnchanged()) return false;
     }
 
-    const crossChatSettings = await getCrossChatSettings();
-    const generatedConflict = findGeneratedHotkeyConflict(hotkey.combo, index, crossChatSettings);
-    if (generatedConflict) {
-        const confirmed = await window.OCPModal.show({
-            title: 'Generated shortcut conflict',
-            text: `${hotkey.label} is currently generated for ${generatedConflict.label}. Use it here and disable that generated shortcut?`,
-            confirmText: 'Use here',
-            cancelText: 'Cancel',
-            type: 'confirm'
-        });
-
-        if (!confirmed) {
-            return false;
+    if (hotkey) {
+        const crossChatSettings = await getCrossChatSettings();
+        if (!isUnchanged()) return false;
+        const generatedConflict = findGeneratedHotkeyConflict(hotkey.combo, index, crossChatSettings, conflictButton);
+        if (generatedConflict) {
+            const confirmed = await window.OCPModal.show({
+                title: 'Generated shortcut conflict',
+                text: `${hotkey.label} is currently generated for ${generatedConflict.label}. Use it here and disable that generated shortcut?`,
+                confirmText: 'Use here',
+                cancelText: 'Cancel',
+                type: 'confirm'
+            });
+            if (!confirmed || !isUnchanged()) return false;
         }
     }
 
-    currentProfile.customButtons[index].hotkey = hotkey;
-    if (!(await saveCurrentProfile())) {
-        if (previousHotkey === undefined) {
-            delete currentProfile.customButtons[index].hotkey;
-        } else {
-            currentProfile.customButtons[index].hotkey = previousHotkey;
-        }
-        if (conflictIndex !== -1) {
-            if (conflictingHotkey === undefined) {
-                delete currentProfile.customButtons[conflictIndex].hotkey;
-            } else {
-                currentProfile.customButtons[conflictIndex].hotkey = conflictingHotkey;
+    // Confirmations have no side effects. Apply the transfer only after every approval,
+    // while profile transitions are locked, and roll back by object identity on failure.
+    return withProfileTransition(async () => {
+        if (!isUnchanged()) return false;
+        if (conflictButton) delete conflictButton.hotkey;
+        if (hotkey) button.hotkey = hotkey;
+        else delete button.hotkey;
+        if (!(await saveCurrentProfile(profile))) {
+            for (const changedIndex of [index, conflictIndex]) {
+                if (changedIndex === -1) continue;
+                const entry = originalButtons[changedIndex];
+                const previous = originalHotkeys[changedIndex];
+                if (previous === undefined) delete entry.hotkey;
+                else entry.hotkey = previous;
             }
+            return false;
         }
-        return false;
-    }
-    await updatebuttonCardsList(false);
-    logToGUIConsole(`Saved shortcut ${hotkey.label} for button at index ${index}`);
-    showToast(`Shortcut saved: ${hotkey.label}`, 'success');
-    return true;
+        await updatebuttonCardsList(false);
+        logToGUIConsole(`Updated shortcut for button at index ${index}`);
+        showToast(hotkey ? `Shortcut saved: ${hotkey.label}` : 'Shortcut cleared.', 'success');
+        return true;
+    });
 }
 
 function openHotkeyPicker(buttonItem) {
-    const index = parseInt(buttonItem?.dataset.index, 10);
-    if (Number.isNaN(index) || !currentProfile?.customButtons?.[index]) return;
-
-    const button = currentProfile.customButtons[index];
+    const button = getButtonDataFromCard(buttonItem);
+    if (!button) return;
+    const index = currentProfile.customButtons.indexOf(button);
     let pendingHotkey = window.MaxExtensionHotkeys?.normalizeStoredHotkey(button.hotkey);
     let validationMessage = pendingHotkey ? '' : 'Press Ctrl, Alt, or Cmd/Win plus a key.';
 
@@ -991,7 +983,7 @@ function openHotkeyPicker(buttonItem) {
     saveButton.addEventListener('click', async () => {
         if (!pendingHotkey) return;
         document.removeEventListener('keydown', onKeyDown, true);
-        const saved = await saveHotkeyForButton(index, pendingHotkey);
+        const saved = await saveHotkeyForButton(button, pendingHotkey);
         if (saved) {
             close();
         } else {
@@ -1001,7 +993,7 @@ function openHotkeyPicker(buttonItem) {
     });
     clearButton.addEventListener('click', async () => {
         document.removeEventListener('keydown', onKeyDown, true);
-        const saved = await saveHotkeyForButton(index, null);
+        const saved = await saveHotkeyForButton(button, null);
         if (saved) {
             close();
         } else {
