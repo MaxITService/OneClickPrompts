@@ -22,6 +22,7 @@ const DELETE_UNDO_DURATION_MS = 2000;
 // Tracks buttons that are waiting out their undo window before deletion.
 // Keyed by the button object reference so reorders/edits keep the link intact.
 const pendingButtonDeletions = new Map();
+let buttonCardLayoutFrame = null;
 
 function escapeHtml(value) {
     return String(value ?? '')
@@ -180,22 +181,23 @@ async function updatebuttonCardsList(restoreScroll = true) {
         left: window.pageXOffset || document.documentElement.scrollLeft
     };
 
-    buttonCardsList.innerHTML = ''; // This already removes old listeners
+    const cardsFragment = document.createDocumentFragment();
     if (currentProfile.customButtons && currentProfile.customButtons.length > 0) {
         currentProfile.customButtons.forEach((button, index) => {
             const buttonElement = createButtonCardElement(button, index, crossChatSettings);
-            buttonCardsList.appendChild(buttonElement);
+            cardsFragment.appendChild(buttonElement);
         });
     } else {
         const emptyMessage = document.createElement('div');
         emptyMessage.textContent = 'No custom buttons. Add buttons using the buttons above.';
         emptyMessage.className = 'empty-message';
-        buttonCardsList.appendChild(emptyMessage);
+        cardsFragment.appendChild(emptyMessage);
     }
+    buttonCardsList.replaceChildren(cardsFragment);
 
     // After updating the list, attach event listeners
-    textareaSaverAndResizerFunc();
-    attachEmojiInputListeners();
+    textareaSaverAndResizerFunc(false);
+    attachEmojiInputListeners(false);
     attachAutoSendToggleListeners();
     reapplyPendingDeletionUI();
 
@@ -204,10 +206,10 @@ async function updatebuttonCardsList(restoreScroll = true) {
         window.scrollTo(scrollPos.left, scrollPos.top);
     }
 
-    // Deferred resize pass: when switching profiles the sync resize above runs
-    // before the browser has computed layout, so scrollHeight is wrong (too small).
-    // One rAF gives the browser one frame to settle, then we re-measure correctly.
-    requestAnimationFrame(() => {
+    // Fit the complete list together once it is attached, coalescing rapid rebuilds.
+    if (buttonCardLayoutFrame !== null) cancelAnimationFrame(buttonCardLayoutFrame);
+    buttonCardLayoutFrame = requestAnimationFrame(() => {
+        buttonCardLayoutFrame = null;
         refitButtonCardLayouts();
     });
 }
@@ -1335,7 +1337,7 @@ function textareaInputAreaResizerFun(textareaId) {
  * @param {HTMLTextAreaElement} textarea The textarea to resize.
  */
 function resizeVerticalTextarea(textarea, preventScrollRestoration = false) {
-    if (!textarea) return;
+    if (!textarea || textarea.getClientRects().length === 0) return;
 
     // Save current scroll position
     const scrollPos = {
@@ -1363,12 +1365,22 @@ function resizeVerticalTextarea(textarea, preventScrollRestoration = false) {
  * @param {boolean} [preventScroll=false] Whether to skip restoring the window scroll position.
  */
 function resizeEmojiInputWidth(inputElement, preventScroll = false) {
-    if (!inputElement) return;
+    if (!inputElement || inputElement.getClientRects().length === 0) return;
 
     inputElement.style.overflowX = 'hidden';
     inputElement.style.whiteSpace = 'nowrap';
     inputElement.style.width = '1px';
 
+    const finalWidth = measureEmojiInputWidth(inputElement);
+    inputElement.style.width = `${finalWidth}px`;
+    inputElement.style.textAlign = finalWidth <= 100 ? 'center' : 'left';
+
+    // Width changes of the emoji field alter the space left for the paired prompt textarea.
+    const mainTextarea = inputElement.closest('.button-item')?.querySelector('textarea.text-input');
+    resizeVerticalTextarea(mainTextarea, preventScroll);
+}
+
+function measureEmojiInputWidth(inputElement) {
     const bufferPx = 6;
     const desired = inputElement.scrollWidth + bufferPx;
 
@@ -1386,16 +1398,7 @@ function resizeEmojiInputWidth(inputElement, preventScroll = false) {
         finalWidth = Math.min(desired, 200);
     }
 
-    inputElement.style.width = `${finalWidth}px`;
-    const centerUntilPx = 100;
-    inputElement.style.textAlign = finalWidth <= centerUntilPx ? 'center' : 'left';
-
-    // Width changes of the emoji field alter the space left for the paired prompt textarea.
-    const buttonItem = inputElement.closest('.button-item');
-    if (buttonItem) {
-        const mainTextarea = buttonItem.querySelector('.text-input');
-        resizeVerticalTextarea(mainTextarea, preventScroll);
-    }
+    return finalWidth;
 }
 
 /**
@@ -1414,22 +1417,45 @@ function refitButtonCreationInputs() {
  */
 function refitButtonCardLayouts() {
     const buttonCardsListElement = document.getElementById('buttonCardsList');
-    if (!buttonCardsListElement) return;
+    if (!buttonCardsListElement || buttonCardsListElement.getClientRects().length === 0) return;
 
-    buttonCardsListElement.querySelectorAll('textarea.emoji-input').forEach((inputElement) => {
-        resizeEmojiInputWidth(inputElement, true);
+    const scrollLeft = window.scrollX;
+    const scrollTop = window.scrollY;
+    const emojiInputs = [...buttonCardsListElement.querySelectorAll('textarea.emoji-input')]
+        .filter(input => input.getClientRects().length > 0);
+    const textareas = [...buttonCardsListElement.querySelectorAll('textarea.text-input')]
+        .filter(textarea => textarea.getClientRects().length > 0);
+
+    // Keep DOM writes and layout reads in separate passes across the entire list.
+    emojiInputs.forEach(input => {
+        input.style.overflowX = 'hidden';
+        input.style.whiteSpace = 'nowrap';
+        input.style.width = '1px';
+    });
+    const widths = emojiInputs.map(measureEmojiInputWidth);
+    emojiInputs.forEach((input, index) => {
+        input.style.width = `${widths[index]}px`;
+        input.style.textAlign = widths[index] <= 100 ? 'center' : 'left';
     });
 
-    buttonCardsListElement.querySelectorAll('textarea.text-input').forEach((textarea) => {
-        resizeVerticalTextarea(textarea, true);
+    const overflowValues = textareas.map(textarea => textarea.style.overflowY);
+    textareas.forEach(textarea => {
+        textarea.style.overflowY = 'hidden';
+        textarea.style.height = '0px';
     });
+    const heights = textareas.map(textarea => textarea.scrollHeight);
+    textareas.forEach((textarea, index) => {
+        textarea.style.height = `${heights[index]}px`;
+        textarea.style.overflowY = overflowValues[index];
+    });
+    window.scrollTo(scrollLeft, scrollTop);
 }
 
 /**
  * Attaches input listeners to emoji textareas for horizontal resizing and data saving.
  * Crucially, it also triggers a vertical resize on the sibling main text area.
  */
-function attachEmojiInputListeners() {
+function attachEmojiInputListeners(resizeInitially = true) {
     // Select both: the "Add new button" single-line input (#buttonIcon) and per-item emoji textareas
     const allEmojiInputs = document.querySelectorAll('#buttonIcon, #buttonCardsList textarea.emoji-input');
 
@@ -1439,7 +1465,7 @@ function attachEmojiInputListeners() {
         };
 
         if (inputElement.dataset.ocpEmojiListenersAttached === 'true') {
-            resizeSelf(true);
+            if (resizeInitially) resizeSelf(true);
             return;
         }
 
@@ -1505,7 +1531,7 @@ function attachEmojiInputListeners() {
         });
 
         // Initial sizing
-        resizeSelf(true);
+        if (resizeInitially) resizeSelf(true);
     });
 }
 
@@ -1531,11 +1557,11 @@ function attachAutoSendToggleListeners() {
  * Automatically resizes textareas based on their content and attaches input listeners for saving.
  * Uses the resizeVerticalTextarea helper for resizing logic.
  */
-function textareaSaverAndResizerFunc() {
+function textareaSaverAndResizerFunc(resizeInitially = true) {
     const textareas = buttonCardsList.querySelectorAll('textarea.text-input');
     textareas.forEach(textarea => {
         // Perform an initial resize to fit existing content.
-        resizeVerticalTextarea(textarea, true);
+        if (resizeInitially) resizeVerticalTextarea(textarea, true);
 
         textarea.addEventListener('input', () => {
             // Resize the textarea vertically as the user types.
