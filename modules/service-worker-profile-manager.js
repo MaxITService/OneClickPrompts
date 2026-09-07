@@ -234,10 +234,12 @@ export async function getCurrentProfileConfig() {
 // Function to list all available profiles
 export async function listProfiles() {
     try {
-        const storage = await chrome.storage.local.get(null);
-        const profiles = Object.keys(storage)
+        const keys = typeof chrome.storage.local.getKeys === 'function'
+            ? await chrome.storage.local.getKeys()
+            : Object.keys(await chrome.storage.local.get(null));
+        const profiles = keys
             .filter(key => key.startsWith('profiles.'))
-            .map(key => key.replace('profiles.', ''));
+            .map(key => key.slice('profiles.'.length));
 
         logConfigurationRelatedStuff('Available profiles:', profiles);
         return profiles;
