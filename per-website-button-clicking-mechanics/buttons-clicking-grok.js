@@ -158,30 +158,31 @@ async function processGrokCustomSendButtonClick(event, customText, autoSend) {
     // Threshold for large prompt; for very large texts, we continue with full direct insertion.
     const LARGE_PROMPT_THRESHOLD = 200;
 
-    if (isEditorInInitialState()) {
-        if (customText.length > LARGE_PROMPT_THRESHOLD) {
-            logConCgp('[grok] Editor is in initial state with large prompt. Using direct insertion for bulk text, then natural typing for last symbol.');
-            // Insert bulk text (all but last symbol) directly.
-            const bulkText = customText.slice(0, -1);
-            const lastChar = customText.slice(-1);
-            if (isTextArea) {
-                editorArea.value = bulkText;
+    await ButtonsClickingShared.insertPrompt(event, editorArea, async () => {
+        if (isEditorInInitialState()) {
+            if (customText.length > LARGE_PROMPT_THRESHOLD) {
+                logConCgp('[grok] Editor is in initial state with large prompt. Using direct insertion for bulk text, then natural typing for last symbol.');
+                // Insert bulk text (all but last symbol) directly.
+                const bulkText = customText.slice(0, -1);
+                const lastChar = customText.slice(-1);
+                if (isTextArea) {
+                    editorArea.value = bulkText;
+                } else {
+                    editorArea.innerText = bulkText;
+                }
+                // Then simulate natural typing for the last character.
+                await simulateKeystroke(editorArea, lastChar, isTextArea);
             } else {
-                editorArea.innerText = bulkText;
+                logConCgp('[grok] Editor is in initial state with small prompt. Inserting text with natural typing for last symbol.');
+                await insertWithNaturalLastSymbol(editorArea, customText, isTextArea);
             }
-            // Then simulate natural typing for the last character.
-            await simulateKeystroke(editorArea, lastChar, isTextArea);
+            logConCgp('[grok] Custom text inserted into editor.');
         } else {
-            logConCgp('[grok] Editor is in initial state with small prompt. Inserting text with natural typing for last symbol.');
+            logConCgp('[grok] Editor already has content. Appending custom text using natural typing for last symbol.');
             await insertWithNaturalLastSymbol(editorArea, customText, isTextArea);
+            logConCgp('[grok] Custom text appended.');
         }
-        logConCgp('[grok] Custom text inserted into editor.');
-    } else {
-        logConCgp('[grok] Editor already has content. Appending custom text using natural typing for last symbol.');
-        await insertWithNaturalLastSymbol(editorArea, customText, isTextArea);
-        logConCgp('[grok] Custom text appended.');
-    }
-
+    });
     // If auto-send is enabled in both the global configuration and the function parameter, initiate auto-send.
     if (autoSend && (event?.__fromDangerBroadcast || event?.__fromQueue || globalMaxExtensionConfig.globalAutoSendEnabled)) {
         logConCgp('[grok] Auto-send enabled. Waiting 100ms before sending.');
@@ -189,6 +190,7 @@ async function processGrokCustomSendButtonClick(event, customText, autoSend) {
         await new Promise(resolve => setTimeout(resolve, 100));
 
         return ButtonsClickingShared.performAutoSend({
+            queueContext: event?.__queueContext,
             preClickValidation: () => {
                 const currentText = isTextArea ? editorArea.value.trim() : editorArea.innerText.trim();
                 return currentText.length > 0;

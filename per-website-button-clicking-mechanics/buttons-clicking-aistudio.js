@@ -30,17 +30,19 @@ async function processAIStudioCustomSendButtonClick(event, customText, autoSend)
     }
 
     // Insert text and trigger Angular's change detection
-    editorArea.value = editorArea.value + customText;
+    await ButtonsClickingShared.insertPrompt(event, editorArea, () => {
+        editorArea.value = editorArea.value + customText;
 
-    // Dispatch events for Angular binding
-    const events = ['input', 'change'];
-    events.forEach(eventType => {
-        const event = new Event(eventType, { bubbles: true });
-        editorArea.dispatchEvent(event);
+        // Dispatch events for Angular binding
+        const events = ['input', 'change'];
+        events.forEach(eventType => {
+            const event = new Event(eventType, { bubbles: true });
+            editorArea.dispatchEvent(event);
+        });
+
+        // Move cursor to end
+        editorArea.setSelectionRange(editorArea.value.length, editorArea.value.length);
     });
-
-    // Move cursor to end
-    editorArea.setSelectionRange(editorArea.value.length, editorArea.value.length);
 
     // Auto-send if enabled
     if (autoSend && (event?.__fromDangerBroadcast || event?.__fromQueue || globalMaxExtensionConfig.globalAutoSendEnabled)) {
@@ -54,6 +56,7 @@ async function processAIStudioCustomSendButtonClick(event, customText, autoSend)
         // Start polling after initial delay to let text settle
         await new Promise(r => setTimeout(r, 100));
         return ButtonsClickingShared.performAutoSend({
+            queueContext: event?.__queueContext,
             interval: 200,
             maxAttempts: MAX_ATTEMPTS,
             findButton: async () => {

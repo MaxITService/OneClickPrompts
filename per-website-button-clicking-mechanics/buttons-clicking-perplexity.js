@@ -25,7 +25,9 @@ async function processPerplexityCustomSendButtonClick(event, customText, autoSen
         return;
     }
 
-    const insertionSucceeded = insertTextIntoPerplexityEditor(editorElement, customText);
+    const insertionSucceeded = await ButtonsClickingShared.insertPrompt(event, editorElement, () => (
+        insertTextIntoPerplexityEditor(editorElement, customText, event?.__queueContext?.signal)
+    ));
     if (!insertionSucceeded) {
         logConCgp('[Perplexity] Text insertion failed.');
         showToast('Failed to insert text.', 'error');
@@ -38,22 +40,25 @@ async function processPerplexityCustomSendButtonClick(event, customText, autoSen
 
     logConCgp('[Perplexity] Auto-send requested; locating submit button.');
     await new Promise(r => setTimeout(r, 150));
-    return beginPerplexityAutoSend(customText, editorElement);
+    return beginPerplexityAutoSend(customText, editorElement, event);
 }
 
 /**
  * Populates Perplexity's Lexical editor with supplied text.
  * @param {HTMLElement} editorElement - The editor container.
  * @param {string} textToInsert - Text to insert.
- * @returns {boolean} Whether insertion succeeded.
+ * @param {AbortSignal} [signal] Cancels an insertion that has not reached the page yet.
+ * @returns {Promise<boolean>} Whether insertion succeeded.
  */
-function insertTextIntoPerplexityEditor(editorElement, textToInsert) {
+async function insertTextIntoPerplexityEditor(editorElement, textToInsert, signal) {
     try {
         const text = String(textToInsert || '');
         if (!text) {
             logConCgp('[Perplexity] Empty text provided. Skipping insertion.');
             return true;
         }
+        signal?.throwIfAborted();
+        const previousText = editorElement.innerText || editorElement.textContent || '';
 
         // Store the text to insert in a data attribute so the injector script can read it
         editorElement.setAttribute('data-ocp-target', 'true');
@@ -62,12 +67,33 @@ function insertTextIntoPerplexityEditor(editorElement, textToInsert) {
         // Inject external script to run in Main World (bypasses CSP)
         const script = document.createElement('script');
         script.src = chrome.runtime.getURL('per-website-button-clicking-mechanics/perplexity-injector.js');
-        script.onload = () => script.remove();
-        script.onerror = () => {
-            logConCgp('[Perplexity] Failed to load injector script.');
-            script.remove();
-        };
-        (document.head || document.documentElement).appendChild(script);
+        const inserted = await new Promise((resolve) => {
+            let settled = false;
+            const finish = (success) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timeoutId);
+                signal?.removeEventListener('abort', onAbort);
+                script.remove();
+                editorElement.removeAttribute('data-ocp-target');
+                editorElement.removeAttribute('data-ocp-text');
+                resolve(success);
+            };
+            const onAbort = () => finish(false);
+            const timeoutId = setTimeout(() => finish(false), 5000);
+            script.onload = () => finish((editorElement.innerText || editorElement.textContent || '') !== previousText);
+            script.onerror = () => {
+                logConCgp('[Perplexity] Failed to load injector script.');
+                finish(false);
+            };
+            signal?.addEventListener('abort', onAbort, { once: true });
+            try {
+                (document.head || document.documentElement).appendChild(script);
+            } catch (error) {
+                logConCgp('[Perplexity] Failed to insert editor script:', error);
+                finish(false);
+            }
+        });
 
         // Visual feedback: Move cursor to end in isolated world too (just in case)
         if (window.MaxExtensionUtils && typeof window.MaxExtensionUtils.moveCursorToEnd === 'function') {
@@ -75,7 +101,7 @@ function insertTextIntoPerplexityEditor(editorElement, textToInsert) {
         }
 
         logConCgp('[Perplexity] Text insertion script injected into main world.');
-        return true;
+        return inserted;
     } catch (error) {
         logConCgp('[Perplexity] Error during text insertion:', error);
         return false;
@@ -163,8 +189,9 @@ function clearPerplexityEditor(editorElement) {
  * @param {string} expectedText - Text we attempted to insert.
  * @param {HTMLElement} editorElement - The editor element to check for content.
  */
-function beginPerplexityAutoSend(expectedText, editorElement) {
+function beginPerplexityAutoSend(expectedText, editorElement, event) {
     return ButtonsClickingShared.performAutoSend({
+        queueContext: event?.__queueContext,
         interval: 250,
         maxAttempts: 20,
         isEnabled: (button) => isPerplexityButtonEnabled(button),

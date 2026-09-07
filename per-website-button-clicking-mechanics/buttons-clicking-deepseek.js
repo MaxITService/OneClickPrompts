@@ -166,6 +166,7 @@ async function processDeepSeekCustomSendButtonClick(event, customText, autoSend)
     // 3. Robust auto-send system
     function startAutoSend() {
         return ButtonsClickingShared.performAutoSend({
+            queueContext: event?.__queueContext,
             findButton: findDeepSeekSendButton,
             findStopButton: findDeepSeekStopButton,
             maxAttempts: 15,
@@ -180,7 +181,7 @@ async function processDeepSeekCustomSendButtonClick(event, customText, autoSend)
             preClickValidation: () => !findDeepSeekStopButton(),
             clickAction: (btn) => window.MaxExtensionUtils.simulateClick(btn)
         }).then((result) => {
-            if (result.status !== 'sent' && result.status !== 'blocked_by_stop') {
+            if (!['sent', 'blocked_by_stop', 'cancelled', 'unconfirmed'].includes(result.status)) {
                 if (result.status === 'not_found' && result.reason !== 'post-stop-missing-send') {
                     showToast('Could not find the send button.', 'error');
                 }
@@ -190,7 +191,7 @@ async function processDeepSeekCustomSendButtonClick(event, customText, autoSend)
     }
 
     // Execute input on the found editor
-    handleEditorInput(editor, customText);
+    await ButtonsClickingShared.insertPrompt(event, editor, () => handleEditorInput(editor, customText));
 
     // Initiate auto-send if enabled
     if (autoSend && (event?.__fromDangerBroadcast || event?.__fromQueue || globalMaxExtensionConfig.globalAutoSendEnabled)) {

@@ -35,9 +35,13 @@ async function processGeminiCustomSendButtonClick(event, customText, autoSend) {
         const currentText = isInitial ? '' : editor.innerText.trim();
         const newText = `${currentText}${text}`;
 
-        // Set innerHTML - Quill expects paragraphs
-        editor.innerHTML = `<p>${newText.replace(/\n/g, '</p><p>')}</p>`;
-        logConCgp('[Gemini] Editor innerHTML updated.');
+        // Quill expects paragraphs; prompt content remains literal text.
+        editor.replaceChildren(...newText.split('\n').map((line) => {
+            const paragraph = document.createElement('p');
+            paragraph.textContent = line;
+            return paragraph;
+        }));
+        logConCgp('[Gemini] Editor paragraphs updated.');
 
         // Dispatch events to notify the framework (likely Angular)
         // 'input' is crucial for Quill/Angular to recognize the change
@@ -50,7 +54,7 @@ async function processGeminiCustomSendButtonClick(event, customText, autoSend) {
     };
 
     // Insert the custom text
-    insertTextIntoGeminiEditor(editorArea, customText);
+    await ButtonsClickingShared.insertPrompt(event, editorArea, () => insertTextIntoGeminiEditor(editorArea, customText));
 
     // Auto-send logic
     // Auto-send logic
@@ -58,10 +62,11 @@ async function processGeminiCustomSendButtonClick(event, customText, autoSend) {
         logConCgp('[Gemini] Auto-send enabled. Attempting to send.');
 
         return ButtonsClickingShared.performAutoSend({
+            queueContext: event?.__queueContext,
             isEnabled: (sendButton) => sendButton && sendButton.getAttribute('aria-disabled') !== 'true',
             clickAction: (btn) => MaxExtensionUtils.simulateClick(btn)
         }).then((result) => {
-            if (result.status !== 'sent' && result.status !== 'blocked_by_stop') {
+            if (!['sent', 'blocked_by_stop', 'cancelled', 'unconfirmed'].includes(result.status)) {
                 logConCgp('[Gemini] Send button did not become enabled after multiple attempts.');
                 showToast('Send button did not become active.', 'error');
             }

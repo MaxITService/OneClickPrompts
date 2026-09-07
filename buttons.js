@@ -1792,13 +1792,20 @@ async function processCustomSendButtonClick(event, customText, autoSend) {
         logConCgp('[buttons] Shift key detected. autoSend inverted to:', autoSend);
     }
 
-    if (window.MaxExtensionPromptVariables && typeof window.MaxExtensionPromptVariables.resolvePromptText === 'function') {
+    const queueContext = event?.__queueContext;
+    queueContext?.assertActive();
+    if (typeof queueContext?.item.resolvedPrompt === 'string') {
+        customText = queueContext.item.resolvedPrompt;
+    } else if (window.MaxExtensionPromptVariables && typeof window.MaxExtensionPromptVariables.resolvePromptText === 'function') {
         customText = await window.MaxExtensionPromptVariables.resolvePromptText(customText, { event, autoSend, invokedByQueue });
         if (customText === null) {
             logConCgp('[buttons] Smart placeholder input cancelled.');
             return { status: 'cancelled', reason: 'prompt_variable_cancelled' };
         }
     }
+
+    queueContext?.assertActive();
+    if (queueContext) queueContext.item.resolvedPrompt = customText;
 
     // Check if we are in queue mode in the floating panel.
     // IMPORTANT: When invoked by the queue itself, do NOT re-enqueue.

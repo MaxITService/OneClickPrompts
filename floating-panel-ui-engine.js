@@ -759,11 +759,16 @@ window.MaxExtensionFloatingPanel.processNextQueueItem = function () {
         return this.__queueDispatchPromise;
     }
 
-    const dispatchPromise = this.dispatchNextQueueItem();
+    const controller = new AbortController();
+    this.__queueDispatchController = controller;
+    const dispatchPromise = this.dispatchNextQueueItem(controller.signal);
     this.__queueDispatchPromise = dispatchPromise;
     return dispatchPromise.finally(() => {
         if (this.__queueDispatchPromise === dispatchPromise) {
             this.__queueDispatchPromise = null;
+        }
+        if (this.__queueDispatchController === controller) {
+            this.__queueDispatchController = null;
         }
         const shouldDispatchRequestedItem = this.__queueDispatchRequested === true;
         this.__queueDispatchRequested = false;
@@ -783,7 +788,7 @@ window.MaxExtensionFloatingPanel.processNextQueueItem = function () {
 /**
  * Processes one queue item through the canonical button-click entry point.
  */
-window.MaxExtensionFloatingPanel.dispatchNextQueueItem = async function () {
+window.MaxExtensionFloatingPanel.dispatchNextQueueItem = async function (signal) {
     const runtime = getQueueRuntime(this);
     const initialState = runtime.snapshot;
     const dispatchGeneration = initialState.generation;
@@ -816,7 +821,7 @@ window.MaxExtensionFloatingPanel.dispatchNextQueueItem = async function () {
         logConCgp('[queue-engine] Pre-send actions failed:', err?.message || err);
     }
 
-    if (!runtime.isCurrentGeneration(dispatchGeneration)) {
+    if (signal.aborted || !runtime.isCurrentGeneration(dispatchGeneration)) {
         logConCgp('[queue-engine] Ignoring stale dispatch after queue reset.');
         return;
     }
@@ -853,7 +858,9 @@ window.MaxExtensionFloatingPanel.dispatchNextQueueItem = async function () {
 
     // Journal the in-flight item before any click can reach the website.
     // A reload after this point recovers it at the front, paused, as an uncertain send.
-    if (!await runtime.flushPersistence()) {
+    const inFlightSaved = await runtime.flushPersistence();
+    if (!runtime.isCurrentGeneration(dispatchGeneration)) return;
+    if (!inFlightSaved) {
         logConCgp('[queue-engine] Queue paused: could not persist the in-flight item.');
         restoreUnsentItem();
         if (typeof this.setQueueStatus === 'function') {
@@ -869,6 +876,7 @@ window.MaxExtensionFloatingPanel.dispatchNextQueueItem = async function () {
 
     if (
         !runtime.isCurrentGeneration(dispatchGeneration)
+        || signal.aborted
         || !this.isQueueRunning
         || !window.globalMaxExtensionConfig?.enableQueueMode
     ) {
@@ -886,7 +894,10 @@ window.MaxExtensionFloatingPanel.dispatchNextQueueItem = async function () {
 
     // Synthesize a "user-like" click by calling the same entry function that real buttons use.
     // We tag the event so processCustomSendButtonClick won't re-enqueue and won't apply Shift inversion.
-    const mockEvent = { preventDefault: () => { }, shiftKey: false, __fromQueue: true };
+    const mockEvent = {
+        preventDefault: () => { }, shiftKey: false, __fromQueue: true,
+        __queueContext: new window.MaxExtensionQueueSendContext(item, signal, runtime, dispatchGeneration)
+    };
 
     try {
         if (typeof this.setQueueStatus === 'function') {
@@ -908,6 +919,15 @@ window.MaxExtensionFloatingPanel.dispatchNextQueueItem = async function () {
         // Only an explicit "sent" result may consume a queued item.
         const sendStatus = sendResult?.status;
         if (sendStatus !== 'sent') {
+            if (sendStatus === 'unconfirmed') {
+                restoreUnsentItem();
+                this.setQueueStatus?.(
+                    'Check last send', 'warning',
+                    'Send was clicked, but the site did not confirm acceptance. Check the chat: remove this item if it was sent, or press Play to retry.'
+                );
+                this.pauseQueue();
+                return;
+            }
             if (sendStatus === 'blocked_by_stop') {
                 logConCgp('[queue-engine] Queue paused: blocked by stop button/AI typing.');
                 restoreUnsentItem();
@@ -962,7 +982,9 @@ window.MaxExtensionFloatingPanel.dispatchNextQueueItem = async function () {
         }
 
         runtime.confirmInFlightSent(item.queueId);
-        if (!await runtime.flushPersistence()) {
+        const completionSaved = await runtime.flushPersistence();
+        if (!runtime.isCurrentGeneration(dispatchGeneration)) return;
+        if (!completionSaved) {
             logConCgp('[queue-engine] Sent item, but could not persist its completion. Pausing.');
             if (typeof this.setQueueStatus === 'function') {
                 this.setQueueStatus(
@@ -987,7 +1009,11 @@ window.MaxExtensionFloatingPanel.dispatchNextQueueItem = async function () {
         }
         restoreUnsentItem();
         if (typeof this.setQueueStatus === 'function') {
-            this.setQueueStatus('Error: ' + (err?.message || 'Dispatch failed'), 'error');
+            if (err?.name === 'AbortError') {
+                this.setQueueStatus('Queue paused', 'info', 'The pending send was cancelled. Press Play to retry.');
+            } else {
+                this.setQueueStatus('Error: ' + (err?.message || 'Dispatch failed'), 'error');
+            }
         }
         this.pauseQueue();
         return;

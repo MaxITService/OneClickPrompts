@@ -2,6 +2,14 @@
 'use strict';
 
 window.ButtonsClickingShared = {
+    // Site adapters retain their insertion mechanics; queue retries reuse an unchanged draft.
+    insertPrompt: async (event, editor, insertText) => {
+        const context = event?.__queueContext;
+        if (!context) return await insertText();
+        const result = await context.insert(editor, insertText);
+        context.assertActive();
+        return result;
+    },
     isVisibleInteractiveElement: (el) => {
         if (!el) return false;
         if (!el.isConnected) return false;
@@ -123,11 +131,17 @@ window.ButtonsClickingShared = {
 
     /**
      * Configurable Auto-Send Engine with Stop-Button Awareness.
-     * Returns a contract: { status: 'sent' | 'blocked_by_stop' | 'not_found' | 'failed', reason?, button? }
+     * Returns a contract: { status: 'sent' | 'blocked_by_stop' | 'not_found' | 'failed' | 'cancelled' | 'unconfirmed', reason?, button? }
      * @returns {Promise<{status: string, reason?: string, button?: HTMLElement}>}
      */
     performAutoSend: (config = {}) => {
         return new Promise((resolve) => {
+            const queueContext = config.queueContext;
+            const signal = queueContext?.signal;
+            if (signal?.aborted) {
+                resolve({ status: 'cancelled', reason: 'queue_paused' });
+                return;
+            }
             // 1. Safety Cleanup
             if (typeof window.sharedAutoSendCancel === 'function') {
                 const cancelPreviousRun = window.sharedAutoSendCancel;
@@ -160,6 +174,8 @@ window.ButtonsClickingShared = {
             let searchIntervalId = null;
             let cancelCurrentRun = null;
             let mainReadySince = 0;
+            let clickIssued = false;
+            let abortListener = null;
             const activeIntervalIds = new Set();
 
             const startTrackedInterval = (callback, delay) => {
@@ -180,6 +196,7 @@ window.ButtonsClickingShared = {
                 finished = true;
                 activeIntervalIds.forEach((intervalId) => clearInterval(intervalId));
                 activeIntervalIds.clear();
+                if (abortListener) signal?.removeEventListener('abort', abortListener);
                 if (window.sharedAutoSendInterval === searchIntervalId) {
                     window.sharedAutoSendInterval = null;
                 }
@@ -196,8 +213,72 @@ window.ButtonsClickingShared = {
                 resolve(result);
             };
 
-            cancelCurrentRun = () => finish({ status: 'failed', reason: 'superseded' });
+            cancelCurrentRun = () => finish({
+                status: queueContext && clickIssued ? 'unconfirmed' : 'failed', reason: 'superseded'
+            });
             window.sharedAutoSendCancel = cancelCurrentRun;
+
+            abortListener = () => {
+                // A delivered click cannot be undone. Observe its outcome, but never issue another.
+                if (!clickIssued) finish({ status: 'cancelled', reason: 'queue_paused' });
+            };
+            signal?.addEventListener('abort', abortListener, { once: true });
+
+            const clickAndConfirm = async (button) => {
+                if (finished) return true;
+                if (queueContext) {
+                    await queueContext.checkpointDraft();
+                    if (finished) return true;
+                    if (!queueContext.isDraftIntact()) {
+                        finish({ status: 'failed', reason: 'editor_changed' });
+                        return true;
+                    }
+                    // Storage awaits can outlive a Send-to-Stop transition or DOM replacement.
+                    const stop = window.ButtonsClickingShared.findStopButton(findStopButton);
+                    if (!button.isConnected || !isEnabled(button) || isBusy(button) || (stop && isBusy(stop))) {
+                        return false;
+                    }
+                }
+                if (finished || signal?.aborted) return true;
+                clickIssued = true;
+                let clicked;
+                try {
+                    clicked = await clickAction(button);
+                } catch (error) {
+                    finish({ status: queueContext ? 'unconfirmed' : 'failed', reason: error?.message || 'click_error' });
+                    return true;
+                }
+                if (finished) return true;
+                if (clicked === false) {
+                    clickIssued = false;
+                    if (signal?.aborted) abortListener();
+                    return false;
+                }
+                if (!queueContext) {
+                    finish({ status: 'sent', button });
+                    return true;
+                }
+
+                activeIntervalIds.forEach((id) => clearInterval(id));
+                activeIntervalIds.clear();
+                const deadline = Date.now() + 5000;
+                const confirmAcceptance = () => {
+                    if (finished) return;
+                    try {
+                        const stop = window.ButtonsClickingShared.findStopButton(findStopButton);
+                        if (queueContext.isEditorCleared() || (stop && isBusy(stop))) {
+                            finish({ status: 'sent', button });
+                        } else if (Date.now() >= deadline) {
+                            finish({ status: 'unconfirmed', reason: 'send_confirmation_timeout' });
+                        }
+                    } catch (error) {
+                        finish({ status: 'unconfirmed', reason: error?.message || 'confirmation_error' });
+                    }
+                };
+                startTrackedInterval(confirmAcceptance, 100);
+                confirmAcceptance();
+                return true;
+            };
 
             searchIntervalId = startTrackedInterval(async () => {
                 if (finished || stopHandlingStarted || mainTickInProgress) {
@@ -262,6 +343,7 @@ window.ButtonsClickingShared = {
 
                         if (buttonReady) {
                             if (await preClickValidation(btn)) {
+                                if (finished) return;
                                 if (!mainReadySince) {
                                     mainReadySince = Date.now();
                                 }
@@ -279,15 +361,14 @@ window.ButtonsClickingShared = {
                                     return;
                                 }
 
-                                const clicked = await clickAction(btn);
-                                if (clicked === false) {
+                                const handled = await clickAndConfirm(btn);
+                                if (!handled) {
                                     mainReadySince = 0;
                                     if (attempts >= maxAttempts) {
                                         finish({ status: 'failed', reason: 'click_rejected' });
                                     }
                                     return;
                                 }
-                                finish({ status: 'sent', button: btn });
                             } else if (attempts >= maxAttempts) {
                                 finish({ status: 'failed', reason: 'validation_failed' });
                             } else {
@@ -308,7 +389,10 @@ window.ButtonsClickingShared = {
                         finish({ status: 'not_found' });
                     }
                 } catch (error) {
-                    finish({ status: 'failed', reason: error?.message || 'auto_send_error' });
+                    finish({
+                        status: error?.name === 'AbortError' ? 'cancelled' : 'failed',
+                        reason: error?.message || 'auto_send_error'
+                    });
                 } finally {
                     mainTickInProgress = false;
                 }
@@ -407,6 +491,7 @@ window.ButtonsClickingShared = {
                                         stopAbsentForMs: Date.now() - stopAbsentSince,
                                         attempts: postStopAttempts
                                     });
+                                    if (finished) return;
 
                                     if (retryButton && buttonEnabled && validationPassed && readinessPassed) {
                                         if (isBusy(retryButton)) {
@@ -432,10 +517,10 @@ window.ButtonsClickingShared = {
                                                 return;
                                             }
 
-                                            const clicked = await clickAction(retryButton);
-                                            if (clicked !== false) {
+                                            const handled = await clickAndConfirm(retryButton);
+                                            if (handled) {
                                                 clearTrackedInterval(postStopPoller);
-                                                finish({ status: 'sent', button: retryButton });
+                                                return;
                                             } else {
                                                 postStopReadySince = 0;
                                                 lastPostStopFailure = 'click_rejected';
@@ -469,7 +554,10 @@ window.ButtonsClickingShared = {
                                     }
                                 } catch (error) {
                                     clearTrackedInterval(postStopPoller);
-                                    finish({ status: 'failed', reason: error?.message || 'post_stop_auto_send_error' });
+                                    finish({
+                                        status: error?.name === 'AbortError' ? 'cancelled' : 'failed',
+                                        reason: error?.message || 'post_stop_auto_send_error'
+                                    });
                                 } finally {
                                     postStopTickInProgress = false;
                                 }

@@ -13,7 +13,7 @@ async function processClaudeCustomSendButtonClick(event, customText, autoSend) {
     logConCgp('[Claude] Starting Claude-specific handling');
 
     // First try to insert the text
-    const insertionSuccessful = await ClaudeEditorUtils.insertTextIntoClaudeEditor(customText);
+    const insertionSuccessful = await ClaudeEditorUtils.insertTextIntoClaudeEditor(customText, event);
 
     if (!insertionSuccessful) {
         logConCgp('[Claude] Text insertion failed');
@@ -23,7 +23,7 @@ async function processClaudeCustomSendButtonClick(event, customText, autoSend) {
     // If auto-send is enabled, handle the send process
     if (autoSend && (event?.__fromDangerBroadcast || event?.__fromQueue || globalMaxExtensionConfig.globalAutoSendEnabled)) {
         logConCgp('[Claude] Auto-send enabled, attempting to send message');
-        return handleClaudeSend();
+        return handleClaudeSend(event);
     }
     return Promise.resolve({ status: 'sent', reason: 'manual' });
 }
@@ -31,12 +31,14 @@ async function processClaudeCustomSendButtonClick(event, customText, autoSend) {
 /**
  * Handles the send button clicking process for Claude
  */
-async function handleClaudeSend() {
+async function handleClaudeSend(event) {
     return ButtonsClickingShared.performAutoSend({
-        clickAction: (btn) => setTimeout(() => MaxExtensionUtils.simulateClick(btn), 200),
+        queueContext: event?.__queueContext,
+        readyConfirmationDelay: 200,
+        clickAction: (btn) => MaxExtensionUtils.simulateClick(btn),
         isBusy: (btn) => ButtonsClickingShared.isBusyStopButton(btn)
     }).then((result) => {
-        if (result.status !== 'sent' && result.status !== 'blocked_by_stop') {
+        if (!['sent', 'blocked_by_stop', 'cancelled', 'unconfirmed'].includes(result.status)) {
             logConCgp('[Claude] Auto-send exhausted without finding enabled send button.');
             showToast('Could not find the send button.', 'error');
         }
@@ -55,7 +57,7 @@ const ClaudeEditorUtils = {
      * @param {string} textToInsert - The text to insert into the editor
      * @returns {boolean} - Whether the insertion was successful
      */
-    insertTextIntoClaudeEditor: async function (textToInsert) {
+    insertTextIntoClaudeEditor: async function (textToInsert, event) {
         logConCgp('[ClaudeEditor] Starting text insertion process');
 
         // Only proceed if we're on Claude
@@ -77,7 +79,9 @@ const ClaudeEditorUtils = {
         logConCgp('[ClaudeEditor] Editor state:', editorState);
 
         // Try to insert text based on editor state
-        return this.performTextInsertion(editorElement, textToInsert, editorState);
+        return await ButtonsClickingShared.insertPrompt(event, editorElement, () => (
+            this.performTextInsertion(editorElement, textToInsert, editorState)
+        ));
     },
 
     /**

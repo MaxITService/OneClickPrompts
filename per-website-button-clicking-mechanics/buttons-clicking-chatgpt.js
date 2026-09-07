@@ -285,6 +285,7 @@ async function processChatGPTCustomSendButtonClick(event, customText, autoSend) 
         const expectedEditorText = readEditorText(editor);
 
         return ButtonsClickingShared.performAutoSend({
+            queueContext: event?.__queueContext,
             findButton: findChatGPTSendButton,
             findStopButton: findChatGPTStopButton,
             preClickValidation: () => {
@@ -328,7 +329,7 @@ async function processChatGPTCustomSendButtonClick(event, customText, autoSend) 
                 return true;
             }
         }).then((result) => {
-            if (result.status !== 'sent' && result.status !== 'blocked_by_stop') {
+            if (!['sent', 'blocked_by_stop', 'cancelled', 'unconfirmed'].includes(result.status)) {
                 if (result.status === 'not_found' && result.reason !== 'post-stop-missing-send') {
                     showToast('Could not find the send button.', 'error');
                 }
@@ -343,20 +344,23 @@ async function processChatGPTCustomSendButtonClick(event, customText, autoSend) 
      */
     const handleMessageInsertion = async () => {
         logConCgp('[buttons] handleMessageInsertion called.');
-        const initialState = isEditorInInitialState(editorArea);
-        let inserted = false;
+        const insertionSucceeded = await ButtonsClickingShared.insertPrompt(event, editorArea, () => {
+            const initialState = isEditorInInitialState(editorArea);
+            let inserted = false;
 
-        if (initialState) {
-            // Insert whole text in one go (no per-character emulation)
-            logConCgp('[buttons][ChatGPT] Editor empty/placeholder. Inserting text (bulk).');
-            inserted = insertTextIntoChatGPTEditor(editorArea, customText, true);
-            logConCgp('[buttons][ChatGPT] Custom text inserted.');
-        } else {
-            logConCgp('[buttons][ChatGPT] Editor has content. Appending text (bulk insert).');
-            inserted = insertTextIntoChatGPTEditor(editorArea, customText, false);
-        }
+            if (initialState) {
+                // Insert whole text in one go (no per-character emulation)
+                logConCgp('[buttons][ChatGPT] Editor empty/placeholder. Inserting text (bulk).');
+                inserted = insertTextIntoChatGPTEditor(editorArea, customText, true);
+                logConCgp('[buttons][ChatGPT] Custom text inserted.');
+            } else {
+                logConCgp('[buttons][ChatGPT] Editor has content. Appending text (bulk insert).');
+                inserted = insertTextIntoChatGPTEditor(editorArea, customText, false);
+            }
 
-        if (!inserted) {
+            return inserted;
+        });
+        if (!insertionSucceeded) {
             return { status: 'failed', reason: 'editor_insertion_failed' };
         }
 

@@ -46,13 +46,14 @@ async function processCopilotCustomSendButtonClick(event, customText, autoSend) 
     const startAutoSend = (_, editor) => {
         logConCgp('[auto-send] Auto-send is enabled. Starting auto-send process.');
         return ButtonsClickingShared.performAutoSend({
+            queueContext: event?.__queueContext,
             preClickValidation: () => {
                 const currentText = editor.value?.trim() ?? '';
                 return currentText.length > 0;
             },
             clickAction: (btn) => btn && btn.click()
         }).then((result) => {
-            if (result.status !== 'sent' && result.status !== 'blocked_by_stop') {
+            if (!['sent', 'blocked_by_stop', 'cancelled', 'unconfirmed'].includes(result.status)) {
                 showToast('Send button not found. Auto-send stopped.', 'error');
             }
             return result;
@@ -60,26 +61,27 @@ async function processCopilotCustomSendButtonClick(event, customText, autoSend) 
     };
 
     const handleMessageInsertion = async () => {
-        const initialState = isEditorInInitialState(editorArea);
+        await ButtonsClickingShared.insertPrompt(event, editorArea, () => {
+            const initialState = isEditorInInitialState(editorArea);
 
-        // Step 1: Consolidate text insertion logic to prevent duplication.
-        if (initialState) {
-            // If editor is empty, just set the text.
-            setEditorValueDirectly(editorArea, customText);
-        } else {
-            // If editor has content, append the new text.
-            const existingText = editorArea.value ?? '';
-            const newText = `${existingText}${customText}`;
-            setEditorValueDirectly(editorArea, newText);
-        }
+            // Step 1: Consolidate text insertion logic to prevent duplication.
+            if (initialState) {
+                // If editor is empty, just set the text.
+                setEditorValueDirectly(editorArea, customText);
+            } else {
+                // If editor has content, append the new text.
+                const existingText = editorArea.value ?? '';
+                const newText = `${existingText}${customText}`;
+                setEditorValueDirectly(editorArea, newText);
+            }
 
-        // Step 2: Move cursor to the end after text is set.
-        const finalLength = editorArea.value.length;
-        if (editorArea.setSelectionRange) {
-            editorArea.setSelectionRange(finalLength, finalLength);
-            logConCgp('[buttons] Cursor moved to the end of the editor.');
-        }
-
+            // Step 2: Move cursor to the end after text is set.
+            const finalLength = editorArea.value.length;
+            if (editorArea.setSelectionRange) {
+                editorArea.setSelectionRange(finalLength, finalLength);
+                logConCgp('[buttons] Cursor moved to the end of the editor.');
+            }
+        });
         // Step 3: Handle auto-sending.
         if (autoSend && (event?.__fromDangerBroadcast || event?.__fromQueue || globalMaxExtensionConfig.globalAutoSendEnabled)) {
             return startAutoSend(null, editorArea);

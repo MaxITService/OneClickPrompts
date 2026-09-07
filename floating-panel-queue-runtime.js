@@ -7,6 +7,90 @@
     const QUEUE_INSTANCE_SESSION_KEY = 'ocpQueueInstanceId.v1';
     const QUEUE_SNAPSHOT_SCHEMA_VERSION = 1;
 
+    // One dispatch owns its cancellation signal and the exact draft it inserted.
+    class QueueSendContext {
+        constructor(item, signal, runtime, generation) {
+            this.item = item;
+            this.signal = signal;
+            this.runtime = runtime;
+            this.generation = generation;
+            this.url = location.href;
+            this.editor = null;
+        }
+
+        assertActive() {
+            this.signal.throwIfAborted();
+            if (!window.globalMaxExtensionConfig?.enableQueueMode) {
+                throw new DOMException('Queue disabled', 'AbortError');
+            }
+            if (!this.runtime.isCurrentGeneration(this.generation)) {
+                throw new DOMException('Queue reset', 'AbortError');
+            }
+            if (location.href !== this.url) {
+                throw new Error('The conversation changed. Check the chat before retrying the queued prompt.');
+            }
+        }
+
+        readEditor() {
+            const editor = this.editor;
+            return String(editor && ('value' in editor ? editor.value : editor.innerText ?? editor.textContent) || '')
+                .replace(/\r\n?/g, '\n').replace(/\u00a0/g, ' ').trim();
+        }
+
+        async insert(editor, insertText) {
+            this.assertActive();
+            if (!editor?.isConnected) throw new Error('The editor is no longer available.');
+            this.editor = editor;
+            const currentText = this.readEditor();
+            const draft = this.item.queueDraft;
+            if (draft && currentText) {
+                if (draft.complete === false || draft.url !== this.url || draft.text !== currentText) {
+                    throw new Error('The editor changed after the previous attempt. Clear it or remove the queued item before retrying.');
+                }
+                return true;
+            }
+
+            let complete = false;
+            try {
+                const result = await insertText();
+                complete = result !== false;
+                return result;
+            } finally {
+                const text = this.readEditor();
+                if (text && text !== currentText) {
+                    this.item.queueDraft = { text, url: this.url, complete };
+                    if (this.runtime.isCurrentGeneration(this.generation) && !await this.runtime.persistNow()) {
+                        throw new Error('The queued draft could not be saved. Nothing was sent.');
+                    }
+                }
+            }
+        }
+
+        async checkpointDraft() {
+            this.assertActive();
+            if (!this.editor?.isConnected) throw new Error('The editor is no longer available.');
+            const text = this.readEditor();
+            if (!text || !this.item.queueDraft || text !== this.item.queueDraft.text) {
+                throw new Error('The queued draft changed. Check the editor before retrying.');
+            }
+            if (!await this.runtime.persistNow()) {
+                throw new Error('The queued draft could not be saved. Nothing was sent.');
+            }
+            this.assertActive();
+        }
+
+        isDraftIntact() {
+            this.assertActive();
+            return this.editor?.isConnected && this.readEditor() === this.item.queueDraft?.text;
+        }
+
+        isEditorCleared() {
+            return this.editor?.isConnected && this.readEditor() === '';
+        }
+    }
+
+    window.MaxExtensionQueueSendContext = QueueSendContext;
+
     class QueueRuntimeController {
         #owner;
         #mutationDepth = 0;
@@ -267,6 +351,7 @@
         }
 
         pause() {
+            this.#owner.__queueDispatchController?.abort();
             return this.#transaction('pause', (queue) => {
                 let remainingMs = Number(queue.remainingTimeOnPause) || 0;
                 if (queue.queueTimerId !== null) {
@@ -282,6 +367,8 @@
         }
 
         reset() {
+            this.#owner.__queueDispatchController?.abort();
+            this.#owner.__queueDispatchRequested = false;
             return this.#transaction('reset', (queue) => {
                 this.#clearTimer(queue);
                 queue.queueGeneration++;
@@ -380,11 +467,11 @@
                 : 'idle';
             queue.queueFinishedState = false;
 
-            if (uncertainItem) {
+            if (uncertainItem || (queue.promptQueue.length > 0 && snapshot?.status?.text === 'Check last send')) {
                 queue.queueStatus = {
                     text: 'Check last send',
                     type: 'warning',
-                    tooltip: 'The page stopped during a send. The item was restored at the front, but it may already have been sent. Check the chat, then remove it or press Play.'
+                    tooltip: 'A previous send was not confirmed. The item is at the front, but it may already have been sent. Check the chat, then remove it or press Play.'
                 };
             } else if (queue.promptQueue.length > 0) {
                 queue.queueStatus = {
@@ -412,6 +499,12 @@
             };
             if (typeof value.source === 'string') item.source = value.source;
             if (value.isManualCard === true) item.isManualCard = true;
+            if (typeof value.resolvedPrompt === 'string') item.resolvedPrompt = value.resolvedPrompt;
+            if (typeof value.queueDraft?.text === 'string' && typeof value.queueDraft?.url === 'string') {
+                item.queueDraft = {
+                    text: value.queueDraft.text, url: value.queueDraft.url, complete: value.queueDraft.complete !== false
+                };
+            }
             return item;
         }
 

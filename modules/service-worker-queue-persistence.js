@@ -66,6 +66,16 @@ function sanitizeQueueItem(value) {
     if (value.isManualCard === true) {
         item.isManualCard = true;
     }
+    if (typeof value.resolvedPrompt === 'string') {
+        if (value.resolvedPrompt.length > MAX_ITEM_TEXT_LENGTH) return null;
+        item.resolvedPrompt = value.resolvedPrompt;
+    }
+    if (value.queueDraft != null) {
+        const draft = value.queueDraft;
+        if (typeof draft.text !== 'string' || draft.text.length > MAX_ITEM_TEXT_LENGTH
+            || typeof draft.url !== 'string' || draft.url.length > 20_000) return null;
+        item.queueDraft = { text: draft.text, url: draft.url, complete: draft.complete !== false };
+    }
     return item;
 }
 
