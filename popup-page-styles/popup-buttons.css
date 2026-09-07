@@ -299,6 +299,19 @@ button.danger:hover {
 }
 
 /* Styles for individual custom button items */
+.button-card-actions {
+    display: flex;
+    flex-direction: column;
+    align-self: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.button-card-actions button {
+    margin: 0;
+    cursor: pointer;
+}
+
 .button-item {
     display: flex;
     align-items: center;

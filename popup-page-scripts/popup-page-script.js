@@ -1104,6 +1104,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Button list event delegation for delete buttons
     buttonCardsList.addEventListener('click', (e) => {
+        const duplicateButton = e.target.closest('.duplicate-button');
+        if (duplicateButton) {
+            void duplicateButtonCard(duplicateButton.closest('.button-item'));
+            return;
+        }
         if (e.target.classList.contains('delete-button')) {
             const buttonItem = e.target.closest('.button-item');
             startUndoableDeletion(buttonItem);

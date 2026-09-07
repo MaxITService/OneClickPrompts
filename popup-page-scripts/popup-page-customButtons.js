@@ -186,7 +186,10 @@ function createButtonCardElement(button, index, crossChatSettings = null) {
                 ${metaSeparatorHTML}
                 ${hotkeyHintHTML}
             </div>
-            <button class="delete-button danger">Delete</button>
+            <div class="button-card-actions">
+                ${!isSystemButton ? '<button type="button" class="duplicate-button" title="Duplicate this button without its custom shortcut">Duplicate</button>' : ''}
+                <button type="button" class="delete-button danger">Delete</button>
+            </div>
         `;
 
         buttonItem.querySelector('.emoji-input').value = String(button.icon ?? '');
@@ -317,6 +320,37 @@ async function addButton(event) {
 
 
 // Section for managing buttons and separators, where user can add, delete, move or update them.
+/**
+ * Duplicates a prompt button next to its source without sharing a custom shortcut.
+ */
+async function duplicateButtonCard(buttonItem) {
+    const sourceButton = getButtonDataFromCard(buttonItem);
+    if (!sourceButton || sourceButton.separator || getSystemButtonMeta(sourceButton.text).text) return;
+    let duplicate = null;
+    const saved = await withProfileTransition(async () => {
+        const profile = currentProfile;
+        const index = profile.customButtons.indexOf(sourceButton);
+        if (index === -1) return false;
+        duplicate = structuredClone(sourceButton);
+        // A custom shortcut belongs to one button. The copy uses its position's default.
+        delete duplicate.hotkey;
+        profile.customButtons.splice(index + 1, 0, duplicate);
+        if (!(await saveCurrentProfile(profile))) {
+            const rollbackIndex = profile.customButtons.indexOf(duplicate);
+            if (rollbackIndex !== -1) profile.customButtons.splice(rollbackIndex, 1);
+            return false;
+        }
+        await updatebuttonCardsList(false);
+        return true;
+    });
+    if (!saved) return;
+    const card = [...buttonCardsList.querySelectorAll('.button-item')]
+        .find(element => element.__buttonDataRef === duplicate);
+    card?.querySelector('textarea.text-input')?.focus({ preventScroll: true });
+    card?.scrollIntoView({ block: 'nearest' });
+    showToast('Button duplicated. Custom shortcut was not copied.', 'success');
+}
+
 /**
  * Adds a separator to the current profile.
  */
