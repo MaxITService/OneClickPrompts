@@ -85,8 +85,8 @@ function createButtonCardElement(button, index, crossChatSettings = null) {
         const systemButtonTitle = systemButtonMeta.title;
 
         const textElementHTML = isSystemButton
-            ? `<div class="text-input" title="${systemButtonTitle}">${systemButtonText}</div>`
-            : `<textarea class="text-input" rows="1">${button.text}</textarea>`;
+            ? `<div class="text-input" title="${escapeHtml(systemButtonTitle)}">${escapeHtml(systemButtonText)}</div>`
+            : '<textarea class="text-input" rows="1"></textarea>';
 
         const autoSendHTML = !isSystemButton
             ? `<div class="autosend-line"><label class="checkbox-row"><input type="checkbox" class="autosend-toggle" ${button.autoSend ? 'checked' : ''}><span>Auto-send</span></label></div>`
@@ -124,7 +124,7 @@ function createButtonCardElement(button, index, crossChatSettings = null) {
 
         buttonItem.innerHTML = `
             <div class="drag-handle">&#9776;</div>
-            <textarea class="emoji-input" rows="1">${button.icon}</textarea>
+            <textarea class="emoji-input" rows="1"></textarea>
             ${textElementHTML}
             <div class="meta-block">
                 ${autoSendHTML}
@@ -134,6 +134,11 @@ function createButtonCardElement(button, index, crossChatSettings = null) {
             </div>
             <button class="delete-button danger">Delete</button>
         `;
+
+        buttonItem.querySelector('.emoji-input').value = String(button.icon ?? '');
+        if (!isSystemButton) {
+            buttonItem.querySelector('textarea.text-input').value = String(button.text ?? '');
+        }
 
         if (isSettingsButton) {
             buttonItem.setAttribute('data-system', 'settings');
