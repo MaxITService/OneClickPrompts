@@ -129,27 +129,31 @@ function sanitizeSnapshot(value, expectedOrigin = null) {
 }
 
 async function cleanupExpiredSnapshotsOnce() {
-    const marker = await chrome.storage.session.get(CLEANUP_MARKER_KEY);
-    const lastCleanupAt = Number(marker?.[CLEANUP_MARKER_KEY]) || 0;
-    if (Date.now() - lastCleanupAt < 24 * 60 * 60 * 1000) return;
+    // Serialize cleanup with journal writes so an expired value cannot be removed
+    // after another tab has replaced it with a fresh recovery snapshot.
+    return withRegistryLock(async () => {
+        const marker = await chrome.storage.session.get(CLEANUP_MARKER_KEY);
+        const lastCleanupAt = Number(marker?.[CLEANUP_MARKER_KEY]) || 0;
+        const now = Date.now();
+        if (now >= lastCleanupAt && now - lastCleanupAt < 24 * 60 * 60 * 1000) return;
 
-    await chrome.storage.session.set({ [CLEANUP_MARKER_KEY]: Date.now() });
-    const allLocalValues = await chrome.storage.local.get(null);
-    const now = Date.now();
-    const expiredKeys = Object.entries(allLocalValues)
-        .filter(([key, value]) => (
-            key.startsWith(SNAPSHOT_KEY_PREFIX)
-            && (
-                !value
-                || !Number.isFinite(Number(value.savedAt))
-                || now - Number(value.savedAt) > SNAPSHOT_TTL_MS
-            )
-        ))
-        .map(([key]) => key);
+        const keys = typeof chrome.storage.local.getKeys === 'function'
+            ? await chrome.storage.local.getKeys()
+            : Object.keys(await chrome.storage.local.get(null));
+        const snapshotKeys = keys.filter(key => key.startsWith(SNAPSHOT_KEY_PREFIX));
+        for (let offset = 0; offset < snapshotKeys.length; offset += 32) {
+            const batchKeys = snapshotKeys.slice(offset, offset + 32);
+            const values = await chrome.storage.local.get(batchKeys);
+            const expiredKeys = batchKeys.filter(key => {
+                const savedAt = Number(values[key]?.savedAt);
+                return !Number.isFinite(savedAt) || savedAt <= 0 || now - savedAt > SNAPSHOT_TTL_MS;
+            });
+            if (expiredKeys.length > 0) await chrome.storage.local.remove(expiredKeys);
+        }
 
-    if (expiredKeys.length > 0) {
-        await chrome.storage.local.remove(expiredKeys);
-    }
+        // Failed cleanup remains retryable on the next claim instead of being skipped for a day.
+        await chrome.storage.session.set({ [CLEANUP_MARKER_KEY]: now });
+    });
 }
 
 async function claimInstanceId(candidateId, tabId, origin) {
@@ -199,24 +203,26 @@ export async function claimQueuePersistenceContext(request, sender) {
     await cleanupExpiredSnapshotsOnce();
     const instanceId = await claimInstanceId(request?.candidateInstanceId, tabId, origin);
     const key = snapshotKey(instanceId);
-    const stored = await chrome.storage.local.get(key);
-    const rawSnapshot = stored?.[key];
-    const snapshot = sanitizeSnapshot(rawSnapshot, origin);
+    return withRegistryLock(async () => {
+        const stored = await chrome.storage.local.get(key);
+        const rawSnapshot = stored?.[key];
+        const snapshot = sanitizeSnapshot(rawSnapshot, origin);
 
-    if (rawSnapshot && (
-        !snapshot
-        || Date.now() - snapshot.savedAt > SNAPSHOT_TTL_MS
-    )) {
-        await chrome.storage.local.remove(key);
-    }
+        if (rawSnapshot && (
+            !snapshot
+            || Date.now() - snapshot.savedAt > SNAPSHOT_TTL_MS
+        )) {
+            await chrome.storage.local.remove(key);
+        }
 
-    return {
-        success: true,
-        instanceId,
-        snapshot: snapshot && Date.now() - snapshot.savedAt <= SNAPSHOT_TTL_MS
-            ? snapshot
-            : null
-    };
+        return {
+            success: true,
+            instanceId,
+            snapshot: snapshot && Date.now() - snapshot.savedAt <= SNAPSHOT_TTL_MS
+                ? snapshot
+                : null
+        };
+    });
 }
 
 export async function saveQueuePersistenceSnapshot(request, sender) {
@@ -231,7 +237,7 @@ export async function saveQueuePersistenceSnapshot(request, sender) {
         return { success: false, error: 'Invalid queue recovery journal.' };
     }
 
-    await chrome.storage.local.set({ [snapshotKey(instanceId)]: snapshot });
+    await withRegistryLock(() => chrome.storage.local.set({ [snapshotKey(instanceId)]: snapshot }));
     return { success: true };
 }
 
@@ -240,6 +246,6 @@ export async function deleteQueuePersistenceSnapshot(request, sender) {
     if (!await isOwnedBySender(instanceId, sender)) {
         return { success: false, error: 'This tab does not own the queue recovery journal.' };
     }
-    await chrome.storage.local.remove(snapshotKey(instanceId));
+    await withRegistryLock(() => chrome.storage.local.remove(snapshotKey(instanceId)));
     return { success: true };
 }
