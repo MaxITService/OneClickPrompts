@@ -60,10 +60,12 @@ async function loadProfiles() {
         // Set the current profile as selected
         profileSelect.value = currentProfile.PROFILE_NAME;
 
-        updateInterface();
+        await updateInterface();
         logToGUIConsole(`Loaded profile: ${currentProfile.PROFILE_NAME}`);
+        return true;
     } catch (error) {
         logToGUIConsole(`Error loading profiles: ${error.message}`);
+        return false;
     }
 }
 
@@ -72,6 +74,11 @@ async function loadProfiles() {
  * @param {string} profileName - The name of the profile to switch to.
  */
 async function switchProfile(profileName) {
+    return withProfileTransition(() => activateProfile(profileName));
+}
+
+// Called inside a profile transition after pending edits have been saved.
+async function activateProfile(profileName) {
     try {
         // Request the profile switch.
         const switchResponse = await chrome.runtime.sendMessage({
@@ -82,17 +89,11 @@ async function switchProfile(profileName) {
             throw new Error(switchResponse?.error || `Profile "${profileName}" could not be activated.`);
         }
 
-        // Now retrieve the configuration for the current profile.
-        const configResponse = await chrome.runtime.sendMessage({ type: 'getConfig' });
-        if (configResponse && configResponse.config) {
-            currentProfile = configResponse.config;
-            const profileSelect = document.getElementById('profileSelect');
-            await updateInterface(profileSelect);
-            logToGUIConsole(`Switched to profile: ${profileName}`);
-            return true;
-        } else {
-            throw new Error(`Unable to retrieve configuration after switching to profile "${profileName}".`);
-        }
+        // Use the configuration returned by this specific profile switch.
+        currentProfile = switchResponse.config;
+        await updateInterface(profileSelect);
+        logToGUIConsole(`Switched to profile: ${profileName}`);
+        return true;
     } catch (error) {
         showToast(`Error switching profile: ${error.message}`, 'error');
         logToGUIConsole(`Error switching profile: ${error.message}`);
@@ -138,29 +139,31 @@ async function addNewEmptyProfile(profileName) {
     if (!validation.isValid) return false;
     const trimmedProfileName = validation.name;
 
-    try {
-        // Initialize new profile with minimal settings
-        const newConfig = { ...minimalDefaultConfig, PROFILE_NAME: trimmedProfileName };
-        const saveResponse = await chrome.runtime.sendMessage({
-            type: 'saveConfig',
-            profileName: trimmedProfileName,
-            config: newConfig
-        });
-        if (saveResponse?.success !== true) {
-            throw new Error(saveResponse?.error || 'The profile could not be saved.');
-        }
+    return withProfileTransition(async () => {
+        try {
+            // Initialize new profile with minimal settings
+            const newConfig = { ...minimalDefaultConfig, PROFILE_NAME: trimmedProfileName };
+            const saveResponse = await chrome.runtime.sendMessage({
+                type: 'saveConfig',
+                profileName: trimmedProfileName,
+                config: newConfig
+            });
+            if (saveResponse?.success !== true) {
+                throw new Error(saveResponse?.error || 'The profile could not be saved.');
+            }
 
-        await loadProfiles();
-        profileSelect.value = trimmedProfileName;
-        if (!(await switchProfile(trimmedProfileName))) return false;
-        showToast(`Profile "${trimmedProfileName}" added successfully.`, 'success');
-        logToGUIConsole(`Created new empty profile: ${trimmedProfileName}`);
-        return true;
-    } catch (error) {
-        showToast(`Error creating profile: ${error.message}`, 'error');
-        logToGUIConsole(`Error creating profile: ${error.message}`);
-        return false;
-    }
+            if (!(await loadProfiles())) throw new Error('The profile list could not be refreshed.');
+            profileSelect.value = trimmedProfileName;
+            if (!(await activateProfile(trimmedProfileName))) return false;
+            showToast(`Profile "${trimmedProfileName}" added successfully.`, 'success');
+            logToGUIConsole(`Created new empty profile: ${trimmedProfileName}`);
+            return true;
+        } catch (error) {
+            showToast(`Error creating profile: ${error.message}`, 'error');
+            logToGUIConsole(`Error creating profile: ${error.message}`);
+            return false;
+        }
+    });
 }
 
 // -------------------------
@@ -173,31 +176,33 @@ async function copyCurrentProfile(profileName) {
     if (!validation.isValid) return false;
     const trimmedProfileName = validation.name;
 
-    try {
-        // Deep copy current profile settings
-        const newConfig = JSON.parse(JSON.stringify(currentProfile));
-        newConfig.PROFILE_NAME = trimmedProfileName;
+    return withProfileTransition(async () => {
+        try {
+            // Deep copy current profile settings
+            const newConfig = JSON.parse(JSON.stringify(currentProfile));
+            newConfig.PROFILE_NAME = trimmedProfileName;
 
-        const saveResponse = await chrome.runtime.sendMessage({
-            type: 'saveConfig',
-            profileName: trimmedProfileName,
-            config: newConfig
-        });
-        if (saveResponse?.success !== true) {
-            throw new Error(saveResponse?.error || 'The copied profile could not be saved.');
+            const saveResponse = await chrome.runtime.sendMessage({
+                type: 'saveConfig',
+                profileName: trimmedProfileName,
+                config: newConfig
+            });
+            if (saveResponse?.success !== true) {
+                throw new Error(saveResponse?.error || 'The copied profile could not be saved.');
+            }
+
+            if (!(await loadProfiles())) throw new Error('The profile list could not be refreshed.');
+            profileSelect.value = trimmedProfileName;
+            if (!(await activateProfile(trimmedProfileName))) return false;
+            showToast(`Profile duplicated as "${trimmedProfileName}" successfully.`, 'success');
+            logToGUIConsole(`Copied profile to new profile: ${trimmedProfileName}`);
+            return true;
+        } catch (error) {
+            showToast(`Error copying profile: ${error.message}`, 'error');
+            logToGUIConsole(`Error copying profile: ${error.message}`);
+            return false;
         }
-
-        await loadProfiles();
-        profileSelect.value = trimmedProfileName;
-        if (!(await switchProfile(trimmedProfileName))) return false;
-        showToast(`Profile duplicated as "${trimmedProfileName}" successfully.`, 'success');
-        logToGUIConsole(`Copied profile to new profile: ${trimmedProfileName}`);
-        return true;
-    } catch (error) {
-        showToast(`Error copying profile: ${error.message}`, 'error');
-        logToGUIConsole(`Error copying profile: ${error.message}`);
-        return false;
-    }
+    });
 }
 
 /**
@@ -225,20 +230,22 @@ async function deleteCurrentProfile() {
     );
     if (!confirmed) return;
 
-    try {
-        const deleteResponse = await chrome.runtime.sendMessage({
-            type: 'deleteProfile',
-            profileName: profileName
-        });
-        if (deleteResponse?.success !== true) {
-            throw new Error(deleteResponse?.error || 'The profile could not be deleted.');
-        }
+    return withProfileTransition(async () => {
+        try {
+            const deleteResponse = await chrome.runtime.sendMessage({
+                type: 'deleteProfile',
+                profileName: profileName
+            });
+            if (deleteResponse?.success !== true) {
+                throw new Error(deleteResponse?.error || 'The profile could not be deleted.');
+            }
 
-        await loadProfiles();
-        logToGUIConsole(`Deleted profile: ${profileName}`);
-        showToast(`Profile "${profileName}" deleted successfully.`, 'success');
-    } catch (error) {
-        showToast(`Error deleting profile: ${error.message}`, 'error');
-        logToGUIConsole(`Error deleting profile: ${error.message}`);
-    }
+            if (!(await loadProfiles())) throw new Error('The profile list could not be refreshed.');
+            logToGUIConsole(`Deleted profile: ${profileName}`);
+            showToast(`Profile "${profileName}" deleted successfully.`, 'success');
+        } catch (error) {
+            showToast(`Error deleting profile: ${error.message}`, 'error');
+            logToGUIConsole(`Error deleting profile: ${error.message}`);
+        }
+    });
 }

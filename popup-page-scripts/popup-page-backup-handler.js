@@ -95,6 +95,7 @@ async function exportBackup() {
     logToGUIConsole(`Initiating JSON backup export for scope: ${scope}.`);
 
     try {
+        if (!(await flushPendingProfileSave())) return;
         const response = await sendRuntimeMessage({
             type: 'getBackupPayload',
             scope,
@@ -195,14 +196,8 @@ async function confirmAppSettingsImport(rawPayload) {
 
 async function refreshPopupAfterImport(result) {
     refreshBackupScopeLabels(result.currentProfile || getCurrentProfileNameForBackupUi());
-    await loadProfiles();
-
-    if (result && result.currentProfile) {
-        profileSelect.value = result.currentProfile;
-        await switchProfile(result.currentProfile);
-    } else {
-        await updateInterface();
-    }
+    // The import already activated its profile in storage; reload it without saving stale form data.
+    if (!(await loadProfiles())) throw new Error('The imported profile could not be loaded.');
 
     // Theme script does not auto-listen for changes, so refresh it explicitly.
     try {
@@ -272,19 +267,23 @@ async function handleImportProfile(event) {
             return;
         }
 
-        const importResponse = await sendRuntimeMessage({
-            type: 'applyBackupPayload',
-            payload: parsedPayload,
-            options: { overwriteExisting },
+        const result = await withProfileTransition(async () => {
+            const importResponse = await sendRuntimeMessage({
+                type: 'applyBackupPayload',
+                payload: parsedPayload,
+                options: { overwriteExisting },
+            });
+
+            const importedResult = importResponse && importResponse.result ? importResponse.result : {
+                importedProfiles: [],
+                skippedProfiles: [],
+                appSettingsApplied: false,
+            };
+
+            await refreshPopupAfterImport(importedResult);
+            return importedResult;
         });
-
-        const result = importResponse && importResponse.result ? importResponse.result : {
-            importedProfiles: [],
-            skippedProfiles: [],
-            appSettingsApplied: false,
-        };
-
-        await refreshPopupAfterImport(result);
+        if (!result) return;
 
         const summary = summarizeImportResult(result);
         const importedCount = Array.isArray(result.importedProfiles) ? result.importedProfiles.length : 0;

@@ -13,6 +13,9 @@ let currentProfile = null;
 
 // Global variable for debounced save timeout
 let saveTimeoutId = null;
+let pendingProfileSave = null;
+let profileSaveChain = Promise.resolve(true);
+let profileTransitionInProgress = false;
 
 // DOM Elements
 const profileSelect = document.getElementById('profileSelect');
@@ -62,24 +65,53 @@ const uiScaleLockBtnEl = document.getElementById('uiScaleLockBtn');
 
 /**
  * Debounced save function.
- * Clears any pending save and schedules a new one 500ms in the future.
+ * Clears any pending save and schedules a new one 150ms in the future.
  * This function is used on rapid-fire events (e.g., textarea input) so that
- * saving happens only after 500ms of inactivity.
+ * saving happens only after 150ms of inactivity.
  */
 function debouncedSaveCurrentProfile() {
+    if (!currentProfile?.PROFILE_NAME) return;
     if (saveTimeoutId !== null) {
         clearTimeout(saveTimeoutId);
     }
-    saveTimeoutId = setTimeout(async () => {
-        try {
-            await saveCurrentProfile(); // Calls the existing save function
-        } catch (error) {
-            logToGUIConsole(`Error saving profile: ${error.message}`);
-        }
+    pendingProfileSave = currentProfile;
+    saveTimeoutId = setTimeout(() => {
+        const profile = pendingProfileSave;
         saveTimeoutId = null;
+        pendingProfileSave = null;
+        if (profile) void saveCurrentProfile(profile);
     }, 150);
 }
 
+async function flushPendingProfileSave() {
+    if (pendingProfileSave) return saveCurrentProfile(pendingProfileSave);
+    if (await profileSaveChain) return true;
+    // A failed write can be retried with the current editor contents before leaving.
+    return saveCurrentProfile();
+}
+
+// Profile replacement waits for writes and temporarily prevents edits to the old form.
+async function withProfileTransition(action) {
+    if (profileTransitionInProgress) return false;
+    profileTransitionInProgress = true;
+    const previousInert = document.body.inert;
+    const previousBusy = document.body.getAttribute('aria-busy');
+    document.body.inert = true;
+    document.body.setAttribute('aria-busy', 'true');
+    try {
+        // Undo countdowns belong to the form being left and must not write during replacement.
+        pendingButtonDeletions.forEach((state, button) => undoPendingDeletion(button));
+        if (!(await flushPendingProfileSave())) return false;
+        return await action();
+    } finally {
+        document.body.inert = previousInert;
+        if (previousBusy === null) document.body.removeAttribute('aria-busy');
+        else document.body.setAttribute('aria-busy', previousBusy);
+        profileTransitionInProgress = false;
+        if (currentProfile?.PROFILE_NAME) profileSelect.value = currentProfile.PROFILE_NAME;
+        if (typeof refreshBackupScopeLabels === 'function') refreshBackupScopeLabels();
+    }
+}
 
 // -------------------------
 // 7. Settings Management
@@ -202,10 +234,6 @@ async function handleUiScaleSliderChange() {
         currentProfile.tooltipScale = val;
     }
     updateUiScalePreview();
-    if (saveTimeoutId !== null) {
-        clearTimeout(saveTimeoutId);
-        saveTimeoutId = null;
-    }
     await saveCurrentProfile();
 }
 
@@ -228,10 +256,6 @@ async function handleTooltipScaleSliderChange() {
         currentProfile.uiScale = val;
     }
     updateUiScalePreview();
-    if (saveTimeoutId !== null) {
-        clearTimeout(saveTimeoutId);
-        saveTimeoutId = null;
-    }
     await saveCurrentProfile();
 }
 
@@ -714,20 +738,22 @@ async function revertToDefault() {
 
     if (!confirmed) return;
 
-    try {
-        const response = await chrome.runtime.sendMessage({ type: 'createDefaultProfile' });
-        if (!response?.config) {
-            throw new Error(response?.error || 'The Default profile could not be created.');
+    return withProfileTransition(async () => {
+        try {
+            const response = await chrome.runtime.sendMessage({ type: 'createDefaultProfile' });
+            if (!response?.config) {
+                throw new Error(response?.error || 'The Default profile could not be created.');
+            }
+            currentProfile = response.config;
+            if (!(await saveCurrentProfile())) return;
+            await updateInterface(); // Now awaiting the async function
+            showToast('Changed to the Default profile and wiped it successfully.', 'success');
+            logToGUIConsole('Changed to the Default profile and wiped it');
+        } catch (error) {
+            showToast(`Error changing to and wiping the Default profile: ${error.message}`, 'error');
+            logToGUIConsole(`Error changing to and wiping the Default profile: ${error.message}`);
         }
-        currentProfile = response.config;
-        if (!(await saveCurrentProfile())) return;
-        await updateInterface(); // Now awaiting the async function
-        showToast('Changed to the Default profile and wiped it successfully.', 'success');
-        logToGUIConsole('Changed to the Default profile and wiped it');
-    } catch (error) {
-        showToast(`Error changing to and wiping the Default profile: ${error.message}`, 'error');
-        logToGUIConsole(`Error changing to and wiping the Default profile: ${error.message}`);
-    }
+    });
 }
 
 // -------------------------
@@ -738,20 +764,34 @@ async function revertToDefault() {
  * Saves the current profile configuration.
  * @returns {Promise<boolean>} - Returns true if save is successful, else false.
  */
-async function saveCurrentProfile() {
+async function saveCurrentProfile(profile = currentProfile) {
     try {
-        if (!currentProfile?.PROFILE_NAME) {
+        if (!profile?.PROFILE_NAME) {
             throw new Error('No active profile is available to save.');
         }
-        const response = await chrome.runtime.sendMessage({
-            type: 'saveConfig',
-            profileName: currentProfile.PROFILE_NAME,
-            config: currentProfile
-        });
-        if (response?.success !== true) {
-            throw new Error(response?.error || 'The service worker rejected the profile save.');
+        const snapshot = structuredClone(profile);
+        if (pendingProfileSave === profile) {
+            clearTimeout(saveTimeoutId);
+            saveTimeoutId = null;
+            pendingProfileSave = null;
         }
-        return true;
+        // Capture before waiting so later edits and profile switches cannot change this write.
+        profileSaveChain = profileSaveChain.then(async () => {
+            const response = await chrome.runtime.sendMessage({
+                type: 'saveConfig',
+                profileName: snapshot.PROFILE_NAME,
+                config: snapshot
+            });
+            if (response?.success !== true) {
+                throw new Error(response?.error || 'The service worker rejected the profile save.');
+            }
+            return true;
+        }).catch(error => {
+            logToGUIConsole(`Error saving profile: ${error.message}`);
+            showToast(`Profile was not saved: ${error.message}`, 'error');
+            return false;
+        });
+        return await profileSaveChain;
     } catch (error) {
         logToGUIConsole(`Error saving profile: ${error.message}`);
         showToast(`Profile was not saved: ${error.message}`, 'error');

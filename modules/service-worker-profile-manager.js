@@ -187,8 +187,9 @@ export async function saveProfileConfig(profileName, config, options = {}) {
 export async function switchProfile(profileName, excludeTabId, origin = null) {
     logConfigurationRelatedStuff(`Switching to profile: ${profileName}`);
     try {
-        const profile = await loadProfileConfig(profileName);
-        if (profile) {
+        const storedProfile = await loadProfileConfig(profileName);
+        if (storedProfile) {
+            const profile = normalizeProfileConfig(storedProfile, profileName);
             await chrome.storage.local.set({ 'currentProfile': profileName });
             logConfigurationRelatedStuff(`Switched to profile: ${profileName}`);
 
