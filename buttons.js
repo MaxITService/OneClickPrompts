@@ -65,6 +65,7 @@ window.MaxExtensionPromptVariables = {
     },
 
     normalizeSettings(settings = {}) {
+        settings = settings && typeof settings === 'object' ? settings : {};
         const rawVariables = Array.isArray(settings.customVariables) ? settings.customVariables : [];
         return {
             enabled: settings.enabled === true,
@@ -79,12 +80,13 @@ window.MaxExtensionPromptVariables = {
         };
     },
 
-    async loadSettings() {
+    async loadSettings({ strict = false } = {}) {
         try {
             const result = await chrome.storage.local.get([this.storageKey]);
             return this.normalizeSettings(result?.[this.storageKey]);
         } catch (error) {
             logConCgp('[prompt-vars] Failed loading settings:', error?.message || error);
+            if (strict) throw new Error('Unable to load prompt variables. Please retry before sending.');
             return this.normalizeSettings();
         }
     },
@@ -100,69 +102,18 @@ window.MaxExtensionPromptVariables = {
             return config;
         }
 
-        const settings = await this.loadSettings();
-        if (!settings.enabled) {
-            return config;
-        }
-        if (settings.dateExampleInitialized) {
-            return config;
-        }
-
-        const alreadyExists = config.customButtons.some(button => (
-            button &&
-            !button.separator &&
-            (button.__ocpSmartVariableExample === 'today' || button.text === this.dateExampleText)
-        ));
-
-        if (alreadyExists) {
-            try {
-                await this.saveSettings({ ...settings, dateExampleInitialized: true }, { silent: true });
-            } catch (error) {
-                logConCgp('[prompt-vars] Failed marking the existing date example as initialized:', error?.message || error);
-            }
-            return config;
-        }
-
-        const exampleButton = {
-            icon: this.dateExampleIcon,
-            text: this.dateExampleText,
-            autoSend: false,
-            __ocpSmartVariableExample: 'today'
-        };
-        config.customButtons.push(exampleButton);
-        this.markButtonForShine(config.customButtons.length - 1, 'today');
-
         try {
-            const { currentProfile } = await chrome.storage.local.get('currentProfile');
-            const profileName = currentProfile || config.PROFILE_NAME;
-            if (!profileName) {
-                throw new Error('Missing current profile name');
-            }
             const response = await chrome.runtime.sendMessage({
-                type: 'saveConfig',
-                profileName,
-                config
+                type: 'ensurePromptVariableExample', profileName: config.PROFILE_NAME
             });
-            if (response?.success !== true) {
-                throw new Error(response?.error || 'The service worker rejected the profile save.');
-            }
+            if (response?.success !== true) throw new Error(response?.error || 'Unable to initialize date example.');
+            if (response.added) this.markButtonForShine(response.buttonIndex, 'today');
+            return response.config || config;
         } catch (error) {
-            const exampleIndex = config.customButtons.indexOf(exampleButton);
-            if (exampleIndex !== -1) config.customButtons.splice(exampleIndex, 1);
-            this.shineState = null;
             logConCgp('[prompt-vars] Failed saving first-run date example:', error?.message || error);
             return config;
         }
-
-        try {
-            await this.saveSettings({ ...settings, dateExampleInitialized: true }, { silent: true });
-        } catch (error) {
-            logConCgp('[prompt-vars] Failed marking the saved date example as initialized:', error?.message || error);
-        }
-
-        return config;
     },
-
     markButtonForShine(profileIndex, kind = '') {
         this.shineState = {
             profileIndex,
@@ -204,7 +155,7 @@ window.MaxExtensionPromptVariables = {
             return rawText;
         }
 
-        const settings = await this.loadSettings();
+        const settings = await this.loadSettings({ strict: true });
         if (!settings.enabled) {
             return rawText;
         }
@@ -225,7 +176,7 @@ window.MaxExtensionPromptVariables = {
             builtins.time = this.formatTime();
         }
 
-        const customValues = {};
+        const customValues = Object.create(null);
         const customLookup = new Map(
             settings.customVariables.map(variable => [variable.name.toLowerCase(), variable])
         );

@@ -13,7 +13,8 @@ window.ButtonsClickingShared = {
     isVisibleInteractiveElement: (el) => {
         if (!el) return false;
         if (!el.isConnected) return false;
-        if (el.offsetParent === null) return false;
+        const rect = el.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return false;
         const style = window.getComputedStyle(el);
         if (!style) return false;
         return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
@@ -26,7 +27,8 @@ window.ButtonsClickingShared = {
      */
     isBusyStopButton: (btn) => {
         if (!btn) return false;
-        const text = ((btn.getAttribute('aria-label') || btn.getAttribute('data-testid') || btn.innerText) || '').toLowerCase();
+        const text = [btn.getAttribute('aria-label'), btn.getAttribute('data-testid'), btn.getAttribute('title'), btn.innerText]
+            .filter(Boolean).join(' ').toLowerCase();
         return text.includes('stop');
     },
 
@@ -137,6 +139,7 @@ window.ButtonsClickingShared = {
     performAutoSend: (config = {}) => {
         return new Promise((resolve) => {
             const queueContext = config.queueContext;
+            const initialUrl = location.href;
             const signal = queueContext?.signal;
             if (signal?.aborted) {
                 resolve({ status: 'cancelled', reason: 'queue_paused' });
@@ -177,6 +180,14 @@ window.ButtonsClickingShared = {
             let clickIssued = false;
             let abortListener = null;
             const activeIntervalIds = new Set();
+            const activeDelays = new Map();
+            const waitForConfirmation = delay => new Promise(resolveDelay => {
+                const id = setTimeout(() => {
+                    activeDelays.delete(id);
+                    resolveDelay();
+                }, delay);
+                activeDelays.set(id, resolveDelay);
+            });
 
             const startTrackedInterval = (callback, delay) => {
                 const intervalId = setInterval(callback, delay);
@@ -196,7 +207,13 @@ window.ButtonsClickingShared = {
                 finished = true;
                 activeIntervalIds.forEach((intervalId) => clearInterval(intervalId));
                 activeIntervalIds.clear();
+                activeDelays.forEach((resolveDelay, id) => {
+                    clearTimeout(id);
+                    resolveDelay();
+                });
+                activeDelays.clear();
                 if (abortListener) signal?.removeEventListener('abort', abortListener);
+                document.removeEventListener('ocp-page-navigated', cancelForNavigation);
                 if (window.sharedAutoSendInterval === searchIntervalId) {
                     window.sharedAutoSendInterval = null;
                 }
@@ -217,6 +234,10 @@ window.ButtonsClickingShared = {
                 status: queueContext && clickIssued ? 'unconfirmed' : 'failed', reason: 'superseded'
             });
             window.sharedAutoSendCancel = cancelCurrentRun;
+            const cancelForNavigation = () => finish({
+                status: clickIssued ? 'unconfirmed' : 'cancelled', reason: 'page_navigated'
+            });
+            document.addEventListener('ocp-page-navigated', cancelForNavigation);
 
             abortListener = () => {
                 // A delivered click cannot be undone. Observe its outcome, but never issue another.
@@ -226,6 +247,7 @@ window.ButtonsClickingShared = {
 
             const clickAndConfirm = async (button) => {
                 if (finished) return true;
+                if (location.href !== initialUrl) { cancelForNavigation(); return true; }
                 if (queueContext) {
                     await queueContext.checkpointDraft();
                     if (finished) return true;
@@ -233,13 +255,14 @@ window.ButtonsClickingShared = {
                         finish({ status: 'failed', reason: 'editor_changed' });
                         return true;
                     }
-                    // Storage awaits can outlive a Send-to-Stop transition or DOM replacement.
-                    const stop = window.ButtonsClickingShared.findStopButton(findStopButton);
-                    if (!button.isConnected || !isEnabled(button) || isBusy(button) || (stop && isBusy(stop))) {
-                        return false;
-                    }
                 }
                 if (finished || signal?.aborted) return true;
+                if (location.href !== initialUrl) { cancelForNavigation(); return true; }
+                // Any awaited validation can outlive a Send-to-Stop transition or DOM replacement.
+                const stop = window.ButtonsClickingShared.findStopButton(findStopButton);
+                if (!button.isConnected || !isEnabled(button) || isBusy(button) || (stop && isBusy(stop))) {
+                    return false;
+                }
                 clickIssued = true;
                 let clicked;
                 try {
@@ -294,7 +317,7 @@ window.ButtonsClickingShared = {
                         stopHandlingStarted = true;
 
                         if (stopConfirmationDelay > 0) {
-                            await new Promise((resolve) => setTimeout(resolve, stopConfirmationDelay));
+                            await waitForConfirmation(stopConfirmationDelay);
                             if (finished) return;
                             const confirmedStopBtn = window.ButtonsClickingShared.findStopButton(findStopButton);
                             if (!confirmedStopBtn || !isBusy(confirmedStopBtn)) {

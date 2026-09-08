@@ -23,11 +23,11 @@ window.OneClickPromptsSelectorGuard = {
 
         // 2. Handle Result
         if (element) {
-            window.OneClickPromptsSelectorAutoDetector.reportRecovery('editor');
+            window.OneClickPromptsSelectorAutoDetector?.reportRecovery?.('editor');
             return element;
         } else {
             // Try to recover
-            return await window.OneClickPromptsSelectorAutoDetector.reportFailure('editor', { selectors });
+            return await window.OneClickPromptsSelectorAutoDetector?.reportFailure?.('editor', { selectors }) || null;
         }
     },
 
@@ -62,13 +62,13 @@ window.OneClickPromptsSelectorGuard = {
 
         // 2. Handle Result
         if (element) {
-            window.OneClickPromptsSelectorAutoDetector.reportRecovery('sendButton');
+            window.OneClickPromptsSelectorAutoDetector?.reportRecovery?.('sendButton');
             return element;
         } else {
             // If editor is also missing, surface that failure first to guide the user.
             const editorElement = this._querySelectors(editorSelectors);
             if (!editorElement && window.OneClickPromptsSelectorAutoDetector) {
-                await window.OneClickPromptsSelectorAutoDetector.reportFailure('editor', { selectors: editorSelectors });
+                await window.OneClickPromptsSelectorAutoDetector.reportFailure?.('editor', { selectors: editorSelectors });
             }
 
             // Check if stop button is visible — if so, the missing send button is expected (AI is generating)
@@ -94,7 +94,7 @@ window.OneClickPromptsSelectorGuard = {
                 }
             }
             // Try to recover
-            return await window.OneClickPromptsSelectorAutoDetector.reportFailure('sendButton', { selectors });
+            return await window.OneClickPromptsSelectorAutoDetector?.reportFailure?.('sendButton', { selectors }) || null;
         }
     },
 

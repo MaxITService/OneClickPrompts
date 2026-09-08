@@ -52,7 +52,7 @@ export function logConfigurationRelatedStuff(message, ...optionalParams) {
 export function handleStorageError(error) {
     if (error) {
         logConfigurationRelatedStuff('Storage error:', error);
-        if (error.message.includes('QUOTA_BYTES')) {
+        if (String(error?.message || error).includes('QUOTA_BYTES')) {
             logConfigurationRelatedStuff('Storage quota exceeded. Some data may not be saved.');
         }
     }

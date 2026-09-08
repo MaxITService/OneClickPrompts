@@ -22,7 +22,18 @@
 /**
  * Creates the floating panel element by fetching an HTML template and appending it.
  */
-window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
+window.MaxExtensionFloatingPanel.createFloatingPanel = function () {
+    if (this.__panelCreationPromise) return this.__panelCreationPromise;
+    const pending = createFloatingPanelDom.call(this);
+    this.__panelCreationPromise = pending;
+    const release = () => {
+        if (this.__panelCreationPromise === pending) this.__panelCreationPromise = null;
+    };
+    void pending.then(release, release);
+    return pending;
+};
+
+async function createFloatingPanelDom() {
     // Check if the panel element exists and is still attached to the document.
     if (this.panelElement && document.body.contains(this.panelElement)) {
         return this.panelElement;
@@ -34,6 +45,9 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
         logConCgp('[floating-panel] Panel element was detached from the DOM. It will be recreated.');
     }
 
+    this.__panelDomEvents?.abort();
+    this.__panelDomEvents = new AbortController();
+    let createdPanel = null;
     try {
         const response = await fetch(chrome.runtime.getURL('floating-panel-files/floating-panel.html'));
         if (!response.ok) {
@@ -44,6 +58,8 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = html;
         const panel = tempDiv.firstElementChild;
+        if (!panel) throw new Error('The floating panel template is empty.');
+        createdPanel = panel;
 
         document.body.appendChild(panel);
 
@@ -255,7 +271,7 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
                     closeTransparencyPopover();
                 }
             };
-            document.addEventListener('mousedown', outsideClickHandler, true);
+            document.addEventListener('mousedown', outsideClickHandler, { capture: true, signal: this.__panelDomEvents.signal });
 
             // Close on ESC
             const escHandler = (e) => {
@@ -263,7 +279,7 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
                     closeTransparencyPopover();
                 }
             };
-            document.addEventListener('keydown', escHandler, true);
+            document.addEventListener('keydown', escHandler, { capture: true, signal: this.__panelDomEvents.signal });
 
             // Slider input -> live preview + save (debounced)
             transparencySlider.addEventListener('input', (e) => {
@@ -299,10 +315,13 @@ window.MaxExtensionFloatingPanel.createFloatingPanel = async function () {
         return panel;
 
     } catch (error) {
+        this.__panelDomEvents.abort();
+        createdPanel?.remove();
+        if (this.panelElement === createdPanel) this.panelElement = null;
         logConCgp('[floating-panel] Error creating floating panel from template:', error);
         return null;
     }
-};
+}
 
 /**
  * Creates the profile switcher UI inside the panel footer.
@@ -575,6 +594,9 @@ window.MaxExtensionFloatingPanel.ensurePanelWithinViewport = function () {
  * Initializes responsive positioning for the queue toggle based on available space.
  */
 window.MaxExtensionFloatingPanel.initializeResponsiveQueueToggle = function () {
+    this.queueToggleResizeObserver?.disconnect();
+    if (this.updateQueueTogglePlacement) window.removeEventListener('resize', this.updateQueueTogglePlacement);
+    clearTimeout(this.queueTogglePlacementTimer);
     // This will be called after the queue section is initialized
     // We'll add a resize observer to monitor panel width changes
     if (!this.panelElement) return;
@@ -682,7 +704,7 @@ window.MaxExtensionFloatingPanel.initializeResponsiveQueueToggle = function () {
     this.updateQueueTogglePlacement = checkSpaceAndMoveToggle;
 
     // Initial check
-    setTimeout(checkSpaceAndMoveToggle, 100);
+    this.queueTogglePlacementTimer = setTimeout(checkSpaceAndMoveToggle, 100);
 
     // Monitor panel resize
     if (window.ResizeObserver) {

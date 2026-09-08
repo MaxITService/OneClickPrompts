@@ -74,6 +74,7 @@ if (!window.__OCP_messageListenerRegistered_v2) {
     window.__OCP_partialRefreshUI = function (optionalNewConfig, origin = null) {
         try {
             if (optionalNewConfig) {
+                window.__OCP_profileRevision = (window.__OCP_profileRevision || 0) + 1;
                 window.globalMaxExtensionConfig = optionalNewConfig;
             }
             if (window.MaxExtensionButtonsInit && typeof window.MaxExtensionButtonsInit.updateButtonsForProfileChange === 'function') {
@@ -224,18 +225,26 @@ if (!window.__OCP_messageListenerRegistered_v2) {
  * Main entry point. Retrieves configuration and then starts the async initialization.
  */
 function publicStaticVoidMain() {
+    const generation = (window.__OCP_initializationGeneration || 0) + 1;
+    window.__OCP_initializationGeneration = generation;
+    const initialUrl = location.href;
+    const profileRevision = window.__OCP_profileRevision || 0;
+    const isCurrent = () => generation === window.__OCP_initializationGeneration && location.href === initialUrl;
     // Start a chain of callbacks to load all necessary configurations before initializing.
     chrome.runtime.sendMessage({ type: 'getConfig' }, (response) => {
         if (chrome.runtime.lastError || !response?.config) {
             logConCgp('[init] Error loading main configuration:', chrome.runtime.lastError?.message);
             return;
         }
+        if (!isCurrent()) return;
         const mainConfig = response.config;
         logConCgp('[init] Main configuration successfully loaded:', mainConfig);
 
         const loadInlineProfileSelectorSettings = () => {
             chrome.runtime.sendMessage({ type: 'getInlineProfileSelectorSettings' }, (selectorResponse) => {
-                if (chrome.runtime.lastError || !selectorResponse?.settings) {
+                const error = chrome.runtime.lastError;
+                if (!isCurrent()) return;
+                if (error || !selectorResponse?.settings) {
                     logConCgp('[init] Could not load Inline Profile Selector settings.', chrome.runtime.lastError?.message);
                     window.globalInlineSelectorConfig = { enabled: false, placement: 'before' };
                 } else {
@@ -244,11 +253,16 @@ function publicStaticVoidMain() {
                 }
 
                 // Start main initialization only after all global configs are present
-                commenceExtensionInitialization(mainConfig);
+                const config = profileRevision !== (window.__OCP_profileRevision || 0)
+                    ? window.globalMaxExtensionConfig || mainConfig : mainConfig;
+                commenceExtensionInitialization(config, isCurrent).catch(error => {
+                    logConCgp('[init] Page initialization failed:', error?.message || error);
+                });
             });
         };
 
         const applyCrossChatAndContinue = (settings, logLabel) => {
+            if (!isCurrent()) return;
             const appliedSettings = applyCrossChatConfig(settings);
             if (logLabel) {
                 logConCgp(logLabel, appliedSettings);
@@ -259,10 +273,12 @@ function publicStaticVoidMain() {
         // After loading the main config, load the cross-chat module settings.
         chrome.runtime.sendMessage({ type: 'getCrossChatModuleSettings' }, (moduleResponse) => {
             const settingsError = chrome.runtime.lastError;
+            if (!isCurrent()) return;
             if (settingsError || !moduleResponse?.settings) {
                 logConCgp('[init] Could not load Cross-Chat module settings. Attempting defaults.', settingsError?.message);
                 chrome.runtime.sendMessage({ type: 'getCrossChatModuleDefaults' }, (defaultsResponse) => {
                     const defaultsError = chrome.runtime.lastError;
+                    if (!isCurrent()) return;
                     if (defaultsError || !defaultsResponse?.defaults) {
                         logConCgp('[init] Cross-Chat defaults unavailable. Using fallback disabled state.', defaultsError?.message);
                         applyCrossChatAndContinue({}, '[init] Cross-Chat module defaults unavailable; using fallback:');
@@ -282,12 +298,17 @@ function publicStaticVoidMain() {
  * Initializes the extension using an async "decide-first" approach.
  * @param {Object} configurationObject - The configuration object.
  */
-async function commenceExtensionInitialization(configurationObject) {
+async function commenceExtensionInitialization(configurationObject, isCurrent = () => true) {
+    if (!isCurrent()) return;
     logConCgp('[init] Async initialization started.');
     // Configs are now set in publicStaticVoidMain before this is called.
     window.globalMaxExtensionConfig = configurationObject;
     if (window.MaxExtensionPromptVariables && typeof window.MaxExtensionPromptVariables.ensureFirstRunDateExampleButton === 'function') {
-        window.globalMaxExtensionConfig = await window.MaxExtensionPromptVariables.ensureFirstRunDateExampleButton(window.globalMaxExtensionConfig);
+        const initializedConfig = await window.MaxExtensionPromptVariables.ensureFirstRunDateExampleButton(configurationObject);
+        if (!isCurrent()) return;
+        if (window.globalMaxExtensionConfig === configurationObject) {
+            window.globalMaxExtensionConfig = initializedConfig;
+        }
     }
 
     /**
@@ -309,11 +330,13 @@ async function commenceExtensionInitialization(configurationObject) {
     }
 
     const shouldPanelBeVisible = await getFloatingPanelVisibility();
+    if (!isCurrent()) return;
 
     if (shouldPanelBeVisible) {
         logConCgp('[init] Decide-first: Panel should be visible. Creating panel and buttons directly.');
         if (window.MaxExtensionFloatingPanel) {
             await window.MaxExtensionFloatingPanel.createFloatingPanel();
+            if (!isCurrent()) return;
             const buttonsArea = document.getElementById('max-extension-buttons-area');
             const panel = window.MaxExtensionFloatingPanel.panelElement;
 
@@ -346,7 +369,9 @@ async function commenceExtensionInitialization(configurationObject) {
     // After the initial decision and creation, initialize the full floating panel system.
     // This loads settings, profiles, and attaches event listeners.
     if (window.MaxExtensionFloatingPanel) {
-        window.MaxExtensionFloatingPanel.initialize();
+        Promise.resolve(window.MaxExtensionFloatingPanel.initialize()).catch(error => {
+            logConCgp('[init] Floating panel initialization failed:', error?.message || error);
+        });
         logConCgp('[init] Floating panel system initialized in a controlled manner.');
     }
 
@@ -364,15 +389,6 @@ async function commenceExtensionInitialization(configurationObject) {
         logConCgp(`[init] Keyboard shortcut listener is active for ${activeWebsite}.`);
     }
 
-    resilientStartAndRetryOnSPANavigation(() => {
-        logConCgp('[init] Path change detected via MutationObserver. Re-initializing script...');
-        const debouncedEnhancedInitialization = debounceFunctionExecution(() => {
-            publicStaticVoidMain();
-        }, 100);
-        debouncedEnhancedInitialization();
-    });
-
-    patchHistoryMethods();
 }
 
 /**
@@ -438,6 +454,7 @@ function debounceFunctionExecution(func, delay) {
  * @param {Function} callback - The function to execute when a URL change is detected.
  */
 function resilientStartAndRetryOnSPANavigation(callback) {
+    if (window.__OCP_checkNavigation) return;
     // Ensure only one observer is active across re-inits
     try {
         if (window.__OCP_urlChangeObserver) {
@@ -447,16 +464,20 @@ function resilientStartAndRetryOnSPANavigation(callback) {
     } catch (e) { }
 
     let previousUrl = location.href;
-    const urlChangeObserver = new MutationObserver(() => {
+    const checkNavigation = () => {
         const currentUrl = location.href;
         if (currentUrl !== previousUrl) {
             previousUrl = currentUrl;
             document.dispatchEvent(new CustomEvent('ocp-page-navigated'));
             callback();
         }
-    });
+    };
+    window.__OCP_checkNavigation = checkNavigation;
+    const urlChangeObserver = new MutationObserver(checkNavigation);
     urlChangeObserver.observe(document, { subtree: true, childList: true });
     window.__OCP_urlChangeObserver = urlChangeObserver;
+    window.addEventListener('popstate', checkNavigation);
+    window.addEventListener('hashchange', checkNavigation);
 }
 
 /**
@@ -471,12 +492,13 @@ function patchHistoryMethods() {
         history[method] = function (...args) {
             const result = original.apply(this, args);
             logConCgp(`[init] ${method} called. URL:`, args[2]);
-            document.dispatchEvent(new CustomEvent('ocp-page-navigated'));
-            publicStaticVoidMain(); // Re-run the full initialization logic
+            window.__OCP_checkNavigation?.();
             return result;
         };
     });
 }
 
 // Automatically start the initialization process upon script load.
+resilientStartAndRetryOnSPANavigation(debounceFunctionExecution(publicStaticVoidMain, 100));
+patchHistoryMethods();
 publicStaticVoidMain();

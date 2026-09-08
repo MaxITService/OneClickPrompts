@@ -13,10 +13,13 @@ window.MaxExtensionUtils = {
         let attempts = 0;
         let intervalId = null;
         let observer = null;
+        let probeTimer = null;
         let cancelled = false;
         let completed = false;
 
         const stopWatching = () => {
+            clearTimeout(probeTimer);
+            probeTimer = null;
             if (observer) {
                 observer.disconnect();
                 observer = null;
@@ -35,7 +38,8 @@ window.MaxExtensionUtils = {
                 cancelled = true;
                 stopWatching();
             },
-            isCancelled: () => cancelled
+            isCancelled: () => cancelled,
+            isPending: () => !cancelled && !completed
         };
 
         const finishSuccess = (element) => {
@@ -64,6 +68,8 @@ window.MaxExtensionUtils = {
         };
 
         const tryFindElement = () => {
+            clearTimeout(probeTimer);
+            probeTimer = null;
             if (cancelled || completed) {
                 return false;
             }
@@ -80,7 +86,8 @@ window.MaxExtensionUtils = {
         }
 
         observer = new MutationObserver(() => {
-            tryFindElement();
+            // Streaming responses may emit hundreds of mutation batches between polling ticks.
+            if (probeTimer === null) probeTimer = setTimeout(tryFindElement, 100);
         });
         observer.observe(document, { childList: true, subtree: true });
 

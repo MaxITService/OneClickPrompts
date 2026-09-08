@@ -8,6 +8,7 @@
 'use strict';
 
 import { serviceWorkerConsoleLogsAreDisabled } from './service-worker-config-helpers.js';
+import { runStateOperation } from './service-worker-operation-queue.js';
 
 // Namespaced logging
 function logSS(message, ...args) {
@@ -291,12 +292,16 @@ async function getValue(path) {
   }
   if (path === KEYS.floatingPanel) {
     // Build map from structured store if exists, else from legacy scattered keys
-    const all = await lsGet(null);
-    const structured = all[KEYS.floatingPanel];
+    const stored = await lsGet([KEYS.floatingPanel]);
+    const structured = stored[KEYS.floatingPanel];
     if (structured && typeof structured === 'object') {
       return structured;
     }
     // Fallback: collect legacy floating_panel_* keys
+    const keys = typeof chrome.storage.local.getKeys === 'function'
+      ? await chrome.storage.local.getKeys()
+      : Object.keys(await lsGet(null));
+    const all = await lsGet(keys.filter(key => key.startsWith(LEGACY.floatingPanelPrefix)));
     const map = {};
     Object.keys(all || {}).forEach(k => {
       if (k.startsWith(LEGACY.floatingPanelPrefix)) {
@@ -323,22 +328,22 @@ async function getValue(path) {
   return r[path];
 }
 
-async function setValue(path, value) {
+async function setValue(path, value, write = lsSet) {
   // Dual-write where applicable
   if (path === KEYS.ui.theme) {
-    await lsSet({ [KEYS.ui.theme]: value, [LEGACY.darkTheme]: value });
+    await write({ [KEYS.ui.theme]: value, [LEGACY.darkTheme]: value });
     return;
   }
   if (path === KEYS.ui.popup) {
     // No legacy, write only new
-    await lsSet({ [KEYS.ui.popup]: value });
+    await write({ [KEYS.ui.popup]: value });
     return;
   }
   if (path === KEYS.modules.crossChat) {
     // Expect value shape { settings, storedPrompt }
     const settings = { ...CROSS_CHAT_DEFAULT_SETTINGS, ...(value?.settings || {}) };
     const storedPrompt = typeof value?.storedPrompt === 'string' ? value.storedPrompt : '';
-    await lsSet({
+    await write({
       [KEYS.modules.crossChat]: { settings, storedPrompt },
       [LEGACY.crossChatModuleSettings]: settings,
       [LEGACY.crossChatStoredPrompt]: storedPrompt,
@@ -351,7 +356,7 @@ async function setValue(path, value) {
       enabled: !!settings.enabled,
       placement: settings.placement === 'after' ? 'after' : 'before',
     };
-    await lsSet({ [KEYS.modules.inlineProfileSelector]: normalized });
+    await write({ [KEYS.modules.inlineProfileSelector]: normalized });
     return;
   }
   if (path === KEYS.modules.tokenApproximator) {
@@ -399,7 +404,7 @@ async function setValue(path, value) {
       countingMethod,
       enabledSites
     };
-    await lsSet({ [KEYS.modules.tokenApproximator]: normalized });
+    await write({ [KEYS.modules.tokenApproximator]: normalized });
     return;
   }
   if (path === KEYS.modules.selectorAutoDetector) {
@@ -412,7 +417,7 @@ async function setValue(path, value) {
       notifyContainerMissing: settings.notifyContainerMissing === true,
       autoFallbackToFloatingPanel: settings.autoFallbackToFloatingPanel !== false,
     };
-    await lsSet({ [KEYS.modules.selectorAutoDetector]: normalized });
+    await write({ [KEYS.modules.selectorAutoDetector]: normalized });
     return;
   }
   if (path === KEYS.modules.tooltip) {
@@ -424,7 +429,7 @@ async function setValue(path, value) {
       themeOverride: !!settings.themeOverride,
       forcedTheme: settings.forcedTheme === 'light' ? 'light' : 'dark',
     };
-    await lsSet({ [KEYS.modules.tooltip]: normalized });
+    await write({ [KEYS.modules.tooltip]: normalized });
     return;
   }
   if (path === KEYS.modules.manualQueueCards) {
@@ -444,7 +449,7 @@ async function setValue(path, value) {
       expanded: !!data.expanded,
       cardCount,
     };
-    await lsSet({ [KEYS.modules.manualQueueCards]: normalized });
+    await write({ [KEYS.modules.manualQueueCards]: normalized });
     return;
   }
   if (path.startsWith(KEYS.floatingPanel)) {
@@ -456,30 +461,76 @@ async function setValue(path, value) {
       Object.entries(map).forEach(([host, settings]) => {
         legacySet[LEGACY.floatingPanelPrefix + host] = settings;
       });
-      await lsSet({ [KEYS.floatingPanel]: map, ...legacySet });
+      await write({ [KEYS.floatingPanel]: map, ...legacySet });
       return;
     } else {
       // path like 'floatingPanel.<hostname>'
       const host = path.replace(KEYS.floatingPanel + '.', '');
       const current = await getValue(KEYS.floatingPanel);
       current[host] = value;
-      await setValue(KEYS.floatingPanel, current);
+      await setValue(KEYS.floatingPanel, current, write);
       return;
     }
   }
   if (path === KEYS.global.customSelectors) {
-    await lsSet({ [KEYS.global.customSelectors]: value, [LEGACY.customSelectors]: value });
+    await write({ [KEYS.global.customSelectors]: value, [LEGACY.customSelectors]: value });
     return;
   }
   if (path === KEYS.meta.schemaVersion || path === KEYS.meta.debugLogging) {
-    await lsSet({ [path]: value });
+    await write({ [path]: value });
     return;
   }
-  await lsSet({ [path]: value });
+  await write({ [path]: value });
 }
 
 // Public API (service worker-side)
 export const StateStore = {
+  // Normalize an import into one storage patch before any data is written.
+  async prepareBackupPatch(settings) {
+    const patch = {};
+    const collect = async values => Object.assign(patch, values);
+    const mapping = {
+      theme: KEYS.ui.theme, inlineProfileSelector: KEYS.modules.inlineProfileSelector,
+      tokenApproximator: KEYS.modules.tokenApproximator,
+      selectorAutoDetector: KEYS.modules.selectorAutoDetector, tooltip: KEYS.modules.tooltip,
+      manualQueueCards: KEYS.modules.manualQueueCards,
+      floatingPanel: KEYS.floatingPanel, customSelectors: KEYS.global.customSelectors
+    };
+    for (const [field, key] of Object.entries(mapping)) {
+      if (Object.hasOwn(settings, field)) await setValue(key, settings[field], collect);
+    }
+    if (settings.crossChatSettings || typeof settings.crossChatStoredPrompt === 'string') {
+      const current = await this.getCrossChat();
+      await setValue(KEYS.modules.crossChat, {
+        settings: { ...current.settings, ...settings.crossChatSettings },
+        storedPrompt: settings.crossChatStoredPrompt ?? current.storedPrompt
+      }, collect);
+    }
+    return patch;
+  },
+
+  async broadcastBackupPatch(patch) {
+    const events = {
+      'ui.theme': ['uiThemeChanged', 'theme'],
+      'modules.inlineProfileSelector': ['inlineProfileSelectorSettingsChanged', 'settings'],
+      'modules.tokenApproximator': ['tokenApproximatorSettingsChanged', 'settings'],
+      'modules.selectorAutoDetector': ['selectorAutoDetectorSettingsChanged', 'settings'],
+      'modules.tooltip': ['tooltipSettingsChanged', 'settings'],
+      'modules.manualQueueCards': ['manualQueueCardsChanged', 'data']
+    };
+    for (const [key, [type, property]] of Object.entries(events)) {
+      if (Object.hasOwn(patch, key)) await this.broadcast({ type, [property]: patch[key] });
+    }
+    if (patch[KEYS.modules.crossChat]) {
+      await this.broadcast({ type: 'crossChatChanged', settings: patch[KEYS.modules.crossChat].settings });
+      await this.broadcast({ type: 'crossChatPromptChanged' });
+    }
+    if (patch[KEYS.global.customSelectors]) await this.broadcast({ type: 'customSelectorsChanged' });
+    if (patch[KEYS.floatingPanel]) {
+      await this.broadcast({ type: 'floatingPanelResetAll' });
+      for (const hostname of Object.keys(patch[KEYS.floatingPanel])) await this.broadcast({ type: 'floatingPanelChanged', hostname });
+    }
+  },
   // Theme
   async getUiTheme() {
     return await getValue(KEYS.ui.theme);
@@ -499,7 +550,7 @@ export const StateStore = {
   async setUiPopupState(patch) {
     const current = await this.getUiPopupState();
     const merged = { ...current, ...patch };
-    if (!merged.collapsibles) merged.collapsibles = {};
+    merged.collapsibles = { ...current.collapsibles, ...patch?.collapsibles };
     await setValue(KEYS.ui.popup, merged);
     this.broadcast({ type: 'uiPopupChanged', state: merged });
   },
@@ -670,3 +721,21 @@ export const StateStore = {
     }
   }
 };
+
+// All read/modify/write entry points for a namespace share the same queue.
+// Reads inside these operations remain direct to avoid nested-lock deadlocks.
+const STATE_MUTATIONS = {
+  'ui.popup': ['setUiPopupState'],
+  'modules.crossChat': ['saveCrossChat', 'saveStoredPrompt', 'clearStoredPrompt'],
+  floatingPanel: ['saveFloatingPanelSettings', 'resetFloatingPanelSettings', 'resetFloatingPanelSettingsForHostname'],
+  'global.customSelectors': ['saveCustomSelectors', 'resetAdvancedSelectors']
+};
+for (const [namespace, methods] of Object.entries(STATE_MUTATIONS)) {
+  for (const method of methods) {
+    const operation = StateStore[method];
+    StateStore[method] = function (...args) {
+      const capturedArgs = structuredClone(args);
+      return runStateOperation(namespace, () => operation.apply(this, capturedArgs));
+    };
+  }
+}

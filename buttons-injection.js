@@ -277,6 +277,7 @@ function buttonBoxCheckingAndInjection(enableResiliency = true, activeWebsite, o
         },
         searchMaxAttempts
     );
+    if (!window.__OCP_inlineSearchController.isPending()) window.__OCP_inlineSearchController = null;
 }
 
 // Global variable to store the current resiliency check timer
@@ -382,15 +383,26 @@ function startExtendedMonitoringWithObserver() {
     if (window.OneClickPropmts_extendedMonitoringObserver) {
         window.OneClickPropmts_extendedMonitoringObserver.disconnect();
     }
+    clearTimeout(window.__OCP_extendedMonitoringExpiry);
+    clearTimeout(window.__OCP_extendedMonitoringProbe);
+    window.__OCP_extendedMonitoringProbe = null;
 
     // Create new observer
-    window.OneClickPropmts_extendedMonitoringObserver = new MutationObserver((mutations) => {
-        // Also check the toggle flag here to avoid reacting to our own changes.
-        if (!window.OneClickPrompts_isTogglingPanel && !doCustomModificationsExist()) {
-            logConCgp('[button-injection] Modifications missing during extended monitoring - reinserting');
-            enforceResiliencyMeasures();
-        }
+    const observer = new MutationObserver(() => {
+        if (window.__OCP_extendedMonitoringProbe !== null) return;
+        window.__OCP_extendedMonitoringProbe = setTimeout(() => {
+            window.__OCP_extendedMonitoringProbe = null;
+            if (window.OneClickPropmts_extendedMonitoringObserver !== observer) return;
+            // Let the existing search finish; restarting it on every mutation prevents timeout/recovery.
+            if (window.OneClickPrompts_isTogglingPanel || window.MaxExtensionFloatingPanel?.isPanelVisible
+                || window.__OCP_inlineSearchController?.isPending?.()) return;
+            if (!doCustomModificationsExist()) {
+                logConCgp('[button-injection] Modifications missing during extended monitoring - reinserting');
+                enforceResiliencyMeasures();
+            }
+        }, 150);
     });
+    window.OneClickPropmts_extendedMonitoringObserver = observer;
 
     // Start observing
     window.OneClickPropmts_extendedMonitoringObserver.observe(document.body, {
@@ -399,10 +411,12 @@ function startExtendedMonitoringWithObserver() {
     });
 
     // Set up automatic cleanup after 2 hours
-    setTimeout(() => {
-        if (window.OneClickPropmts_extendedMonitoringObserver) {
-            window.OneClickPropmts_extendedMonitoringObserver.disconnect();
+    window.__OCP_extendedMonitoringExpiry = setTimeout(() => {
+        if (window.OneClickPropmts_extendedMonitoringObserver === observer) {
+            observer.disconnect();
             window.OneClickPropmts_extendedMonitoringObserver = null;
+            clearTimeout(window.__OCP_extendedMonitoringProbe);
+            window.__OCP_extendedMonitoringProbe = null;
             logConCgp('[button-injection] Extended monitoring period complete');
         }
     }, EXTENDED_CHECK_DURATION);

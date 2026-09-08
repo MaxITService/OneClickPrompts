@@ -26,6 +26,7 @@ const SMART_VARIABLE_BUILTINS = [
 ];
 
 function normalizeSmartVariableSettings(settings = {}) {
+    settings = settings && typeof settings === 'object' ? settings : {};
     const customVariables = Array.isArray(settings.customVariables) ? settings.customVariables : [];
     return {
         enabled: settings.enabled === true,
@@ -46,24 +47,23 @@ async function loadSmartVariableSettings() {
         return normalizeSmartVariableSettings(result?.[OCP_PROMPT_VARIABLES_STORAGE_KEY]);
     } catch (error) {
         logToGUIConsole(`Error loading smart variables: ${error.message}`);
-        return normalizeSmartVariableSettings();
+        throw error;
     }
 }
 
 async function saveSmartVariableSettings(settings) {
     const normalized = normalizeSmartVariableSettings(settings);
-    await chrome.storage.local.set({ [OCP_PROMPT_VARIABLES_STORAGE_KEY]: normalized });
-    return normalized;
+    return await persistSmartVariablePatch(normalized);
 }
 
 async function saveSmartVariableEnabled(enabled) {
-    const savedSettings = await loadSmartVariableSettings();
-    const normalized = normalizeSmartVariableSettings({
-        ...savedSettings,
-        enabled: enabled === true
-    });
-    await chrome.storage.local.set({ [OCP_PROMPT_VARIABLES_STORAGE_KEY]: normalized });
-    return normalized;
+    return await persistSmartVariablePatch({ enabled: enabled === true });
+}
+
+async function persistSmartVariablePatch(settings) {
+    const response = await chrome.runtime.sendMessage({ type: 'savePromptVariableSettings', settings });
+    if (response?.success !== true) throw new Error(response?.error || 'Unable to save smart variables.');
+    return response.settings;
 }
 
 function insertIntoButtonText(token) {
@@ -201,6 +201,7 @@ async function initializeSmartVariablesPanel() {
     if (enabledToggle) {
         enabledToggle.checked = draft.enabled;
         enabledToggle.addEventListener('change', async () => {
+            panel.inert = true;
             const previousEnabled = draft.enabled;
             const nextEnabled = enabledToggle.checked;
             draft.enabled = nextEnabled;
@@ -214,6 +215,8 @@ async function initializeSmartVariablesPanel() {
                 enabledToggle.checked = previousEnabled;
                 logToGUIConsole(`Error saving smart variables toggle: ${error.message}`);
                 showToast('Could not update smart variables toggle.', 'error');
+            } finally {
+                panel.inert = false;
             }
         });
     }
@@ -226,12 +229,25 @@ async function initializeSmartVariablesPanel() {
     });
 
     saveButton?.addEventListener('click', async () => {
-        draft = await saveSmartVariableSettings(draft);
-        renderSmartVariableCustomList(draft);
-        showToast('Smart variables saved.', 'success');
+        panel.inert = true;
+        try {
+            draft = await saveSmartVariableSettings(draft);
+            renderSmartVariableCustomList(draft);
+            showToast('Smart variables saved.', 'success');
+        } catch (error) {
+            logToGUIConsole(`Error saving smart variables: ${error.message}`);
+            showToast('Could not save smart variables. Your edits are still here; retry saving.', 'error');
+        } finally {
+            panel.inert = false;
+        }
     });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    initializeSmartVariablesPanel();
+    initializeSmartVariablesPanel().catch(error => {
+        const panel = document.getElementById('smartVariablesPanel');
+        if (panel) panel.inert = true;
+        logToGUIConsole(`Error initializing smart variables: ${error.message}`);
+        showToast('Could not load smart variables. Reopen the popup to retry.', 'error');
+    });
 });

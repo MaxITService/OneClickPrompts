@@ -1,8 +1,9 @@
 {
   "name": "one-click-prompts-tests",
   "private": true,
+  "type": "module",
   "scripts": {
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test --test-reporter=spec tests/*.test.mjs"
   },
   "engines": {
     "node": ">=22.18.0"

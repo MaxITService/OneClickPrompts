@@ -24,6 +24,13 @@ export function createClock() {
             return id;
         },
         clearTimeout(id) { pending.delete(id); },
+        setInterval(callback, delay = 0) {
+            const id = ++nextId;
+            const interval = Math.max(1, delay);
+            pending.set(id, { callback, at: now + interval, interval });
+            return id;
+        },
+        clearInterval(id) { pending.delete(id); },
         async advance(duration) {
             const target = now + duration;
             let count = 0;
@@ -33,7 +40,8 @@ export function createClock() {
                 if (!next) break;
                 if (++count > 1000) throw new Error('Timer loop exceeded the test safety limit');
                 now = next[1].at;
-                pending.delete(next[0]);
+                if (next[1].interval) next[1].at += next[1].interval;
+                else pending.delete(next[0]);
                 next[1].callback();
                 await settle();
             }

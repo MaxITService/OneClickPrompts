@@ -10,10 +10,20 @@ import { logConfigurationRelatedStuff, handleStorageError, loadDefaultConfig } f
 
 // Function to normalize profile configuration with default values
 export function normalizeProfileConfig(profile, profileName) {
+    if (!profile || typeof profile !== 'object' || Array.isArray(profile)) {
+        throw new Error(`Profile "${profileName}" has invalid data.`);
+    }
+    profile.PROFILE_NAME = profileName;
     // Ensure the profile has a 'customButtons' property
-    if (!profile.customButtons) {
+    if (profile.customButtons === undefined) {
         profile.customButtons = [];
         logConfigurationRelatedStuff(`Initialized missing 'customButtons' for profile: ${profileName}`);
+    }
+    if (!Array.isArray(profile.customButtons) || profile.customButtons.some(button => (
+        !button || typeof button !== 'object' || Array.isArray(button)
+        || (button.separator !== true && (typeof button.text !== 'string' || typeof button.icon !== 'string'))
+    ))) {
+        throw new Error(`Profile "${profileName}" has an invalid button list.`);
     }
     // Ensure queue settings exist for backward compatibility
     if (typeof profile.queueDelayMinutes === 'undefined') {
@@ -126,7 +136,7 @@ export async function loadProfileConfig(profileName) {
         }
     } catch (error) {
         handleStorageError(error);
-        return null;
+        throw error;
     }
 }
 
@@ -158,13 +168,17 @@ export async function broadcastProfileChange(profileName, profileData, excludeTa
 export async function saveProfileConfig(profileName, config, options = {}) {
     logConfigurationRelatedStuff(`Saving profile: ${profileName}`);
     try {
+        if (typeof profileName !== 'string' || !profileName.trim()
+            || !config || !Array.isArray(config.customButtons)) {
+            throw new Error('Invalid profile configuration.');
+        }
+        config = normalizeProfileConfig(structuredClone(config), profileName);
         const excludeTabId = Number.isInteger(options?.excludeTabId) ? options.excludeTabId : null;
         const snapshot = await chrome.storage.local.get([`profiles.${profileName}`, 'currentProfile']);
         const existingConfig = snapshot[`profiles.${profileName}`];
         const wasActiveProfile = snapshot.currentProfile ? snapshot.currentProfile === profileName : true;
 
         await chrome.storage.local.set({
-            'currentProfile': profileName,
             [`profiles.${profileName}`]: config
         });
         logConfigurationRelatedStuff(`Profile ${profileName} saved successfully`);
@@ -223,6 +237,12 @@ export async function getCurrentProfileConfig() {
             }
         }
 
+        // A missing active name must not wipe an existing Default profile.
+        const existingDefault = await loadProfileConfig('Default');
+        if (existingDefault) {
+            await chrome.storage.local.set({ currentProfile: 'Default' });
+            return normalizeProfileConfig(existingDefault, 'Default');
+        }
         logConfigurationRelatedStuff('No valid current profile found. Creating default profile');
         const defaultProfile = await createDefaultProfile();
         return normalizeProfileConfig(defaultProfile, 'Default');
@@ -246,7 +266,7 @@ export async function listProfiles() {
         return profiles;
     } catch (error) {
         handleStorageError(error);
-        return ['Default'];
+        throw error;
     }
 }
 

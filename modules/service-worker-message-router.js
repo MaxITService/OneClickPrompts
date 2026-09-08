@@ -7,6 +7,7 @@ Extracted from config.js to improve maintainability.
 'use strict';
 
 import { StateStore } from './service-worker-auxiliary-state-store.js';
+import { runStateOperation } from './service-worker-operation-queue.js';
 import {
     getCurrentProfileConfig,
     saveProfileConfig,
@@ -18,7 +19,7 @@ import {
     broadcastProfileChange,
     normalizeProfileConfig
 } from './service-worker-profile-manager.js';
-import { logConfigurationRelatedStuff, handleStorageError } from './service-worker-config-helpers.js';
+import { logConfigurationRelatedStuff, handleStorageError, loadDefaultConfig } from './service-worker-config-helpers.js';
 import {
     claimQueuePersistenceContext,
     saveQueuePersistenceSnapshot,
@@ -76,7 +77,7 @@ function sanitizeProfilesMap(rawProfiles) {
     const sanitizedProfiles = {};
     Object.entries(rawProfiles).forEach(([rawName, rawProfile]) => {
         const profileName = sanitizeProfileName(rawName);
-        if (!profileName || !isPlainObject(rawProfile)) {
+        if (!profileName || DANGEROUS_OBJECT_KEYS.has(profileName) || !isPlainObject(rawProfile)) {
             return;
         }
 
@@ -236,11 +237,12 @@ async function buildBackupPayload(scope = 'currentProfile') {
             ? 'allProfiles'
             : 'currentProfile';
     const currentResponse = await chrome.storage.local.get(['currentProfile', 'globalSettings', PROMPT_VARIABLES_STORAGE_KEY]);
-    const currentProfileName = sanitizeProfileName(currentResponse.currentProfile) || 'Default';
+    let currentProfileName = sanitizeProfileName(currentResponse.currentProfile) || 'Default';
     const profiles = {};
 
     if (normalizedScope === 'currentProfile') {
         const currentProfile = await getCurrentProfileConfig();
+        currentProfileName = currentProfile.PROFILE_NAME;
         profiles[currentProfileName] = deepCloneSafeJson(currentProfile);
     } else {
         const profileNames = await listProfiles();
@@ -316,75 +318,15 @@ async function applyBackupPayload(rawPayload, options = {}) {
         importedProfiles.push(profileName);
     }
 
-    if (Object.keys(storagePatch).length > 0) {
-        await chrome.storage.local.set(storagePatch);
-    }
-
-    let appSettingsApplied = false;
+    const appSettingsApplied = !!backup.appSettings;
     if (backup.appSettings) {
-        const appSettings = backup.appSettings;
-
-        if (appSettings.theme === 'light' || appSettings.theme === 'dark') {
-            await StateStore.setUiTheme(appSettings.theme);
+        Object.assign(storagePatch, await StateStore.prepareBackupPatch(backup.appSettings));
+        if (backup.appSettings.globalSettings) {
+            storagePatch.globalSettings = deepCloneSafeJson(backup.appSettings.globalSettings);
         }
-
-        if (isPlainObject(appSettings.globalSettings)) {
-            await chrome.storage.local.set({ globalSettings: deepCloneSafeJson(appSettings.globalSettings) });
+        if (backup.appSettings.promptVariables) {
+            storagePatch[PROMPT_VARIABLES_STORAGE_KEY] = sanitizePromptVariables(backup.appSettings.promptVariables);
         }
-
-        if (isPlainObject(appSettings.crossChatSettings)) {
-            await StateStore.saveCrossChat(appSettings.crossChatSettings);
-        }
-
-        if (typeof appSettings.crossChatStoredPrompt === 'string') {
-            await StateStore.saveStoredPrompt(appSettings.crossChatStoredPrompt);
-        }
-
-        if (isPlainObject(appSettings.inlineProfileSelector)) {
-            await StateStore.saveInlineProfileSelectorSettings(appSettings.inlineProfileSelector);
-        }
-
-        if (isPlainObject(appSettings.tokenApproximator)) {
-            await StateStore.saveTokenApproximatorSettings(appSettings.tokenApproximator);
-        }
-
-        if (isPlainObject(appSettings.selectorAutoDetector)) {
-            await StateStore.saveSelectorAutoDetectorSettings(appSettings.selectorAutoDetector);
-        }
-
-        if (isPlainObject(appSettings.tooltip)) {
-            await StateStore.saveTooltipSettings(appSettings.tooltip);
-        }
-
-        if (isPlainObject(appSettings.manualQueueCards)) {
-            await StateStore.saveManualQueueCards(appSettings.manualQueueCards);
-        }
-
-        if (isPlainObject(appSettings.promptVariables)) {
-            await chrome.storage.local.set({ [PROMPT_VARIABLES_STORAGE_KEY]: sanitizePromptVariables(appSettings.promptVariables) });
-        }
-
-        if (isPlainObject(appSettings.floatingPanel)) {
-            await StateStore.resetFloatingPanelSettings();
-            for (const [hostname, settings] of Object.entries(appSettings.floatingPanel)) {
-                if (!hostname || !isPlainObject(settings)) {
-                    continue;
-                }
-                await StateStore.saveFloatingPanelSettings(hostname, deepCloneSafeJson(settings));
-            }
-        }
-
-        if (isPlainObject(appSettings.customSelectors)) {
-            await StateStore.resetAdvancedSelectors();
-            for (const [site, selectors] of Object.entries(appSettings.customSelectors)) {
-                if (!site || !isPlainObject(selectors)) {
-                    continue;
-                }
-                await StateStore.saveCustomSelectors(site, deepCloneSafeJson(selectors));
-            }
-        }
-
-        appSettingsApplied = true;
     }
 
     const importedProfileSet = new Set(importedProfiles);
@@ -393,12 +335,17 @@ async function applyBackupPayload(rawPayload, options = {}) {
         nextCurrentProfile = importedProfiles[0] || sanitizeProfileName((await chrome.storage.local.get(['currentProfile'])).currentProfile) || 'Default';
     }
 
-    await chrome.storage.local.set({ currentProfile: nextCurrentProfile });
-    let activeProfile = await loadProfileConfig(nextCurrentProfile);
+    let activeProfile = storagePatch[`profiles.${nextCurrentProfile}`] || await loadProfileConfig(nextCurrentProfile);
     if (!activeProfile) {
-        activeProfile = await createDefaultProfile();
         nextCurrentProfile = 'Default';
+        activeProfile = await loadProfileConfig('Default') || await loadDefaultConfig();
+        storagePatch['profiles.Default'] = normalizeProfileConfig(activeProfile, 'Default');
     }
+    activeProfile = normalizeProfileConfig(activeProfile, nextCurrentProfile);
+    storagePatch.currentProfile = nextCurrentProfile;
+    // Submit the fully prepared profiles, settings, and active name in one write.
+    await chrome.storage.local.set(storagePatch);
+    await StateStore.broadcastBackupPatch(storagePatch);
     if (activeProfile) {
         await broadcastProfileChange(nextCurrentProfile, normalizeProfileConfig(activeProfile, nextCurrentProfile), null, 'backupImport');
     }
@@ -409,6 +356,30 @@ async function applyBackupPayload(rawPayload, options = {}) {
         appSettingsApplied,
         currentProfile: nextCurrentProfile,
     };
+}
+
+async function ensurePromptVariableExample(profileName) {
+    const data = await chrome.storage.local.get(['currentProfile', PROMPT_VARIABLES_STORAGE_KEY]);
+    const settings = sanitizePromptVariables(data[PROMPT_VARIABLES_STORAGE_KEY]);
+    if (!settings.enabled || settings.dateExampleInitialized || data.currentProfile !== profileName) {
+        return { success: true, added: false };
+    }
+    const stored = await loadProfileConfig(profileName);
+    if (!stored) return { success: false, error: 'Profile not found.' };
+    const config = normalizeProfileConfig(stored, profileName);
+    const exists = config.customButtons.some(button => !button.separator && (
+        button.__ocpSmartVariableExample === 'today' || button.text === 'Today is {{today}}.'
+    ));
+    if (!exists) config.customButtons.push({
+        icon: '📅', text: 'Today is {{today}}.', autoSend: false, __ocpSmartVariableExample: 'today'
+    });
+    // Initialize against the latest stored profile, never a stale content-script snapshot.
+    await chrome.storage.local.set({
+        [`profiles.${profileName}`]: config,
+        [PROMPT_VARIABLES_STORAGE_KEY]: { ...settings, dateExampleInitialized: true }
+    });
+    if (!exists) await broadcastProfileChange(profileName, config, null, 'inline');
+    return { success: true, added: !exists, config, buttonIndex: config.customButtons.length - 1 };
 }
 
 async function createCustomButtonFromEditorText(payload = {}) {
@@ -465,9 +436,11 @@ async function updateCustomButtonFromEditorOptions(payload = {}) {
     let buttonIndex = Number.isInteger(requestedIndex) ? requestedIndex : -1;
     let button = profile.customButtons[buttonIndex];
     if (!button || button.separator || button.text !== text) {
-        buttonIndex = profile.customButtons.findLastIndex((candidate) => (
-            candidate && !candidate.separator && candidate.text === text
+        const matchingIndices = profile.customButtons.flatMap((candidate, index) => (
+            candidate && !candidate.separator && candidate.text === text ? [index] : []
         ));
+        if (matchingIndices.length > 1) return { success: false, reason: 'ambiguous_button' };
+        buttonIndex = matchingIndices[0] ?? -1;
         button = profile.customButtons[buttonIndex];
     }
 
@@ -492,7 +465,63 @@ async function updateCustomButtonFromEditorOptions(payload = {}) {
 
 // Main message handler function
 export function handleMessage(request, sender, sendResponse) {
+    if (!request || typeof request.type !== 'string') {
+        sendResponse({ success: false, error: 'A message type is required.' });
+        return false;
+    }
+    if (!PROFILE_OPERATION_TYPES.has(request.type)) return dispatchMessage(request, sender, sendResponse);
+    const capturedRequest = structuredClone(request);
+    void runStateOperation('profiles', () => new Promise((resolve, reject) => {
+        let responded = false;
+        const respond = response => {
+            if (responded) return;
+            responded = true;
+            // Closing a popup can invalidate its response channel after the write succeeds.
+            try { sendResponse(response); } catch (_) { /* The caller disconnected. */ }
+            resolve();
+        };
+        try {
+            dispatchMessage(capturedRequest, sender, respond);
+        } catch (error) {
+            reject(error);
+        }
+    })).catch(error => sendResponse({ success: false, error: String(error?.message || error) }));
+    return true;
+}
+
+const PROFILE_OPERATION_TYPES = new Set([
+    'getConfig', 'saveConfig', 'switchProfile', 'listProfiles', 'deleteProfile',
+    'createDefaultProfile', 'createCustomButtonFromEditorText',
+    'ensurePromptVariableExample', 'savePromptVariableSettings',
+    'updateCustomButtonFromEditorOptions', 'updateCustomButtonAutoSend',
+    'getBackupPayload', 'applyBackupPayload', 'clearStorage',
+    'saveGlobalSettings', 'setTheme', 'saveCustomSelectors', 'resetAdvancedSelectors',
+    'saveFloatingPanelSettings', 'resetFloatingPanelSettings', 'resetFloatingPanelSettingsForHostname',
+    'saveCrossChatModuleSettings', 'saveStoredPrompt', 'clearStoredPrompt',
+    'saveInlineProfileSelectorSettings', 'saveTokenApproximatorSettings',
+    'saveSelectorAutoDetectorSettings', 'saveTooltipSettings', 'saveManualQueueCards'
+]);
+
+function dispatchMessage(request, sender, sendResponse) {
     switch (request.type) {
+        case 'ensurePromptVariableExample':
+            ensurePromptVariableExample(request.profileName).then(sendResponse)
+                .catch(error => sendResponse({ success: false, error: String(error?.message || error) }));
+            return true;
+
+        case 'savePromptVariableSettings':
+            (async () => {
+                const data = await chrome.storage.local.get(PROMPT_VARIABLES_STORAGE_KEY);
+                const current = sanitizePromptVariables(data[PROMPT_VARIABLES_STORAGE_KEY]);
+                const settings = sanitizePromptVariables({
+                    ...current, ...request.settings,
+                    dateExampleInitialized: current.dateExampleInitialized
+                });
+                await chrome.storage.local.set({ [PROMPT_VARIABLES_STORAGE_KEY]: settings });
+                sendResponse({ success: true, settings });
+            })().catch(error => sendResponse({ success: false, error: String(error?.message || error) }));
+            return true;
+
         case 'getConfig':
             getCurrentProfileConfig().then(config => {
                 sendResponse({ config });
@@ -508,7 +537,7 @@ export function handleMessage(request, sender, sendResponse) {
             }).then(success => {
                 sendResponse({ success });
                 logConfigurationRelatedStuff('Config save request processed');
-            });
+            }).catch(error => sendResponse({ success: false, error: String(error?.message || error) }));
             return true;
 
         case 'switchProfile':
@@ -517,7 +546,7 @@ export function handleMessage(request, sender, sendResponse) {
                 // Echo the origin back to the initiator for clarity.
                 sendResponse({ config, origin: request.origin || null });
                 logConfigurationRelatedStuff('Profile switch request processed');
-            });
+            }).catch(error => sendResponse({ success: false, error: String(error?.message || error) }));
             return true;
 
         case 'createCustomButtonFromEditorText':
@@ -545,7 +574,7 @@ export function handleMessage(request, sender, sendResponse) {
             listProfiles().then(profiles => {
                 sendResponse({ profiles });
                 logConfigurationRelatedStuff('Profile list request processed');
-            });
+            }).catch(error => sendResponse({ success: false, error: String(error?.message || error) }));
             return true;
 
         case 'getBackupPayload':
@@ -591,7 +620,7 @@ export function handleMessage(request, sender, sendResponse) {
             deleteProfile(request.profileName).then(success => {
                 sendResponse({ success });
                 logConfigurationRelatedStuff('Profile deletion request processed');
-            });
+            }).catch(error => sendResponse({ success: false, error: String(error?.message || error) }));
             return true;
 
         case 'createDefaultProfile':

@@ -196,15 +196,17 @@ window.MaxExtensionFloatingPanel.saveGlobalSettings = function () {
  * Saves the current global config to storage for the active profile.
  */
 window.MaxExtensionFloatingPanel.saveCurrentProfileConfig = function (options = {}) {
-    if (!this.currentProfileName || !window.globalMaxExtensionConfig) {
+    const config = window.globalMaxExtensionConfig;
+    const profileName = config?.PROFILE_NAME;
+    if (!profileName || !config) {
         logConCgp('[floating-panel] Cannot save profile: profile name or config not available.');
         return;
     }
     const suppressSenderRefresh = options?.suppressSenderRefresh === true;
     chrome.runtime.sendMessage({
         type: 'saveConfig',
-        profileName: this.currentProfileName,
-        config: window.globalMaxExtensionConfig,
+        profileName,
+        config,
         suppressSenderRefresh
     }, (response) => {
         if (chrome.runtime.lastError) {

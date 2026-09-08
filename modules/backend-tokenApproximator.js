@@ -776,8 +776,32 @@
   }
 
   function listEditors() {
-    return Array.from(document.querySelectorAll(EDITOR_SELECTOR))
-      .filter(el => isVisible(el));
+    const configured = window.InjectionTargetsOnWebsite?.selectors?.editors;
+    const selectors = Array.isArray(configured) && configured.length ? configured : [EDITOR_SELECTOR];
+    const editors = new Set();
+    for (const selector of selectors) {
+      try {
+        for (const element of document.querySelectorAll(selector)) {
+          if (!isExtensionUiNode(element) && isVisible(element)) editors.add(element);
+        }
+      } catch (error) {
+        log('Skipping invalid editor selector:', selector, error?.message || error);
+      }
+    }
+    return [...editors];
+  }
+
+  function isExtensionUiNode(node) {
+    const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
+    return !!element?.closest('[id*="custom-buttons-container"], [id^="max-extension-"], .ocp-tokapprox-wrap');
+  }
+
+  function hasPageMutation(mutations) {
+    return mutations.some(mutation => {
+      if (isExtensionUiNode(mutation.target)) return false;
+      const changed = [...mutation.addedNodes, ...mutation.removedNodes];
+      return changed.length === 0 || changed.some(node => !isExtensionUiNode(node));
+    });
   }
 
   function editorsText() {
@@ -793,63 +817,7 @@
   }
 
   // ---- Schedulers: separate for thread and editor ----
-  function makeScheduler({ runFn, minCooldown = 1000 }) {
-    let dirty = false;
-    let running = false;
-    let lastRun = 0;
-    let scheduled = false;
-
-    function schedule(leading = false) {
-      if (document.visibilityState !== 'visible') return; // active tab only
-      const now = Date.now();
-      if (leading && !running && now - lastRun > minCooldown) {
-        tick();
-        return;
-      }
-      if (scheduled) return;
-      scheduled = true;
-      const cb = (deadline) => {
-        scheduled = false;
-        const since = Date.now() - lastRun;
-        if (since < minCooldown) {
-          setTimeout(() => schedule(false), minCooldown - since);
-          return;
-        }
-        if (dirty && !running) tick(deadline);
-      };
-      if ('requestIdleCallback' in window) {
-        requestIdleCallback(cb, { timeout: minCooldown + 200 });
-      } else {
-        requestAnimationFrame(() => cb(null));
-      }
-    }
-
-    async function tick(deadline) {
-      if (running) return;
-      running = true;
-      dirty = false;
-      lastRun = Date.now();
-      try {
-        await runFn(deadline);
-      } finally {
-        running = false;
-      }
-    }
-
-    return {
-      markDirty() { dirty = true; schedule(false); },
-      runNow() { if (!running) { dirty = true; schedule(true); } },
-      // Only clicking should bypass cooldown:
-      // expose an explicit forceNow() used exclusively by the click handler.
-      forceNow() {
-        if (running) { dirty = true; return; }
-        dirty = true;
-        lastRun = 0; // ensures schedule(true) runs immediately
-        schedule(true);
-      },
-      pauseInfo() { return { running }; }
-    };
-  }
+  const { makeScheduler } = window.OCPTokenApproxScheduler;
 
   // ---- Main init ----
   (async () => {
@@ -869,6 +837,7 @@
 
     // Check if threadRoot selector is defined for this site
     const effectiveSettings = { ...settings };
+    const isCounterEnabled = () => effectiveSettings.enabled === true && effectiveSettings.enabledSites?.[Site] === true;
     // If threadRoot is not defined and threadMode is not 'hide', hide thread counter
     if (!THREAD_SELECTOR && effectiveSettings.threadMode !== 'hide') {
       log(`Thread selector not defined for ${Site}, hiding thread counter`);
@@ -914,8 +883,7 @@
       setTooltip(editorChip, 'editor', 'loading', settings);
     } catch { }
 
-    // Worker shared for both schedulers
-    const worker = createEstimatorWorker();
+    // Each scheduler creates its worker lazily on the first estimate.
 
     // ---- INDEPENDENT COUNTER FUNCTIONS ----
     // Completely separate thread and editor estimation to prevent coupling issues
@@ -940,7 +908,7 @@
     function estimateThreadTokens(deadline) {
       return new Promise((resolve) => {
         // Skip if thread mode is hide or if no thread selector
-        if (effectiveSettings.threadMode === 'hide' || !THREAD_SELECTOR) {
+        if (!isCounterEnabled() || effectiveSettings.threadMode === 'hide' || !THREAD_SELECTOR) {
           return resolve();
         }
 
@@ -1078,7 +1046,7 @@
     function estimateEditorTokens(deadline) {
       return new Promise((resolve) => {
         // Skip if editor counter is disabled
-        if (!effectiveSettings.showEditorCounter) {
+        if (!isCounterEnabled() || !effectiveSettings.showEditorCounter) {
           return resolve();
         }
 
@@ -1178,17 +1146,20 @@
 
     // INDEPENDENT SCHEDULERS - Thread and Editor are now completely separate
     const threadScheduler = makeScheduler({
+      isEnabled: isCounterEnabled,
       minCooldown: Site === 'ChatGPT' ? 2500 : 15000,
       runFn: (deadline) => estimateThreadTokens(deadline)
     });
 
     const editorScheduler = makeScheduler({
+      isEnabled: isCounterEnabled,
       minCooldown: 600, // faster editor updates
       runFn: (deadline) => estimateEditorTokens(deadline)
     });
 
     // Replace the simple observer with one that can re-create the UI
     const keepInRow = new MutationObserver(() => {
+      if (!isCounterEnabled()) return;
       const container = document.getElementById(BUTTONS_CONTAINER_ID);
       if (!container) return; // Not an error, page might be changing
 
@@ -1218,9 +1189,9 @@
     const threadRoot = getThreadRoot();
     if (threadRoot) {
       // Only attach thread observer if there's actually a thread root
-      const mo = new MutationObserver(() => {
+      const mo = new MutationObserver(mutations => {
         // Only mark thread dirty, editors have their own observer
-        threadScheduler.markDirty();
+        if (hasPageMutation(mutations)) threadScheduler.markDirty();
       });
       mo.observe(threadRoot, { childList: true, characterData: true, subtree: true });
 
@@ -1241,9 +1212,9 @@
     }
 
     // Editors lifecycle is completely independent from thread
-    const moAll = new MutationObserver(() => {
+    const moAll = new MutationObserver(mutations => {
       // Only mark editor dirty on DOM changes
-      editorScheduler.markDirty();
+      if (hasPageMutation(mutations)) editorScheduler.markDirty();
     });
     moAll.observe(document.documentElement, { childList: true, subtree: true });
 
@@ -1251,7 +1222,7 @@
     document.addEventListener('input', (ev) => {
       const t = ev.target;
       if (!(t instanceof Element)) return;
-      if (t.matches(EDITOR_SELECTOR)) editorScheduler.markDirty();
+      if (!isExtensionUiNode(t) && (t.matches(EDITOR_SELECTOR) || t.closest('[contenteditable="true"]'))) editorScheduler.markDirty();
     }, true);
 
     // Visibility control - keeps thread and editor separate
@@ -1352,11 +1323,6 @@
       chrome.runtime.onMessage.addListener((msg) => {
         if (!msg || msg.type !== 'tokenApproximatorSettingsChanged' || !msg.settings) return;
 
-        // Store old enabled state for comparison
-        const wasEnabled = settings.enabled &&
-          settings.enabledSites &&
-          settings.enabledSites[Site];
-
         Object.assign(settings, {
           enabled: !!msg.settings.enabled,
           calibration: Number.isFinite(msg.settings.calibration) && msg.settings.calibration > 0 ? Number(msg.settings.calibration) : settings.calibration,
@@ -1372,16 +1338,18 @@
           settings.enabledSites &&
           settings.enabledSites[Site];
 
-        if (wasEnabled && !nowEnabled) {
+        // Update the guards before removing UI: the page observer must not recreate it.
+        Object.assign(effectiveSettings, settings);
+        if (!nowEnabled) {
           // Remove the UI if this site was disabled
           log(`Token Approximator was disabled for site: ${Site}, removing UI.`);
           const wrap = document.getElementById(WRAP_ID);
           if (wrap) wrap.remove();
+          clearThreadDeferRetry();
           return;
         }
 
         // Update effectiveSettings for this site
-        Object.assign(effectiveSettings, settings);
 
         // Check if threadRoot selector is defined for this site
         if (!THREAD_SELECTOR && effectiveSettings.threadMode !== 'hide') {

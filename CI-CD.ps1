@@ -2,8 +2,8 @@
 # --------------------------- Configuration --------------------------- #
 
 # Define exclusions
-$excludedDirs = @('Promo')   # Additional directories to exclude
-$excludedFiles = @('.gitignore', 'CI-CD.ps1', '.aider.chat.history.md', '.aider.input.history', 'notes.txt', 'instructions.txt', 'Full_logo.png', 'prompt-update.md')  # Files to exclude
+$excludedDirs = @('Promo', 'node_modules', 'tests', 'coverage')   # Additional directories to exclude
+$excludedFiles = @('.gitignore', 'CI-CD.ps1', '.aider.chat.history.md', '.aider.input.history', 'notes.txt', 'instructions.txt', 'Full_logo.png', 'prompt-update.md', 'package.json', 'package-lock.json')  # Files to exclude
 
 # Define the source directory as the current working directory
 $source = Get-Location
