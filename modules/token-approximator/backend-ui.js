@@ -165,6 +165,7 @@
       case 'fresh': postfix = 'updated just now'; break;
       case 'stale': postfix = 'stale - click to re-estimate'; break;
       case 'paused': postfix = 'paused while tab inactive'; break;
+      case 'error': postfix = 'unavailable - chat controls or counting could not be read'; break;
       default: postfix = ''; break;
     }
 
@@ -182,6 +183,10 @@
 
   function setTooltip(el, kind, status, settings) {
     if (!el) return;
+    if (status === 'error' && el.__staleTimer) {
+      clearTimeout(el.__staleTimer);
+      el.__staleTimer = null;
+    }
     setLoadingVisual(el, status === 'loading');
     const next = buildTooltip(kind, status, settings);
     if (el.__tooltipText !== next) {
@@ -223,6 +228,8 @@
 
   function markLoading(el, kind, settings) {
     if (!el) return;
+    // Automatic retries keep an unavailable counter steady until a valid result arrives.
+    if (el.__tooltipStatus === 'error') return;
     if (el.__staleTimer) {
       clearTimeout(el.__staleTimer);
       el.__staleTimer = null;
@@ -232,6 +239,7 @@
 
   function markPaused(el, kind, settings) {
     if (!el) return;
+    if (el.__tooltipStatus === 'error') return;
     setTooltip(el, kind, 'paused', settings);
   }
 

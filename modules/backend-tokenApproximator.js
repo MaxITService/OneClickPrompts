@@ -388,6 +388,7 @@
       case 'fresh': postfix = 'updated just now'; break;
       case 'stale': postfix = 'stale — click to re-estimate'; break;
       case 'paused': postfix = 'paused while tab inactive'; break;
+      case 'error': postfix = 'unavailable - chat controls or counting could not be read'; break;
       default: postfix = ''; break;
     }
     // CTA: always present on thread; also helpful on editor
@@ -403,6 +404,10 @@
 
   function fallbackSetTooltip(el, kind, status, settings) {
     if (!el) return;
+    if (status === 'error' && el.__staleTimer) {
+      clearTimeout(el.__staleTimer);
+      el.__staleTimer = null;
+    }
     fallbackSetLoadingVisual(el, status === 'loading');
     const next = buildTooltip(kind, status, settings);
     if (el.__tooltipText !== next) {
@@ -454,6 +459,7 @@
   }
 
   function fallbackMarkLoading(el, kind, settings) {
+    if (el?.__tooltipStatus === 'error') return;
     if (el?.__staleTimer) {
       clearTimeout(el.__staleTimer);
       el.__staleTimer = null;
@@ -462,6 +468,7 @@
   }
 
   function fallbackMarkPaused(el, kind, settings) {
+    if (el?.__tooltipStatus === 'error') return;
     // No class toggling; keep tooltip update
     setTooltip(el, kind, 'paused', settings);
   }
@@ -509,7 +516,7 @@
       }
       return { ok: true, estimates: out, modelUsed: model.getMetadata().id, requestId: data.requestId ?? null };
     } catch (err) {
-      return { ok: false, error: (err && err.message) || String(err) };
+      return { ok: false, error: (err && err.message) || String(err), requestId: data?.requestId ?? null };
     }
   }
 
@@ -644,7 +651,7 @@
     const selectors = (window.InjectionTargetsOnWebsite && window.InjectionTargetsOnWebsite.selectors) || {};
     const threadSelector = selectors.threadRoot;
     if (!threadSelector) return null;
-    return document.querySelector(threadSelector);
+    try { return document.querySelector(threadSelector); } catch { return null; }
   }
 
   function getChatGptThreadText() {
@@ -775,6 +782,7 @@
     }
   }
 
+  const invalidEditorSelectors = new Set();
   function listEditors() {
     const configured = window.InjectionTargetsOnWebsite?.selectors?.editors;
     const selectors = Array.isArray(configured) && configured.length ? configured : [EDITOR_SELECTOR];
@@ -785,7 +793,10 @@
           if (!isExtensionUiNode(element) && isVisible(element)) editors.add(element);
         }
       } catch (error) {
-        log('Skipping invalid editor selector:', selector, error?.message || error);
+        if (!invalidEditorSelectors.has(selector)) {
+          invalidEditorSelectors.add(selector);
+          log('Skipping invalid editor selector:', selector, error?.message || error);
+        }
       }
     }
     return [...editors];
@@ -804,9 +815,9 @@
     });
   }
 
-  function editorsText() {
+  function editorsText(editors = listEditors()) {
     const parts = [];
-    for (const el of listEditors()) {
+    for (const el of editors) {
       if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') {
         parts.push(el.value || '');
       } else {
@@ -888,8 +899,9 @@
     // ---- INDEPENDENT COUNTER FUNCTIONS ----
     // Completely separate thread and editor estimation to prevent coupling issues
 
-    let sharedThreadWorker = null;
-    let threadRequestSeq = 0;
+    const threadClient = window.OCPTokenApproxWorkerClient.create({ createWorker: createEstimatorWorker });
+    const editorClient = window.OCPTokenApproxWorkerClient.create({ createWorker: createEstimatorWorker });
+    let counterRevision = 0;
     let threadDeferRetryTimer = null;
     function scheduleThreadDeferRetry(delayMs = 1200) {
       if (threadDeferRetryTimer) clearTimeout(threadDeferRetryTimer);
@@ -905,256 +917,94 @@
       threadDeferRetryTimer = null;
     }
 
-    function estimateThreadTokens(deadline) {
-      return new Promise((resolve) => {
-        // Skip if thread mode is hide or if no thread selector
-        if (!isCounterEnabled() || effectiveSettings.threadMode === 'hide' || !THREAD_SELECTOR) {
-          return resolve();
-        }
+    function resetCounterRequests() {
+      counterRevision++;
+      threadClient.reset();
+      editorClient.reset();
+      clearThreadDeferRetry();
+    }
 
-        // Check deadline to avoid blocking main thread if time is tight
-        if (deadline && deadline.timeRemaining() < 2 && !deadline.didTimeout) {
-          if (typeof threadScheduler !== 'undefined') threadScheduler.markDirty();
-          return resolve();
-        }
+    async function estimateTokens(kind, deadline) {
+      const isThread = kind === 'thread';
+      if (!isCounterEnabled() || (isThread
+        ? effectiveSettings.threadMode === 'hide' || !THREAD_SELECTOR
+        : !effectiveSettings.showEditorCounter)) return;
+      const scheduler = isThread ? threadScheduler : editorScheduler;
+      if (deadline && deadline.timeRemaining() < 2 && !deadline.didTimeout) {
+        scheduler.markDirty();
+        return;
+      }
 
-        const wrap = document.getElementById(WRAP_ID);
-        if (!wrap) return resolve();
-        const threadChip = wrap.querySelector('.ocp-tokapprox-chip[data-kind="thread"]');
-        if (!threadChip) return resolve();
-        const requestId = ++threadRequestSeq;
-
-        // Reuse dedicated worker for thread estimation
-        if (!sharedThreadWorker) sharedThreadWorker = createEstimatorWorker();
-        const threadWorker = sharedThreadWorker;
-
-        threadWorker.onmessage = (ev) => {
-          try {
-            const currentWrap = document.getElementById(WRAP_ID);
-            if (!currentWrap) return resolve();
-            const currentThreadChip = currentWrap.querySelector('.ocp-tokapprox-chip[data-kind="thread"]');
-            if (!currentThreadChip) return resolve();
-
-            const { ok, estimates, modelUsed, error, requestId: responseRequestId } = ev.data || {};
-            if (responseRequestId !== requestId) {
-              return;
-            }
-
-            if (!ok) {
-              log(`Thread estimation failed: ${error || 'Unknown error'}`);
-              currentThreadChip.querySelector('.val').textContent = '-------';
-              clearThreadDeferRetry();
-              setTooltip(currentThreadChip, 'thread', 'error', effectiveSettings);
-              return resolve();
-            }
-
-            if (!estimates || !estimates.threadText) {
-              log('Thread estimation returned no data');
-              currentThreadChip.querySelector('.val').textContent = '-------';
-              clearThreadDeferRetry();
-              setTooltip(currentThreadChip, 'thread', 'error', effectiveSettings);
-              return resolve();
-            }
-
-            // log(`Thread estimation success: ${modelUsed}`);
-            const tokens = estimates.threadText;
-            currentThreadChip.querySelector('.val').textContent = formatTokens(tokens);
-            clearThreadDeferRetry();
-            markThreadEstimateDone(currentThreadChip, effectiveSettings);
-
-          } catch (err) {
-            log(`Thread estimation error: ${err.message}`);
-          } finally {
-            // Do not terminate shared worker
-            resolve();
-          }
-        };
-
-        threadWorker.onerror = () => {
-          log('Thread worker error');
-          clearThreadDeferRetry();
-          const currentThreadChip = document.querySelector('.ocp-tokapprox-chip[data-kind="thread"]');
-          if (currentThreadChip) {
-            currentThreadChip.querySelector('.val').textContent = '-------';
-            setTooltip(currentThreadChip, 'thread', 'error', effectiveSettings);
-          }
-          threadWorker.terminate();
-          sharedThreadWorker = null;
-          resolve();
-        };
-
-        try {
-          // Get thread text with error isolation
-          const rootTxt = getThreadText(effectiveSettings.threadMode === 'ignoreEditors');
-          const edTxt = editorsText();
-
-          let threadText = '';
-          if (effectiveSettings.threadMode === 'ignoreEditors') {
-            threadText = rootTxt;
-          } else {
-            threadText = `${rootTxt}\n${edTxt}`.trim();
-          }
-
-          if (!threadText) {
-            log('No thread text found');
-            threadChip.querySelector('.val').textContent = '-------';
-            clearThreadDeferRetry();
-            setTooltip(threadChip, 'thread', 'error', effectiveSettings);
-            // Do not terminate shared worker
-            return resolve();
-          }
-
+      const chip = document.querySelector(`.ocp-tokapprox-chip[data-kind="${kind}"]`);
+      if (!chip) return;
+      const revision = counterRevision;
+      const url = location.href;
+      const stillCurrent = () => revision === counterRevision && location.href === url
+        && chip.isConnected && isCounterEnabled();
+      try {
+        const editors = listEditors();
+        if (!isThread && editors.length === 0) throw new Error('Chat editor not found.');
+        const editorText = editorsText(editors);
+        let text = editorText;
+        if (isThread) {
+          const rootText = getThreadText(effectiveSettings.threadMode === 'ignoreEditors');
+          if (!rootText && !getThreadRoot()) throw new Error('Chat thread not found.');
+          text = effectiveSettings.threadMode === 'ignoreEditors' ? rootText : `${rootText}\n${editorText}`.trim();
+          if (!text) throw new Error('No thread text found.');
           if (shouldDeferThreadEstimate()) {
             const cacheState = chatGptThreadModule?.getState?.();
             if (cacheState?.warmupActive) {
-              threadChip.querySelector('.val').textContent = 'scan';
-              setTooltip(threadChip, 'thread', 'warming', effectiveSettings);
+              chip.querySelector('.val').textContent = 'scan';
+              setTooltip(chip, 'thread', 'warming', effectiveSettings);
             } else {
-              markLoading(threadChip, 'thread', effectiveSettings);
-              scheduleThreadDeferRetry();
+              markLoading(chip, 'thread', effectiveSettings);
             }
-            try {
-              if (cacheState?.lastChangedAt && Date.now() - cacheState.lastChangedAt < 2200) {
-                setTimeout(() => threadScheduler.markDirty(), 2200);
-              }
-            } catch { /* noop */ }
-            return resolve();
+            scheduleThreadDeferRetry();
+            return;
           }
+        } else if (!text.trim()) {
+          chip.querySelector('.val').textContent = formatTokens(0);
+          markFreshThenStale(chip, 'editor', effectiveSettings);
+          return;
+        }
 
-          // Set loading state only after confirming there is thread text to process.
-          markLoading(threadChip, 'thread', effectiveSettings);
-
-          threadWorker.postMessage({
-            requestId,
-            texts: { threadText },
-            scale: settings.calibration,
-            countingMethod: settings.countingMethod
-          });
-
-        } catch (err) {
-          log(`Thread text extraction failed: ${err.message}`);
-          threadChip.querySelector('.val').textContent = '-------';
+        markLoading(chip, kind, effectiveSettings);
+        const key = isThread ? 'threadText' : 'editorText';
+        const result = await (isThread ? threadClient : editorClient).request({
+          texts: { [key]: text }, scale: settings.calibration, countingMethod: settings.countingMethod
+        });
+        if (!stillCurrent()) return;
+        const tokens = result?.estimates?.[key];
+        if (!result?.ok || !Number.isFinite(tokens) || tokens < 0) {
+          throw new Error(result?.error || 'The counter returned invalid data.');
+        }
+        chip.querySelector('.val').textContent = formatTokens(tokens);
+        if (isThread) {
           clearThreadDeferRetry();
-          setTooltip(threadChip, 'thread', 'error', effectiveSettings);
-          // Do not terminate shared worker
-          resolve();
+          markThreadEstimateDone(chip, effectiveSettings);
+        } else {
+          markFreshThenStale(chip, 'editor', effectiveSettings);
         }
-      });
+      } catch (error) {
+        if (!stillCurrent() || error?.name === 'AbortError') return;
+        if (chip.__tooltipStatus !== 'error') log(`${kind} estimation failed:`, error?.message || error);
+        const value = chip.querySelector('.val');
+        if (value.textContent !== '-------') value.textContent = '-------';
+        setTooltip(chip, kind, 'error', effectiveSettings);
+        if (isThread) clearThreadDeferRetry();
+      }
     }
-
-    let sharedEditorWorker = null;
-    function estimateEditorTokens(deadline) {
-      return new Promise((resolve) => {
-        // Skip if editor counter is disabled
-        if (!isCounterEnabled() || !effectiveSettings.showEditorCounter) {
-          return resolve();
-        }
-
-        // Check deadline
-        if (deadline && deadline.timeRemaining() < 2 && !deadline.didTimeout) {
-          if (typeof editorScheduler !== 'undefined') editorScheduler.markDirty();
-          return resolve();
-        }
-
-        const wrap = document.getElementById(WRAP_ID);
-        if (!wrap) return resolve();
-        const editorChip = wrap.querySelector('.ocp-tokapprox-chip[data-kind="editor"]');
-        if (!editorChip) return resolve();
-
-        // Reuse dedicated worker for editor estimation
-        if (!sharedEditorWorker) sharedEditorWorker = createEstimatorWorker();
-        const editorWorker = sharedEditorWorker;
-
-        editorWorker.onmessage = (ev) => {
-          try {
-            const currentWrap = document.getElementById(WRAP_ID);
-            if (!currentWrap) return resolve();
-            const currentEditorChip = currentWrap.querySelector('.ocp-tokapprox-chip[data-kind="editor"]');
-            if (!currentEditorChip) return resolve();
-
-            const { ok, estimates, modelUsed, error } = ev.data || {};
-
-            if (!ok) {
-              log(`Editor estimation failed: ${error || 'Unknown error'}`);
-              currentEditorChip.querySelector('.val').textContent = '-------';
-              setTooltip(currentEditorChip, 'editor', 'error', effectiveSettings);
-              return resolve();
-            }
-
-            if (!estimates || !Number.isFinite(estimates.editorText)) {
-              log('Editor estimation returned invalid data');
-              currentEditorChip.querySelector('.val').textContent = '-------';
-              setTooltip(currentEditorChip, 'editor', 'error', effectiveSettings);
-              return resolve();
-            }
-
-            // log(`Editor estimation success: ${modelUsed}`);
-            const tokens = estimates.editorText;
-            currentEditorChip.querySelector('.val').textContent = formatTokens(tokens);
-            markFreshThenStale(currentEditorChip, 'editor', effectiveSettings);
-
-          } catch (err) {
-            log(`Editor estimation error: ${err.message}`);
-          } finally {
-            // Do not terminate shared worker
-            resolve();
-          }
-        };
-
-        editorWorker.onerror = () => {
-          log('Editor worker error');
-          const currentEditorChip = document.querySelector('.ocp-tokapprox-chip[data-kind="editor"]');
-          if (currentEditorChip) {
-            currentEditorChip.querySelector('.val').textContent = '-------';
-            setTooltip(currentEditorChip, 'editor', 'error', effectiveSettings);
-          }
-          editorWorker.terminate();
-          sharedEditorWorker = null;
-          resolve();
-        };
-
-        try {
-          // Get editor text - completely independent of thread
-          const edTxt = editorsText();
-
-          if (!edTxt.trim()) {
-            // Empty editor is valid - show 0 tokens
-            editorChip.querySelector('.val').textContent = formatTokens(0);
-            markFreshThenStale(editorChip, 'editor', effectiveSettings);
-            // Do not terminate shared worker
-            return resolve();
-          }
-
-          // Set loading state only when there is actual text to estimate.
-          markLoading(editorChip, 'editor', effectiveSettings);
-
-          editorWorker.postMessage({
-            texts: { editorText: edTxt },
-            scale: settings.calibration,
-            countingMethod: settings.countingMethod
-          });
-
-        } catch (err) {
-          log(`Editor text extraction failed: ${err.message}`);
-          editorChip.querySelector('.val').textContent = '-------';
-          setTooltip(editorChip, 'editor', 'error', effectiveSettings);
-          // Do not terminate shared worker
-          resolve();
-        }
-      });
-    }
-
     // INDEPENDENT SCHEDULERS - Thread and Editor are now completely separate
     const threadScheduler = makeScheduler({
       isEnabled: isCounterEnabled,
       minCooldown: Site === 'ChatGPT' ? 2500 : 15000,
-      runFn: (deadline) => estimateThreadTokens(deadline)
+      runFn: (deadline) => estimateTokens('thread', deadline)
     });
 
     const editorScheduler = makeScheduler({
       isEnabled: isCounterEnabled,
       minCooldown: 600, // faster editor updates
-      runFn: (deadline) => estimateEditorTokens(deadline)
+      runFn: (deadline) => estimateTokens('editor', deadline)
     });
 
     // Replace the simple observer with one that can re-create the UI
@@ -1322,6 +1172,7 @@
     try {
       chrome.runtime.onMessage.addListener((msg) => {
         if (!msg || msg.type !== 'tokenApproximatorSettingsChanged' || !msg.settings) return;
+        resetCounterRequests();
 
         Object.assign(settings, {
           enabled: !!msg.settings.enabled,
@@ -1382,9 +1233,13 @@
     const handlePageNavigation = debounce(() => {
       log('Debounced navigation event triggered, forcing thread token update.');
       threadScheduler.forceNow();
+      editorScheduler.forceNow();
     }, 2000);
 
     // Listen for the custom event dispatched by init.js on SPA navigation.
-    document.addEventListener('ocp-page-navigated', handlePageNavigation);
+    document.addEventListener('ocp-page-navigated', () => {
+      resetCounterRequests();
+      handlePageNavigation();
+    });
   })();
 })();

@@ -69,6 +69,7 @@
         "/modules/token-approximator/backend-settings.js",
         "/modules/token-approximator/backend-ui.js",
         "/modules/token-approximator/backend-worker.js",
+        "/modules/token-approximator/backend-worker-client.js",
         "/modules/token-approximator/backend-scheduler.js",
         "/modules/token-approximator/backend-chatgpt-thread-cache.js",
         "/modules/deepseek-heuristics.js",

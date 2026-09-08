@@ -39,11 +39,7 @@
 
       const result = {};
       for (const key of Object.keys(texts)) {
-        try {
-          result[key] = model.estimate(texts[key] || '', scale);
-        } catch {
-          result[key] = 0;
-        }
+        result[key] = model.estimate(texts[key] || '', scale);
       }
 
       let modelId = resolvedModelId;
@@ -60,6 +56,7 @@
     } catch (err) {
       return {
         ok: false,
+        requestId: payload?.requestId ?? null,
         error: err && err.message ? err.message : String(err)
       };
     }
@@ -72,18 +69,18 @@
       const mockWorker = {
         onmessage: null,
         postMessage(data) {
-          const response = runEstimation(data);
           if (typeof mockWorker.onmessage === 'function') {
             setTimeout(() => {
+              if (!mockWorker.onmessage) return;
               try {
-                mockWorker.onmessage({ data: response });
+                mockWorker.onmessage({ data: runEstimation(data) });
               } catch {
                 /* ignore listener errors */
               }
             }, 0);
           }
         },
-        terminate() { /* noop */ }
+        terminate() { mockWorker.onmessage = null; }
       };
       return mockWorker;
     }
@@ -163,7 +160,24 @@ ${factoryListCode}
     `;
 
     const blob = new Blob([constructorsCode, '\n', workerBootstrap], { type: 'application/javascript' });
-    return new Worker(URL.createObjectURL(blob));
+    const url = URL.createObjectURL(blob);
+    try {
+      const worker = new Worker(url);
+      let released = false;
+      const releaseUrl = () => {
+        if (released) return;
+        released = true;
+        URL.revokeObjectURL(url);
+      };
+      worker.addEventListener('message', releaseUrl, { once: true });
+      worker.addEventListener('error', releaseUrl, { once: true });
+      const terminate = worker.terminate.bind(worker);
+      worker.terminate = () => { try { terminate(); } finally { releaseUrl(); } };
+      return worker;
+    } catch (error) {
+      URL.revokeObjectURL(url);
+      throw error;
+    }
   }
 
   window.OCPTokenApproxWorker = Object.freeze({

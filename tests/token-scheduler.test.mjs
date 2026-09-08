@@ -6,6 +6,7 @@ import { settle } from './helpers.mjs';
 async function setup(t) {
     const h = page(t);
     await h.load('modules/token-approximator/backend-scheduler.js');
+    await h.load('modules/token-approximator/backend-worker-client.js');
     return { ...h, create: h.w.OCPTokenApproxScheduler.makeScheduler };
 }
 
@@ -111,7 +112,7 @@ test('counter rendering cannot retrigger itself and manual queue fields are excl
         OCPTokenApproxWorker: { createEstimatorWorker: () => {
             const worker = { postMessage(payload) {
                 requests.push(payload);
-                h.clock.setTimeout(() => worker.onmessage({ data: { ok: true, estimates: { editorText: 3 } } }), 1);
+                h.clock.setTimeout(() => worker.onmessage({ data: { ok: true, requestId: payload.requestId, estimates: { editorText: 3 } } }), 1);
             } };
             return worker;
         } },
@@ -129,4 +130,64 @@ test('counter rendering cannot retrigger itself and manual queue fields are excl
     await h.clock.advance(1000);
     assert.equal(requests.length, 2);
     assert.equal(requests[1].texts.editorText, 'edited prompt');
+});
+
+test('unknown editor DOM stays unavailable without loading flashes and recovers when the composer returns', async t => {
+    const h = await setup(t);
+    h.w.document.body.innerHTML = '<div id="buttons"></div><textarea id="composer">text</textarea>';
+    h.w.HTMLElement.prototype.getBoundingClientRect = () => ({ width: 100, height: 40 });
+    const requests = [];
+    Object.assign(h.w, {
+        InjectionTargetsOnWebsite: { activeSite: 'ChatGPT', selectors: { buttonsContainerId: 'buttons', editors: ['#composer'], threadRoot: '[invalid' } },
+        OCPTokenApproxSettings: { loadSettings: async () => ({
+            enabled: true, enabledSites: { ChatGPT: true }, threadMode: 'ignoreEditors', showEditorCounter: true
+        }) },
+        OCPTokenApproxWorker: { createEstimatorWorker: () => {
+            const worker = { postMessage(payload) {
+                requests.push(payload);
+                h.clock.setTimeout(() => worker.onmessage?.({ data: { ok: true, requestId: payload.requestId, estimates: { editorText: 3 } } }), 1);
+            }, terminate() {} };
+            return worker;
+        } },
+        chrome: { runtime: { onMessage: { addListener() {} } } }
+    });
+    await h.load('modules/token-approximator/backend-ui.js');
+    await h.load('modules/backend-tokenApproximator.js');
+    await settle();
+    await h.clock.advance(1000);
+    const editorChip = h.w.document.querySelector('[data-kind="editor"]');
+    const threadChip = h.w.document.querySelector('[data-kind="thread"]');
+    assert.equal(editorChip.__tooltipStatus, 'fresh');
+    assert.equal(threadChip.__tooltipStatus, 'error');
+    h.w.document.getElementById('composer').remove();
+    await settle();
+    await h.clock.advance(1000);
+    assert.equal(editorChip.__tooltipStatus, 'error');
+    assert.match(editorChip.title, /unavailable/);
+    let loadingFlashes = 0;
+    // Observe actual resulting classes on mutations, including visibility-triggered retries.
+    const observer = new h.w.MutationObserver(() => {
+        if (editorChip.classList.contains('ocp-tokapprox-loading') || threadChip.classList.contains('ocp-tokapprox-loading')) loadingFlashes++;
+    });
+    observer.observe(h.w.document.body, { attributes: true, subtree: true });
+    for (let index = 0; index < 4; index++) {
+        h.w.document.body.append(h.w.document.createElement('span'));
+        Object.defineProperty(h.w.document, 'visibilityState', { configurable: true, value: 'hidden' });
+        h.w.document.dispatchEvent(new h.w.Event('visibilitychange'));
+        Object.defineProperty(h.w.document, 'visibilityState', { configurable: true, value: 'visible' });
+        h.w.document.dispatchEvent(new h.w.Event('visibilitychange'));
+        await settle();
+        await h.clock.advance(3000);
+    }
+    assert.equal(loadingFlashes, 0);
+    assert.equal(editorChip.__tooltipStatus, 'error', 'The old stale timer must not erase unavailable state');
+    assert.equal(requests.length, 1);
+    const composer = h.w.document.createElement('textarea');
+    composer.id = 'composer'; composer.value = 'restored';
+    h.w.document.body.append(composer);
+    await settle();
+    await h.clock.advance(1000);
+    assert.equal(editorChip.__tooltipStatus, 'fresh');
+    assert.equal(requests.length, 2);
+    observer.disconnect();
 });

@@ -10,5 +10,7 @@ test('the manifest content scripts exist and parse together in their declared or
         const scripts = await Promise.all(paths.map(source));
         new vm.Script(scripts.join('\n;\n'));
         assert.ok(paths.indexOf('modules/token-approximator/backend-scheduler.js') < paths.indexOf('modules/backend-tokenApproximator.js'));
+        assert.ok(paths.includes('modules/token-approximator/backend-worker-client.js'));
+        assert.ok(paths.indexOf('modules/token-approximator/backend-worker-client.js') < paths.indexOf('modules/backend-tokenApproximator.js'));
     }
 });
