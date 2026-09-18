@@ -392,7 +392,8 @@ class InjectionTargetsOnWebsite {
             },
             Claude: {
                 containers: [
-                    'div:has(> div.tiptap.ProseMirror[contenteditable="true"][aria-label="Write your prompt to Claude"])',
+                    'div.rounded-composer:has(div.tiptap.ProseMirror[contenteditable="true"][aria-label="Write your prompt to Claude"])',
+                    'div.rounded-composer:has(div.tiptap.ProseMirror[contenteditable="true"][data-testid="chat-input"])',
                     'div.flex.flex-col.bg-bg-000.rounded-2xl',
                     'div.flex.flex-col.bg-bg-000.gap-1\\.5'
                 ],
