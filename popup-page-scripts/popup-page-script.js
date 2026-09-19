@@ -912,6 +912,17 @@ function resetProfileActionsUI() {
     if (currentProfileNameStatic) currentProfileNameStatic.classList.add('is-hidden');
     currentProfileLabel.classList.add('is-hidden');
 }
+
+/**
+ * Treats Enter inside a profile-name input as a click on its Save button.
+ * @param {KeyboardEvent} event - The keydown event from the input.
+ * @param {HTMLButtonElement} saveButton - The Save button paired with the input.
+ */
+function submitProfileNameOnEnter(event, saveButton) {
+    if (event.key !== 'Enter' || event.isComposing || event.repeat) return;
+    event.preventDefault();
+    saveButton.click();
+}
 // -------------------------
 // 9. Event Listeners
 // -------------------------
@@ -937,6 +948,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentProfileNameStatic.classList.remove('is-hidden');
         }
         currentProfileLabel.classList.remove('is-hidden');
+        addProfileInput.focus();
     });
 
     // Copy Profile Button Click
@@ -954,6 +966,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentProfileNameStatic.classList.remove('is-hidden');
         }
         currentProfileLabel.classList.remove('is-hidden');
+        copyProfileInput.focus();
     });
 
     // Save Add Profile Button Click
@@ -1136,6 +1149,10 @@ document.addEventListener('DOMContentLoaded', () => {
             copyProfileInput.classList.remove('input-error');
         }
     });
+
+    // Enter inside a profile-name input saves it, exactly like the Save button beside it.
+    addProfileInput.addEventListener('keydown', (event) => submitProfileNameOnEnter(event, saveAddProfileButton));
+    copyProfileInput.addEventListener('keydown', (event) => submitProfileNameOnEnter(event, saveCopyProfileButton));
 
 
 
