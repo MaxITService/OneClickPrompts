@@ -209,39 +209,7 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         delayContainer.classList.add('random-delay-container');
     }
 
-    let randomPercentPopover = document.getElementById('max-extension-random-percent-popover');
-    if (!randomPercentPopover && delayContainer) {
-        randomPercentPopover = document.createElement('div');
-        randomPercentPopover.id = 'max-extension-random-percent-popover';
-        randomPercentPopover.className = 'max-extension-popover random-percent-popover';
-        randomPercentPopover.style.display = 'none';
-
-        const inner = document.createElement('div');
-        inner.className = 'max-extension-popover-inner';
-
-        const label = document.createElement('label');
-        label.className = 'max-extension-popover-label';
-        label.setAttribute('for', 'max-extension-random-percent-slider');
-        label.innerHTML = 'Random offset: <span id="max-extension-random-percent-value">5%</span>';
-
-        const slider = document.createElement('input');
-        slider.id = 'max-extension-random-percent-slider';
-        slider.type = 'range';
-        slider.min = '0';
-        slider.max = '100';
-        slider.step = '1';
-
-        inner.appendChild(label);
-        inner.appendChild(slider);
-        randomPercentPopover.appendChild(inner);
-        delayContainer.appendChild(randomPercentPopover);
-    } else if (randomPercentPopover && delayContainer && !delayContainer.contains(randomPercentPopover)) {
-        delayContainer.appendChild(randomPercentPopover);
-    }
-
-    this.randomPercentPopover = document.getElementById('max-extension-random-percent-popover');
-    this.randomPercentSlider = document.getElementById('max-extension-random-percent-slider');
-    this.randomPercentValueElement = document.getElementById('max-extension-random-percent-value');
+    this.ensureRandomPercentPopover(delayContainer);
 
     // Prevent dragging when interacting with the queue section
     this.queueSectionElement.addEventListener('mousedown', (event) => {
@@ -289,34 +257,6 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         const value = this.queueDelaySliderPositionToValue(event.target.value, min, max);
         this.setQueueDelayValue(value, unit);
     });
-
-    if (this.randomPercentSlider && !this.randomPercentSlider.dataset.randomSliderBound) {
-        this.randomPercentSlider.dataset.randomSliderBound = 'true';
-        this.randomPercentSlider.addEventListener('input', (event) => {
-            const rawValue = Number(event.target.value);
-            const clampedValue = Math.min(100, Math.max(0, Math.round(rawValue)));
-            event.target.value = String(clampedValue);
-
-            if (!window.globalMaxExtensionConfig) {
-                window.globalMaxExtensionConfig = {};
-            }
-            window.globalMaxExtensionConfig.queueRandomizePercent = clampedValue;
-            if (this.lastQueueDelaySample) {
-                this.lastQueueDelaySample.percent = clampedValue;
-            }
-            if (typeof this.syncRandomPercentSlider === 'function') {
-                this.syncRandomPercentSlider();
-            }
-            this.updateRandomDelayBadge();
-            if (typeof this.saveCurrentProfileConfig === 'function') {
-                this.saveCurrentProfileConfig({ suppressSenderRefresh: true });
-            }
-            if (typeof this.recalculateRunningTimer === 'function') {
-                this.recalculateRunningTimer();
-            }
-            logConCgp(`[floating-panel-queue] Random delay offset slider set to ${clampedValue}%.`);
-        });
-    }
 
     if (typeof this.syncRandomPercentSlider === 'function') {
         this.syncRandomPercentSlider();
@@ -1479,6 +1419,7 @@ window.MaxExtensionFloatingPanel.ensureInlineQueueControls = function (container
                 <input type="number" class="max-extension-inline-queue-delay-input" min="10" max="64000" step="1" inputmode="numeric" aria-label="Exact queue delay in seconds">
                 <span class="max-extension-inline-queue-delay-unit">s</span>
                 <input type="range" class="max-extension-inline-queue-delay-slider" min="0" max="1000" step="1" aria-label="Logarithmic queue delay in seconds">
+                <button type="button" class="max-extension-inline-queue-random random-disabled" aria-label="Toggle random delay offset" title="Random delay offset disabled. Click to enable. Shift-click to adjust percentage.">🚫🎲</button>
             </label>
             <div class="max-extension-inline-queue-body">
                 <div class="max-extension-inline-queue-items" title="Queued prompts. Drag to reorder; click an item to remove it."></div>
@@ -1517,7 +1458,8 @@ window.MaxExtensionFloatingPanel.bindInlineQueueControls = function (wrapper) {
         queueCountElement: wrapper.querySelector('.max-extension-inline-queue-count'),
         delayInputElement: wrapper.querySelector('.max-extension-inline-queue-delay-input'),
         delaySliderElement: wrapper.querySelector('.max-extension-inline-queue-delay-slider'),
-        closeQueueButton: wrapper.querySelector('.max-extension-inline-queue-close')
+        closeQueueButton: wrapper.querySelector('.max-extension-inline-queue-close'),
+        randomDelayBadge: wrapper.querySelector('.max-extension-inline-queue-random')
     };
 
     if (!Array.isArray(this.inlineQueueControlWrappers)) {
@@ -1561,6 +1503,20 @@ window.MaxExtensionFloatingPanel.bindInlineQueueControls = function (wrapper) {
         this.hideQueueMenu?.();
     });
 
+    this.inlineQueueControls.randomDelayBadge?.addEventListener('click', (event) => {
+        // preventDefault also stops the surrounding <label> from focusing the delay input.
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.shiftKey) {
+            // The popover normally lives in the floating panel; create it on demand
+            // when the panel has not been mounted on this page yet.
+            this.ensureRandomPercentPopover?.();
+            this.toggleRandomPercentPopover?.(event.currentTarget);
+            return;
+        }
+        this.toggleRandomDelayFromBadge?.();
+    });
+
     const updateInlineDelay = (value, options = {}) => {
         const numericValue = Number(value);
         if (!Number.isFinite(numericValue) || numericValue < 10 || numericValue > 64000) return;
@@ -1590,6 +1546,7 @@ window.MaxExtensionFloatingPanel.bindInlineQueueControls = function (wrapper) {
         updateInlineDelay(seconds);
     });
 
+    this.updateRandomDelayBadge?.();
     this.syncQueueUiFromState?.();
 };
 
@@ -1731,7 +1688,9 @@ window.MaxExtensionFloatingPanel.renderQueueDisplayInto = function (displayArea)
         const queuedItemElement = document.createElement('button');
         queuedItemElement.className = 'max-extension-queued-item';
         queuedItemElement.innerHTML = item.icon;
-        queuedItemElement.title = `Drag to reorder; click to remove: ${item.text}`;
+        const isNext = index === 0;
+        queuedItemElement.classList.toggle('max-extension-queued-item--next', isNext);
+        queuedItemElement.title = `${isNext ? 'Next to send. ' : ''}Drag to reorder; click to remove: ${item.text}`;
         if (item.queueId) {
             queuedItemElement.dataset.queueId = item.queueId;
         }
@@ -1911,6 +1870,95 @@ window.MaxExtensionFloatingPanel.updateQueueControlsState = function () {
 /**
  * Toggles random delay when the badge is clicked.
  */
+/**
+ * Creates (once) the random-offset percent popover and binds its slider.
+ * Called from the floating panel's queue section, and lazily from the inline
+ * queue menu when the panel has not been created yet.
+ * @param {HTMLElement|null} [preferredParent] - Where to mount a newly created popover.
+ */
+window.MaxExtensionFloatingPanel.ensureRandomPercentPopover = function (preferredParent = null) {
+    let popover = document.getElementById('max-extension-random-percent-popover');
+    const mountTarget = preferredParent || document.body;
+
+    if (!popover) {
+        popover = document.createElement('div');
+        popover.id = 'max-extension-random-percent-popover';
+        popover.className = 'max-extension-popover random-percent-popover';
+        popover.style.display = 'none';
+
+        const inner = document.createElement('div');
+        inner.className = 'max-extension-popover-inner';
+
+        const label = document.createElement('label');
+        label.className = 'max-extension-popover-label';
+        label.setAttribute('for', 'max-extension-random-percent-slider');
+        label.innerHTML = 'Random offset: <span id="max-extension-random-percent-value">5%</span>';
+
+        const slider = document.createElement('input');
+        slider.id = 'max-extension-random-percent-slider';
+        slider.type = 'range';
+        slider.min = '0';
+        slider.max = '100';
+        slider.step = '1';
+
+        inner.appendChild(label);
+        inner.appendChild(slider);
+        popover.appendChild(inner);
+        mountTarget.appendChild(popover);
+    } else if (preferredParent && !preferredParent.contains(popover) && popover.style.display === 'none') {
+        preferredParent.appendChild(popover);
+    }
+
+    this.randomPercentPopover = popover;
+    this.randomPercentSlider = document.getElementById('max-extension-random-percent-slider');
+    this.randomPercentValueElement = document.getElementById('max-extension-random-percent-value');
+
+    if (this.randomPercentSlider && !this.randomPercentSlider.dataset.randomSliderBound) {
+        this.randomPercentSlider.dataset.randomSliderBound = 'true';
+        this.randomPercentSlider.addEventListener('input', (event) => {
+            const rawValue = Number(event.target.value);
+            const clampedValue = Math.min(100, Math.max(0, Math.round(rawValue)));
+            event.target.value = String(clampedValue);
+
+            if (!window.globalMaxExtensionConfig) {
+                window.globalMaxExtensionConfig = {};
+            }
+            window.globalMaxExtensionConfig.queueRandomizePercent = clampedValue;
+            if (this.lastQueueDelaySample) {
+                this.lastQueueDelaySample.percent = clampedValue;
+            }
+            if (typeof this.syncRandomPercentSlider === 'function') {
+                this.syncRandomPercentSlider();
+            }
+            this.updateRandomDelayBadge();
+            if (typeof this.saveCurrentProfileConfig === 'function') {
+                this.saveCurrentProfileConfig({ suppressSenderRefresh: true });
+            }
+            if (typeof this.recalculateRunningTimer === 'function') {
+                this.recalculateRunningTimer();
+            }
+            logConCgp(`[floating-panel-queue] Random delay offset slider set to ${clampedValue}%.`);
+        });
+    }
+
+    if (typeof this.syncRandomPercentSlider === 'function') {
+        this.syncRandomPercentSlider();
+    }
+    return popover;
+};
+
+/**
+ * Returns every random-delay badge currently mounted (floating panel + inline menus).
+ */
+window.MaxExtensionFloatingPanel.getRandomDelayBadges = function () {
+    return [
+        this.randomDelayBadge,
+        ...(this.getInlineQueueControlWrappers?.() || []).map((wrapper) => (
+            wrapper.querySelector('.max-extension-inline-queue-random')
+        ))
+    ].filter((element, index, list) => element && list.indexOf(element) === index);
+};
+
 window.MaxExtensionFloatingPanel.toggleRandomDelayFromBadge = function () {
     if (typeof this.closeRandomPercentPopover === 'function') {
         this.closeRandomPercentPopover();
@@ -1942,18 +1990,19 @@ window.MaxExtensionFloatingPanel.toggleRandomDelayFromBadge = function () {
     logConCgp(`[floating-panel-queue] Random delay offset ${newState ? 'enabled' : 'disabled'} via floating panel.`);
 };
 
-window.MaxExtensionFloatingPanel.toggleRandomPercentPopover = function () {
+window.MaxExtensionFloatingPanel.toggleRandomPercentPopover = function (anchor = null) {
     if (!this.randomPercentPopover) return;
     const isVisible = this.randomPercentPopover.style.display !== 'none';
     if (isVisible) {
         this.closeRandomPercentPopover();
     } else {
-        this.openRandomPercentPopover();
+        this.openRandomPercentPopover(anchor);
     }
 };
 
-window.MaxExtensionFloatingPanel.openRandomPercentPopover = function () {
+window.MaxExtensionFloatingPanel.openRandomPercentPopover = function (anchor = null) {
     if (!this.randomPercentPopover) return;
+    const anchorElement = anchor || this.randomDelayBadge;
     if (typeof this.syncRandomPercentSlider === 'function') {
         this.syncRandomPercentSlider();
     }
@@ -1962,8 +2011,8 @@ window.MaxExtensionFloatingPanel.openRandomPercentPopover = function () {
     }
     this.randomPercentPopover.style.display = 'block';
     this.randomPercentPopover.setAttribute('data-visible', 'true');
-    if (typeof this.positionFloatingPopover === 'function' && this.randomDelayBadge) {
-        this.positionFloatingPopover(this.randomPercentPopover, this.randomDelayBadge, {
+    if (typeof this.positionFloatingPopover === 'function' && anchorElement) {
+        this.positionFloatingPopover(this.randomPercentPopover, anchorElement, {
             offsetY: 6,
             align: 'center'
         });
@@ -1976,7 +2025,8 @@ window.MaxExtensionFloatingPanel.openRandomPercentPopover = function () {
             if (this.randomPercentPopover.contains(event.target)) {
                 return;
             }
-            if (this.randomDelayBadge && this.randomDelayBadge.contains(event.target)) {
+            const badges = this.getRandomDelayBadges?.() || [this.randomDelayBadge].filter(Boolean);
+            if (badges.some((badge) => badge.contains(event.target))) {
                 return;
             }
             this.closeRandomPercentPopover();
@@ -2016,7 +2066,9 @@ window.MaxExtensionFloatingPanel.syncRandomPercentSlider = function () {
  * Updates the random delay badge icon and tooltip.
  */
 window.MaxExtensionFloatingPanel.updateRandomDelayBadge = function () {
-    if (!this.randomDelayBadge || !window.globalMaxExtensionConfig) return;
+    if (!window.globalMaxExtensionConfig) return;
+    const badges = this.getRandomDelayBadges?.() || [this.randomDelayBadge].filter(Boolean);
+    if (badges.length === 0) return;
 
     const config = window.globalMaxExtensionConfig;
     const randomEnabled = Boolean(config.queueRandomizeEnabled);
@@ -2051,10 +2103,12 @@ window.MaxExtensionFloatingPanel.updateRandomDelayBadge = function () {
         tooltip = `Random delay offset disabled. Click to enable (uses up to ${percent}% of base delay). Shift-click to adjust percentage.`;
     }
 
-    this.randomDelayBadge.textContent = randomEnabled ? '🎲' : '🚫🎲';
-    this.randomDelayBadge.title = tooltip;
-    this.randomDelayBadge.classList.toggle('random-enabled', randomEnabled);
-    this.randomDelayBadge.classList.toggle('random-disabled', !randomEnabled);
+    badges.forEach((badge) => {
+        badge.textContent = randomEnabled ? '🎲' : '🚫🎲';
+        badge.title = tooltip;
+        badge.classList.toggle('random-enabled', randomEnabled);
+        badge.classList.toggle('random-disabled', !randomEnabled);
+    });
 
     if (typeof this.syncRandomPercentSlider === 'function') {
         this.syncRandomPercentSlider();
@@ -2082,8 +2136,22 @@ window.MaxExtensionFloatingPanel.renderQueueStatusFromState = function () {
 
     const { text, type = 'info' } = status;
     const finalTooltip = status.tooltip || text;
+    const hasUndoAction = status.action === 'undo-removal' && !!this.pendingQueueRemovalUndo;
     statusLabels.forEach((statusLabel) => {
         statusLabel.textContent = text;
+        if (hasUndoAction) {
+            const undoButton = document.createElement('button');
+            undoButton.type = 'button';
+            undoButton.className = 'max-extension-queue-status-action';
+            undoButton.textContent = 'Undo';
+            undoButton.title = 'Put the removed prompt back into the queue';
+            undoButton.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.undoQueueRemoval?.();
+            });
+            statusLabel.appendChild(undoButton);
+        }
         statusLabel.style.display = 'block';
 
         // Simple styling reset
@@ -2110,11 +2178,57 @@ window.MaxExtensionFloatingPanel.renderQueueStatusFromState = function () {
 /**
  * Updates queue status through the runtime so newly mounted views rehydrate it.
  */
-window.MaxExtensionFloatingPanel.setQueueStatus = function (text, type = 'info', tooltip = '') {
+window.MaxExtensionFloatingPanel.setQueueStatus = function (text, type = 'info', tooltip = '', extra = {}) {
     if (this.queueRuntime?.setStatus) {
-        this.queueRuntime.setStatus(text, type, tooltip);
+        this.queueRuntime.setStatus(text, type, tooltip, extra);
         return;
     }
-    this.queueStatus = text ? { text, type, tooltip: tooltip || text } : null;
+    this.queueStatus = text ? { text, type, tooltip: tooltip || text, ...extra } : null;
     this.renderQueueStatusFromState?.();
+};
+
+/**
+ * Shows a short-lived "Removed X — Undo" status after a queued prompt was
+ * removed by clicking it, so mis-clicks (the item is also the drag handle)
+ * are recoverable.
+ * @param {object} item - The removed queue entry.
+ * @param {number} index - The index it was removed from.
+ */
+window.MaxExtensionFloatingPanel.offerQueueRemovalUndo = function (item, index) {
+    if (!item) return;
+    if (this.pendingQueueRemovalUndo?.timeoutId) {
+        clearTimeout(this.pendingQueueRemovalUndo.timeoutId);
+    }
+    const pending = { item, index, timeoutId: null };
+    pending.timeoutId = setTimeout(() => {
+        if (this.pendingQueueRemovalUndo !== pending) return;
+        this.pendingQueueRemovalUndo = null;
+        if (this.queueStatus?.action === 'undo-removal') {
+            this.setQueueStatus(null);
+        }
+    }, this.QUEUE_REMOVAL_UNDO_MS || 6000);
+    this.pendingQueueRemovalUndo = pending;
+
+    const icon = item.icon || '';
+    this.setQueueStatus(`Removed ${icon}`.trim(), 'info', `Removed from queue: ${item.text || ''}`, { action: 'undo-removal' });
+};
+
+window.MaxExtensionFloatingPanel.undoQueueRemoval = function () {
+    const pending = this.pendingQueueRemovalUndo;
+    if (!pending) return false;
+    clearTimeout(pending.timeoutId);
+    this.pendingQueueRemovalUndo = null;
+
+    const restored = this.queueRuntime?.insertAt
+        ? this.queueRuntime.insertAt(pending.index, pending.item)
+        : false;
+    if (!restored) {
+        this.setQueueStatus(null);
+        return false;
+    }
+    this.clearQueueFinishedState?.();
+    this.showQueueMenu?.();
+    this.setQueueStatus(null);
+    logConCgp('[floating-panel-queue] Restored removed queue item:', pending.item.text);
+    return true;
 };

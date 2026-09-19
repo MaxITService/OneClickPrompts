@@ -59,7 +59,10 @@ window.MaxExtensionFloatingPanel.handleQueueItemClick = function (event, index) 
         event.stopPropagation();
         return;
     }
-    this.removeFromQueue(index);
+    const removed = this.removeFromQueue(index);
+    if (removed) {
+        this.offerQueueRemovalUndo?.(removed, index);
+    }
 };
 
 window.MaxExtensionFloatingPanel.captureQueuePreRender = function () {

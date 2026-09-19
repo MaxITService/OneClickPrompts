@@ -211,6 +211,19 @@
             });
         }
 
+        insertAt(index, item) {
+            if (!item) return false;
+            return this.#transaction('insert-at', (queue) => {
+                const alreadyQueued = queue.promptQueue.some((entry) => (
+                    entry === item || (item.queueId && entry?.queueId === item.queueId)
+                ));
+                if (alreadyQueued) return false;
+                const boundedIndex = Math.min(queue.promptQueue.length, Math.max(0, Number(index) || 0));
+                queue.promptQueue.splice(boundedIndex, 0, item);
+                return true;
+            });
+        }
+
         removeById(queueId) {
             if (typeof queueId !== 'string' || !queueId) return null;
             return this.#transaction('remove-by-id', (queue) => {
@@ -351,9 +364,11 @@
             }, { renderItems: false, ...options });
         }
 
-        setStatus(text, type = 'info', tooltip = '') {
+        setStatus(text, type = 'info', tooltip = '', extra = {}) {
             return this.#transaction('set-status', (queue) => {
-                queue.queueStatus = text ? { text: String(text), type, tooltip: tooltip || String(text) } : null;
+                queue.queueStatus = text
+                    ? { ...(extra && typeof extra === 'object' ? extra : {}), text: String(text), type, tooltip: tooltip || String(text) }
+                    : null;
             }, { renderItems: false });
         }
 
