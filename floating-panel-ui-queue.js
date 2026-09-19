@@ -1464,8 +1464,12 @@ window.MaxExtensionFloatingPanel.ensureInlineQueueControls = function (container
 
     const wrapper = document.createElement('div');
     wrapper.className = 'max-extension-inline-queue-controls';
+    // Single wrapping row: tab, delay editor, then the body (queued items,
+    // status chip, actions, progress bar) which absorbs the free space. In
+    // narrow containers the body wraps onto its own line as one unit. The close
+    // button is pinned top-right.
     wrapper.innerHTML = `
-        <div class="max-extension-inline-queue-header">
+        <div class="max-extension-inline-queue-row">
             <div class="max-extension-inline-queue-tab">
                 <span class="max-extension-inline-queue-title">Queue</span>
                 <span class="max-extension-inline-queue-count">0</span>
@@ -1476,20 +1480,20 @@ window.MaxExtensionFloatingPanel.ensureInlineQueueControls = function (container
                 <span class="max-extension-inline-queue-delay-unit">s</span>
                 <input type="range" class="max-extension-inline-queue-delay-slider" min="0" max="1000" step="1" aria-label="Logarithmic queue delay in seconds">
             </label>
-            <button type="button" class="max-extension-inline-queue-close" aria-label="Cancel queue and hide queue menu" title="Cancel the queue and hide this menu until the next queued prompt">×</button>
-        </div>
-        <div class="max-extension-inline-queue-body">
-            <div class="max-extension-inline-queue-items" title="Queued prompts. Drag to reorder; click an item to remove it."></div>
-            <div class="max-extension-inline-queue-actions">
-                <button type="button" class="max-extension-inline-queue-play" title="Start or pause queue">▶️</button>
-                <button type="button" class="max-extension-inline-queue-skip" title="Send next queued prompt now">⏭️</button>
-                <button type="button" class="max-extension-inline-queue-reset" title="Clear queue">🔄</button>
+            <div class="max-extension-inline-queue-body">
+                <div class="max-extension-inline-queue-items" title="Queued prompts. Drag to reorder; click an item to remove it."></div>
+                <div class="max-extension-inline-queue-status"></div>
+                <div class="max-extension-inline-queue-actions">
+                    <button type="button" class="max-extension-inline-queue-play" title="Start or pause queue">▶️</button>
+                    <button type="button" class="max-extension-inline-queue-skip" title="Send next queued prompt now">⏭️</button>
+                    <button type="button" class="max-extension-inline-queue-reset" title="Clear queue">🔄</button>
+                </div>
+                <div class="max-extension-inline-queue-progress-container" title="Click to seek the queue timer">
+                    <div class="max-extension-inline-queue-progress-bar"></div>
+                </div>
             </div>
-            <div class="max-extension-inline-queue-status"></div>
-            <div class="max-extension-inline-queue-progress-container">
-                <div class="max-extension-inline-queue-progress-bar"></div>
-            </div>
         </div>
+        <button type="button" class="max-extension-inline-queue-close" aria-label="Cancel queue and hide queue menu" title="Cancel the queue and hide this menu until the next queued prompt">×</button>
     `;
 
     container.appendChild(wrapper);

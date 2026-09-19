@@ -129,6 +129,7 @@
 
 .max-extension-inline-queue-controls {
     display: none;
+    position: relative;
     width: 100%;
     margin-top: 4px;
     border-top: 1px solid rgba(128, 128, 128, 0.35);
@@ -147,20 +148,27 @@
     display: none;
 }
 
-.max-extension-inline-queue-header {
+/* One wrapping row: tab, delay editor, body (queued items + actions).
+   The body absorbs the free space so nothing is left unused on wide
+   containers; on narrow ones it wraps onto its own line as one unit.
+   Right padding reserves room for the absolutely positioned close button. */
+.max-extension-inline-queue-row {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 12px;
+    gap: 6px 12px;
     width: 100%;
+    box-sizing: border-box;
+    padding-right: 34px;
 }
 
 .max-extension-inline-queue-tab {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    align-self: flex-start;
+    flex: 0 0 auto;
     border: 1px solid rgba(128, 128, 128, 0.45);
-    border-radius: 6px 6px 0 0;
+    border-radius: 6px;
     padding: 3px 8px;
     font-size: 12px;
     background: rgba(60, 60, 60, 0.08);
@@ -175,12 +183,16 @@
     font-weight: 700;
 }
 
+/* Clamped so the slider does not balloon inside very wide chat containers.
+   Values are in px on purpose: the inline container is scaled via CSS `zoom`,
+   so the clamp grows/shrinks proportionally with the UI scale setting. */
 .max-extension-inline-queue-delay-editor {
     display: flex;
     align-items: center;
     gap: 6px;
-    flex: 1 1 360px;
+    flex: 0 1 auto;
     min-width: 190px;
+    max-width: 380px;
     font-size: 11px;
 }
 
@@ -203,14 +215,17 @@
 }
 
 .max-extension-inline-queue-delay-slider {
-    flex: 1 1 260px;
+    flex: 1 1 200px;
     min-width: 100px;
+    max-width: 240px;
     accent-color: rgb(122, 92, 200);
     cursor: pointer;
 }
 
 .max-extension-inline-queue-close {
-    flex: 0 0 auto;
+    position: absolute;
+    top: 6px;
+    right: 0;
     width: 26px;
     height: 26px;
     padding: 0;
@@ -231,17 +246,25 @@
     opacity: 1;
 }
 
+/* Body: items, status chip, actions, progress bar — packed left to right;
+   only the (clamped) progress bar grows into the free space. When the body is
+   too narrow its own content wraps instead of squeezing the items. */
 .max-extension-inline-queue-body {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 6px;
+    gap: 6px 8px;
+    flex: 1 1 360px;
+    min-width: 0;
 }
 
 .max-extension-inline-queue-items {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 4px;
+    flex: 0 1 auto;
+    min-width: 32px;
     min-height: 28px;
     position: relative;
 }
@@ -249,6 +272,7 @@
 .max-extension-inline-queue-actions {
     display: inline-flex;
     gap: 4px;
+    flex: 0 0 auto;
 }
 
 .max-extension-inline-queue-actions button,
@@ -268,25 +292,45 @@
     opacity: 0.45;
 }
 
+/* Status chip sits between the queued items and the action buttons. */
 .max-extension-inline-queue-status {
-    grid-column: 1 / -1;
     display: none;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 260px;
+    box-sizing: border-box;
+    border: 1px solid rgba(128, 128, 128, 0.3);
+    border-radius: 999px;
+    padding: 3px 9px;
     font-size: 11px;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background: rgba(128, 128, 128, 0.1);
 }
 
+/* Progress bar: clamped so it never runs to the page edge, with a taller
+   transparent hit area (padding) around the thin visible track so the ends
+   stay easy to click for seeking. */
 .max-extension-inline-queue-progress-container {
-    grid-column: 1 / -1;
     display: none;
-    height: 3px;
-    overflow: hidden;
+    flex: 1 1 90px;
+    min-width: 90px;
+    max-width: 320px;
+    box-sizing: border-box;
+    height: 16px;
+    padding: 6px 0;
     border-radius: 999px;
     background: rgba(128, 128, 128, 0.22);
+    background-clip: content-box;
     cursor: pointer;
 }
 
 .max-extension-inline-queue-progress-bar {
     width: 0%;
     height: 100%;
+    border-radius: 999px;
     background: rgba(122, 92, 200, 0.8);
 }
 
