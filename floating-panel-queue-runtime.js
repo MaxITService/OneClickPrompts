@@ -435,6 +435,9 @@
                 const shouldRestore = !this.#mutatedBeforeHydration && response.snapshot;
                 if (shouldRestore) {
                     this.#applyRecoveredSnapshot(response.snapshot);
+                    if (this.#owner.promptQueue.length > 0 || this.#owner.queueInFlightItem) {
+                        this.#owner.showQueueMenu?.();
+                    }
                 }
 
                 this.#hydrationComplete = true;

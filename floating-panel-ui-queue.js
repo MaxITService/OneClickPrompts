@@ -1390,8 +1390,53 @@ window.MaxExtensionFloatingPanel.syncInlineQueuePanelLayout = function (wrappers
     }
 };
 
+window.MaxExtensionFloatingPanel.persistQueueMenuHiddenState = function (hidden) {
+    const isHidden = Boolean(hidden);
+    try {
+        localStorage.setItem('ocp_inline_queue_hidden', String(isHidden));
+    } catch (_) { }
+
+    try {
+        if (chrome?.storage?.local?.set) {
+            chrome.storage.local.set({ ocp_inline_queue_hidden: isHidden });
+        }
+    } catch (_) { }
+};
+
+window.MaxExtensionFloatingPanel.initQueueMenuHiddenState = function () {
+    let storedHidden = null;
+    try {
+        const localVal = localStorage.getItem('ocp_inline_queue_hidden');
+        if (localVal !== null) {
+            storedHidden = localVal === 'true';
+        }
+    } catch (_) { }
+
+    if (storedHidden !== null) {
+        this.queueMenuHidden = storedHidden;
+    }
+
+    try {
+        if (chrome?.storage?.local?.get) {
+            chrome.storage.local.get(['ocp_inline_queue_hidden'], (result) => {
+                if (chrome.runtime?.lastError) return;
+                if (typeof result?.ocp_inline_queue_hidden === 'boolean') {
+                    const hasActiveQueue = (Array.isArray(this.promptQueue) && this.promptQueue.length > 0)
+                        || this.isQueueRunning
+                        || Number(this.remainingTimeOnPause) > 0;
+                    if (!hasActiveQueue) {
+                        this.queueMenuHidden = result.ocp_inline_queue_hidden;
+                        this.updateInlineQueueControlsVisibility?.();
+                    }
+                }
+            });
+        }
+    } catch (_) { }
+};
+
 window.MaxExtensionFloatingPanel.showQueueMenu = function () {
     this.queueMenuHidden = false;
+    this.persistQueueMenuHiddenState?.(false);
     this.updateInlineQueueControlsVisibility?.();
 };
 
@@ -1399,9 +1444,12 @@ window.MaxExtensionFloatingPanel.hideQueueMenu = function () {
     // Closing the menu is also an explicit queue cancellation: stop any timer,
     // discard queued/in-flight prompts, and clear the recovery snapshot.
     this.queueMenuHidden = true;
+    this.persistQueueMenuHiddenState?.(true);
     this.resetQueue?.();
     this.updateInlineQueueControlsVisibility?.();
 };
+
+window.MaxExtensionFloatingPanel.initQueueMenuHiddenState();
 
 window.MaxExtensionFloatingPanel.ensureInlineQueueControls = function (container) {
     if (!container) return null;

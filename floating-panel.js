@@ -84,7 +84,13 @@ window.MaxExtensionFloatingPanel = {
     queueAudioContext: null,
     queueFinishedIndicatorButton: null,
     queueFinishedState: false,
-    queueMenuHidden: false,
+    queueMenuHidden: (() => {
+        try {
+            return localStorage.getItem('ocp_inline_queue_hidden') === 'true';
+        } catch (_) {
+            return false;
+        }
+    })(),
     inlineQueueControlWrappers: [],
     queueSectionHiddenByInlineControls: false,
 
