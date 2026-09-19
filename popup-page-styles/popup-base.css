@@ -29,6 +29,14 @@ body {
     transition: background-color var(--transition-duration) ease;
 }
 
+/* The extension popup auto-sizes to its content (max 600px tall) and only draws a
+   scrollbar once the content actually overflows that cap, so short tabs lose the
+   bar and the layout shifts. Keep the document just taller than the cap so the
+   scrollbar is always present. Not needed in tab mode. */
+body:not(.tab-mode) {
+    min-height: 601px;
+}
+
 /* Hide version container when the user is adding or copying a profile, as this space is used for that functionality at that sequence */
 body:has(#addProfileContainer:not(.is-hidden)) #versionContainer,
 body:has(#copyProfileContainer:not(.is-hidden)) #versionContainer {

@@ -387,9 +387,24 @@ Ultra-premium menu buttons featuring:
 }
 
 /* ------------------------------------------------------------------------- */
+/* Click Effects Layer                                                       */
+/* ------------------------------------------------------------------------- */
+/* menu.js appends ripples and particles here instead of into the buttons.
+   Their boxes grow far beyond the button; inside the page flow they would
+   extend the scrollable area and flash the scrollbars on every click.
+   A fixed overlay never contributes to the document's scroll geometry. */
+.menu-fx-layer {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 60;
+}
+
+/* ------------------------------------------------------------------------- */
 /* Ripple Effect                                                             */
 /* ------------------------------------------------------------------------- */
-.menu-btn .ripple {
+.menu-fx-layer .ripple {
     position: absolute;
     border-radius: 50%;
     background: radial-gradient(circle,
@@ -417,7 +432,7 @@ Ultra-premium menu buttons featuring:
 /* ------------------------------------------------------------------------- */
 /* Particle Effect                                                           */
 /* ------------------------------------------------------------------------- */
-.menu-btn .particle {
+.menu-fx-layer .particle {
     position: absolute;
     width: 6px;
     height: 6px;
@@ -440,12 +455,12 @@ Ultra-premium menu buttons featuring:
 }
 
 /* Particle color variations */
-.menu-btn .particle:nth-child(odd) {
+.menu-fx-layer .particle:nth-child(odd) {
     background: linear-gradient(135deg, #9b7ed9, #7a5cc8);
     box-shadow: 0 0 8px rgba(122, 92, 200, 0.8);
 }
 
-.menu-btn .particle:nth-child(even) {
+.menu-fx-layer .particle:nth-child(even) {
     background: linear-gradient(135deg, #c084fc, #a855f7);
     box-shadow: 0 0 8px rgba(192, 132, 252, 0.8);
 }
@@ -631,8 +646,8 @@ body.dark-theme .menu-btn:active {
         background: rgba(122, 92, 200, 0.3);
     }
 
-    .menu-btn .ripple,
-    .menu-btn .particle,
+    .menu-fx-layer .ripple,
+    .menu-fx-layer .particle,
     .menu-btn .cosmic-dust {
         animation: none;
         display: none;

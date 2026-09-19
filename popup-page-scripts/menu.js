@@ -18,6 +18,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const menuButtons = menuSection.querySelectorAll('.menu-btn');
 
+    // Fixed overlay for ripples/particles so they never extend the page's
+    // scrollable area (see .menu-fx-layer in menu.css).
+    const fxLayer = document.createElement('div');
+    fxLayer.className = 'menu-fx-layer';
+    fxLayer.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(fxLayer);
+
     // Initialize each button with extra elements
     menuButtons.forEach(btn => {
         // Add glow ring element
@@ -172,11 +179,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const clickX = e.clientX - rect.left;
             const clickY = e.clientY - rect.top;
 
-            // Create ripple
-            createRipple(btn, clickX, clickY, rect);
+            // Defer one frame: the tab switch handler may reset the page scroll,
+            // and the effects must land where the button ends up on screen.
+            requestAnimationFrame(() => {
+                const liveRect = btn.getBoundingClientRect();
 
-            // Create particle burst
-            createParticleBurst(btn, clickX, clickY);
+                // Create ripple
+                createRipple(liveRect, clickX, clickY);
+
+                // Create particle burst
+                createParticleBurst(liveRect, clickX, clickY);
+            });
 
             // Add clicked class for glow pulse effect
             btn.classList.add('clicked');
@@ -187,16 +200,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // ─────────────────────────────────────────────────────────────────────────
     // Ripple Effect
     // ─────────────────────────────────────────────────────────────────────────
-    function createRipple(btn, x, y, rect) {
+    function createRipple(rect, x, y) {
         const ripple = document.createElement('span');
         ripple.className = 'ripple';
 
         const size = Math.max(rect.width, rect.height) * 2.5;
         ripple.style.width = ripple.style.height = `${size}px`;
-        ripple.style.left = `${x - size / 2}px`;
-        ripple.style.top = `${y - size / 2}px`;
+        ripple.style.left = `${rect.left + x - size / 2}px`;
+        ripple.style.top = `${rect.top + y - size / 2}px`;
 
-        btn.appendChild(ripple);
+        fxLayer.appendChild(ripple);
 
         setTimeout(() => ripple.remove(), 800);
     }
@@ -204,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ─────────────────────────────────────────────────────────────────────────
     // Particle Burst Effect
     // ─────────────────────────────────────────────────────────────────────────
-    function createParticleBurst(btn, x, y) {
+    function createParticleBurst(rect, x, y) {
         const particleCount = 16;
         const colors = [
             'linear-gradient(135deg, #9b7ed9, #7a5cc8)',
@@ -224,8 +237,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const tx = Math.cos(angle * Math.PI / 180) * distance;
             const ty = Math.sin(angle * Math.PI / 180) * distance;
 
-            particle.style.left = `${x}px`;
-            particle.style.top = `${y}px`;
+            particle.style.left = `${rect.left + x}px`;
+            particle.style.top = `${rect.top + y}px`;
             particle.style.setProperty('--tx', `${tx}px`);
             particle.style.setProperty('--ty', `${ty}px`);
             particle.style.background = colors[i % colors.length];
@@ -236,7 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
             particle.style.width = `${size}px`;
             particle.style.height = `${size}px`;
 
-            btn.appendChild(particle);
+            fxLayer.appendChild(particle);
 
             setTimeout(() => particle.remove(), 950);
         }
