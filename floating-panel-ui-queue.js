@@ -172,6 +172,9 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
     this.skipQueueButton = document.getElementById('max-extension-skip-queue-btn');
     this.resetQueueButton = document.getElementById('max-extension-reset-queue-btn');
     this.queueDisplayArea = document.getElementById('max-extension-queue-display');
+    if (this.queueDisplayArea) {
+        this.queueDisplayArea.title = this.getQueueDropZoneTooltip?.() || this.queueDisplayArea.title;
+    }
     this.queueProgressContainer = document.getElementById('max-extension-queue-progress-container');
     this.queueProgressBar = document.getElementById('max-extension-queue-progress-bar');
     this.queueStatusLabel = document.getElementById('max-extension-queue-status-label');
@@ -1422,7 +1425,7 @@ window.MaxExtensionFloatingPanel.ensureInlineQueueControls = function (container
                 <button type="button" class="max-extension-inline-queue-random random-disabled" aria-label="Toggle random delay offset" title="Random delay offset disabled. Click to enable. Shift-click to adjust percentage.">🚫🎲</button>
             </label>
             <div class="max-extension-inline-queue-body">
-                <div class="max-extension-inline-queue-items" title="Queued prompts. Drag to reorder; click an item to remove it."></div>
+                <div class="max-extension-inline-queue-items"></div>
                 <div class="max-extension-inline-queue-status"></div>
                 <div class="max-extension-inline-queue-actions">
                     <button type="button" class="max-extension-inline-queue-play" title="Start or pause queue">▶️</button>
@@ -1470,6 +1473,9 @@ window.MaxExtensionFloatingPanel.bindInlineQueueControls = function (wrapper) {
     }
 
     this.bindQueueProgressSeeking?.(this.inlineQueueControls.queueProgressContainer);
+    if (this.inlineQueueControls.queueDisplayArea) {
+        this.inlineQueueControls.queueDisplayArea.title = this.getQueueDropZoneTooltip?.() || '';
+    }
 
     if (wrapper.__ocpInlineQueueBound) {
         this.syncQueueUiFromState?.();
@@ -1679,6 +1685,27 @@ window.MaxExtensionFloatingPanel.syncInlineQueueProgress = function () {
     this.syncQueueProgressFromState?.();
 };
 
+const QUEUE_DROP_ZONE_TOOLTIP = [
+    'Queue drop zone.',
+    '• Drag any prompt button here to add it to the queue (drop between items to pick its slot).',
+    '• Drag queued items to reorder them.',
+    '• Click a queued item to remove it.',
+    '• The queue keeps its current state (stopped/paused/running) after a drop; press ▶️ to start it.'
+].join('\n');
+
+window.MaxExtensionFloatingPanel.getQueueDropZoneTooltip = function () {
+    return QUEUE_DROP_ZONE_TOOLTIP;
+};
+
+window.MaxExtensionFloatingPanel.createQueueDropPlaceholder = function () {
+    const placeholder = document.createElement('div');
+    placeholder.className = 'max-extension-queue-drop-placeholder';
+    placeholder.textContent = 'Drop a prompt button here to queue it';
+    placeholder.title = QUEUE_DROP_ZONE_TOOLTIP;
+    placeholder.setAttribute('aria-hidden', 'true');
+    return placeholder;
+};
+
 window.MaxExtensionFloatingPanel.renderQueueDisplayInto = function (displayArea) {
     if (!displayArea) return;
     displayArea.innerHTML = '';
@@ -1710,13 +1737,18 @@ window.MaxExtensionFloatingPanel.renderQueueDisplayInto = function (displayArea)
         fragment.appendChild(queuedItemElement);
     });
 
+    if (this.promptQueue.length === 0) {
+        // Empty state doubles as the drop target for prompt buttons dragged
+        // from the toolbar, so the area stays visible instead of collapsing.
+        fragment.appendChild(this.createQueueDropPlaceholder?.() || document.createTextNode(''));
+    }
+
     displayArea.appendChild(fragment);
-    if (this.promptQueue.length > 0) {
+    if (this.promptQueue.length > 0 || window.globalMaxExtensionConfig?.enableQueueMode) {
         displayArea.style.display = 'flex';
-    } else if (window.globalMaxExtensionConfig?.enableQueueMode) {
-        displayArea.style.display = 'none';
     }
 };
+
 
 /**
  * Renders the queue display area with the current items in the queue.

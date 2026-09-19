@@ -4,8 +4,10 @@
 // Provides pointer drag-and-drop reordering for queued prompts in every queue
 // surface. Implements FLIP-style transitions to animate item movement and
 // gracefully handles edge cases (queue item dispatched while dragging).
+// Also implements dragging prompt buttons (inline toolbar / floating panel)
+// onto any queue surface to enqueue them; see the section at the bottom.
 // Extends window.MaxExtensionFloatingPanel with helper methods consumed by
-// floating-panel-ui-queue.js.
+// floating-panel-ui-queue.js and buttons.js (registerQueueDragSource).
 
 'use strict';
 
@@ -522,4 +524,414 @@ window.MaxExtensionFloatingPanel.clearPendingDrag = function () {
         state.pressTimer = null;
     }
     state.pendingDrag = null;
+};
+
+// ---------------------------------------------------------------------------
+// Prompt button → queue drag-and-drop
+// ---------------------------------------------------------------------------
+// Any regular prompt button (inline toolbar or floating panel) can be dragged
+// and dropped onto a queue surface to enqueue it. Clicking still sends: a drag
+// only starts once the pointer travels BUTTON_QUEUE_DRAG_THRESHOLD px. Button
+// edit mode owns the pointer for reordering, so nothing starts while it is on.
+// While a drag is in flight every queue surface is force-revealed (even when
+// dismissed, empty, or queue mode is off) so there is always a place to drop.
+
+const BUTTON_QUEUE_DRAG_THRESHOLD = 5;
+const QUEUE_DROP_AREA_SELECTOR = '.max-extension-inline-queue-items, #max-extension-queue-display';
+const QUEUE_DROP_SURFACE_SELECTOR = '.max-extension-inline-queue-controls, #max-extension-queue-section';
+const QUEUE_DROP_SKIP_ITEM_SELECTOR = '.max-extension-queued-item--placeholder, .max-extension-queued-item--dragging';
+
+window.MaxExtensionFloatingPanel.initializeButtonQueueDrag = function () {
+    if (this.buttonQueueDragState) return;
+    this.buttonQueueDragState = {
+        pending: null,
+        active: null,
+        boundMove: (event) => this.handleButtonQueuePointerMove(event),
+        boundUp: (event) => this.handleButtonQueuePointerUp(event),
+        boundCancel: (event) => this.handleButtonQueuePointerCancel(event),
+        boundKeydown: (event) => {
+            if (event.key !== 'Escape' || !this.buttonQueueDragState?.active) return;
+            event.preventDefault();
+            event.stopPropagation();
+            this.cancelButtonQueueDrag();
+        }
+    };
+};
+
+/**
+ * Makes a prompt button a drag source for the queue. Idempotent per element.
+ * Must run before the element's send click listener is attached so the
+ * post-drag click suppression can stop it via stopImmediatePropagation.
+ */
+window.MaxExtensionFloatingPanel.registerQueueDragSource = function (element, buttonConfig) {
+    if (!element || !buttonConfig || element.__ocpQueueDragSourceBound) return;
+    this.initializeButtonQueueDrag();
+    element.__ocpQueueDragSourceBound = true;
+    element.classList.add('ocp-queue-drag-source');
+
+    element.addEventListener('pointerdown', (event) => this.handleButtonQueuePointerDown(event, element, buttonConfig));
+    element.addEventListener('click', (event) => {
+        if (!element.__ocpSuppressQueueDragClick) return;
+        element.__ocpSuppressQueueDragClick = false;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+    });
+};
+
+window.MaxExtensionFloatingPanel.isButtonQueueDragAllowed = function (element) {
+    if (!element || element.disabled) return false;
+    if (window.MaxExtensionButtonEditMode?.active) return false;
+    if (window.globalMaxExtensionConfig?.queueHideActivationToggle) return false;
+    if (this.queueDndState?.isActive) return false;
+    return true;
+};
+
+window.MaxExtensionFloatingPanel.handleButtonQueuePointerDown = function (event, element, buttonConfig) {
+    const state = this.buttonQueueDragState;
+    if (!state || event.button !== 0 || state.active || state.pending) return;
+    if (!this.isButtonQueueDragAllowed(element)) return;
+
+    state.pending = {
+        element,
+        buttonConfig,
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY
+    };
+    this.attachButtonQueuePointerListeners();
+};
+
+window.MaxExtensionFloatingPanel.handleButtonQueuePointerMove = function (event) {
+    const state = this.buttonQueueDragState;
+    if (!state) return;
+
+    if (state.pending && !state.active) {
+        if (state.pending.pointerId !== event.pointerId) return;
+        const distance = Math.hypot(event.clientX - state.pending.startX, event.clientY - state.pending.startY);
+        if (distance < BUTTON_QUEUE_DRAG_THRESHOLD) return;
+        this.startButtonQueueDrag(state.pending, event);
+        if (!state.active) return;
+    }
+
+    if (!state.active || state.active.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    this.updateButtonQueueDragPosition(event);
+};
+
+window.MaxExtensionFloatingPanel.handleButtonQueuePointerUp = function (event) {
+    const state = this.buttonQueueDragState;
+    if (!state) return;
+
+    if (state.pending && !state.active) {
+        if (state.pending.pointerId !== event.pointerId) return;
+        state.pending = null;
+        this.detachButtonQueuePointerListeners();
+        return;
+    }
+
+    if (!state.active || state.active.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    this.updateButtonQueueDragPosition(event);
+    this.completeButtonQueueDrag();
+};
+
+window.MaxExtensionFloatingPanel.handleButtonQueuePointerCancel = function (event) {
+    const state = this.buttonQueueDragState;
+    if (!state) return;
+    if (state.active && state.active.pointerId !== event.pointerId) return;
+    if (state.pending && !state.active && state.pending.pointerId !== event.pointerId) return;
+    this.cancelButtonQueueDrag();
+};
+
+window.MaxExtensionFloatingPanel.startButtonQueueDrag = function (pending, event) {
+    const state = this.buttonQueueDragState;
+    if (!state || !pending) return;
+    const element = pending.element;
+    if (!element?.isConnected || !this.isButtonQueueDragAllowed(element)) {
+        state.pending = null;
+        this.detachButtonQueuePointerListeners();
+        return;
+    }
+
+    // Same ghost strategy as button edit mode: fixed-position clone on
+    // document.body (no transformed/zoomed ancestor), sized to the layout box and
+    // scaled by the measured visual scale so it looks identical to the source.
+    const rect = element.getBoundingClientRect();
+    const layoutWidth = element.offsetWidth || rect.width;
+    const layoutHeight = element.offsetHeight || rect.height;
+    const ghost = element.cloneNode(true);
+    ghost.querySelectorAll('.ocp-button-delete-x').forEach((node) => node.remove());
+    ghost.removeAttribute('id');
+    ghost.removeAttribute('data-testid');
+    ghost.removeAttribute('title');
+    ghost.removeAttribute('data-ocp-tooltip');
+    ghost.removeAttribute('data-ocp-tooltip-attached');
+    ghost.className = 'ocp-queue-drag-ghost';
+    // Keep the source's inline styles (font-size, padding) so the icon renders
+    // identically; only geometry and margins are overridden.
+    ghost.style.cssText += `;
+        margin: 0;
+        left: ${rect.left}px;
+        top: ${rect.top}px;
+        width: ${layoutWidth}px;
+        height: ${layoutHeight}px;
+        transform: scale(${layoutWidth ? rect.width / layoutWidth : 1}, ${layoutHeight ? rect.height / layoutHeight : 1});
+    `;
+    document.body.appendChild(ghost);
+
+    state.active = {
+        element,
+        buttonConfig: pending.buttonConfig,
+        pointerId: pending.pointerId,
+        ghost,
+        offsetX: pending.startX - rect.left,
+        offsetY: pending.startY - rect.top,
+        target: null,
+        indicator: null
+    };
+    state.pending = null;
+
+    element.classList.add('ocp-queue-drag-source--active');
+    document.body.classList.add('ocp-queue-button-dragging');
+    document.addEventListener('keydown', state.boundKeydown, true);
+    this.revealQueueDropTargets();
+    this.updateButtonQueueDragPosition(event);
+};
+
+window.MaxExtensionFloatingPanel.updateButtonQueueDragPosition = function (event) {
+    const active = this.buttonQueueDragState?.active;
+    if (!active) return;
+    active.ghost.style.left = `${event.clientX - active.offsetX}px`;
+    active.ghost.style.top = `${event.clientY - active.offsetY}px`;
+    this.applyQueueDropHover(this.resolveQueueDropTarget(event.clientX, event.clientY));
+};
+
+/**
+ * Reveals every queue surface as a drop zone for the duration of a drag,
+ * regardless of dismissed/empty/disabled state. Restored by concealQueueDropTargets.
+ */
+window.MaxExtensionFloatingPanel.revealQueueDropTargets = function () {
+    (this.getInlineQueueControlWrappers?.() || []).forEach((wrapper) => {
+        wrapper.classList.add('is-drop-ready');
+        const itemsArea = wrapper.querySelector('.max-extension-inline-queue-items');
+        if (itemsArea && itemsArea.childElementCount === 0) {
+            this.renderQueueDisplayInto?.(itemsArea);
+        }
+    });
+
+    const panelDropAllowed = this.isPanelVisible
+        && this.queueDisplayArea
+        && this.queueSectionElement
+        && !this.queueSectionHiddenByInlineControls
+        && !window.globalMaxExtensionConfig?.queueHideActivationToggle;
+    if (panelDropAllowed) {
+        this.queueSectionElement.classList.add('ocp-queue-drop-ready');
+        this.queueDisplayArea.classList.add('ocp-queue-drop-ready');
+        if (this.queueDisplayArea.childElementCount === 0) {
+            this.renderQueueDisplayInto?.(this.queueDisplayArea);
+        }
+    }
+};
+
+window.MaxExtensionFloatingPanel.concealQueueDropTargets = function () {
+    (this.getInlineQueueControlWrappers?.() || []).forEach((wrapper) => {
+        wrapper.classList.remove('is-drop-ready', 'ocp-queue-drop-hover');
+    });
+    this.queueSectionElement?.classList.remove('ocp-queue-drop-ready', 'ocp-queue-drop-hover');
+    this.queueDisplayArea?.classList.remove('ocp-queue-drop-ready');
+    document.querySelectorAll(QUEUE_DROP_AREA_SELECTOR).forEach((area) => {
+        area.classList.remove('ocp-queue-drop-hover');
+    });
+};
+
+/**
+ * Finds the queue surface under the pointer and the slot the button would land
+ * in. Dropping anywhere on a queue bar/section (not just the items strip) is
+ * accepted and appends; over the items strip the slot follows reading order.
+ * @returns {{ displayArea: HTMLElement, surface: HTMLElement, index: number } | null}
+ */
+window.MaxExtensionFloatingPanel.resolveQueueDropTarget = function (clientX, clientY) {
+    const pointElement = document.elementFromPoint(clientX, clientY);
+    if (!pointElement) return null;
+
+    const surface = pointElement.closest(QUEUE_DROP_SURFACE_SELECTOR);
+    if (!surface) return null;
+    const displayArea = surface.querySelector(QUEUE_DROP_AREA_SELECTOR);
+    if (!displayArea) return null;
+
+    const items = Array.from(displayArea.querySelectorAll('.max-extension-queued-item'))
+        .filter((item) => !item.matches(QUEUE_DROP_SKIP_ITEM_SELECTOR));
+    let index = items.length;
+
+    if (pointElement.closest(QUEUE_DROP_AREA_SELECTOR) === displayArea) {
+        const hoveredItem = pointElement.closest('.max-extension-queued-item');
+        const hoveredIndex = hoveredItem ? items.indexOf(hoveredItem) : -1;
+        if (hoveredIndex >= 0) {
+            const itemRect = hoveredItem.getBoundingClientRect();
+            index = hoveredIndex + (clientX > itemRect.left + itemRect.width / 2 ? 1 : 0);
+        } else {
+            // In a gap or on the empty-state placeholder: first item that comes
+            // after the pointer in reading order (rows top-to-bottom, then x).
+            for (let i = 0; i < items.length; i++) {
+                const itemRect = items[i].getBoundingClientRect();
+                const inRow = clientY >= itemRect.top && clientY <= itemRect.bottom;
+                if (itemRect.top > clientY || (inRow && clientX < itemRect.left + itemRect.width / 2)) {
+                    index = i;
+                    break;
+                }
+            }
+        }
+    }
+
+    return { displayArea, surface, index };
+};
+
+window.MaxExtensionFloatingPanel.applyQueueDropHover = function (target) {
+    const active = this.buttonQueueDragState?.active;
+    if (!active) return;
+    const previous = active.target;
+
+    if (previous && previous.displayArea !== target?.displayArea) {
+        previous.displayArea.classList.remove('ocp-queue-drop-hover');
+        previous.surface.classList.remove('ocp-queue-drop-hover');
+        active.indicator?.remove();
+    }
+
+    active.target = target;
+    if (!target) return;
+
+    target.displayArea.classList.add('ocp-queue-drop-hover');
+    target.surface.classList.add('ocp-queue-drop-hover');
+
+    const items = Array.from(target.displayArea.querySelectorAll('.max-extension-queued-item'))
+        .filter((item) => !item.matches(QUEUE_DROP_SKIP_ITEM_SELECTOR));
+    if (items.length === 0) {
+        // Empty state: the placeholder itself lights up via CSS; no slot marker.
+        active.indicator?.remove();
+        return;
+    }
+
+    if (!active.indicator) {
+        const indicator = document.createElement('div');
+        indicator.className = 'max-extension-queued-item max-extension-queued-item--placeholder ocp-queue-drop-indicator';
+        indicator.setAttribute('aria-hidden', 'true');
+        active.indicator = indicator;
+    }
+    // A queue re-render (e.g. an item was dispatched) wipes the indicator; it is
+    // simply re-inserted on the next pointer move.
+    const reference = items[target.index] || null;
+    if (active.indicator.parentNode !== target.displayArea || active.indicator.nextSibling !== reference) {
+        target.displayArea.insertBefore(active.indicator, reference);
+    }
+};
+
+window.MaxExtensionFloatingPanel.completeButtonQueueDrag = function () {
+    const state = this.buttonQueueDragState;
+    const active = state?.active;
+    if (!active) return;
+
+    const target = active.target;
+    const buttonConfig = active.buttonConfig;
+    const element = active.element;
+    this.teardownButtonQueueDrag();
+
+    if (!target) return;
+
+    if (!window.globalMaxExtensionConfig) {
+        window.globalMaxExtensionConfig = {};
+    }
+    if (!window.globalMaxExtensionConfig.enableQueueMode) {
+        // Mirrors the "queue current editor text" button: a drop is an explicit
+        // request to use the queue, so switch queue mode on for this profile.
+        window.globalMaxExtensionConfig.enableQueueMode = true;
+        this.syncQueueModeUiFromConfig?.();
+        this.saveCurrentProfileConfig?.();
+    }
+
+    const inlineContainer = element?.closest?.('[id$="-custom-buttons-container"]');
+    if (inlineContainer && !inlineContainer.closest('#max-extension-floating-panel')) {
+        this.ensureInlineQueueControls?.(inlineContainer);
+    }
+
+    const queueEntry = this.addToQueue({
+        icon: buttonConfig.icon || element?.innerHTML || '⏳',
+        text: buttonConfig.text,
+        autoSend: buttonConfig.autoSend === true,
+        source: 'button-drag'
+    }, { index: target.index });
+
+    if (!queueEntry) {
+        if (typeof showToast === 'function') {
+            showToast(`Queue is full (max ${this.QUEUE_MAX_SIZE} prompts).`, 'error', 3000);
+        }
+        return;
+    }
+
+    // Do not touch the timer: a stopped/paused queue stays that way with the new
+    // item waiting; a running queue simply has one more prompt.
+    const queue = Array.isArray(this.promptQueue) ? this.promptQueue : [];
+    const count = queue.length;
+    const position = Math.max(1, queue.indexOf(queueEntry) + 1);
+    if (typeof showToast === 'function') {
+        showToast(
+            this.isQueueRunning === true
+                ? `Queued at position ${position} of ${count}. Timer running.`
+                : `Queued at position ${position} of ${count}. Press ▶️ to start the queue.`,
+            'success',
+            2800
+        );
+    }
+    logConCgp('[queue-dnd] Prompt button dropped into queue at index', target.index);
+};
+
+window.MaxExtensionFloatingPanel.cancelButtonQueueDrag = function () {
+    const state = this.buttonQueueDragState;
+    if (!state) return;
+    if (state.active) {
+        this.teardownButtonQueueDrag();
+        return;
+    }
+    state.pending = null;
+    this.detachButtonQueuePointerListeners();
+};
+
+window.MaxExtensionFloatingPanel.teardownButtonQueueDrag = function () {
+    const state = this.buttonQueueDragState;
+    const active = state?.active;
+    if (!active) return;
+
+    active.ghost?.remove();
+    active.indicator?.remove();
+    active.element?.classList.remove('ocp-queue-drag-source--active');
+    if (active.element) {
+        // The pointerup that ends a drag is followed by a click on the source
+        // button; swallow exactly that one so the prompt is not also sent.
+        active.element.__ocpSuppressQueueDragClick = true;
+        setTimeout(() => { active.element.__ocpSuppressQueueDragClick = false; }, 0);
+    }
+
+    document.body.classList.remove('ocp-queue-button-dragging');
+    document.removeEventListener('keydown', state.boundKeydown, true);
+    this.concealQueueDropTargets();
+
+    state.active = null;
+    state.pending = null;
+    this.detachButtonQueuePointerListeners();
+    this.updateInlineQueueControlsVisibility?.();
+};
+
+window.MaxExtensionFloatingPanel.attachButtonQueuePointerListeners = function () {
+    const state = this.buttonQueueDragState;
+    if (!state) return;
+    window.addEventListener('pointermove', state.boundMove, { passive: false });
+    window.addEventListener('pointerup', state.boundUp);
+    window.addEventListener('pointercancel', state.boundCancel);
+};
+
+window.MaxExtensionFloatingPanel.detachButtonQueuePointerListeners = function () {
+    const state = this.buttonQueueDragState;
+    if (!state) return;
+    window.removeEventListener('pointermove', state.boundMove);
+    window.removeEventListener('pointerup', state.boundUp);
+    window.removeEventListener('pointercancel', state.boundCancel);
 };

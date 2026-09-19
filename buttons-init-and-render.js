@@ -935,7 +935,7 @@ window.MaxExtensionButtonsInit = {
                         // This avoids the popup blocker (ERR_BLOCKED_BY_CLIENT).
                         chrome.runtime.sendMessage({ type: 'openSettingsPage' });
                     };
-                    buttonElement = MaxExtensionButtons.createCustomSendButton(settingsButtonConfig, index, settingsClickHandler, shortcutKey);
+                    buttonElement = MaxExtensionButtons.createCustomSendButton(settingsButtonConfig, index, settingsClickHandler, shortcutKey, { queueDraggable: false });
                     buttonElement.dataset.ocpSettingsButton = 'true';
                     buttonElement.dataset.ocpSettingsDefaultTitle = settingsButtonTooltip;
                     window.MaxExtensionButtonEditMode?.setSettingsButtonTooltip(buttonElement, settingsButtonTooltip);
@@ -957,7 +957,8 @@ window.MaxExtensionButtonsInit = {
                         copyLastResponseButtonConfig,
                         index,
                         copyLastResponseClickHandler,
-                        isChatGPT ? shortcutKey : null
+                        isChatGPT ? shortcutKey : null,
+                        { queueDraggable: false }
                     );
                     if (!isChatGPT) {
                         buttonElement.disabled = true;
@@ -978,7 +979,7 @@ window.MaxExtensionButtonsInit = {
                             });
                         }
                     };
-                    buttonElement = MaxExtensionButtons.createCustomSendButton(queueButtonConfig, index, queueClickHandler, shortcutKey);
+                    buttonElement = MaxExtensionButtons.createCustomSendButton(queueButtonConfig, index, queueClickHandler, shortcutKey, { queueDraggable: false });
                     buttonElement.classList.add('ocp-queue-system-button');
                 } else if (def.config.text === CREATE_BUTTON_FROM_EDITOR_MAGIC_TEXT) {
                     const createButtonConfig = {
@@ -991,7 +992,7 @@ window.MaxExtensionButtonsInit = {
                             window.MaxExtensionButtons.createButtonFromEditorText(event);
                         }
                     };
-                    buttonElement = MaxExtensionButtons.createCustomSendButton(createButtonConfig, index, createClickHandler, shortcutKey);
+                    buttonElement = MaxExtensionButtons.createCustomSendButton(createButtonConfig, index, createClickHandler, shortcutKey, { queueDraggable: false });
                 } else {
                     buttonElement = MaxExtensionButtons.createCustomSendButton(def.config, index, processCustomSendButtonClick, shortcutKey);
                 }

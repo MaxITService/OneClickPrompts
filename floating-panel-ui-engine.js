@@ -102,8 +102,11 @@ window.MaxExtensionFloatingPanel.setQueueDelayValue = function (value, unit, opt
 /**
  * Adds a prompt configuration to the queue.
  * @param {object} buttonConfig - The configuration of the button clicked.
+ * @param {object} [options]
+ * @param {number} [options.index] - Insert at this slot instead of appending
+ *   (used by drag-and-drop from prompt buttons).
  */
-window.MaxExtensionFloatingPanel.addToQueue = function (buttonConfig) {
+window.MaxExtensionFloatingPanel.addToQueue = function (buttonConfig, options = {}) {
     // Prevent adding if queue mode is disabled
     if (!window.globalMaxExtensionConfig?.enableQueueMode) {
         logConCgp('[queue-engine] Queue mode is disabled. Ignoring addToQueue.');
@@ -124,7 +127,11 @@ window.MaxExtensionFloatingPanel.addToQueue = function (buttonConfig) {
         return null;
     }
 
-    const queueEntry = getQueueRuntime(this).enqueue(buttonConfig, this.QUEUE_MAX_SIZE);
+    const runtime = getQueueRuntime(this);
+    const insertIndex = Number(options?.index);
+    const queueEntry = Number.isInteger(insertIndex) && insertIndex >= 0 && insertIndex < this.promptQueue.length
+        ? runtime.enqueueAt(insertIndex, buttonConfig, this.QUEUE_MAX_SIZE)
+        : runtime.enqueue(buttonConfig, this.QUEUE_MAX_SIZE);
     if (!queueEntry) return null;
     this.clearQueueFinishedState?.();
     this.showQueueMenu?.();

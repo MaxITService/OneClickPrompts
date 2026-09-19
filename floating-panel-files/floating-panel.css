@@ -148,6 +148,14 @@
     display: none;
 }
 
+/* While a prompt button is being dragged the inline queue bar is revealed as a
+   drop zone even when it is dismissed, empty, or queue mode is off. */
+.max-extension-inline-queue-controls.is-drop-ready {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
 /* One wrapping row: tab, delay editor, body (queued items + actions).
    The body absorbs the free space so nothing is left unused on wide
    containers; on narrow ones it wraps onto its own line as one unit.
@@ -742,6 +750,103 @@
     background-color: rgba(255, 255, 255, 0.08);
     opacity: 0.5;
     pointer-events: none;
+}
+
+/* ---- Drag prompt buttons into the queue -------------------------------- */
+
+/* Empty-state drop placeholder rendered inside every queue display area. */
+.max-extension-queue-drop-placeholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1 1 auto;
+    min-height: 24px;
+    box-sizing: border-box;
+    padding: 2px 10px;
+    border: 1px dashed rgba(128, 128, 128, 0.55);
+    border-radius: 6px;
+    font-size: 11px;
+    line-height: 1.2;
+    white-space: nowrap;
+    opacity: 0.7;
+    cursor: default;
+    transition: border-color 0.15s, background-color 0.15s, opacity 0.15s;
+}
+
+/* The panel display already draws a dashed frame; avoid a double border. */
+#max-extension-queue-display .max-extension-queue-drop-placeholder {
+    border-color: transparent;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Force-reveal the panel queue area while a drag is in flight. */
+#max-extension-queue-section.ocp-queue-drop-ready,
+#max-extension-queue-display.ocp-queue-drop-ready {
+    display: flex !important;
+}
+
+/* Every revealed drop zone gets a quiet dashed hint; the one under the pointer
+   lights up. */
+body.ocp-queue-button-dragging .max-extension-inline-queue-items,
+body.ocp-queue-button-dragging #max-extension-queue-display {
+    outline: 1px dashed rgba(122, 92, 200, 0.55);
+    outline-offset: 2px;
+    border-radius: 6px;
+    transition: outline-color 0.15s, background-color 0.15s;
+}
+
+.max-extension-inline-queue-items.ocp-queue-drop-hover,
+#max-extension-queue-display.ocp-queue-drop-hover {
+    outline: 2px dashed rgba(122, 92, 200, 0.95);
+    outline-offset: 2px;
+    background-color: rgba(122, 92, 200, 0.14);
+}
+
+.max-extension-inline-queue-controls.ocp-queue-drop-hover {
+    border-top-color: rgba(122, 92, 200, 0.85);
+}
+
+.ocp-queue-drop-hover .max-extension-queue-drop-placeholder {
+    border-color: rgba(122, 92, 200, 0.95);
+    background-color: rgba(122, 92, 200, 0.18);
+    opacity: 1;
+}
+
+/* Insertion slot marker shown between queued items while hovering. */
+.ocp-queue-drop-indicator {
+    width: 20px;
+    min-height: 26px;
+    padding: 0;
+    border: 2px dashed rgba(122, 92, 200, 0.95);
+    background-color: rgba(122, 92, 200, 0.2);
+    opacity: 1;
+}
+
+/* Source button while its ghost is being dragged. */
+.ocp-queue-drag-source--active {
+    opacity: 0.45;
+}
+
+body.ocp-queue-button-dragging {
+    cursor: grabbing;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* Fixed-position clone that follows the pointer (appended to document.body so
+   no transformed/zoomed ancestor skews its coordinates). */
+.ocp-queue-drag-ghost {
+    position: fixed;
+    z-index: 2147483647;
+    pointer-events: none;
+    transform-origin: 0 0;
+    opacity: 0.85;
+    cursor: grabbing;
+    animation: none;
+    outline: 2px solid #8b5cf6;
+    outline-offset: 2px;
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 0 4px rgba(139, 92, 246, 0.22);
 }
 
 .max-extension-queue-automation-buttons {

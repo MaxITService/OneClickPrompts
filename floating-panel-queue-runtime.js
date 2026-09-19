@@ -195,6 +195,27 @@
             });
         }
 
+        /**
+         * Enqueues a single button config at a specific slot (used by drag-and-drop
+         * from prompt buttons). Index is clamped to the current queue length, so
+         * anything out of range simply appends.
+         */
+        enqueueAt(index, buttonConfig, maxSize) {
+            if (!buttonConfig) return null;
+            const limit = Number.isFinite(maxSize) ? Math.max(0, Math.floor(maxSize)) : Number.MAX_SAFE_INTEGER;
+            return this.#transaction('enqueue-at', (queue) => {
+                const occupiedSlots = queue.promptQueue.length + (queue.queueInFlightItem ? 1 : 0);
+                if (occupiedSlots >= limit) return null;
+                const entry = {
+                    ...buttonConfig,
+                    queueId: `queue-item-${queue.nextQueueItemId++}`
+                };
+                const boundedIndex = Math.min(queue.promptQueue.length, Math.max(0, Number(index) || 0));
+                queue.promptQueue.splice(boundedIndex, 0, entry);
+                return entry;
+            });
+        }
+
         removeAt(index) {
             return this.#transaction('remove', (queue) => {
                 if (!Number.isInteger(index) || index < 0 || index >= queue.promptQueue.length) return null;

@@ -10,7 +10,7 @@
      - Handles click behavior across supported sites and integrates with queue mode in the floating panel.
 
      Exposed methods:
-     - MaxExtensionButtons.createCustomSendButton(buttonConfig, index, onClickHandler, overrideShortcutKey?)
+     - MaxExtensionButtons.createCustomSendButton(buttonConfig, index, onClickHandler, overrideShortcutKey?, { queueDraggable? })
      - MaxExtensionButtons.createCrossChatButton(type: 'copy'|'paste', shortcutKey?)
      - MaxExtensionButtons.determineShortcutKeyForButtonIndex(buttonIndex, offset?)
 
@@ -544,9 +544,12 @@ window.MaxExtensionButtons = {
      * @param {number} buttonIndex - The index of the button in the custom buttons array.
      * @param {Function} onClickHandler - The function to handle the button's click event.
      * @param {number|null|undefined} [overrideShortcutKey] - Optional shortcut key. Use null to suppress legacy fallback.
+     * @param {Object} [options]
+     * @param {boolean} [options.queueDraggable=true] - When true the button can be dragged
+     *   onto a queue surface to enqueue it (system buttons pass false).
      * @returns {HTMLButtonElement} - The newly created custom send button element.
      */
-    createCustomSendButton: function (buttonConfig, buttonIndex, onClickHandler, overrideShortcutKey = undefined) {
+    createCustomSendButton: function (buttonConfig, buttonIndex, onClickHandler, overrideShortcutKey = undefined, options = {}) {
         const customButtonElement = document.createElement('button');
         customButtonElement.type = 'button'; // Prevent form being defaut type, that is "submit".
         customButtonElement.innerHTML = buttonConfig.icon;
@@ -592,6 +595,12 @@ window.MaxExtensionButtons = {
             margin-right: 5px;
             margin-bottom: 5px;
         `;
+
+        // Drag-to-queue must be registered BEFORE the click listener: after a
+        // completed drag it swallows the trailing click via stopImmediatePropagation.
+        if (options.queueDraggable !== false) {
+            window.MaxExtensionFloatingPanel?.registerQueueDragSource?.(customButtonElement, buttonConfig);
+        }
 
         // Attach the click event listener to handle custom send actions
         customButtonElement.addEventListener('click', (event) => onClickHandler(event, buttonConfig.text, buttonConfig.autoSend));
