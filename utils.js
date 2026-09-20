@@ -184,11 +184,18 @@ window.MaxExtensionUtils = {
     // Function to create a visual separator
     createSeparator: function () {
         const separator = document.createElement('div');
+        // The visible line is 1px, but the spacing is padding (not margin) so
+        // the whole 17px strip receives pointer events and can be grabbed to
+        // drag/reorder; background-clip keeps only the 1px content box painted.
         separator.style.cssText = `
             width: 1px;
             height: 24px;
             background-color: #ccc;
-            margin: 0 8px;
+            background-clip: content-box;
+            padding: 0 8px;
+            margin: 0;
+            box-sizing: content-box;
+            flex-shrink: 0;
         `;
         return separator;
     },

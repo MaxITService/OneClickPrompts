@@ -882,9 +882,25 @@ body.ocp-button-dragging {
 .ocp-button-drag-ghost--separator {
     width: 18px !important;
     min-height: 24px;
-    box-sizing: border-box;
+    padding: 0 !important;
+    box-sizing: border-box !important;
     background: rgba(122, 92, 200, 0.18) !important;
+    background-clip: border-box !important;
     border: 1px dashed rgba(122, 92, 200, 0.9);
+}
+
+/* The separator's own 1px line, redrawn in the middle of the ghost body
+   (the ghost's translucent background replaces the source's line). */
+.ocp-button-drag-ghost--separator::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 2px;
+    bottom: 2px;
+    width: 1px;
+    margin-left: -0.5px;
+    background-color: #ccc;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
 }
 
 /* Over a queue surface: green = will be queued on release. */
@@ -1373,6 +1389,7 @@ body.ocp-button-dragging {
     min-width: 18px;
     width: 18px;
     height: 28px;
+    padding: 0;
     margin: 0 8px;
     border: 1px dashed rgba(122, 92, 200, 0.5);
     background-clip: content-box;
