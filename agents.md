@@ -18,8 +18,7 @@ TELL USER IN CHAT, ONCE, WITH FIRST REPLY, THAT "AGENTS.MD" INSTRUCTIONS ARE REC
 # AI instructions:
 There is emoji problem in harness: i mostly see them normally in documents, and in program, but your harness writes them faulty (probably like question marks). SO ONLY U SEE THEM BAD. THEY ARE ACTUALLY WRITTEN OK TO DISC (most of the time, lol) Do this: write them normally and ask me to check files at the end, to see if something broke in encoding. Don't try to endlessly fix emojis; it probably won't work.  
 DO NOT WRITE MD FILES WITH PLANS OR TASK COMPLETION REPORT: WRITE ME IN CHAT, EVEN IF GUIDED BY HARNESS. 
-LINE ENDINGS: lf - even on Windows.
-Encoding: UTF-8 - notify user if found other encoding.
+LINE ENDINGS / ENCODING: LF + UTF-8. Edit/Write already guarantee this - no need to re-verify after a normal edit. Only check bytes if the file was touched via shell (heredoc, redirection, sed/python replace) instead of Edit/Write.
 If harness does not allow you to do something - like read enough files - tell the user.
 
 
