@@ -1,3 +1,18 @@
+# What's New in 0.0.7.5
+
+Changes users will notice since `0.0.7.4`.
+
+## Drag buttons to reorder or queue them
+
+- Drag any prompt button or separator to reorder it right on the chat page. No edit mode needed; a plain click still sends as before.
+- Drop a prompt button onto the queue bar (or the floating panel's queue area) to add it to the queue. The dragged button turns green when it will be queued and red when it cannot be (separators and system buttons are reorder-only).
+- Drop between queued items to pick the exact slot. The queue keeps its current state: a stopped queue stays stopped until you press play.
+- Release the button away from the toolbar to cancel; Esc cancels too. Nothing is changed in that case.
+- Queued items can now be dragged out of the queue to remove them. Drag one away from the queue bar and let go.
+- Every drag action has an Undo: reordering buttons, dropping a button into the queue, and removing a queued item all show a short-lived Undo.
+- Works with touch and pen: press and hold a button, then drag it. A tap still sends and a swipe over the toolbar still scrolls the page.
+- New switch in the Advanced tab: "Drag buttons to reorder / drop into queue". Turn it off if dragging misbehaves on a site. Button edit mode keeps working regardless.
+
 # What's New in 0.0.6.8
 
 Changes users will notice since `0.0.6.7`.

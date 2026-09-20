@@ -78,6 +78,9 @@ window.OneClickPromptsSelectorAutoDetector = {
         enableContainerHeuristics: false,
         notifyContainerMissing: false,
         autoFallbackToFloatingPanel: true,
+        // Toolbar button drag (reorder / drop-to-queue); Advanced-tab kill switch
+        // for pages where pointer handling misbehaves.
+        enableButtonDragAndDrop: true,
         loaded: false
     },
     lastOffers: {
@@ -625,6 +628,7 @@ window.OneClickPromptsSelectorAutoDetector = {
                 enableContainerHeuristics: response.settings.enableContainerHeuristics === true,
                 notifyContainerMissing: response.settings.notifyContainerMissing === true,
                 autoFallbackToFloatingPanel: response.settings.autoFallbackToFloatingPanel !== false,
+                enableButtonDragAndDrop: response.settings.enableButtonDragAndDrop !== false,
                 loaded: true
             };
             if (this.settingsLoadRetryTimer) {
@@ -651,6 +655,7 @@ window.OneClickPromptsSelectorAutoDetector = {
             enableContainerHeuristics: this.settings.enableContainerHeuristics === true,
             notifyContainerMissing: this.settings.notifyContainerMissing === true,
             autoFallbackToFloatingPanel: this.settings.autoFallbackToFloatingPanel !== false,
+            enableButtonDragAndDrop: this.settings.enableButtonDragAndDrop !== false,
             ...overrides
         };
     },
@@ -1589,6 +1594,7 @@ if (chrome?.runtime?.onMessage?.addListener) {
                 enableContainerHeuristics: message.settings.enableContainerHeuristics === true,
                 notifyContainerMissing: message.settings.notifyContainerMissing === true,
                 autoFallbackToFloatingPanel: message.settings.autoFallbackToFloatingPanel !== false,
+                enableButtonDragAndDrop: message.settings.enableButtonDragAndDrop !== false,
                 loaded: true
             };
         }

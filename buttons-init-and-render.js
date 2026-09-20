@@ -295,17 +295,19 @@ window.MaxExtensionButtonEditMode = {
         }
     },
 
-    getEditableButtons() {
-        if (!this.container) return [];
-        return Array.from(this.container.querySelectorAll('[data-ocp-button-edit-index]'));
+    // The reorder helpers below accept an explicit container so the unified
+    // button drag (floating-panel-ui-queue-dnd.js) can reuse them outside edit mode.
+    getEditableButtons(container = this.container) {
+        if (!container) return [];
+        return Array.from(container.querySelectorAll('[data-ocp-button-edit-index]'));
     },
 
-    captureRects() {
-        return new Map(this.getEditableButtons().map(button => [button, button.getBoundingClientRect()]));
+    captureRects(container = this.container) {
+        return new Map(this.getEditableButtons(container).map(button => [button, button.getBoundingClientRect()]));
     },
 
-    playFlip(beforeRects) {
-        this.getEditableButtons().forEach(button => {
+    playFlip(beforeRects, container = this.container) {
+        this.getEditableButtons(container).forEach(button => {
             const before = beforeRects.get(button);
             if (!before) return;
             const after = button.getBoundingClientRect();
@@ -446,12 +448,12 @@ window.MaxExtensionButtonEditMode = {
         this.pointerState = null;
     },
 
-    moveDraggedButton(clientX, clientY, draggedButton) {
+    moveDraggedButton(clientX, clientY, draggedButton, container = this.container) {
         // Throttle: let the previous FLIP animation finish before starting a new reorder
         const now = performance.now();
         if (this._lastReorderTime && now - this._lastReorderTime < this.flipDurationMs) return;
 
-        const siblings = this.getEditableButtons().filter(button => button !== draggedButton);
+        const siblings = this.getEditableButtons(container).filter(button => button !== draggedButton);
         let target = null;
         let insertAfter = false;
         let bestDistance = Infinity;
@@ -475,13 +477,13 @@ window.MaxExtensionButtonEditMode = {
         if (!insertAfter && draggedButton.nextElementSibling === target) return;
 
         this._lastReorderTime = now;
-        const beforeRects = this.captureRects();
+        const beforeRects = this.captureRects(container);
         if (insertAfter) {
             target.after(draggedButton);
         } else {
             target.before(draggedButton);
         }
-        this.playFlip(beforeRects);
+        this.playFlip(beforeRects, container);
     },
 
     getEditableSlots() {
@@ -491,26 +493,26 @@ window.MaxExtensionButtonEditMode = {
         return buttons.map((_, index) => index);
     },
 
-    async saveOrderFromDom() {
+    async saveOrderFromDom(container = this.container) {
         const config = window.globalMaxExtensionConfig;
-        if (!config || !Array.isArray(config.customButtons)) return;
-        const order = this.getEditableButtons()
+        if (!config || !Array.isArray(config.customButtons)) return false;
+        const order = this.getEditableButtons(container)
             .map(button => Number(button.dataset.ocpButtonEditIndex))
             .filter(Number.isInteger);
         const slots = this.getEditableSlots();
-        if (order.length !== slots.length) return;
+        if (order.length !== slots.length) return false;
 
         const previous = [...config.customButtons];
         const reordered = order.map(index => previous[index]).filter(Boolean);
         slots.forEach((slot, offset) => {
             config.customButtons[slot] = reordered[offset];
         });
-        this.updateDomIndexesFromSlots(slots);
-        await this.saveCurrentProfileConfig();
+        this.updateDomIndexesFromSlots(slots, container);
+        return this.saveCurrentProfileConfig();
     },
 
-    updateDomIndexesFromSlots(slots) {
-        this.getEditableButtons().forEach((button, offset) => {
+    updateDomIndexesFromSlots(slots, container = this.container) {
+        this.getEditableButtons(container).forEach((button, offset) => {
             if (Number.isInteger(slots[offset])) {
                 button.dataset.ocpButtonEditIndex = String(slots[offset]);
             }
@@ -856,7 +858,9 @@ window.MaxExtensionButtonsInit = {
                 if (Number.isInteger(def.profileIndex)) {
                     separatorElement.dataset.ocpButtonEditIndex = String(def.profileIndex);
                     separatorElement.dataset.ocpButtonEditKind = 'separator';
-                    separatorElement.title = 'Separator. Ctrl+Shift-click Settings to reorder or delete.';
+                    separatorElement.title = 'Separator. Drag to reorder. Ctrl+Shift-click Settings to delete.';
+                    // Reorder-only: separators can never be dropped into the queue.
+                    window.MaxExtensionFloatingPanel?.registerButtonDragSource?.(separatorElement, { queueDroppable: false });
                 }
                 container.appendChild(separatorElement);
                 logConCgp('[init] Separator element has been created and appended.');
@@ -888,6 +892,7 @@ window.MaxExtensionButtonsInit = {
                     const settingsButtonTooltip = [
                         'Settings button',
                         '• Click: open OneClickPrompts settings in a new tab.',
+                        '• Drag any button or separator: reorder it. Drop a prompt button onto the queue bar to queue it.',
                         '• Shift-click: move the whole place where OneClickPrompts injects all buttons.',
                         '• Ctrl+Shift-click: edit individual buttons and separators, then drag them relative to each other.',
                         '• While editing: click Done editing, click Settings again, or press Esc to exit edit mode.'
@@ -935,7 +940,7 @@ window.MaxExtensionButtonsInit = {
                         // This avoids the popup blocker (ERR_BLOCKED_BY_CLIENT).
                         chrome.runtime.sendMessage({ type: 'openSettingsPage' });
                     };
-                    buttonElement = MaxExtensionButtons.createCustomSendButton(settingsButtonConfig, index, settingsClickHandler, shortcutKey, { queueDraggable: false });
+                    buttonElement = MaxExtensionButtons.createCustomSendButton(settingsButtonConfig, index, settingsClickHandler, shortcutKey, { queueDroppable: false });
                     buttonElement.dataset.ocpSettingsButton = 'true';
                     buttonElement.dataset.ocpSettingsDefaultTitle = settingsButtonTooltip;
                     window.MaxExtensionButtonEditMode?.setSettingsButtonTooltip(buttonElement, settingsButtonTooltip);
@@ -958,7 +963,7 @@ window.MaxExtensionButtonsInit = {
                         index,
                         copyLastResponseClickHandler,
                         isChatGPT ? shortcutKey : null,
-                        { queueDraggable: false }
+                        { queueDroppable: false }
                     );
                     if (!isChatGPT) {
                         buttonElement.disabled = true;
@@ -979,7 +984,7 @@ window.MaxExtensionButtonsInit = {
                             });
                         }
                     };
-                    buttonElement = MaxExtensionButtons.createCustomSendButton(queueButtonConfig, index, queueClickHandler, shortcutKey, { queueDraggable: false });
+                    buttonElement = MaxExtensionButtons.createCustomSendButton(queueButtonConfig, index, queueClickHandler, shortcutKey, { queueDroppable: false });
                     buttonElement.classList.add('ocp-queue-system-button');
                 } else if (def.config.text === CREATE_BUTTON_FROM_EDITOR_MAGIC_TEXT) {
                     const createButtonConfig = {
@@ -992,7 +997,7 @@ window.MaxExtensionButtonsInit = {
                             window.MaxExtensionButtons.createButtonFromEditorText(event);
                         }
                     };
-                    buttonElement = MaxExtensionButtons.createCustomSendButton(createButtonConfig, index, createClickHandler, shortcutKey, { queueDraggable: false });
+                    buttonElement = MaxExtensionButtons.createCustomSendButton(createButtonConfig, index, createClickHandler, shortcutKey, { queueDroppable: false });
                 } else {
                     buttonElement = MaxExtensionButtons.createCustomSendButton(def.config, index, processCustomSendButtonClick, shortcutKey);
                 }

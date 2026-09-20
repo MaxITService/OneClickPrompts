@@ -371,9 +371,8 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
             if (expandableSection) {
                 expandableSection.style.display = state ? 'contents' : 'none';
             }
-            if (this.queueDisplayArea) {
-                this.queueDisplayArea.style.display = state ? 'flex' : 'none';
-            }
+            // Empty display stays compact even when enabling (see applyPanelQueueDisplayVisibility).
+            this.applyPanelQueueDisplayVisibility?.(state);
             this.saveCurrentProfileConfig(); // Save to profile
 
             // If the toggle lives in the footer, keep the queue section visible only when enabled.
@@ -407,9 +406,7 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
         if (expandableSection) {
             expandableSection.style.display = isQueueEnabled ? 'contents' : 'none';
         }
-        if (this.queueDisplayArea) {
-            this.queueDisplayArea.style.display = isQueueEnabled ? 'flex' : 'none';
-        }
+        this.applyPanelQueueDisplayVisibility?.(isQueueEnabled);
 
         // If queue mode is off on init but state exists, freeze (pause) and hide visuals (do not clear).
         if (!isQueueEnabled && (this.isQueueRunning || (this.promptQueue && this.promptQueue.length > 0))) {
@@ -444,7 +441,7 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
             }
         }
         if (expandableSection) expandableSection.style.display = 'contents';
-        if (this.queueDisplayArea) this.queueDisplayArea.style.display = 'flex';
+        this.applyPanelQueueDisplayVisibility?.(true);
         // Ensure the queue section is visible after acceptance
         if (this.queueSectionElement) {
             this.queueSectionElement.style.display = 'flex';
@@ -1744,9 +1741,41 @@ window.MaxExtensionFloatingPanel.renderQueueDisplayInto = function (displayArea)
     }
 
     displayArea.appendChild(fragment);
+    if (displayArea === this.queueDisplayArea) {
+        // The panel's own display stays compact: hidden while empty (the
+        // placeholder is still rendered inside and revealed only during a
+        // queue-droppable button drag by the body.ocp-queue-button-dragging
+        // CSS rule). Queue mode off is owned by the toggle callback.
+        this.applyPanelQueueDisplayVisibility(window.globalMaxExtensionConfig?.enableQueueMode === true, { fromRender: true });
+        return;
+    }
     if (this.promptQueue.length > 0 || window.globalMaxExtensionConfig?.enableQueueMode) {
         displayArea.style.display = 'flex';
     }
+};
+
+/**
+ * Single rule for the panel queue display (#max-extension-queue-display):
+ * shown while it has items, compact (hidden) while empty. The queue-mode
+ * toggle, init, TOS acceptance and renderQueueDisplayInto all go through this
+ * so none of them fights the others.
+ * @param {boolean} isQueueEnabled
+ * @param {{ fromRender?: boolean }} [options] - Render path: items always show
+ *   (frozen items stay visible with queue mode off) and the queue-mode-off +
+ *   empty case leaves the inline style to the toggle callback.
+ */
+window.MaxExtensionFloatingPanel.applyPanelQueueDisplayVisibility = function (isQueueEnabled, options = {}) {
+    if (!this.queueDisplayArea) return;
+    const hasItems = Array.isArray(this.promptQueue) && this.promptQueue.length > 0;
+    if (options.fromRender) {
+        if (hasItems) {
+            this.queueDisplayArea.style.display = 'flex';
+        } else if (isQueueEnabled) {
+            this.queueDisplayArea.style.display = 'none';
+        }
+        return;
+    }
+    this.queueDisplayArea.style.display = isQueueEnabled && hasItems ? 'flex' : 'none';
 };
 
 
@@ -2168,19 +2197,25 @@ window.MaxExtensionFloatingPanel.renderQueueStatusFromState = function () {
 
     const { text, type = 'info' } = status;
     const finalTooltip = status.tooltip || text;
-    const hasUndoAction = status.action === 'undo-removal' && !!this.pendingQueueRemovalUndo;
+    // Status actions: each needs its pending record to still exist.
+    let undoAction = null;
+    if (status.action === 'undo-removal' && this.pendingQueueRemovalUndo) {
+        undoAction = { title: 'Put the removed prompt back into the queue', run: () => this.undoQueueRemoval?.() };
+    } else if (status.action === 'undo-add' && this.pendingQueueAddUndo) {
+        undoAction = { title: 'Remove the prompt you just dropped into the queue', run: () => this.undoQueueAdd?.() };
+    }
     statusLabels.forEach((statusLabel) => {
         statusLabel.textContent = text;
-        if (hasUndoAction) {
+        if (undoAction) {
             const undoButton = document.createElement('button');
             undoButton.type = 'button';
             undoButton.className = 'max-extension-queue-status-action';
             undoButton.textContent = 'Undo';
-            undoButton.title = 'Put the removed prompt back into the queue';
+            undoButton.title = undoAction.title;
             undoButton.addEventListener('click', (event) => {
                 event.preventDefault();
                 event.stopPropagation();
-                this.undoQueueRemoval?.();
+                undoAction.run();
             });
             statusLabel.appendChild(undoButton);
         }
@@ -2262,5 +2297,54 @@ window.MaxExtensionFloatingPanel.undoQueueRemoval = function () {
     this.showQueueMenu?.();
     this.setQueueStatus(null);
     logConCgp('[floating-panel-queue] Restored removed queue item:', pending.item.text);
+    return true;
+};
+
+/**
+ * Shows the "Queued at position N of M …" status with an Undo action after a
+ * prompt button was dropped into the queue. Undo removes exactly that entry by
+ * queueId (never by index: the queue may have moved on); if it was already
+ * dispatched the chip is simply cleared. Mirrors offerQueueRemovalUndo.
+ * @param {object} entry - The queue entry returned by addToQueue.
+ * @param {string} text - Chip text (position message).
+ */
+window.MaxExtensionFloatingPanel.offerQueueAddUndo = function (entry, text) {
+    if (!entry?.queueId) return;
+    if (this.pendingQueueAddUndo?.timeoutId) {
+        clearTimeout(this.pendingQueueAddUndo.timeoutId);
+    }
+    const pending = { queueId: entry.queueId, timeoutId: null };
+    pending.timeoutId = setTimeout(() => {
+        if (this.pendingQueueAddUndo !== pending) return;
+        this.pendingQueueAddUndo = null;
+        if (this.queueStatus?.action === 'undo-add') {
+            this.setQueueStatus(null);
+        }
+    }, this.QUEUE_REMOVAL_UNDO_MS || 6000);
+    this.pendingQueueAddUndo = pending;
+
+    const chipText = text || `Queued ${entry.icon || ''}`.trim();
+    this.setQueueStatus(chipText, 'success', `Added to queue: ${entry.text || ''}`, { action: 'undo-add' });
+};
+
+window.MaxExtensionFloatingPanel.undoQueueAdd = function () {
+    const pending = this.pendingQueueAddUndo;
+    if (!pending) return false;
+    clearTimeout(pending.timeoutId);
+    this.pendingQueueAddUndo = null;
+    if (this.queueStatus?.action === 'undo-add') {
+        this.setQueueStatus(null);
+    }
+
+    const removed = this.queueRuntime?.removeById
+        ? this.queueRuntime.removeById(pending.queueId)
+        : null;
+    if (!removed) {
+        // Already dispatched (or otherwise gone): nothing to take back.
+        logConCgp('[floating-panel-queue] Undo add: entry no longer in the queue:', pending.queueId);
+        return false;
+    }
+    this.clearQueueFinishedState?.();
+    logConCgp('[floating-panel-queue] Undo add: removed dropped queue item:', removed.text);
     return true;
 };

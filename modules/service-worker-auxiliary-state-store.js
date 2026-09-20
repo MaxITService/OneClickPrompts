@@ -56,7 +56,7 @@ const KEYS = {
     crossChat: 'modules.crossChat', // object { settings: {...}, storedPrompt: string }
     inlineProfileSelector: 'modules.inlineProfileSelector', // object { enabled:boolean, placement:'before'|'after' }
     tokenApproximator: 'modules.tokenApproximator', // object { enabled:boolean, calibration:number, threadMode:string, showEditorCounter:boolean, placement:'before'|'after' }
-    selectorAutoDetector: 'modules.selectorAutoDetector', // object { enableEditorHeuristics:boolean, enableSendButtonHeuristics:boolean, enableStopButtonHeuristics:boolean, enableContainerHeuristics:boolean, notifyContainerMissing:boolean, autoFallbackToFloatingPanel:boolean }
+    selectorAutoDetector: 'modules.selectorAutoDetector', // object { enableEditorHeuristics:boolean, enableSendButtonHeuristics:boolean, enableStopButtonHeuristics:boolean, enableContainerHeuristics:boolean, notifyContainerMissing:boolean, autoFallbackToFloatingPanel:boolean, enableButtonDragAndDrop:boolean }
     tooltip: 'modules.tooltip', // object { enabled:boolean, showDelayMs:number, fontColor:string|null }
     manualQueueCards: 'modules.manualQueueCards', // object { cards: Array<{emoji:string, text:string}>, expanded:boolean, cardCount:number }
   },
@@ -237,6 +237,7 @@ async function getValue(path) {
         enableContainerHeuristics: obj.enableContainerHeuristics === true,
         notifyContainerMissing: obj.notifyContainerMissing === true,
         autoFallbackToFloatingPanel: obj.autoFallbackToFloatingPanel !== false,
+        enableButtonDragAndDrop: obj.enableButtonDragAndDrop !== false,
       };
     }
     return { ...SELECTOR_AUTO_DETECTOR_DEFAULTS };
@@ -416,6 +417,7 @@ async function setValue(path, value, write = lsSet) {
       enableContainerHeuristics: settings.enableContainerHeuristics === true,
       notifyContainerMissing: settings.notifyContainerMissing === true,
       autoFallbackToFloatingPanel: settings.autoFallbackToFloatingPanel !== false,
+      enableButtonDragAndDrop: settings.enableButtonDragAndDrop !== false,
     };
     await write({ [KEYS.modules.selectorAutoDetector]: normalized });
     return;

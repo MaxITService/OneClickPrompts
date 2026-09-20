@@ -148,14 +148,6 @@
     display: none;
 }
 
-/* While a prompt button is being dragged the inline queue bar is revealed as a
-   drop zone even when it is dismissed, empty, or queue mode is off. */
-.max-extension-inline-queue-controls.is-drop-ready {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
 /* One wrapping row: tab, delay editor, body (queued items + actions).
    The body absorbs the free space so nothing is left unused on wide
    containers; on narrow ones it wraps onto its own line as one unit.
@@ -752,6 +744,25 @@
     pointer-events: none;
 }
 
+/* Queued item dragged outside every queue surface: releasing removes it. The
+   item dims and carries a small trash hint; the placeholder is gone so the
+   list has already closed up. */
+.max-extension-queued-item--remove-intent {
+    opacity: 0.45;
+    filter: grayscale(0.6);
+}
+
+.max-extension-queued-item--remove-intent::after {
+    content: "\1F5D1\FE0F";
+    position: absolute;
+    right: -8px;
+    top: -9px;
+    font-size: 12px;
+    line-height: 1;
+    filter: none;
+    opacity: 1;
+}
+
 /* ---- Drag prompt buttons into the queue -------------------------------- */
 
 /* Empty-state drop placeholder rendered inside every queue display area. */
@@ -779,14 +790,17 @@
     color: rgba(255, 255, 255, 0.8);
 }
 
-/* Force-reveal the panel queue area while a drag is in flight. */
-#max-extension-queue-section.ocp-queue-drop-ready,
-#max-extension-queue-display.ocp-queue-drop-ready {
+/* The panel's own queue display is compact (hidden) while empty; it is
+   revealed, placeholder included, only while a queue-droppable prompt button
+   is being dragged. This is the panel's section, never a hidden/dismissed
+   inline bar: inline bars are not force-revealed by a drag. */
+body.ocp-queue-button-dragging #max-extension-queue-display {
     display: flex !important;
 }
 
-/* Every revealed drop zone gets a quiet dashed hint; the one under the pointer
-   lights up. */
+/* While a queue-droppable prompt button is dragged, every *visible* drop zone
+   gets a quiet dashed hint; the one under the pointer lights up. Hidden or
+   dismissed queue bars are never revealed by a drag. */
 body.ocp-queue-button-dragging .max-extension-inline-queue-items,
 body.ocp-queue-button-dragging #max-extension-queue-display {
     outline: 1px dashed rgba(122, 92, 200, 0.55);
@@ -822,12 +836,26 @@ body.ocp-queue-button-dragging #max-extension-queue-display {
     opacity: 1;
 }
 
-/* Source button while its ghost is being dragged. */
-.ocp-queue-drag-source--active {
-    opacity: 0.45;
+/* Separators are draggable to reorder without entering edit mode. */
+.ocp-button-drag-source[data-ocp-button-edit-kind="separator"] {
+    cursor: grab;
 }
 
-body.ocp-queue-button-dragging {
+/* Source element stays in flow (hidden via inline visibility) while its ghost
+   is dragged, so siblings reflow for live reordering. */
+.ocp-button-drag-source--active {
+    animation: none;
+}
+
+/* Touch/pen: while a long-press drag is pending or active on this element
+   only, the browser must not claim the gesture for scrolling. Idle buttons
+   keep the default touch-action so a swipe over the toolbar scrolls the page. */
+.ocp-button-drag-source--pending,
+.ocp-button-drag-source--active {
+    touch-action: none;
+}
+
+body.ocp-button-dragging {
     cursor: grabbing;
     user-select: none;
     -webkit-user-select: none;
@@ -835,7 +863,7 @@ body.ocp-queue-button-dragging {
 
 /* Fixed-position clone that follows the pointer (appended to document.body so
    no transformed/zoomed ancestor skews its coordinates). */
-.ocp-queue-drag-ghost {
+.ocp-button-drag-ghost {
     position: fixed;
     z-index: 2147483647;
     pointer-events: none;
@@ -847,6 +875,34 @@ body.ocp-queue-button-dragging {
     outline-offset: 2px;
     border-radius: 6px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 0 4px rgba(139, 92, 246, 0.22);
+    transition: outline-color 0.15s, box-shadow 0.15s;
+}
+
+/* A 1px separator would be invisible as a ghost; give it a visible dashed body. */
+.ocp-button-drag-ghost--separator {
+    width: 18px !important;
+    min-height: 24px;
+    box-sizing: border-box;
+    background: rgba(122, 92, 200, 0.18) !important;
+    border: 1px dashed rgba(122, 92, 200, 0.9);
+}
+
+/* Over a queue surface: green = will be queued on release. */
+.ocp-button-drag-ghost--queue {
+    outline-color: #22c55e;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 0 4px rgba(34, 197, 94, 0.25);
+}
+
+/* Away from both the toolbar and any queue: releasing cancels the drag. */
+.ocp-button-drag-ghost--outside {
+    opacity: 0.5;
+}
+
+/* Over a queue surface with a separator/system button: red = cannot be queued. */
+.ocp-button-drag-ghost--blocked {
+    outline-color: #ef4444;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 0 4px rgba(239, 68, 68, 0.25);
+    opacity: 0.6;
 }
 
 .max-extension-queue-automation-buttons {

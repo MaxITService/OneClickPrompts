@@ -32,13 +32,14 @@ Tired of retyping the same prompts in your AI chats? **OneClickPrompts** lets yo
 - One-Click Prompt Insertion: Instantly add your custom prompts to ChatGPT, DeepSeek Chat, Google AI Studio, Claude, Copilot, Gemini, Perplexity, and more with a single click.
 - Multi-Platform Support: Works seamlessly across ChatGPT, DeepSeek Chat, Google AI Studio, Claude, Copilot, Gemini, Perplexity, and Grok (and growing!).
 - Customizable Buttons: Easily create buttons for any prompt you use regularly.
+- Drag to Reorder: Drag any prompt button or separator right on the chat page to reorder it, no edit mode required. Undo is one click away. (Switch it off in the Advanced tab if dragging misbehaves on a site.)
 - Prompt Profiles: Organize your buttons into profiles for different tasks, projects, AI platforms, or writing styles.
 - Visual Icons & Emojis: Personalize buttons with emojis or characters for quick visual recognition.
 - Auto-Send Convenience: Optionally send messages automatically when you click a button. Use Shift-click to toggle auto-send behavior.
 - Keyboard Shortcuts (Alt + 1-9): Quickly access your first nine buttons with keyboard shortcuts for maximum speed.
 - Button Separators: Visually organize your prompt buttons with customizable separators for a cleaner workspace.
 - **Token Counter**: Monitor your prompt token usage with a built-in token counter that supports multiple counting algorithms for different speed/accuracy needs.
-- **Floating Panel & Prompt Queue:** Summon a draggable, resizable floating panel (click the '🔼' button) that contains the new Queue feature. Chain multiple prompts to send them sequentially with a configurable delay, perfect for complex, multi-step tasks.
+- **Floating Panel & Prompt Queue:** Summon a draggable, resizable floating panel (click the '🔼' button) that contains the new Queue feature. Chain multiple prompts to send them sequentially with a configurable delay, perfect for complex, multi-step tasks. Drop a prompt button onto the queue bar to queue it (green = will queue, red = cannot), drag queued items to reorder them or drag them out to remove them, and undo any of it with one click.
 - **Cross-Chat Superpowers:**
   - **Copy & Paste Prompts (manual way):** Ever wanted to ask the same question to different AIs? Copy a prompt from one site's input box and instantly paste it into another.
   - **Multi-Chat Broadcast (auto send to all open tabs same prompt):** A power-user feature to send a prompt to _every_ supported AI chat tab you have open at once. Great for comparing responses across models. You can "shield" a tab to prevent it from receiving broadcasts. This is Dangerous and should me monitored: risk of sending to chats you didn't intend to!
@@ -51,7 +52,7 @@ Tired of retyping the same prompts in your AI chats? **OneClickPrompts** lets yo
 
 ## Documentation
 
-- [What's new in 0.0.6.8](documentation/what's%20new.md)
+- [What's new in 0.0.7.5](documentation/what's%20new.md)
 
 ## AI generated codebase overview - DeepWiki
 

@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const containerHeuristicsToggle = document.getElementById('containerHeuristicsToggle');
     const containerMissingNotifyCheckbox = document.getElementById('containerMissingNotifyCheckbox');
     const autoFloatingFallbackCheckbox = document.getElementById('autoFloatingFallbackCheckbox');
+    const buttonDragAndDropToggle = document.getElementById('buttonDragAndDropToggle');
 
     const heuristicsDefaults = {
         enableEditorHeuristics: false,
@@ -26,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
         enableContainerHeuristics: false,
         notifyContainerMissing: false,
         autoFallbackToFloatingPanel: true,
+        enableButtonDragAndDrop: true,
     };
     let heuristicsSettings = { ...heuristicsDefaults };
 
@@ -64,6 +66,9 @@ document.addEventListener('DOMContentLoaded', () => {
         containerHeuristicsToggle.checked = !!heuristicsSettings.enableContainerHeuristics;
         containerMissingNotifyCheckbox.checked = !!heuristicsSettings.notifyContainerMissing;
         autoFloatingFallbackCheckbox.checked = !!heuristicsSettings.autoFallbackToFloatingPanel;
+        if (buttonDragAndDropToggle) {
+            buttonDragAndDropToggle.checked = heuristicsSettings.enableButtonDragAndDrop !== false;
+        }
     }
 
     async function saveHeuristicsSettings(settingsSnapshot = heuristicsSettings) {
@@ -89,6 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
         containerHeuristicsToggle,
         containerMissingNotifyCheckbox,
         autoFloatingFallbackCheckbox,
+        buttonDragAndDropToggle,
     ].filter(Boolean);
 
     async function updateHeuristicsSetting(key, checkbox) {
@@ -307,6 +313,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (containerMissingNotifyCheckbox) {
         containerMissingNotifyCheckbox.addEventListener('change', () => {
             void updateHeuristicsSetting('notifyContainerMissing', containerMissingNotifyCheckbox);
+        });
+    }
+    if (buttonDragAndDropToggle) {
+        buttonDragAndDropToggle.addEventListener('change', () => {
+            void updateHeuristicsSetting('enableButtonDragAndDrop', buttonDragAndDropToggle);
         });
     }
     if (autoFloatingFallbackCheckbox) {
