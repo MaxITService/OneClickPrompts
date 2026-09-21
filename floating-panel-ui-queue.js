@@ -153,6 +153,14 @@ const QUEUE_AUTOMATION_BUTTONS = [
         emoji: '🏁',
         ariaLabel: 'Play a completion beep when the queue finishes sending all prompts',
         tooltip: 'Plays a celebratory tone once all queued prompts have been sent.'
+    },
+    {
+        flagProp: 'queueAutoHideOnFinishEnabled',
+        storageKey: 'queueAutoHideOnFinish',
+        label: 'Auto-hide when finished',
+        emoji: '🫥',
+        ariaLabel: 'Hide the in-chat queue bar automatically when the queue finishes',
+        tooltip: 'Hides the in-chat queue bar automatically once all queued prompts have been sent (same as pressing its × button). It reappears the next time something is queued.'
     }
 ];
 
@@ -206,6 +214,7 @@ window.MaxExtensionFloatingPanel.initializeQueueSection = function () {
     this.queueBeepEnabled = Boolean(window.globalMaxExtensionConfig.queueBeepBeforeSend);
     this.queueSpeakEnabled = Boolean(window.globalMaxExtensionConfig.queueSpeakBeforeSend);
     this.queueFinishBeepEnabled = Boolean(window.globalMaxExtensionConfig.queueBeepOnFinish);
+    this.queueAutoHideOnFinishEnabled = Boolean(window.globalMaxExtensionConfig.queueAutoHideOnFinish);
 
     const delayContainer = this.randomDelayBadge?.closest('.delay-container');
     if (delayContainer) {
@@ -1272,6 +1281,15 @@ window.MaxExtensionFloatingPanel.markQueueFinished = function () {
         void this.playQueueCompletionBeep();
     }
     this.updateQueueFinishedIndicator?.();
+    // Same effect as the inline bar's × button, minus the reset: the queue is
+    // already empty, and the "Queue is finished" indicator in the panel stays.
+    // The bar comes back on the next addToQueue via showQueueMenu.
+    if (this.queueAutoHideOnFinishEnabled) {
+        this.queueMenuHidden = true;
+        this.persistQueueMenuHiddenState?.(true);
+        this.updateInlineQueueControlsVisibility?.();
+        logConCgp('[floating-panel-queue] Queue finished; inline queue bar auto-hidden.');
+    }
 };
 
 window.MaxExtensionFloatingPanel.syncQueueModeUiFromConfig = function () {

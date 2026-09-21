@@ -986,6 +986,29 @@ window.MaxExtensionButtonsInit = {
                     };
                     buttonElement = MaxExtensionButtons.createCustomSendButton(queueButtonConfig, index, queueClickHandler, shortcutKey, { queueDroppable: false });
                     buttonElement.classList.add('ocp-queue-system-button');
+                    // The queued text is whatever the editor holds at click time, so
+                    // preview it in the tooltip on hover (same idea as the Paste
+                    // button's stored-prompt preview) and restore the base text after.
+                    const queueBaseTooltip = buttonElement.dataset.ocpTooltipBase || '';
+                    const QUEUE_PREVIEW_MAX_CHARS = 200;
+                    buttonElement.addEventListener('mouseenter', () => {
+                        const buttons = window.MaxExtensionButtons;
+                        const editor = buttons?.__findActiveEditor?.();
+                        const text = editor && typeof buttons.__readEditorText === 'function'
+                            ? buttons.__readEditorText(editor).trim()
+                            : '';
+                        const preview = !text
+                            ? '<i>Editor is empty — nothing to queue.</i>'
+                            : `Will queue: &ldquo;${escapeTooltipHtml(text.length > QUEUE_PREVIEW_MAX_CHARS
+                                ? text.substring(0, QUEUE_PREVIEW_MAX_CHARS - 3) + '...'
+                                : text)}&rdquo;`;
+                        buttonElement.dataset.ocpTooltipBase = `${queueBaseTooltip}<br><br>${preview}`;
+                        buttons?.updateCustomButtonAutoSendTooltip?.(buttonElement);
+                    });
+                    buttonElement.addEventListener('mouseleave', () => {
+                        buttonElement.dataset.ocpTooltipBase = queueBaseTooltip;
+                        window.MaxExtensionButtons?.updateCustomButtonAutoSendTooltip?.(buttonElement);
+                    });
                 } else if (def.config.text === CREATE_BUTTON_FROM_EDITOR_MAGIC_TEXT) {
                     const createButtonConfig = {
                         ...def.config,
