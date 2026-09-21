@@ -36,19 +36,9 @@ async function processChatGPTCustomSendButtonClick(event, customText, autoSend) 
         }) || null;
     };
 
-    const isChatGPTStopButtonLike = (btn) => {
-        if (!btn) return false;
-        const label = (
-            (btn.getAttribute('aria-label') || '') +
-            ' ' +
-            (btn.getAttribute('data-testid') || '') +
-            ' ' +
-            (btn.innerText || '')
-        ).toLowerCase();
-        return label.includes('stop streaming')
-            || label.includes('stop generating')
-            || label.includes('stop');
-    };
+    // "Stop streaming" / "Stop generating" / data-testid="stop-button"; word-level so a sidebar
+    // chat titled "Stop Here" ("Pin Stop Here") never counts.
+    const isChatGPTStopButtonLike = (btn) => window.ButtonsClickingShared.hasStopLabel(btn);
 
     const isChatGPTSendButtonLike = (btn) => {
         if (!btn) return false;

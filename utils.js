@@ -418,7 +418,7 @@ class InjectionTargetsOnWebsite {
                 stopButtons: [
                     'button[aria-label="Stop response"]',
                     'button[aria-label*="stop response" i]',
-                    'button[type="button"][aria-label*="stop" i]'
+                    'button[type="button"][aria-label^="stop" i]'
                 ]
             },
             Copilot: {

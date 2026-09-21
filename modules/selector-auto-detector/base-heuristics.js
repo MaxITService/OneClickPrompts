@@ -242,14 +242,22 @@ window.OneClickPromptsSelectorAutoDetectorBase = {
             const title = (el.getAttribute('title') || '').toLowerCase();
             const testId = (el.getAttribute('data-testid') || '').toLowerCase();
 
-            // A. Keywords
+            // A. Keywords: a Stop control's label starts with the verb ("Stop generating").
+            // A word buried in the middle ("Pin Stop Here", a sidebar chat title) is weak evidence.
             const keywords = ['stop', 'cancel', 'abort', 'pause'];
-            const matchesKeyword = (str) => keywords.some(k => str.includes(k));
+            const leadingKeyword = /^\s*(?:stop|cancel|abort|pause)\b/;
+            const embeddedKeyword = /\b(?:stop|cancel|abort|pause)\b/;
+            const keywordScore = (str, full) => leadingKeyword.test(str) ? full : embeddedKeyword.test(str) ? Math.ceil(full / 4) : 0;
 
-            if (matchesKeyword(ariaLabel)) score += 10;
-            if (matchesKeyword(title)) score += 5;
-            if (matchesKeyword(testId)) score += 8;
+            score += keywordScore(ariaLabel, 10);
+            score += keywordScore(title, 5);
+            score += keywordScore(testId.replace(/[-_]/g, ' '), 8);
             if (keywords.includes(text)) score += 8;
+
+            // Sidebars, menus and links never host the generation Stop control.
+            if (el.closest('nav, aside, a[href], [role="navigation"], [role="menu"], [role="menuitem"], [role="listbox"], [role="tablist"]')) {
+                score -= 50;
+            }
 
             // B. Iconography
             // Suggestive of square/stop/rect shapes
@@ -267,9 +275,14 @@ window.OneClickPromptsSelectorAutoDetectorBase = {
             if (editorRect) {
                 const btnRect = el.getBoundingClientRect();
 
-                // Inside editor area or slightly below
-                if (btnRect.bottom >= editorRect.top && btnRect.top <= editorRect.bottom + 100) {
+                // Inside editor area or slightly below, and horizontally within the composer
+                const verticallyNear = btnRect.bottom >= editorRect.top && btnRect.top <= editorRect.bottom + 100;
+                const horizontallyNear = btnRect.right >= editorRect.left - 200 && btnRect.left <= editorRect.right + 200;
+                if (verticallyNear && horizontallyNear) {
                     score += 3;
+                } else {
+                    // Same row as the editor but off in a sidebar is not a composer control
+                    score -= 30;
                 }
             }
 

@@ -84,14 +84,7 @@ async function processDeepSeekCustomSendButtonClick(event, customText, autoSend)
     // 2.1 Stop button detection tuned for DeepSeek (class churn-safe)
     const isStopButtonLike = (el) => {
         if (!el) return false;
-        const label = (
-            (el.getAttribute('aria-label') || '') +
-            (el.getAttribute('title') || '') +
-            (el.getAttribute('data-testid') || '') +
-            (el.innerText || '')
-        ).toLowerCase();
-        const stopKeywords = ['stop', 'cancel', 'abort', 'pause'];
-        if (stopKeywords.some(k => label.includes(k))) return true;
+        if (window.ButtonsClickingShared.hasStopLabel(el, ['cancel', 'abort', 'pause'])) return true;
 
         // Require a square-ish icon in the main action cluster; avoids false positives on toggles
         const inActionCluster = !!el.closest('.bf38813a');

@@ -21,16 +21,77 @@ window.ButtonsClickingShared = {
     },
 
     /**
+     * Word-level Stop-label check. A substring test matched sidebar chat titles
+     * ("Pin Stop Here") and any role="button" wrapper whose content mentioned the word.
+     * Labels and captions must start with the keyword; data-testid must carry it as a token.
+     * @param {HTMLElement} el
+     * @param {string[]} extraKeywords - Site-specific synonyms such as 'cancel'
+     * @returns {boolean}
+     */
+    hasStopLabel: (el, extraKeywords = []) => {
+        if (!el?.getAttribute) return false;
+        const keywords = ['stop', ...extraKeywords].join('|');
+        const leading = new RegExp(`^\\s*(?:${keywords})\\b`, 'i');
+        const token = new RegExp(`(?:^|[-_:.\\s])(?:${keywords})(?:[-_:.\\s]|$)`, 'i');
+        const caption = (el.innerText || '').trim();
+        // A real Stop control carries a short caption; long text means a wrapper around content.
+        const shortCaption = caption.length <= 40 ? caption : '';
+        return leading.test(el.getAttribute('aria-label') || '')
+            || leading.test(el.getAttribute('title') || '')
+            || token.test(el.getAttribute('data-testid') || '')
+            || leading.test(shortCaption);
+    },
+
+    /**
+     * Sidebars, menus and links never host the generation Stop control.
+     * @param {HTMLElement} el
+     * @returns {boolean}
+     */
+    isInsidePageChrome: (el) => !!el?.closest?.(
+        'nav, aside, a[href], [role="navigation"], [role="menu"], [role="menuitem"], [role="listbox"], [role="tablist"]'
+    ),
+
+    /**
+     * The composer region: the visible editor's form, or the editor itself when there is none.
+     * @returns {HTMLElement|null}
+     */
+    getComposerScope: () => {
+        const editorSelectors = window.InjectionTargetsOnWebsite?.selectors?.editors || [];
+        for (const selector of editorSelectors) {
+            let editor = null;
+            try {
+                editor = Array.from(document.querySelectorAll(selector))
+                    .find(window.ButtonsClickingShared.isVisibleInteractiveElement);
+            } catch (_) { /* invalid selector */ }
+            if (editor) return editor.closest('form') || editor;
+        }
+        return null;
+    },
+
+    /**
+     * True when the element sits inside the composer scope or within a small margin of it.
+     * An unknown scope cannot veto anything.
+     * @param {HTMLElement} el
+     * @param {HTMLElement|null} scope
+     * @returns {boolean}
+     */
+    isNearComposer: (el, scope, margin = 200) => {
+        if (!scope || !el) return true;
+        if (scope.contains(el)) return true;
+        const a = el.getBoundingClientRect();
+        const b = scope.getBoundingClientRect();
+        const edges = [a.left, a.right, a.top, a.bottom, b.left, b.right, b.top, b.bottom];
+        if (!edges.every(Number.isFinite)) return true;
+        return a.right >= b.left - margin && a.left <= b.right + margin
+            && a.bottom >= b.top - margin && a.top <= b.bottom + margin;
+    },
+
+    /**
      * Checks if a button is in a "Stop" or "Busy" state.
      * @param {HTMLElement} btn
      * @returns {boolean}
      */
-    isBusyStopButton: (btn) => {
-        if (!btn) return false;
-        const text = [btn.getAttribute('aria-label'), btn.getAttribute('data-testid'), btn.getAttribute('title'), btn.innerText]
-            .filter(Boolean).join(' ').toLowerCase();
-        return text.includes('stop');
-    },
+    isBusyStopButton: (btn) => window.ButtonsClickingShared.hasStopLabel(btn),
 
     /**
      * Tries to find a stop button using site-specific selectors or heuristics.
@@ -76,7 +137,7 @@ window.ButtonsClickingShared = {
             });
 
             const visible = candidates.find(el => {
-                return isVisibleStopCandidate(el);
+                return isVisibleStopCandidate(el) && !window.ButtonsClickingShared.isInsidePageChrome(el);
             });
             if (visible) {
                 window.OneClickPromptsSelectorAutoDetector?.reportRecovery?.('stopButton');
@@ -84,29 +145,22 @@ window.ButtonsClickingShared = {
             }
         }
 
-        // 3. Heuristic fallback: Search for visible buttons with "stop" in relevant attributes
-        // Exclude OCP buttons and hidden elements
+        // 3. Heuristic fallback: a visible Stop-labelled control near the composer.
+        // Exclude OCP UI, page chrome (sidebars, menus) and anything far from the editor.
+        const shared = window.ButtonsClickingShared;
+        const composerScope = shared.getComposerScope();
         const allButtons = Array.from(document.querySelectorAll('button, [role="button"], div.ds-icon-button'));
         const heuristicStop = allButtons.find(btn => {
             if (!isVisibleStopCandidate(btn)) return false;
 
-            // Exclude OCP UI
             const testId = (btn.getAttribute('data-testid') || '').toLowerCase();
-            if (testId.startsWith('custom-send-button') || btn.closest('[id*="custom-buttons-container"]')) {
+            if (testId.startsWith('custom-send-button') || btn.closest('[id*="custom-buttons-container"], #max-extension-floating-panel')) {
                 return false;
             }
 
-            // Check content/attributes
-            const text = (
-                (btn.getAttribute('aria-label') || '') +
-                (btn.getAttribute('title') || '') +
-                (btn.getAttribute('data-testid') || '') +
-                (btn.innerText || '')
-            ).toLowerCase();
-
-            if (!text.includes('stop')) return false;
-
-            return true;
+            if (!shared.hasStopLabel(btn)) return false;
+            if (shared.isInsidePageChrome(btn)) return false;
+            return shared.isNearComposer(btn, composerScope);
         }) || null;
 
         if (heuristicStop) {
