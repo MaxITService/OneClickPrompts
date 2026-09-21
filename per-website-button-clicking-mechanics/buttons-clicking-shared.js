@@ -33,7 +33,9 @@ window.ButtonsClickingShared = {
         const keywords = ['stop', ...extraKeywords].join('|');
         const leading = new RegExp(`^\\s*(?:${keywords})\\b`, 'i');
         const token = new RegExp(`(?:^|[-_:.\\s])(?:${keywords})(?:[-_:.\\s]|$)`, 'i');
-        const caption = (el.innerText || '').trim();
+        // Icon-font glyph names (Material Symbols: "progress_activity", "stop_circle") render as
+        // text; drop leading snake_case tokens so the visible caption ("Stop") is what gets tested.
+        const caption = (el.innerText || '').trim().replace(/^(?:[a-z0-9]+(?:_[a-z0-9]+)+\s*)+/i, '');
         // A real Stop control carries a short caption; long text means a wrapper around content.
         const shortCaption = caption.length <= 40 ? caption : '';
         return leading.test(el.getAttribute('aria-label') || '')
@@ -460,6 +462,12 @@ window.ButtonsClickingShared = {
                     }
 
                     mainReadySince = 0;
+
+                    // Recovery may have opened the selector helper during findButton(); keep waiting
+                    // for the user instead of timing out (the picked element is clicked after Dismiss).
+                    if (window.OneClickPromptsSelectorAutoDetector?.state?.sendButton?.autoSendAwaitingUser) {
+                        return;
+                    }
 
                     // C. Neither stop nor send button found - Timeout check
                     if (attempts >= maxAttempts) {

@@ -48,7 +48,11 @@ async function processAIStudioCustomSendButtonClick(event, customText, autoSend)
     if (autoSend && (event?.__fromDangerBroadcast || event?.__fromQueue || globalMaxExtensionConfig.globalAutoSendEnabled)) {
         logConCgp('[buttons] AI Studio Auto-send enabled, attempting to send message');
 
-        const MAX_ATTEMPTS = 10; // 2 seconds max (10 x 200ms)
+        // Run stays disabled for a moment after the text lands: poll the configured selectors
+        // quietly first, then hand over to the Guard (failure reporting + heuristics) with
+        // attempts to spare so a recovery started there can still finish.
+        const QUIET_ATTEMPTS = 10; // 2 seconds (10 x 200ms)
+        const MAX_ATTEMPTS = 25;
         const selectors = window.InjectionTargetsOnWebsite?.selectors?.sendButtons || [];
         let findAttempts = 0;
 
@@ -61,7 +65,7 @@ async function processAIStudioCustomSendButtonClick(event, customText, autoSend)
             maxAttempts: MAX_ATTEMPTS,
             findButton: async () => {
                 findAttempts += 1;
-                if (findAttempts < MAX_ATTEMPTS) {
+                if (findAttempts < QUIET_ATTEMPTS) {
                     return window.OneClickPromptsSelectorGuard._querySelectors(selectors, { requireEnabled: true });
                 }
                 return window.OneClickPromptsSelectorGuard.findSendButton();

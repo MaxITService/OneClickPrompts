@@ -81,14 +81,36 @@ async function processDeepSeekCustomSendButtonClick(event, customText, autoSend)
         }
     }
 
+    // All DeepSeek selectors live in utils.js (getDefaultSelectors) or the user's custom selectors.
+    const getSiteSelectors = (key) => window.InjectionTargetsOnWebsite?.selectors?.[key] || [];
+
+    const queryAll = (selectors) => selectors.flatMap((selector) => {
+        try {
+            return Array.from(document.querySelectorAll(selector));
+        } catch (_) {
+            return [];
+        }
+    });
+
+    // DeepSeek reuses the same action-cluster control for Send and Stop, so the configured
+    // send-button selectors also describe the cluster a Stop control must belong to.
+    const isInActionCluster = (el) => {
+        const selectors = getSiteSelectors('sendButtons');
+        if (selectors.length === 0) return false;
+        try {
+            return el.matches(selectors.join(', '));
+        } catch (_) {
+            return selectors.some((selector) => { try { return el.matches(selector); } catch (_) { return false; } });
+        }
+    };
+
     // 2.1 Stop button detection tuned for DeepSeek (class churn-safe)
     const isStopButtonLike = (el) => {
         if (!el) return false;
         if (window.ButtonsClickingShared.hasStopLabel(el, ['cancel', 'abort', 'pause'])) return true;
 
         // Require a square-ish icon in the main action cluster; avoids false positives on toggles
-        const inActionCluster = !!el.closest('.bf38813a');
-        if (!inActionCluster) return false;
+        if (!isInActionCluster(el)) return false;
 
         const hasSquareIcon = !!el.querySelector('svg rect, svg use[href*="stop"], svg use[*|href*="stop"]');
         if (hasSquareIcon) return true;
@@ -102,28 +124,9 @@ async function processDeepSeekCustomSendButtonClick(event, customText, autoSend)
     };
 
     const findDeepSeekStopButton = () => {
-        const selectors = window.InjectionTargetsOnWebsite?.selectors?.stopButtons || [];
-        const fromSelectors = selectors
-            .map(sel => {
-                try {
-                    return Array.from(document.querySelectorAll(sel));
-                } catch {
-                    return [];
-                }
-            })
-            .flat();
-
-        const candidates = [
-            ...fromSelectors,
-            ...Array.from(document.querySelectorAll('.bf38813a .ds-icon-button.ds-icon-button--sizing-container'))
-        ];
-
-        return candidates.find((el) => {
-            if (!el || el.offsetParent === null) return false;
-            const style = window.getComputedStyle(el);
-            if (!style || style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
-            return isStopButtonLike(el);
-        }) || null;
+        // Stop selectors first; then the shared Send/Stop cluster, filtered by icon shape.
+        const candidates = queryAll([...getSiteSelectors('stopButtons'), ...getSiteSelectors('sendButtons')]);
+        return candidates.find((el) => isVisible(el) && isStopButtonLike(el)) || null;
     };
 
     const isVisible = (el) => {
@@ -136,9 +139,10 @@ async function processDeepSeekCustomSendButtonClick(event, customText, autoSend)
     };
 
     const findDeepSeekSendButton = async () => {
-        // Prefer the rightmost visible action button in the main action cluster, excluding stops
-        const clusterButtons = Array.from(document.querySelectorAll('.bf38813a .ds-icon-button.ds-icon-button--sizing-container:not([aria-disabled=\"true\"])'))
+        // Prefer the rightmost visible action button matched by the configured selectors, excluding stops
+        const clusterButtons = queryAll(getSiteSelectors('sendButtons'))
             .filter(isVisible)
+            .filter(el => el.getAttribute('aria-disabled') !== 'true' && !el.classList.contains('ds-button--disabled'))
             .filter(el => !isStopButtonLike(el));
 
         if (clusterButtons.length > 0) {
@@ -152,6 +156,7 @@ async function processDeepSeekCustomSendButtonClick(event, customText, autoSend)
             return clusterButtons[0];
         }
 
+        // Nothing matched: let the Guard report the failure and run heuristics.
         const guardBtn = await window.OneClickPromptsSelectorGuard.findSendButton();
         return isStopButtonLike(guardBtn) ? null : guardBtn;
     };
@@ -168,7 +173,8 @@ async function processDeepSeekCustomSendButtonClick(event, customText, autoSend)
                 if (!sendButton) return false;
                 return !sendButton.disabled &&
                     sendButton.getAttribute('aria-disabled') !== 'true' &&
-                    !sendButton.classList.contains('disabled');
+                    !sendButton.classList.contains('disabled') &&
+                    !sendButton.classList.contains('ds-button--disabled');
             },
             isBusy: (btn) => isStopButtonLike(btn) || ButtonsClickingShared.isBusyStopButton(btn),
             preClickValidation: () => !findDeepSeekStopButton(),

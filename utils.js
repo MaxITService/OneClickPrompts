@@ -394,7 +394,8 @@ class InjectionTargetsOnWebsite {
                     'button#composer-submit-button[data-testid="stop-button"]',
                     'button[data-testid="stop-button"]',
                     'button[aria-label="Stop streaming"]',
-                    'button[aria-label="Stop generating"]'
+                    'button[aria-label="Stop generating"]',
+                    'button[aria-label^="Stop" i]'
                 ]
             },
             Claude: {
@@ -470,6 +471,11 @@ class InjectionTargetsOnWebsite {
                     "textarea.ds-scroll-area"
                 ],
                 "sendButtons": [
+                    // 2026-09: the action cluster (.bf38813a) holds one circle .ds-button reused for Send/Stop;
+                    // disabled state is a class, not aria-disabled. Stop is told apart by its square icon path.
+                    ".bf38813a .ds-button.ds-button--primary.ds-button--circle:not(.ds-button--disabled):not(:has(svg path[d*=\"4.88\"]))",
+                    ".bf38813a .ds-button.ds-button--primary.ds-button--circle:not(.ds-button--disabled)",
+                    // legacy (.ds-icon-button markup, pre-2026-09)
                     ".bf38813a .ds-icon-button.ds-icon-button--sizing-container:not([aria-disabled=\"true\"])",
                     "div.ec4f5d61 .bf38813a .ds-icon-button.ds-icon-button--sizing-container:last-of-type:not([aria-disabled=\"true\"])",
                     "div.ec4f5d61 .bf38813a .ds-icon-button._7436101.ds-icon-button--sizing-container:not([aria-disabled=\"true\"])",
@@ -477,6 +483,8 @@ class InjectionTargetsOnWebsite {
                 ],
                 "threadRoot": ".ds-scroll-area:has(.ds-message), .scrollable:has(textarea, [contenteditable=\"true\"])",
                 "stopButtons": [
+                    ".bf38813a .ds-button.ds-button--primary.ds-button--circle:has(svg path[d*=\"4.88\"])",
+                    // legacy (.ds-icon-button markup, pre-2026-09)
                     ".bf38813a .ds-icon-button:has(svg rect)",
                     ".bf38813a .ds-icon-button:has(svg path[d*=\"4.88\"])",
                     ".bf38813a .ds-icon-button:has(svg path[d*=\"4.88C23.68\"])",
@@ -494,6 +502,7 @@ class InjectionTargetsOnWebsite {
                     'body > app-root > div > div > div.layout-wrapper > div > span > ms-prompt-switcher > ms-chunk-editor > section > footer'
                 ],
                 sendButtons: [
+                    'ms-run-button button:has(.run-button-label)', // 2026-09: same button turns into Stop (spinner + "Stop")
                     'ms-run-button button[type="submit"]', // Most specific - custom element + submit button
                     'button.run-button[type="submit"]', // Specific class + type
                     'button[aria-label="Run"][type="submit"]', // Aria-label + type
@@ -512,6 +521,7 @@ class InjectionTargetsOnWebsite {
                 ],
                 buttonsContainerId: 'aistudio-custom-buttons-container',
                 stopButtons: [
+                    'ms-run-button button:has(.spin)', // 2026-09: Run button in its "Stop" state
                     'button[aria-label="Stop generating"]',
                     'button[aria-label="Cancel"]'
                 ]
@@ -594,8 +604,10 @@ class InjectionTargetsOnWebsite {
                 threadRoot: 'div.relative.border-subtlest.ring-subtlest.divide-subtlest.bg-base',
                 buttonsContainerId: 'perplexity-custom-buttons-container',
                 stopButtons: [
+                    'button[aria-label^="Stop response"]', // 2026-09: "Stop response (Esc)"
                     'button[aria-label="Stop"]',
-                    'button[data-testid="stop-button"]'
+                    'button[data-testid="stop-button"]',
+                    'button[aria-label^="Stop" i]'
                 ]
             }
         };

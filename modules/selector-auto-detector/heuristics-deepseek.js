@@ -28,19 +28,9 @@
     };
 
     const detectEditor = async () => {
-        // Note: this selector list mirrors the defaults in utils.js so heuristics can still
-        // guess an editor when the Guard's configured selectors fail (e.g., class churn).
-        const selectors = [
-            'textarea[placeholder="Message DeepSeek"]',
-            'textarea[aria-label*="Message"]',
-            'textarea[placeholder*="Message"]',
-            '[class*="chat-input"] textarea',
-            '[class*="chat-input"] [contenteditable="true"]',
-            'textarea',
-            'div[contenteditable="true"]',
-            'textarea._27c9245',
-            'textarea.ds-scroll-area'
-        ];
+        // Shipped defaults from utils.js: still a useful guess when the user's configured
+        // (custom) selectors fail, e.g. after class churn.
+        const selectors = window.InjectionTargetsOnWebsite?.getDefaultSelectors?.('DeepSeek')?.editors || [];
 
         const candidates = unique(
             selectors.flatMap(sel => Array.from(document.querySelectorAll(sel)))

@@ -137,13 +137,22 @@ window.OneClickPromptsSelectorAutoDetectorBase = {
             const testId = (el.getAttribute('data-testid') || '').toLowerCase();
 
             // A. Text/Label Matches
-            const keywords = ['send', 'submit', 'enter', 'chat'];
-            const matchesKeyword = (str) => keywords.some(k => str.includes(k));
+            // "send"/"submit" are the real signal. "chat"/"enter" alone are weak: header controls
+            // like "Temporary chat" or "New chat" carry them too, so they must not tie with Send.
+            const strongKeywords = ['send', 'submit'];
+            const weakKeywords = ['enter', 'chat'];
+            const matchesStrong = (str) => strongKeywords.some(k => str.includes(k));
+            const matchesWeak = (str) => weakKeywords.some(k => str.includes(k));
 
-            if (matchesKeyword(ariaLabel)) score += 10;
-            if (matchesKeyword(title)) score += 5;
-            if (matchesKeyword(testId)) score += 8;
-            if (text === 'send' || text === 'submit') score += 5; // Exact match
+            if (matchesStrong(ariaLabel)) score += 10;
+            else if (matchesWeak(ariaLabel)) score += 3;
+            if (matchesStrong(title)) score += 5;
+            else if (matchesWeak(title)) score += 2;
+            if (matchesStrong(testId)) score += 8;
+            else if (matchesWeak(testId)) score += 3;
+            // Caption: first line only (icon-font buttons append glyph names like "keyboard_return").
+            const caption = text.split('\n')[0].trim();
+            if (caption === 'send' || caption === 'submit' || caption === 'run') score += 8;
 
             // B. Iconography (SVG presence)
             // Modern chat apps almost always use an SVG icon for the send button
@@ -160,9 +169,20 @@ window.OneClickPromptsSelectorAutoDetectorBase = {
                 const verticalDist = Math.abs(btnRect.top - editorRect.top);
                 const horizontalDist = btnRect.left - editorRect.right;
 
-                // Inside or overlapping vertically
-                if (btnRect.top >= editorRect.top && btnRect.bottom <= editorRect.bottom) {
+                // Inside or overlapping vertically (a few px of slack: icon buttons often sit
+                // slightly above the first text line of the editor)
+                if (btnRect.bottom >= editorRect.top - 12 && btnRect.top <= editorRect.bottom + 12) {
                     score += 5;
+                }
+
+                // Hugging the editor's right edge is the classic Send placement.
+                if (verticalDist <= 60 && btnRect.left >= editorRect.right - 160 && btnRect.left <= editorRect.right + 60) {
+                    score += 4;
+                }
+
+                // Far from the composer (page header, sidebar, thread actions) is not a Send button.
+                if (verticalDist > 250) {
+                    score -= 15;
                 }
 
                 // To the right
@@ -184,11 +204,21 @@ window.OneClickPromptsSelectorAutoDetectorBase = {
             }
 
             // E. Negative Scoring (Penalize known non-send actions)
-            const negativeKeywords = ['stop', 'group', 'cancel', 'attach', 'upload', 'file', 'image', 'voice', 'mic'];
+            const negativeKeywords = [
+                'stop', 'group', 'cancel', 'attach', 'upload', 'file', 'image', 'voice', 'mic',
+                'temporary', 'new chat', 'history', 'menu', 'settings', 'search', 'close'
+            ];
             const matchesNegative = (str) => negativeKeywords.some(k => str.includes(k));
 
             if (matchesNegative(ariaLabel) || matchesNegative(title) || matchesNegative(testId)) {
                 score -= 50; // Heavy penalty to ensure it's not picked
+            }
+
+            // Consent / cookie bars and dialogs: "OK, got it", "Accept all", "I agree"...
+            const className = (typeof el.className === 'string' ? el.className : '').toLowerCase();
+            const consentWords = ['got it', 'accept', 'agree', 'cookie', 'consent', 'dismiss', 'no thanks'];
+            if (consentWords.some(k => caption.includes(k) || className.includes(k) || ariaLabel.includes(k))) {
+                score -= 50;
             }
 
             return { el, score };

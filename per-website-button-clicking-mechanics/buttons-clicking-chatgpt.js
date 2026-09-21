@@ -25,15 +25,23 @@ async function processChatGPTCustomSendButtonClick(event, customText, autoSend) 
 
     const getComposerRoot = () => editorArea?.closest?.('form[data-type="unified-composer"], form') || document;
 
-    const getCurrentChatGPTActionButton = () => {
+    // All ChatGPT selectors live in utils.js (getDefaultSelectors) or the user's custom selectors.
+    const getSiteSelectors = (key) => window.InjectionTargetsOnWebsite?.selectors?.[key] || [];
+
+    const queryComposer = (selectors) => {
         const root = getComposerRoot();
-        const candidates = Array.from(root.querySelectorAll('button#composer-submit-button, button[data-testid="send-button"], button[data-testid="stop-button"], button[aria-label]'));
-        return candidates.find((candidate) => {
-            if (!window.ButtonsClickingShared?.isVisibleInteractiveElement?.(candidate)) return false;
-            return candidate.id === 'composer-submit-button'
-                || candidate.getAttribute('data-testid') === 'send-button'
-                || candidate.getAttribute('data-testid') === 'stop-button';
-        }) || null;
+        return selectors.flatMap((selector) => {
+            try {
+                return Array.from(root.querySelectorAll(selector));
+            } catch (_) {
+                return [];
+            }
+        });
+    };
+
+    const getCurrentChatGPTActionButton = () => {
+        const candidates = queryComposer([...getSiteSelectors('sendButtons'), ...getSiteSelectors('stopButtons')]);
+        return candidates.find((candidate) => window.ButtonsClickingShared?.isVisibleInteractiveElement?.(candidate)) || null;
     };
 
     // "Stop streaming" / "Stop generating" / data-testid="stop-button"; word-level so a sidebar
@@ -86,58 +94,13 @@ async function processChatGPTCustomSendButtonClick(event, customText, autoSend) 
     };
 
     const findChatGPTStopButton = () => {
-        const root = getComposerRoot();
-        const selectorCandidates = [
-            'button#composer-submit-button[data-testid="stop-button"]',
-            'button[data-testid="stop-button"]',
-            'button[aria-label="Stop streaming"]',
-            'button[aria-label="Stop generating"]',
-            'button[aria-label^="Stop" i]'
-        ];
-
-        const fromSelectors = selectorCandidates.flatMap((selector) => {
-            try {
-                return Array.from(root.querySelectorAll(selector));
-            } catch (_) {
-                return [];
-            }
-        });
-
-        return fromSelectors.find((candidate) => {
+        return queryComposer(getSiteSelectors('stopButtons')).find((candidate) => {
             if (!window.ButtonsClickingShared?.isVisibleInteractiveElement?.(candidate)) return false;
             return isChatGPTStopButtonLike(candidate);
         }) || null;
     };
 
     const findChatGPTSendButton = async () => {
-        const root = getComposerRoot();
-        const selectorCandidates = [
-            'button#composer-submit-button[data-testid="send-button"]',
-            'button[data-testid="send-button"]',
-            'button[aria-label="Send prompt"]',
-            'button[aria-label="Send message"]',
-            'button[aria-label^="Send" i]',
-            'button[type="submit"]'
-        ];
-
-        const fromSelectors = selectorCandidates.flatMap((selector) => {
-            try {
-                return Array.from(root.querySelectorAll(selector));
-            } catch (_) {
-                return [];
-            }
-        });
-
-        const liveSend = fromSelectors.find((candidate) => {
-            if (!window.ButtonsClickingShared?.isVisibleInteractiveElement?.(candidate)) return false;
-            if (candidate.disabled || candidate.getAttribute('aria-disabled') === 'true') return false;
-            return isChatGPTSendButtonLike(candidate);
-        });
-
-        if (liveSend) {
-            return liveSend;
-        }
-
         const guardBtn = await window.OneClickPromptsSelectorGuard.findSendButton();
         if (!guardBtn || isChatGPTStopButtonLike(guardBtn)) {
             return null;
