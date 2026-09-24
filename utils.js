@@ -402,10 +402,14 @@ class InjectionTargetsOnWebsite {
                 containers: [
                     'div.rounded-composer:has(div.tiptap.ProseMirror[contenteditable="true"][aria-label="Write your prompt to Claude"])',
                     'div.rounded-composer:has(div.tiptap.ProseMirror[contenteditable="true"][data-testid="chat-input"])',
+                    'div.rounded-composer:has(div.tiptap.ProseMirror[contenteditable="true"][data-testid="code-prompt-input"])', // claude.ai/code (Claude Code web)
+                    'div.rounded-composer:has(div.ProseMirror[contenteditable="true"])', // generic composer fallback (chat + code)
                     'div.flex.flex-col.bg-bg-000.rounded-2xl',
                     'div.flex.flex-col.bg-bg-000.gap-1\\.5'
                 ],
                 sendButtons: [
+                    'button[data-testid="chat-input-send"]', // 2026-09 chat composer (aria-label "Send message")
+                    'button[data-testid="code-prompt-send"]', // claude.ai/code composer (aria-label "Send")
                     'button[aria-label="Send message"][class*="Button_claude"]', // new main send button with Claude-specific class
                     'button[aria-label="Send message"].font-base-bold', // new send button with bold font class
                     'button[aria-label="Send message"][type="button"]', // new send button generic
@@ -413,8 +417,13 @@ class InjectionTargetsOnWebsite {
                     'button[type="button"].bg-accent-main-000', // legacy fallback
                     'button[type="button"][aria-label="Send message"]', // generic fallback
                 ],
-                editors: ['div.ProseMirror[contenteditable="true"]'],
-                threadRoot: 'div.flex-1.max-w-3xl.mx-auto:has([data-testid="user-message"])',
+                editors: [
+                    'div.ProseMirror[contenteditable="true"][data-testid="chat-input"]',
+                    'div.ProseMirror[contenteditable="true"][data-testid="code-prompt-input"]', // claude.ai/code
+                    'div.ProseMirror[contenteditable="true"]'
+                ],
+                // Second selector: claude.ai/code virtualized transcript (only on-screen rows are in the DOM).
+                threadRoot: 'div.flex-1.max-w-3xl.mx-auto:has([data-testid="user-message"]), [data-testid="epitaxy-virtual-transcript"]',
                 buttonsContainerId: 'claude-custom-buttons-container',
                 stopButtons: [
                     'button[aria-label="Stop response"]',
