@@ -35,11 +35,14 @@
 
     const CHATGPT_HOSTS = new Set(['chatgpt.com', 'chat.openai.com']);
     const SETTINGS_CHANGED_MESSAGE = 'chatgptExporterSettingsChanged';
+    // Button icons are user-editable in the popup; defaults live in modules/module-button-icons.js.
+    const buttonIcons = window.OCPModuleButtonIcons;
     const DEFAULT_SETTINGS = Object.freeze({
         enabled: false,
         placement: 'after',
         includeThinking: true,
-        includeSources: true
+        includeSources: true,
+        icons: buttonIcons.defaults.chatgptExporter
     });
     const REQUEST_TIMEOUT_MS = 30_000;
     const ACCESS_TOKEN_TTL_MS = 5 * 60_000;
@@ -57,7 +60,8 @@
             enabled: value.enabled === true,
             placement: value.placement === 'before' ? 'before' : 'after',
             includeThinking: value.includeThinking !== false,
-            includeSources: value.includeSources !== false
+            includeSources: value.includeSources !== false,
+            icons: buttonIcons.normalize('chatgptExporter', value.icons)
         };
     }
 
@@ -87,7 +91,9 @@
         chrome.runtime.onMessage.addListener((message) => {
             if (message?.type !== SETTINGS_CHANGED_MESSAGE || !message.settings) return;
             const next = normalizeSettings(message.settings);
-            const toolbarChanged = next.enabled !== settings.enabled || next.placement !== settings.placement;
+            const toolbarChanged = next.enabled !== settings.enabled
+                || next.placement !== settings.placement
+                || Object.keys(next.icons).some((key) => next.icons[key] !== settings.icons[key]);
             settings = next;
             if (toolbarChanged) refreshToolbars();
         });
@@ -343,22 +349,20 @@
     // ---------------------------------------------------------------------------------------
 
     const SHIFT_HINT = '\n• Shift+click: copy the Markdown to the clipboard instead.';
+    // `id` doubles as the key of the action's icon in settings.icons.
     const ACTIONS = [
         {
             id: 'full',
-            icon: '\u{1F4D1}', // bookmark tabs
             label: 'Export chat to Markdown',
             tooltip: `Export chat to Markdown\n• Click: download the whole conversation (the branch you are viewing) as a .md file.${SHIFT_HINT}`
         },
         {
             id: 'answers',
-            icon: '\u{1F916}', // robot face
             label: 'Export ChatGPT answers to Markdown',
             tooltip: `Export answers only\n• Click: download only ChatGPT's answers, without your prompts.${SHIFT_HINT}`
         },
         {
             id: 'select',
-            icon: '☑️', // ballot box with check
             label: 'Export selected messages to Markdown',
             tooltip: 'Export selected messages\n• Click: pick messages from a compact list (first lines only), then download or copy them.'
         }
@@ -367,7 +371,7 @@
     function createButton(action) {
         const button = document.createElement('button');
         button.type = 'button';
-        button.textContent = action.icon;
+        button.textContent = settings.icons[action.id];
         button.dataset.ocpExporterAction = action.id;
         button.setAttribute('aria-label', action.label);
         button.title = action.tooltip;

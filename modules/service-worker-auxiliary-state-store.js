@@ -9,6 +9,10 @@
 
 import { serviceWorkerConsoleLogsAreDisabled } from './service-worker-config-helpers.js';
 import { runStateOperation } from './service-worker-operation-queue.js';
+// Classic script shared with content scripts and the popup; publishes globalThis.OCPModuleButtonIcons.
+import './module-button-icons.js';
+
+const { normalize: normalizeModuleButtonIcons } = globalThis.OCPModuleButtonIcons;
 
 // Namespaced logging
 function logSS(message, ...args) {
@@ -59,7 +63,7 @@ const KEYS = {
     selectorAutoDetector: 'modules.selectorAutoDetector', // object { enableEditorHeuristics:boolean, enableSendButtonHeuristics:boolean, enableStopButtonHeuristics:boolean, enableContainerHeuristics:boolean, notifyContainerMissing:boolean, autoFallbackToFloatingPanel:boolean, enableButtonDragAndDrop:boolean }
     tooltip: 'modules.tooltip', // object { enabled:boolean, showDelayMs:number, fontColor:string|null }
     manualQueueCards: 'modules.manualQueueCards', // object { cards: Array<{emoji:string, text:string}>, expanded:boolean, cardCount:number }
-    chatgptExporter: 'modules.chatgptExporter', // object { enabled:boolean, placement:'before'|'after', includeThinking:boolean, includeSources:boolean }
+    chatgptExporter: 'modules.chatgptExporter', // object { enabled:boolean, placement:'before'|'after', includeThinking:boolean, includeSources:boolean, icons:{ full, answers, select } }
   },
   floatingPanel: 'floatingPanel', // object map { [hostname]: settings }
   global: {
@@ -104,6 +108,14 @@ const CROSS_CHAT_DEFAULT_SETTINGS = {
   hideStandardButtons: false,
 };
 
+// Shallow defaults + layers, except `icons` (the only nested field), which is merged key by key across
+// the layers and completed from module-button-icons.js, so a partial icon patch never drops the others.
+function withCrossChatDefaults(...layers) {
+  const settings = Object.assign({}, CROSS_CHAT_DEFAULT_SETTINGS, ...layers);
+  settings.icons = normalizeModuleButtonIcons('crossChat', Object.assign({}, ...layers.map((layer) => layer?.icons)));
+  return settings;
+}
+
 const SELECTOR_AUTO_DETECTOR_DEFAULTS = {
   enableEditorHeuristics: false,
   enableSendButtonHeuristics: false,
@@ -121,6 +133,7 @@ function normalizeChatGptExporterSettings(value) {
     placement: settings.placement === 'before' ? 'before' : 'after',
     includeThinking: settings.includeThinking !== false,
     includeSources: settings.includeSources !== false,
+    icons: normalizeModuleButtonIcons('chatgptExporter', settings.icons),
   };
 }
 
@@ -143,12 +156,12 @@ async function getValue(path) {
     const r = await lsGet([KEYS.modules.crossChat, LEGACY.crossChatModuleSettings, LEGACY.crossChatStoredPrompt]);
     let obj = r[KEYS.modules.crossChat];
     if (!obj) {
-      const settings = { ...CROSS_CHAT_DEFAULT_SETTINGS, ...(r[LEGACY.crossChatModuleSettings] || {}) };
+      const settings = withCrossChatDefaults(r[LEGACY.crossChatModuleSettings]);
       const storedPrompt = r[LEGACY.crossChatStoredPrompt] || '';
       obj = { settings, storedPrompt };
     } else {
       // Ensure shape
-      obj.settings = { ...CROSS_CHAT_DEFAULT_SETTINGS, ...(obj.settings || {}) };
+      obj.settings = withCrossChatDefaults(obj.settings);
       obj.storedPrompt = typeof obj.storedPrompt === 'string' ? obj.storedPrompt : '';
     }
     return obj;
@@ -358,7 +371,7 @@ async function setValue(path, value, write = lsSet) {
   }
   if (path === KEYS.modules.crossChat) {
     // Expect value shape { settings, storedPrompt }
-    const settings = { ...CROSS_CHAT_DEFAULT_SETTINGS, ...(value?.settings || {}) };
+    const settings = withCrossChatDefaults(value?.settings);
     const storedPrompt = typeof value?.storedPrompt === 'string' ? value.storedPrompt : '';
     await write({
       [KEYS.modules.crossChat]: { settings, storedPrompt },
@@ -584,7 +597,7 @@ export const StateStore = {
   },
   async saveCrossChat(settings) {
     const current = await this.getCrossChat();
-    const mergedSettings = { ...CROSS_CHAT_DEFAULT_SETTINGS, ...current.settings, ...settings };
+    const mergedSettings = withCrossChatDefaults(current.settings, settings);
     const next = { settings: mergedSettings, storedPrompt: current.storedPrompt || '' };
     await setValue(KEYS.modules.crossChat, next);
     this.broadcast({ type: 'crossChatChanged', settings: next.settings });

@@ -1744,6 +1744,29 @@ body.dark-theme .side-donate-creeper__close {
     font-family: 'Segoe UI Emoji', sans-serif;
 }
 
+/* Module toolbar button icons: small square single-emoji inputs (modules/popup-page-modules-buttonIcons.js) */
+.module-icon-row {
+    align-items: center;
+    gap: 8px 16px;
+}
+
+.module-icon-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+input[type="text"].module-icon-input {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    text-align: center;
+    font-size: 18px;
+    line-height: 1;
+    font-family: 'Segoe UI Emoji', sans-serif;
+}
+
 /* More Margin/Padding utilities */
 .ml-12 {
     margin-left: 12px;

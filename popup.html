@@ -1026,6 +1026,26 @@
                     </label>
                   </div>
                 </div>
+                <!-- Square emoji inputs; bound by modules/popup-page-modules-buttonIcons.js -->
+                <div class="row module-icon-row" id="crossChatIconsRow">
+                  <label>Button icons:</label>
+                  <label class="module-icon-field" title="Icon of the Copy button.">
+                    <input type="text" class="module-icon-input" data-icon-key="copy" aria-label="Copy button icon" />
+                    Copy
+                  </label>
+                  <label class="module-icon-field" title="Icon of the Paste button.">
+                    <input type="text" class="module-icon-input" data-icon-key="paste" aria-label="Paste button icon" />
+                    Paste
+                  </label>
+                  <label class="module-icon-field" title="Icon of the dangerous broadcast button.">
+                    <input type="text" class="module-icon-input" data-icon-key="broadcast" aria-label="Broadcast button icon" />
+                    Broadcast
+                  </label>
+                  <label class="module-icon-field" title="Icon of the broadcast button while this tab is shielded (Shift+click toggles the shield).">
+                    <input type="text" class="module-icon-input" data-icon-key="shield" aria-label="Shielded broadcast button icon" />
+                    Shielded
+                  </label>
+                </div>
               </div>
             </div>
           </div>
@@ -1198,6 +1218,22 @@
                       After custom buttons
                     </label>
                   </div>
+                </div>
+                <!-- Square emoji inputs; bound by modules/popup-page-modules-buttonIcons.js -->
+                <div class="row module-icon-row mt-8" id="chatgptExporterIconsRow">
+                  <label>Button icons:</label>
+                  <label class="module-icon-field" title="Icon of the Export chat button.">
+                    <input type="text" class="module-icon-input" data-icon-key="full" aria-label="Export chat button icon" />
+                    Chat
+                  </label>
+                  <label class="module-icon-field" title="Icon of the Export answers only button.">
+                    <input type="text" class="module-icon-input" data-icon-key="answers" aria-label="Export answers only button icon" />
+                    Answers
+                  </label>
+                  <label class="module-icon-field" title="Icon of the Export selected button.">
+                    <input type="text" class="module-icon-input" data-icon-key="select" aria-label="Export selected button icon" />
+                    Selected
+                  </label>
                 </div>
               </div>
             </div>
@@ -2153,6 +2189,9 @@
     <script src="/popup-page-scripts/popup-page-advanced.js"></script>
     <!-- Floating Window Settings Handler script -->
     <script src="/popup-page-scripts/popup-page-floating-window-handler.js"></script>
+    <!-- Module toolbar button icons: shared defaults, then the popup input binder (used by the module UIs below) -->
+    <script src="/modules/module-button-icons.js"></script>
+    <script src="/modules/popup-page-modules-buttonIcons.js"></script>
     <!-- Cross-Chat Module UI handler script -->
     <script src="/modules/popup-page-modules-promptShare.js"></script>
     <!-- Inline Profile Selector UI handler script -->

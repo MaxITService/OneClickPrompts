@@ -48,6 +48,7 @@ function normalizeCrossChatConfig(settings = {}) {
     normalized.dangerAutoSendAll = !!normalized.dangerAutoSendAll;
     normalized.hideStandardButtons = !!normalized.hideStandardButtons;
     normalized.placement = normalized.placement === 'before' ? 'before' : 'after';
+    normalized.icons = window.OCPModuleButtonIcons.normalize('crossChat', normalized.icons);
     return normalized;
 }
 

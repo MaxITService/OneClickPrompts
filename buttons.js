@@ -316,9 +316,12 @@ window.MaxExtensionButtons = {
             margin-bottom: 5px;
         `;
 
+        // User-editable in the popup (Cross-Chat module); defaults live in modules/module-button-icons.js.
+        const icons = window.OCPModuleButtonIcons.normalize('crossChat', window.globalCrossChatConfig?.icons);
+
         if (type === 'broadcast') {
-            const ICON_ACTIVE = '⬆️';
-            const ICON_SHIELD = '😷';
+            const ICON_ACTIVE = icons.broadcast;
+            const ICON_SHIELD = icons.shield;
 
             const isShielded = () => window.__OCP_dangerReceiveBlocked === true;
             const setShielded = (value) => {
@@ -334,7 +337,7 @@ window.MaxExtensionButtons = {
             };
 
             const updateBroadcastVisuals = () => {
-                buttonElement.innerHTML = isShielded() ? ICON_SHIELD : ICON_ACTIVE;
+                buttonElement.textContent = isShielded() ? ICON_SHIELD : ICON_ACTIVE;
                 buttonElement.setAttribute('title', buildTooltip());
             };
 
@@ -441,10 +444,9 @@ window.MaxExtensionButtons = {
             return buttonElement;
         }
 
-        const icons = { copy: '📋', paste: '📥' };
         const baseTooltips = { copy: 'Copy prompt from input area', paste: 'Paste stored prompt' };
 
-        buttonElement.innerHTML = icons[type];
+        buttonElement.textContent = icons[type];
 
         const autoSendEnabled = (type === 'copy')
             ? window.globalCrossChatConfig?.autosendCopy

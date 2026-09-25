@@ -39,9 +39,20 @@ document.addEventListener('DOMContentLoaded', () => {
         dangerAutoSendAll: false,
         hideStandardButtons: false,
         placement: 'after',
+        icons: window.OCPModuleButtonIcons.defaults.crossChat,
     };
 
     let currentSettings = { ...defaultSettings };
+
+    // Square emoji inputs for the injected 📋 / 📥 / ⬆️ / 😷 buttons (popup-page-modules-buttonIcons.js).
+    const renderIcons = window.OCPModuleIconInputs.bind(
+        document.getElementById('crossChatIconsRow'),
+        'crossChat',
+        (icons) => {
+            currentSettings.icons = icons;
+            saveModuleSettings();
+        }
+    );
 
     async function loadModuleState() {
         try {
@@ -87,6 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
         autosendPasteToggle.checked = currentSettings.autosendPaste;
         dangerBroadcastToggle.checked = currentSettings.dangerAutoSendAll;
         hideStandardButtonsToggle.checked = currentSettings.hideStandardButtons;
+        renderIcons(currentSettings.icons);
 
         for (const radio of placementRadios) {
             if (radio.value === currentSettings.placement) {

@@ -85,6 +85,7 @@
         "per-website-button-clicking-mechanics/buttons-clicking-grok.js",
         "per-website-button-clicking-mechanics/buttons-clicking-gemini.js",
         "per-website-button-clicking-mechanics/buttons-clicking-perplexity.js",
+        "modules/module-button-icons.js",
         "buttons.js",
         "modules/buttons-container-mover.js",
         "modules/chatgpt-exporter/conversation-parser.js",

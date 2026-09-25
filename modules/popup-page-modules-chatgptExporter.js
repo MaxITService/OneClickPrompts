@@ -24,11 +24,20 @@ document.addEventListener('DOMContentLoaded', () => {
     placement: raw?.placement === 'before' ? 'before' : 'after',
     includeThinking: raw?.includeThinking !== false,
     includeSources: raw?.includeSources !== false,
+    icons: window.OCPModuleButtonIcons.normalize('chatgptExporter', raw?.icons),
   });
 
   let settings = normalize(null);
 
+  // Square emoji inputs for the three injected export buttons (popup-page-modules-buttonIcons.js).
+  const renderIcons = window.OCPModuleIconInputs.bind(
+    document.getElementById('chatgptExporterIconsRow'),
+    'chatgptExporter',
+    (icons) => save({ icons }),
+  );
+
   function render() {
+    renderIcons(settings.icons);
     enableToggle.checked = settings.enabled;
     thinkingToggle.checked = settings.includeThinking;
     sourcesToggle.checked = settings.includeSources;
