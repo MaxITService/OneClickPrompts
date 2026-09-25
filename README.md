@@ -43,6 +43,8 @@ Tired of retyping the same prompts in your AI chats? **OneClickPrompts** lets yo
 - **Cross-Chat Superpowers:**
   - **Copy & Paste Prompts (manual way):** Ever wanted to ask the same question to different AIs? Copy a prompt from one site's input box and instantly paste it into another.
   - **Multi-Chat Broadcast (auto send to all open tabs same prompt):** A power-user feature to send a prompt to _every_ supported AI chat tab you have open at once. Great for comparing responses across models. You can "shield" a tab to prevent it from receiving broadcasts. This is Dangerous and should me monitored: risk of sending to chats you didn't intend to!
+- **ChatGPT Exporter (Markdown):** Save a ChatGPT conversation as a `.md` file in one click: the whole chat, ChatGPT's answers only, or just the messages you pick from a compact list. Shift+click copies the Markdown to the clipboard instead. Math, code blocks, tables, Canvas documents, Deep research reports and web citations are kept. Enable it in the Modules section of the popup.
+- **Custom Module Button Icons:** Change the emojis of the Cross-Chat and ChatGPT Exporter buttons right in the popup.
 
 ## Get Started with OneClickPrompts in 3 Easy Steps:
 
