@@ -12,7 +12,9 @@
 //     - Cross-Chat buttons ("Copy", "Paste") placed "before" or "after" based on globalCrossChatConfig
 //     - Custom buttons from globalMaxExtensionConfig.customButtons (honors separators)
 //     - Numeric shortcuts (1–10) assigned to the first 10 non-separator buttons when enabled
-//  4) Global toggles appended last: "Auto-send" and "Hotkeys"
+//  4) ChatGPT Exporter buttons (module, ChatGPT only) — "before" or "after" the custom buttons,
+//     supplied by window.OCPChatGptExporter (modules/chatgpt-exporter/chatgpt-exporter.js)
+//  5) Global toggles appended last: "Auto-send" and "Hotkeys"
 //
 // Functions:
 // - createAndInsertCustomElements(targetContainer): Creates the container, renders everything once, and inserts it.
@@ -850,6 +852,17 @@ window.MaxExtensionButtonsInit = {
             }
         }
 
+        // ChatGPT Exporter buttons: the module decides visibility (enabled + ChatGPT) and placement.
+        const chatGptExporter = window.OCPChatGptExporter;
+        const appendExporterButtons = (placement) => {
+            if (chatGptExporter?.getToolbarPlacement?.() !== placement) return;
+            const exporterButtons = chatGptExporter.createToolbarButtons?.() ?? [];
+            if (!exporterButtons.length) return;
+            container.append(...exporterButtons);
+            logConCgp(`[init] ChatGPT Exporter buttons appended ${placement} custom buttons.`);
+        };
+        appendExporterButtons('before');
+
         // Process the unified list to create and append buttons
         allButtonDefs.forEach((def, index) => {
             // Handle separators from custom buttons
@@ -1039,6 +1052,8 @@ window.MaxExtensionButtonsInit = {
             }
             logConCgp(`[init] Button ${nonSeparatorCount} (${def.type}) has been created and appended.`);
         });
+
+        appendExporterButtons('after');
 
         // Inline Profile Selector AFTER buttons
         if (window.globalInlineSelectorConfig?.enabled && window.globalInlineSelectorConfig.placement === 'after' && !isPanel) {

@@ -59,6 +59,7 @@ const KEYS = {
     selectorAutoDetector: 'modules.selectorAutoDetector', // object { enableEditorHeuristics:boolean, enableSendButtonHeuristics:boolean, enableStopButtonHeuristics:boolean, enableContainerHeuristics:boolean, notifyContainerMissing:boolean, autoFallbackToFloatingPanel:boolean, enableButtonDragAndDrop:boolean }
     tooltip: 'modules.tooltip', // object { enabled:boolean, showDelayMs:number, fontColor:string|null }
     manualQueueCards: 'modules.manualQueueCards', // object { cards: Array<{emoji:string, text:string}>, expanded:boolean, cardCount:number }
+    chatgptExporter: 'modules.chatgptExporter', // object { enabled:boolean, placement:'before'|'after', includeThinking:boolean, includeSources:boolean }
   },
   floatingPanel: 'floatingPanel', // object map { [hostname]: settings }
   global: {
@@ -111,6 +112,17 @@ const SELECTOR_AUTO_DETECTOR_DEFAULTS = {
   notifyContainerMissing: false,
   autoFallbackToFloatingPanel: true,
 };
+
+// ChatGPT Exporter (modules/chatgpt-exporter/*): off by default; thinking and sources included.
+function normalizeChatGptExporterSettings(value) {
+  const settings = value && typeof value === 'object' ? value : {};
+  return {
+    enabled: settings.enabled === true,
+    placement: settings.placement === 'before' ? 'before' : 'after',
+    includeThinking: settings.includeThinking !== false,
+    includeSources: settings.includeSources !== false,
+  };
+}
 
 // Utilities to get/set nested key paths by flattening as separate storage entries
 // We store each top-level namespace as a whole object where applicable to limit storage ops:
@@ -291,6 +303,10 @@ async function getValue(path) {
       cardCount: MANUAL_QUEUE_CARD_DEFAULT_COUNT,
     };
   }
+  if (path === KEYS.modules.chatgptExporter) {
+    const r = await lsGet([KEYS.modules.chatgptExporter]);
+    return normalizeChatGptExporterSettings(r[KEYS.modules.chatgptExporter]);
+  }
   if (path === KEYS.floatingPanel) {
     // Build map from structured store if exists, else from legacy scattered keys
     const stored = await lsGet([KEYS.floatingPanel]);
@@ -454,6 +470,10 @@ async function setValue(path, value, write = lsSet) {
     await write({ [KEYS.modules.manualQueueCards]: normalized });
     return;
   }
+  if (path === KEYS.modules.chatgptExporter) {
+    await write({ [KEYS.modules.chatgptExporter]: normalizeChatGptExporterSettings(value) });
+    return;
+  }
   if (path.startsWith(KEYS.floatingPanel)) {
     // We maintain a structured map and legacy per-host keys
     if (path === KEYS.floatingPanel) {
@@ -495,7 +515,7 @@ export const StateStore = {
       theme: KEYS.ui.theme, inlineProfileSelector: KEYS.modules.inlineProfileSelector,
       tokenApproximator: KEYS.modules.tokenApproximator,
       selectorAutoDetector: KEYS.modules.selectorAutoDetector, tooltip: KEYS.modules.tooltip,
-      manualQueueCards: KEYS.modules.manualQueueCards,
+      manualQueueCards: KEYS.modules.manualQueueCards, chatgptExporter: KEYS.modules.chatgptExporter,
       floatingPanel: KEYS.floatingPanel, customSelectors: KEYS.global.customSelectors
     };
     for (const [field, key] of Object.entries(mapping)) {
@@ -518,7 +538,8 @@ export const StateStore = {
       'modules.tokenApproximator': ['tokenApproximatorSettingsChanged', 'settings'],
       'modules.selectorAutoDetector': ['selectorAutoDetectorSettingsChanged', 'settings'],
       'modules.tooltip': ['tooltipSettingsChanged', 'settings'],
-      'modules.manualQueueCards': ['manualQueueCardsChanged', 'data']
+      'modules.manualQueueCards': ['manualQueueCardsChanged', 'data'],
+      'modules.chatgptExporter': ['chatgptExporterSettingsChanged', 'settings']
     };
     for (const [key, [type, property]] of Object.entries(events)) {
       if (Object.hasOwn(patch, key)) await this.broadcast({ type, [property]: patch[key] });
@@ -706,6 +727,16 @@ export const StateStore = {
   async saveManualQueueCards(data) {
     await setValue(KEYS.modules.manualQueueCards, data);
     this.broadcast({ type: 'manualQueueCardsChanged', data });
+  },
+
+  // ===== ChatGPT Exporter (Global Module) =====
+  async getChatGptExporterSettings() {
+    return await getValue(KEYS.modules.chatgptExporter);
+  },
+  async saveChatGptExporterSettings(settings) {
+    const normalized = normalizeChatGptExporterSettings(settings);
+    await setValue(KEYS.modules.chatgptExporter, normalized);
+    this.broadcast({ type: 'chatgptExporterSettingsChanged', settings: normalized });
   },
 
   // Broadcast utility

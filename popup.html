@@ -1102,6 +1102,107 @@
             </div>
           </div>
           <br /><br />
+          <!-- ChatGPT Exporter Settings - collapsed by default -->
+          <!-- Managed by modules/popup-page-modules-chatgptExporter.js; runtime in modules/chatgpt-exporter/* -->
+          <div class="collapsible" id="chatgptExporterModule">
+            <div class="section-header subsection-header">
+              <h3>
+                ChatGPT Exporter (Markdown)
+                <span class="expand-text">(click to expand)</span>
+              </h3>
+              <span class="toggle-icon">▶</span>
+            </div>
+            <div class="section-content" id="chatgptExporterContent">
+              <div class="toggle-container mb-16">
+                <div class="toggle">
+                  <input
+                    type="checkbox"
+                    id="chatgptExporterEnableToggle"
+                    class="toggle__input"
+                  />
+                  <label for="chatgptExporterEnableToggle" class="toggle__label">
+                    <span class="toggle__emoji"></span>
+                    <span class="toggle__emoji"></span>
+                  </label>
+                </div>
+                <span class="switch-label">Show export buttons on ChatGPT</span>
+              </div>
+              <div class="text-inside-container mb-16">
+                <p>
+                  Adds three buttons to the ChatGPT button row that save the chat
+                  as a Markdown (.md) file:
+                </p>
+                <ul>
+                  <li><strong>📑 Export chat</strong> — the whole conversation (the branch you are viewing).</li>
+                  <li><strong>🤖 Export answers only</strong> — only ChatGPT's answers, without your prompts.</li>
+                  <li>
+                    <strong>☑️ Export selected</strong> — opens a compact list that shows
+                    only the first lines of each message, so you can pick messages
+                    without scrolling through the whole chat.
+                  </li>
+                </ul>
+                <p>
+                  <strong>Shift+click</strong> the first two buttons to copy the
+                  Markdown to the clipboard instead of downloading it. Math (as
+                  <code>$…$</code> / <code>$$…$$</code>), code blocks, tables,
+                  Canvas documents, Deep research reports and web citations are
+                  kept.
+                </p>
+              </div>
+
+              <!-- Settings visible when expanded -->
+              <div id="chatgptExporterSettingsContainer" class="ml-20">
+                <div class="toggle-container mb-8">
+                  <div class="toggle">
+                    <input
+                      type="checkbox"
+                      id="chatgptExporterIncludeThinkingToggle"
+                      class="toggle__input"
+                    />
+                    <label for="chatgptExporterIncludeThinkingToggle" class="toggle__label">
+                      <span class="toggle__emoji"></span>
+                      <span class="toggle__emoji"></span>
+                    </label>
+                  </div>
+                  <span class="switch-label"
+                    >Include thinking process and code-tool steps</span
+                  >
+                </div>
+                <div class="toggle-container mb-16">
+                  <div class="toggle">
+                    <input
+                      type="checkbox"
+                      id="chatgptExporterIncludeSourcesToggle"
+                      class="toggle__input"
+                    />
+                    <label for="chatgptExporterIncludeSourcesToggle" class="toggle__label">
+                      <span class="toggle__emoji"></span>
+                      <span class="toggle__emoji"></span>
+                    </label>
+                  </div>
+                  <span class="switch-label"
+                    >Include web sources and research references</span
+                  >
+                </div>
+                <div class="row flex-column-start">
+                  <label>Button placement:</label>
+                  <div class="mt-8">
+                    <label>
+                      <input type="radio" name="chatgptExporterPlacement" value="before" />
+                      Before custom buttons
+                    </label>
+                  </div>
+                  <div>
+                    <label>
+                      <input type="radio" name="chatgptExporterPlacement" value="after" checked />
+                      After custom buttons
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <br /><br />
           <!-- ChatGPT Token Approximator Settings - collapsed by default -->
           <div class="collapsible" id="chatgptTokenApproximatorModule">
             <div class="section-header subsection-header">
@@ -1662,6 +1763,12 @@
               before or after custom buttons, then switch profiles directly from
               the button row.
             </li>
+            <li>
+              <strong>ChatGPT Exporter:</strong> Enable it in Modules to add
+              buttons that save a ChatGPT chat as Markdown: the whole chat,
+              answers only, or messages you pick from a compact list.
+              Shift+click copies instead of downloading.
+            </li>
             <li>In case of a problem: first step is to reload your browser.</li>
             <li>
               If buttons or auto-clicking stop working, go to Settings and open
@@ -2050,6 +2157,8 @@
     <script src="/modules/popup-page-modules-promptShare.js"></script>
     <!-- Inline Profile Selector UI handler script -->
     <script src="/modules/popup-page-modules-inlineSelector.js"></script>
+    <!-- ChatGPT Exporter UI handler script -->
+    <script src="/modules/popup-page-modules-chatgptExporter.js"></script>
     <!-- Token Approximator UI handler script -->
     <script src="/modules/popup-page-modules-tokenApproximator.js"></script>
     <!-- Tooltip Settings UI handler script -->

@@ -136,6 +136,10 @@ function sanitizeAppSettings(rawAppSettings) {
         sanitized.manualQueueCards = deepCloneSafeJson(rawAppSettings.manualQueueCards);
     }
 
+    if (isPlainObject(rawAppSettings.chatgptExporter)) {
+        sanitized.chatgptExporter = deepCloneSafeJson(rawAppSettings.chatgptExporter);
+    }
+
     if (isPlainObject(rawAppSettings.promptVariables)) {
         sanitized.promptVariables = sanitizePromptVariables(rawAppSettings.promptVariables);
     }
@@ -274,6 +278,7 @@ async function buildBackupPayload(scope = 'currentProfile') {
             selectorAutoDetector: deepCloneSafeJson(await StateStore.getSelectorAutoDetectorSettings()),
             tooltip: deepCloneSafeJson(await StateStore.getTooltipSettings()),
             manualQueueCards: deepCloneSafeJson(await StateStore.getManualQueueCards()),
+            chatgptExporter: deepCloneSafeJson(await StateStore.getChatGptExporterSettings()),
             promptVariables: sanitizePromptVariables(currentResponse[PROMPT_VARIABLES_STORAGE_KEY] || {
                 enabled: false,
                 dateExampleInitialized: false,
@@ -499,7 +504,8 @@ const PROFILE_OPERATION_TYPES = new Set([
     'saveFloatingPanelSettings', 'resetFloatingPanelSettings', 'resetFloatingPanelSettingsForHostname',
     'saveCrossChatModuleSettings', 'saveStoredPrompt', 'clearStoredPrompt',
     'saveInlineProfileSelectorSettings', 'saveTokenApproximatorSettings',
-    'saveSelectorAutoDetectorSettings', 'saveTooltipSettings', 'saveManualQueueCards'
+    'saveSelectorAutoDetectorSettings', 'saveTooltipSettings', 'saveManualQueueCards',
+    'saveChatGptExporterSettings'
 ]);
 
 function dispatchMessage(request, sender, sendResponse) {
@@ -1067,6 +1073,34 @@ function dispatchMessage(request, sender, sendResponse) {
             })();
             return true;
         // ===== End Inline Profile Selector Cases =====
+
+        // ===== ChatGPT Exporter Cases =====
+        case 'getChatGptExporterSettings':
+            (async () => {
+                try {
+                    const settings = await StateStore.getChatGptExporterSettings();
+                    logConfigurationRelatedStuff('Retrieved ChatGPT Exporter settings:', settings);
+                    sendResponse({ settings });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
+            return true;
+
+        case 'saveChatGptExporterSettings':
+            (async () => {
+                try {
+                    await StateStore.saveChatGptExporterSettings(request.settings);
+                    logConfigurationRelatedStuff('Saved ChatGPT Exporter settings:', request.settings);
+                    sendResponse({ success: true });
+                } catch (error) {
+                    handleStorageError(error);
+                    sendResponse({ error: error.message });
+                }
+            })();
+            return true;
+        // ===== End ChatGPT Exporter Cases =====
 
         // ===== Token Approximator Cases =====
         case 'getTokenApproximatorSettings':

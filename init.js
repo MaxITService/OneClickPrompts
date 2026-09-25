@@ -252,10 +252,15 @@ function publicStaticVoidMain() {
                     logConCgp('[init] Inline Profile Selector settings loaded:', window.globalInlineSelectorConfig);
                 }
 
-                // Start main initialization only after all global configs are present
-                const config = profileRevision !== (window.__OCP_profileRevision || 0)
-                    ? window.globalMaxExtensionConfig || mainConfig : mainConfig;
-                commenceExtensionInitialization(config, isCurrent).catch(error => {
+                // Start main initialization only after all global configs are present.
+                // The ChatGPT Exporter preloads its own settings; waiting (it never rejects) lets the
+                // first render include its buttons instead of re-rendering the row a moment later.
+                Promise.resolve(window.OCPChatGptExporter?.settingsReady).then(() => {
+                    if (!isCurrent()) return;
+                    const config = profileRevision !== (window.__OCP_profileRevision || 0)
+                        ? window.globalMaxExtensionConfig || mainConfig : mainConfig;
+                    return commenceExtensionInitialization(config, isCurrent);
+                }).catch(error => {
                     logConCgp('[init] Page initialization failed:', error?.message || error);
                 });
             });
