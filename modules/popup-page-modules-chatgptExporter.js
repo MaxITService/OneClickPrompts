@@ -46,12 +46,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function save(patch) {
     settings = normalize({ ...settings, ...patch });
-    try {
-      const response = await chrome.runtime.sendMessage({ type: 'saveChatGptExporterSettings', settings });
-      if (response?.error) throw new Error(response.error);
-    } catch (error) {
-      console.error('[chatgptExporter] Failed to save settings:', error);
-      window.showToast?.('Could not save ChatGPT Exporter settings.', 'error');
+    // One delayed retry covers a service worker that is still starting up (typically right
+    // after the extension was reloaded), which is the only transient failure seen so far.
+    for (const attempt of [1, 2]) {
+      try {
+        const response = await chrome.runtime.sendMessage({ type: 'saveChatGptExporterSettings', settings });
+        if (response?.error) throw new Error(response.error);
+        return;
+      } catch (error) {
+        if (attempt === 1) {
+          await new Promise((resolve) => setTimeout(resolve, 400));
+          continue;
+        }
+        console.error('[chatgptExporter] Failed to save settings:', error);
+        const reloaded = /context invalidated/i.test(String(error?.message ?? ''));
+        window.showToast?.(reloaded
+          ? 'The extension was reloaded: reopen this settings page and try again.'
+          : 'Could not save ChatGPT Exporter settings.', 'error');
+      }
     }
   }
 

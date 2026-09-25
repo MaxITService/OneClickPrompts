@@ -14,6 +14,11 @@
 //
 // Data flow:  backend JSON --parser--> turns --(picker)--> selection --markdown--> file/clipboard
 //
+// For the picker, every message is rendered once into its final Markdown section (lazily, then
+// cached). The picker's "show whole message" text, its live size line (characters, UTF-8 KB and
+// — when the Token Counter module is on for ChatGPT — tokens by the model chosen there) and the
+// exported file are all built from those same strings.
+//
 // Privacy: requests go only to the same origin the user is already on (chatgpt.com), using the
 // session the page itself uses. The access token lives in memory for a few minutes and is never
 // stored or sent anywhere else. No new extension permissions are needed: content-script fetches
@@ -280,8 +285,96 @@
         };
     }
 
-    /** Returns `{ turns, mode, delivery }`, or null when the user cancelled. */
-    async function chooseTurns(actionId, conversation, delivery, onBeforePicker) {
+    // ---------------------------------------------------------------------------------------
+    // Selection size (picker footer): characters, UTF-8 KB and Token Counter estimate
+    // ---------------------------------------------------------------------------------------
+
+    /** Code points and UTF-8 bytes in one pass (String#length would count UTF-16 units). */
+    function measureText(text) {
+        let chars = 0;
+        let bytes = 0;
+        for (const character of text) {
+            const codePoint = character.codePointAt(0);
+            chars++;
+            bytes += codePoint < 0x80 ? 1 : codePoint < 0x800 ? 2 : codePoint < 0x10000 ? 3 : 4;
+        }
+        return { chars, bytes };
+    }
+
+    /**
+     * Uses the model and calibration chosen in the Token Counter module, only when that module is
+     * enabled for ChatGPT; otherwise null (the picker then shows no token figure).
+     * @returns {Promise<{ name: string, estimate: (text: string) => number } | null>}
+     */
+    async function loadTokenEstimator() {
+        try {
+            const { settings: tokenSettings } = await chrome.runtime.sendMessage({ type: 'getTokenApproximatorSettings' }) ?? {};
+            if (!tokenSettings?.enabled || tokenSettings.enabledSites?.ChatGPT === false) return null;
+            const registry = window.OCP_createTokenModelRegistry?.();
+            if (!registry) return null;
+            const modelId = registry.resolveModelId(tokenSettings.countingMethod);
+            const model = registry.getModel(modelId) ?? registry.getDefaultModel();
+            if (!model) return null;
+            const calibration = Number.isFinite(tokenSettings.calibration) && tokenSettings.calibration > 0 ? tokenSettings.calibration : 1;
+            const name = window.OCP_TOKEN_MODEL_CATALOG?.getModelMetadata(model.getMetadata().id)?.shortName ?? modelId;
+            return { name, estimate: (text) => model.estimate(text, calibration) };
+        } catch (error) {
+            log('Token Counter unavailable for the picker; token figure hidden.', error?.message || error);
+            return null;
+        }
+    }
+
+    /**
+     * Renders each selected-mode section once (lazily) and answers the picker's questions from
+     * that cache: the full Markdown of one message, and the size of any selection. The final
+     * export is assembled from the very same strings, so the numbers shown are the file's numbers.
+     */
+    function createSectionCache(conversation, renderOptions, tokenEstimator) {
+        const turnsById = new Map(conversation.turns.map((turn) => [turn.id, turn]));
+        const header = ns.markdown.renderHeader(conversation, renderOptions);
+        const headerSize = measureText(header);
+        let headerTokens = null;
+        const cache = new Map();
+
+        const entry = (id) => {
+            let value = cache.get(id);
+            if (!value) {
+                const text = ns.markdown.renderSection(turnsById.get(id), renderOptions);
+                value = { text, ...measureText(text), tokens: null };
+                cache.set(id, value);
+            }
+            return value;
+        };
+        const tokensOf = (value) => (value.tokens ??= tokenEstimator.estimate(value.text));
+        const sectionsOf = (ids) => ids.map(entry).filter((value) => value.text);
+
+        return {
+            fullText: (id) => entry(id).text || '(This message has nothing to export with the current settings.)',
+
+            measure(ids) {
+                const sections = sectionsOf(ids);
+                // Mirrors assembleDocument: header + "\n\n" + sections joined by "\n\n" + "\n".
+                const separators = sections.length ? 2 + 2 * (sections.length - 1) + 1 : 0;
+                let chars = headerSize.chars + separators;
+                let bytes = headerSize.bytes + separators;
+                for (const section of sections) {
+                    chars += section.chars;
+                    bytes += section.bytes;
+                }
+                let tokens = null;
+                if (tokenEstimator) {
+                    headerTokens ??= tokenEstimator.estimate(header);
+                    tokens = sections.reduce((sum, section) => sum + tokensOf(section), headerTokens);
+                }
+                return { chars, bytes, tokens, tokenModel: tokenEstimator?.name ?? null };
+            },
+
+            document: (ids) => ns.markdown.assembleDocument(header, sectionsOf(ids).map((section) => section.text))
+        };
+    }
+
+    /** Returns `{ turns, mode, delivery, markdown? }`, or null when the user cancelled. */
+    async function chooseTurns(actionId, conversation, renderOptions, delivery, onBeforePicker) {
         const { turns } = conversation;
         switch (actionId) {
             case 'full':
@@ -289,11 +382,22 @@
             case 'answers':
                 return { turns: turns.filter((turn) => turn.role === 'assistant'), mode: 'answers', delivery };
             case 'select': {
+                const sections = createSectionCache(conversation, { ...renderOptions, mode: 'selection' }, await loadTokenEstimator());
                 onBeforePicker();
-                const choice = await ns.picker.open({ title: conversation.title, items: turns.map(toPickerItem) });
+                const choice = await ns.picker.open({
+                    title: conversation.title,
+                    items: turns.map(toPickerItem),
+                    getFullText: sections.fullText,
+                    measure: sections.measure
+                });
                 if (!choice) return null;
                 const chosen = new Set(choice.ids);
-                return { turns: turns.filter((turn) => chosen.has(turn.id)), mode: 'selection', delivery: choice.action };
+                return {
+                    turns: turns.filter((turn) => chosen.has(turn.id)),
+                    mode: 'selection',
+                    delivery: choice.action,
+                    markdown: sections.document(choice.ids)
+                };
             }
             default:
                 throw new Error(`Unknown export action: ${actionId}`);
@@ -319,16 +423,16 @@
             const conversation = await loadConversation();
             if (!conversation.turns.length) throw new ExportError('This chat has no messages to export yet.');
 
-            const plan = await chooseTurns(actionId, conversation, copy ? 'copy' : 'download', () => setBusy(button, false));
-            if (!plan) return;
-            if (!plan.turns.length) throw new ExportError('Nothing to export: no matching messages.');
-
-            const markdown = ns.markdown.renderDocument(conversation, plan.turns, {
-                mode: plan.mode,
+            const renderOptions = {
                 includeThinking: settings.includeThinking,
                 includeSources: settings.includeSources,
                 sourceUrl: conversation.sourceUrl
-            });
+            };
+            const plan = await chooseTurns(actionId, conversation, renderOptions, copy ? 'copy' : 'download', () => setBusy(button, false));
+            if (!plan) return;
+            if (!plan.turns.length) throw new ExportError('Nothing to export: no matching messages.');
+
+            const markdown = plan.markdown ?? ns.markdown.renderDocument(conversation, plan.turns, { ...renderOptions, mode: plan.mode });
             await deliver(markdown, {
                 fileName: buildFileName(conversation.title, plan.mode),
                 delivery: plan.delivery,
@@ -364,7 +468,7 @@
         {
             id: 'select',
             label: 'Export selected messages to Markdown',
-            tooltip: 'Export selected messages\n• Click: pick messages from a compact list (first lines only), then download or copy them.'
+            tooltip: 'Export selected messages\n• Click: pick messages from a compact list (first lines only, expand any message to read it whole), see the size of the selection, then download or copy it.'
         }
     ];
 

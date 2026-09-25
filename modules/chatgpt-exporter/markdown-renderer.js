@@ -18,7 +18,10 @@
 //   • Canvas: every version is kept, code canvases as fenced code in the canvas language.
 //
 // Public API: window.OCPChatGptExporter.markdown =
-//   { renderDocument, renderTurnBody, previewOf, formatLocalDateTime }
+//   { renderDocument, renderHeader, renderSection, assembleDocument, renderTurnBody,
+//     previewOf, formatLocalDateTime }
+// renderDocument(...) === assembleDocument(renderHeader(...), turns.map(renderSection)) — the
+// picker relies on this to measure a selection from cached sections without re-rendering.
 
 (() => {
     'use strict';
@@ -283,39 +286,58 @@
         return parts.map((part) => part.trim()).filter(Boolean).join('\n\n');
     }
 
+    /** Collapses runs of blank lines left by removed markers, but never inside code. */
+    function collapseBlankLines(markdown) {
+        return mapOutsideCode(markdown, (prose) => prose.replace(/\n{3,}/g, '\n\n'));
+    }
+
+    const roleHeading = (turn) => `## ${turn.role === 'user' ? 'User' : 'ChatGPT'}`;
+
+    /** One `## Heading` + body section, or '' when the turn renders to nothing. */
+    function renderSection(turn, options, heading = roleHeading(turn)) {
+        const body = renderTurnBody(turn, options);
+        return body ? collapseBlankLines(`${heading}\n\n${body}`) : '';
+    }
+
     /**
-     * Full Markdown document with YAML front matter (read by Obsidian, Jekyll, Hugo, Pandoc…).
-     * @param {object} conversation - Result of parser.parseConversation.
-     * @param {object[]} turns - The turns to include, in order.
-     * @param {{ mode: 'full'|'answers'|'selection', includeThinking: boolean, includeSources: boolean,
-     *           sourceUrl?: string, exportedAt?: Date }} options
+     * YAML front matter (read by Obsidian, Jekyll, Hugo, Pandoc…) plus the `# Title` line.
+     * @param {{ mode: string, sourceUrl?: string, exportedAt?: Date }} options
      */
-    function renderDocument(conversation, turns, options) {
-        const exportedAt = options.exportedAt ?? new Date();
+    function renderHeader(conversation, options) {
         const frontMatter = [
             '---',
             `title: ${JSON.stringify(conversation.title)}`, // JSON strings are valid YAML scalars.
             options.sourceUrl && `source: ${options.sourceUrl}`,
             conversation.model && `model: ${conversation.model}`,
             conversation.createTime && `created: ${formatLocalDateTime(conversation.createTime)}`,
-            `exported: ${formatLocalDateTime(exportedAt)}`,
+            `exported: ${formatLocalDateTime(options.exportedAt ?? new Date())}`,
             `scope: ${options.mode}`,
             '---'
         ].filter(Boolean).join('\n');
+        return `${frontMatter}\n\n# ${conversation.title}`;
+    }
 
-        let answerNumber = 0;
-        const sections = turns.map((turn) => {
-            const body = renderTurnBody(turn, options);
-            if (!body) return '';
-            const heading = options.mode === 'answers'
-                ? `## Answer ${++answerNumber}`
-                : `## ${turn.role === 'user' ? 'User' : 'ChatGPT'}`;
-            return `${heading}\n\n${body}`;
-        }).filter(Boolean);
+    /** Joins a header and pre-rendered sections exactly the way renderDocument does. */
+    function assembleDocument(header, sections) {
+        return `${header}\n\n${sections.join('\n\n')}\n`;
+    }
 
-        const markdown = `${frontMatter}\n\n# ${conversation.title}\n\n${sections.join('\n\n')}\n`;
-        // Collapse runs of blank lines left by removed markers, but never inside code.
-        return mapOutsideCode(markdown, (prose) => prose.replace(/\n{3,}/g, '\n\n'));
+    /**
+     * Full Markdown document.
+     * @param {object} conversation - Result of parser.parseConversation.
+     * @param {object[]} turns - The turns to include, in order.
+     * @param {{ mode: 'full'|'answers'|'selection', includeThinking: boolean, includeSources: boolean,
+     *           sourceUrl?: string, exportedAt?: Date }} options
+     */
+    function renderDocument(conversation, turns, options) {
+        const sections = [];
+        for (const turn of turns) {
+            // "answers" mode only contains assistant turns, so the count is the answer number.
+            const heading = options.mode === 'answers' ? `## Answer ${sections.length + 1}` : roleHeading(turn);
+            const section = renderSection(turn, options, heading);
+            if (section) sections.push(section);
+        }
+        return assembleDocument(renderHeader(conversation, options), sections);
     }
 
     // ---------------------------------------------------------------------------------------
@@ -363,5 +385,13 @@
         };
     }
 
-    ns.markdown = Object.freeze({ renderDocument, renderTurnBody, previewOf, formatLocalDateTime });
+    ns.markdown = Object.freeze({
+        renderDocument,
+        renderHeader,
+        renderSection,
+        assembleDocument,
+        renderTurnBody,
+        previewOf,
+        formatLocalDateTime
+    });
 })();
