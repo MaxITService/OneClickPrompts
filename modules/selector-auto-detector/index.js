@@ -47,6 +47,7 @@ window.OneClickPromptsSelectorAutoDetector = {
             lastFailure: 0,
             recovering: false,
             lastMissingNotifyToastAt: 0,
+            lastHeuristicsDisabledNotifyAt: 0,
             contextKey: null,
             nextRetryAt: 0,
             passiveObserver: null,
@@ -69,7 +70,8 @@ window.OneClickPromptsSelectorAutoDetector = {
         recentSurfaceSuccessGraceMs: 45000,
         passiveRetryBaseMs: 5000,
         passiveRetryMaxMs: 120000,
-        containerMissingNotifyDebounceMs: 30000
+        containerMissingNotifyDebounceMs: 30000,
+        containerHeuristicsDisabledNotifyDebounceMs: 24 * 60 * 60 * 1000 // once a day
     },
     settings: {
         enableEditorHeuristics: false,
@@ -419,13 +421,27 @@ window.OneClickPromptsSelectorAutoDetector = {
         if (type === 'container') this.clearPassiveContainerRetry();
     },
 
-    maybeNotifyContainerMissing: function () {
+    maybeNotifyContainerMissing: function (reason = 'failed') {
         if (this.settings.notifyContainerMissing !== true || typeof window.showToast !== 'function') {
             return;
         }
 
         const s = this.state.container;
         const now = Date.now();
+
+        if (reason === 'heuristics-disabled') {
+            if ((now - (s.lastHeuristicsDisabledNotifyAt || 0)) < this.config.containerHeuristicsDisabledNotifyDebounceMs) {
+                return;
+            }
+            s.lastHeuristicsDisabledNotifyAt = now;
+            window.showToast(
+                'OneClickPrompts: Cannot find where to inject buttons on this page, and automatic recovery (container heuristics) is turned off. Enable it in Advanced settings, or reposition the buttons panel manually.',
+                'error',
+                10000
+            );
+            return;
+        }
+
         if ((now - (s.lastMissingNotifyToastAt || 0)) < this.config.containerMissingNotifyDebounceMs) {
             return;
         }
@@ -459,9 +475,11 @@ window.OneClickPromptsSelectorAutoDetector = {
                         ? this.settings.enableStopButtonHeuristics === true
                         : this.settings.enableContainerHeuristics === true;
 
-            // If heuristics are disabled, stop early and silently.
+            // If heuristics are disabled, stop early and silently (but still let the user know
+            // about a missing container, since heuristics being off means nothing else will).
             if (!heuristicsAllowed) {
                 logConCgp(`[SelectorAutoDetector] ${type} not found. Heuristics disabled; skipping recovery silently.`);
+                if (type === 'container') this.maybeNotifyContainerMissing('heuristics-disabled');
                 return null;
             }
 

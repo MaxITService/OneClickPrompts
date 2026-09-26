@@ -7,13 +7,16 @@ const ATTRIBUTE_PRIORITY = [
     'data-testid',
     'data-test',
     'data-qa',
+    'data-chatgpt-composer',
+    'data-app-shell-main-surface',
+    'data-composer-body',
+    'data-composer-footer-responsive',
     'aria-label',
     'id',
     'name',
     'placeholder'
 ];
 const CLASS_LIMIT = 3;
-const PATH_DEPTH_LIMIT = 4;
 
 function escapeCss(value) {
     if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
@@ -22,9 +25,14 @@ function escapeCss(value) {
     return String(value).replace(/"/g, '\\"');
 }
 
-function isUniqueSelector(selector) {
+function quoteAttributeValue(value) {
+    return `"${String(value).replaceAll('\\', '\\\\').replaceAll('"', '\\"').replaceAll('\n', '\\a ').replaceAll('\r', '\\d ')}"`;
+}
+
+function isUniqueSelector(selector, element) {
     try {
-        return document.querySelectorAll(selector).length === 1;
+        const matches = document.querySelectorAll(selector);
+        return matches.length === 1 && matches[0] === element;
     } catch {
         return false;
     }
@@ -34,13 +42,13 @@ function buildAttributeSelector(element) {
     const tag = element.tagName.toLowerCase();
     for (const attr of ATTRIBUTE_PRIORITY) {
         const value = element.getAttribute(attr);
-        if (!value) continue;
+        if (value === null) continue;
         if (attr === 'id') {
             const candidate = `#${escapeCss(value)}`;
-            if (isUniqueSelector(candidate)) return candidate;
+            if (isUniqueSelector(candidate, element)) return candidate;
         } else {
-            const candidate = `${tag}[${attr}="${escapeCss(value)}"]`;
-            if (isUniqueSelector(candidate)) return candidate;
+            const candidate = value === '' ? `${tag}[${attr}]` : `${tag}[${attr}=${quoteAttributeValue(value)}]`;
+            if (isUniqueSelector(candidate, element)) return candidate;
         }
     }
     return null;
@@ -55,41 +63,61 @@ function buildClassSelector(element) {
     if (usefulClasses.length === 0) return null;
 
     const candidate = `${tag}.${usefulClasses.map(escapeCss).join('.')}`;
-    if (isUniqueSelector(candidate)) {
+    if (isUniqueSelector(candidate, element)) {
         return candidate;
     }
     return null;
 }
 
-function buildDomPathSelector(element) {
+function relativePathFromAncestor(element, ancestor) {
     const segments = [];
     let node = element;
-    let depth = 0;
-    while (node && node.tagName && depth < PATH_DEPTH_LIMIT) {
+    while (node && node !== ancestor) {
         const tag = node.tagName.toLowerCase();
         const parent = node.parentElement;
-        if (!parent) break;
+        if (!parent) return null;
         const siblings = Array.from(parent.children).filter(child => child.tagName === node.tagName);
         const index = siblings.indexOf(node) + 1;
         segments.unshift(`${tag}:nth-of-type(${index})`);
-        const candidate = segments.join(' > ');
-        if (isUniqueSelector(candidate)) {
-            return candidate;
-        }
         node = parent;
-        depth += 1;
+    }
+    return node === ancestor ? segments.join(' > ') : null;
+}
+
+function buildAnchoredPathSelector(element, anchorBuilder) {
+    for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
+        const anchor = anchorBuilder(ancestor);
+        if (!anchor) continue;
+        const relativePath = relativePathFromAncestor(element, ancestor);
+        if (!relativePath) continue;
+        const candidate = `${anchor} > ${relativePath}`;
+        if (isUniqueSelector(candidate, element)) return candidate;
     }
     return null;
 }
 
+function buildDomPathSelector(element) {
+    if (!document.body?.contains(element)) return null;
+    if (element === document.body) return 'body';
+    const relativePath = relativePathFromAncestor(element, document.body);
+    const candidate = relativePath ? `body > ${relativePath}` : null;
+    return candidate && isUniqueSelector(candidate, element) ? candidate : null;
+}
+
 function deriveSelectorFromElement(element) {
-    if (!element || !element.tagName) return null;
-    // Prefer attributes first, then classes, then structural path.
+    if (!element || !element.tagName || !element.isConnected) return null;
+    // A stable attribute on an ancestor is preferable to a generated class on the element.
     const attributeSelector = buildAttributeSelector(element);
     if (attributeSelector) return attributeSelector;
 
+    const anchoredAttributePath = buildAnchoredPathSelector(element, buildAttributeSelector);
+    if (anchoredAttributePath) return anchoredAttributePath;
+
     const classSelector = buildClassSelector(element);
     if (classSelector) return classSelector;
+
+    const anchoredClassPath = buildAnchoredPathSelector(element, buildClassSelector);
+    if (anchoredClassPath) return anchoredClassPath;
 
     const pathSelector = buildDomPathSelector(element);
     if (pathSelector) return pathSelector;

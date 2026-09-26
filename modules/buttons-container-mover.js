@@ -200,7 +200,7 @@ window.MaxExtensionContainerMover = {
             if (container.parentElement !== target) {
                 target.appendChild(container);
             }
-            container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            container.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
             return true;
         } catch (err) {
             logConCgp('[ContainerMover] Failed to move container:', err);
@@ -209,17 +209,13 @@ window.MaxExtensionContainerMover = {
     },
 
     __buildNudgeCandidates: function (session) {
-        if (!session?.active) return { items: [], scrollY: 0 };
+        if (!session?.active) return { items: [] };
 
         const container = session.container;
+        const currentParent = container.parentElement;
         const roots = session.uiRoots || [];
 
         const scrollY = typeof window.scrollY === 'number' ? window.scrollY : 0;
-        const innerHeight = typeof window.innerHeight === 'number' ? window.innerHeight : 0;
-        const innerWidth = typeof window.innerWidth === 'number' ? window.innerWidth : 0;
-
-        const rangeTop = scrollY - innerHeight;
-        const rangeBottom = scrollY + innerHeight * 2;
 
         const allowedTags = new Set([
             'BODY',
@@ -229,13 +225,27 @@ window.MaxExtensionContainerMover = {
         const rootSet = new Set(roots.filter(Boolean));
         const items = [];
         const seen = new Set();
-
-        const minWidthPx = Math.max(140, Math.min(260, Math.floor(innerWidth * 0.6)));
-        const minHeightPx = 18;
+        const getPlacementRect = (el) => {
+            const rect = el.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) return rect;
+            // display:contents wrappers have no box, but can still host the buttons in flow.
+            if (window.getComputedStyle(el).display !== 'contents') return null;
+            const descendants = el.querySelectorAll('div, section, main, form, article, aside, nav, header, footer');
+            for (let i = 0; i < Math.min(descendants.length, 30); i++) {
+                const descendant = descendants[i];
+                if (roots.some(root => root?.contains(descendant))) continue;
+                const childRect = descendant.getBoundingClientRect();
+                if (childRect.width > 0 && childRect.height > 0) return childRect;
+            }
+            return null;
+        };
+        const anchorRect = getPlacementRect(session.nudgeAnchor || container.parentElement) ||
+            container.getBoundingClientRect();
+        const overlapsAnchor = rect => rect.right > anchorRect.left && rect.left < anchorRect.right;
 
         let scanned = 0;
         const maxScanned = 25000;
-        const maxCandidates = 2500;
+        const maxCandidates = 5000;
 
         const filter = {
             acceptNode: (node) => {
@@ -255,7 +265,7 @@ window.MaxExtensionContainerMover = {
             walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, filter);
         } catch (err) {
             logConCgp('[ContainerMover] Failed to create TreeWalker for nudge candidates:', err);
-            return { items: [], scrollY };
+            return { items: [] };
         }
 
         while (walker.nextNode()) {
@@ -270,7 +280,7 @@ window.MaxExtensionContainerMover = {
             seen.add(el);
 
             try {
-                if (el.isContentEditable || el.getAttribute('contenteditable') === 'true') {
+                if (el.isContentEditable || el.closest('[contenteditable="true"], [aria-hidden="true"], [inert]')) {
                     continue;
                 }
             } catch (_) { /* ignore */ }
@@ -283,42 +293,40 @@ window.MaxExtensionContainerMover = {
 
             let rect;
             try {
-                rect = el.getBoundingClientRect();
+                rect = getPlacementRect(el);
             } catch (_) {
                 continue;
             }
 
-            if (!rect || rect.width <= 0 || rect.height <= 0) continue;
+            if (!rect || (el !== currentParent && !overlapsAnchor(rect))) continue;
 
-            const absTop = rect.top + scrollY;
-            const absBottom = rect.bottom + scrollY;
-
-            // Keep it "nearby" so arrows feel like a nudge. User can scroll and nudge again.
-            if (absBottom < rangeTop || absTop > rangeBottom) continue;
-
-            // Avoid tiny containers that are almost never good placements.
-            if (el !== document.body && rect.width < minWidthPx && rect.height < minHeightPx) continue;
+            // Tiny controls are poor hosts even when their tag is DIV.
+            if (el !== document.body && el !== currentParent && (rect.width < 80 || rect.height < 12)) continue;
 
             items.push({
                 el,
-                top: absTop,
+                top: rect.top + scrollY,
                 left: rect.left,
-                area: rect.width * rect.height
+                order: scanned
             });
         }
 
-        // Always allow body as a fallback.
+        // Always allow body as a fallback, including when TreeWalker reaches its limit.
         if (!seen.has(document.body)) {
-            items.push({ el: document.body, top: 0, left: 0, area: Number.MAX_SAFE_INTEGER });
+            items.push({ el: document.body, top: 0, left: 0, order: -1 });
+        }
+        if (currentParent?.isConnected && !items.some(item => item.el === currentParent)) {
+            const rect = getPlacementRect(currentParent) || container.getBoundingClientRect();
+            items.push({ el: currentParent, top: rect.top + scrollY, left: rect.left, order: scanned + 1 });
         }
 
-        items.sort((a, b) => (a.top - b.top) || (a.left - b.left));
+        items.sort((a, b) => (a.top - b.top) || (a.left - b.left) || (a.order - b.order));
 
         if (typeof logConCgp === 'function') {
             logConCgp('[ContainerMover] Nudge candidates built.', { scanned, candidates: items.length });
         }
 
-        return { items, scrollY };
+        return { items };
     },
 
     __nudgeContainer: function (session, direction) {
@@ -327,18 +335,14 @@ window.MaxExtensionContainerMover = {
         const container = session.container;
         const currentParent = container?.parentElement || document.body;
 
-        const now = Date.now();
-        const scrollY = typeof window.scrollY === 'number' ? window.scrollY : 0;
-        const shouldRebuild = !session.nudgeCache ||
-            (now - session.nudgeCache.at > 600) ||
-            (session.nudgeCache.scrollY !== scrollY);
-
-        if (shouldRebuild) {
+        // Keep the order fixed while nudging. Moving the buttons changes element heights and
+        // scroll position; rebuilding after every click used to jump over nearby hosts.
+        if (!session.nudgeCache || session.nudgeCache.parent !== currentParent) {
             const built = this.__buildNudgeCandidates(session);
             session.nudgeCache = {
-                at: now,
-                scrollY: built.scrollY,
-                items: built.items
+                items: built.items,
+                parent: currentParent,
+                index: built.items.findIndex(item => item.el === currentParent)
             };
         }
 
@@ -348,38 +352,14 @@ window.MaxExtensionContainerMover = {
             return;
         }
 
-        let currentRect;
-        try {
-            currentRect = currentParent.getBoundingClientRect();
-        } catch (_) {
-            currentRect = null;
-        }
-
-        const currentTop = currentRect ? (currentRect.top + scrollY) : scrollY;
-        const currentCenterTop = currentRect ? (currentTop + currentRect.height / 2) : currentTop;
-
-        let baseIndex = items.findIndex(item => item.el === currentParent);
-        if (baseIndex === -1) {
-            // If current parent isn't in the list, pick the closest by vertical distance.
-            let bestIndex = 0;
-            let bestDist = Infinity;
-            for (let i = 0; i < items.length; i++) {
-                const dist = Math.abs(items[i].top - currentCenterTop);
-                if (dist < bestDist) {
-                    bestDist = dist;
-                    bestIndex = i;
-                }
-            }
-            baseIndex = bestIndex;
-        }
+        const baseIndex = session.nudgeCache.index >= 0 ? session.nudgeCache.index : 0;
 
         const step = direction === 'back' ? -1 : 1;
         let index = baseIndex + step;
         let wrapped = false;
         let moved = false;
 
-        const maxTries = Math.min(items.length, 60);
-        for (let attempt = 0; attempt < maxTries; attempt++) {
+        for (let attempt = 0; attempt < items.length; attempt++) {
             if (index < 0) {
                 index = items.length - 1;
                 wrapped = true;
@@ -389,13 +369,16 @@ window.MaxExtensionContainerMover = {
             }
 
             const target = items[index]?.el;
-            if (!target || target === currentParent || target === container) {
+            if (!target?.isConnected || target === currentParent || target === container ||
+                target.isContentEditable || target.closest('[contenteditable="true"], [aria-hidden="true"], [inert]')) {
                 index += step;
                 continue;
             }
 
             moved = this.__moveContainerTo(container, target);
             if (moved) {
+                session.nudgeCache.parent = target;
+                session.nudgeCache.index = index;
                 this.__highlight(target, '#4CAF50');
                 break;
             }
@@ -765,6 +748,8 @@ window.MaxExtensionContainerMover = {
                 mover.__toast('Could not move there (protected element). Try another spot.', 'error', 3000);
                 return;
             }
+            session.nudgeAnchor = pickedParent;
+            session.nudgeCache = null;
 
             try {
                 if (session.hoverMoveHandler) {
@@ -823,6 +808,7 @@ window.MaxExtensionContainerMover = {
             uiRoots: this.__getUiRoots(container),
             originalParent: container.parentElement,
             originalNextSibling: container.nextSibling,
+            nudgeAnchor: container.parentElement,
             isPicking: false,
             pickClickHandler: null,
             hoverMoveHandler: null,
@@ -850,7 +836,7 @@ window.MaxExtensionContainerMover = {
         const customButtons = [
             {
                 text: '⬅️ Back',
-                title: 'Move to the previous nearby container',
+                title: 'Move to the previous placement',
                 onClick: () => { mover.__nudgeContainer(session, 'back'); return false; }
             },
             {
@@ -869,7 +855,7 @@ window.MaxExtensionContainerMover = {
             },
             {
                 text: 'Forward ➡️',
-                title: 'Move to the next nearby container',
+                title: 'Move to the next placement',
                 onClick: () => { mover.__nudgeContainer(session, 'forward'); return false; }
             },
             {

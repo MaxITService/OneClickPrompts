@@ -367,10 +367,15 @@ class InjectionTargetsOnWebsite {
         const selectors = {
             ChatGPT: {
                 containers: [
+                    // Legacy composer UI (data-type="unified-composer", #prompt-textarea, Tailwind classes)
                     'form[data-type="unified-composer"] .\\[grid-area\\:footer\\]',
+                    // New composer UI: keep our buttons below the entire composer surface.
+                    // AdaptiveFooterInput is the text input column, so injecting there narrows the editor.
+                    'form[data-chatgpt-composer]:has(div.ProseMirror[contenteditable="true"])',
                     'form[data-type="unified-composer"] > div.rounded-\\[28px\\]',
                     'form[data-type="unified-composer"] > div:has(#prompt-textarea)',
                     'form[data-type="unified-composer"]',
+                    'form[data-chatgpt-composer]',
                     'main.flex.flex-col.items-center'
                 ],
                 sendButtons: [
