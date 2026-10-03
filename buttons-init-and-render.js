@@ -762,12 +762,19 @@ window.MaxExtensionButtonsInit = {
 
     },
 
+    __buttonRenderTokens: new WeakMap(),
+
     /**
      * Creates and appends custom send buttons to the specified container.
      * @param {HTMLElement} container - The DOM element to which custom buttons will be appended.
      * @param {boolean} isPanel - Flag indicating if the container is the floating panel.
      */
     generateAndAppendAllButtons: async function (container, isPanel) {
+        // Profile-save broadcasts and Undo can refresh the same container while
+        // its profile selector is loading. Only the latest render may resume.
+        const renderToken = Symbol();
+        this.__buttonRenderTokens.set(container, renderToken);
+
         if (isPanel) {
             window.MaxExtensionUiScale?.resetInlineContainer(container);
         } else {
@@ -845,6 +852,7 @@ window.MaxExtensionButtonsInit = {
         if (window.globalInlineSelectorConfig?.enabled && window.globalInlineSelectorConfig.placement === 'before' && !isPanel) {
             if (typeof this.createInlineProfileSelector === 'function') {
                 const selectorElBefore = await this.createInlineProfileSelector();
+                if (this.__buttonRenderTokens.get(container) !== renderToken) return;
                 if (selectorElBefore) {
                     container.appendChild(selectorElBefore);
                     logConCgp('[init] Inline Profile Selector appended before buttons.');
@@ -1059,6 +1067,7 @@ window.MaxExtensionButtonsInit = {
         if (window.globalInlineSelectorConfig?.enabled && window.globalInlineSelectorConfig.placement === 'after' && !isPanel) {
             if (typeof this.createInlineProfileSelector === 'function') {
                 const selectorElAfter = await this.createInlineProfileSelector();
+                if (this.__buttonRenderTokens.get(container) !== renderToken) return;
                 if (selectorElAfter) {
                     container.appendChild(selectorElAfter);
                     logConCgp('[init] Inline Profile Selector appended after buttons.');
