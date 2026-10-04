@@ -22,7 +22,7 @@
       }
     };
 
-  const MESSAGE_SELECTOR = '[data-message-author-role]';
+  const MESSAGE_SELECTOR = '[data-message-author-role], [data-chatgpt-search-unit-key]';
   const CACHE_PREFIX = 'ocpTokenApprox.chatgptThread.';
   const CACHE_VERSION = 3;
   const UPDATED_EVENT = 'ocp-token-approx-chatgpt-cache-updated';
@@ -63,6 +63,17 @@
 
   function readNodeText(el) {
     try { return el.innerText || el.textContent || ''; } catch { return ''; }
+  }
+
+  function getMessageRole(el) {
+    return el.getAttribute('data-message-author-role') ||
+      el.getAttribute('data-chatgpt-search-unit-key')?.split(':').at(-1) || '';
+  }
+
+  function readMessageText(el) {
+    // Current search units also contain accessibility labels and action controls.
+    const content = el.querySelector('[data-user-message-bubble], [data-markdown-text-style="assistant-message"]');
+    return readNodeText(content || el).trim();
   }
 
   function getConversationId() {
@@ -207,10 +218,12 @@
     const messageHolder = el.closest('[data-message-id]') || el;
     const explicitId =
       messageHolder.getAttribute('data-message-id') ||
+      el.getAttribute('data-chatgpt-search-message-ids')?.trim().split(/\s+/)[0] ||
       messageHolder.id ||
+      el.getAttribute('data-chatgpt-search-unit-key') ||
       el.getAttribute('data-testid') ||
       '';
-    const role = el.getAttribute('data-message-author-role') || '';
+    const role = getMessageRole(el);
 
     if (explicitId) return `${role}:${explicitId}`;
     return `${role}:hash:${hashText(text)}:${text.length}`;
@@ -321,7 +334,9 @@
     const now = Date.now();
 
     messages.forEach((el, index) => {
-      const text = readNodeText(el).trim();
+      // During layout transitions, prefer the legacy message inside a search unit.
+      if (!el.hasAttribute('data-message-author-role') && el.querySelector('[data-message-author-role]')) return;
+      const text = readMessageText(el);
       if (!text) return;
 
       const key = getMessageKey(el, text);
@@ -329,7 +344,7 @@
       if (!existing || existing.text !== text) {
         changed = true;
         state.messages.set(key, {
-          role: el.getAttribute('data-message-author-role') || '',
+          role: getMessageRole(el),
           text,
           updatedAt: now + index
         });

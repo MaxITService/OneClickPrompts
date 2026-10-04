@@ -1036,21 +1036,32 @@
     keepInRow.observe(document.documentElement, { childList: true, subtree: true });
 
     // Event wiring (now keeps thread and editor completely separate)
-    const threadRoot = getThreadRoot();
-    if (threadRoot) {
-      // Only attach thread observer if there's actually a thread root
-      const mo = new MutationObserver(mutations => {
-        // Only mark thread dirty, editors have their own observer
-        if (hasPageMutation(mutations)) threadScheduler.markDirty();
-      });
-      mo.observe(threadRoot, { childList: true, characterData: true, subtree: true });
-
-      // Scroll on container & window (virtualization) - thread only
-      const scrollTarget = threadRoot.closest('[class*="overflow"],[class*="scroll"],main,body') || window;
-      (scrollTarget === window ? window : scrollTarget).addEventListener('scroll', () => {
-        threadScheduler.markDirty();
-      }, { passive: true });
+    let observedThreadRoot = null;
+    const onThreadScroll = () => {
+      threadScheduler.markDirty();
+    };
+    const threadObserver = new MutationObserver(mutations => {
+      // Only mark thread dirty, editors have their own observer.
+      if (!hasPageMutation(mutations)) return;
+      threadScheduler.markDirty();
+    });
+    function bindThreadRoot() {
+      const root = getThreadRoot();
+      if (root === observedThreadRoot) return;
+      threadObserver.disconnect();
+      observedThreadRoot = root;
+      if (!root) return;
+      // The transcript can mount after init or be replaced during SPA navigation.
+      threadObserver.observe(root, { childList: true, characterData: true, subtree: true });
+      threadScheduler.markDirty();
     }
+    bindThreadRoot();
+    // The scrolling element may be inside the transcript or one of its ancestors.
+    document.addEventListener('scroll', event => {
+      const target = event.target;
+      if (observedThreadRoot && (target === document ||
+        target.contains?.(observedThreadRoot) || observedThreadRoot.contains(target))) onThreadScroll();
+    }, { capture: true, passive: true });
 
     if (Site === 'ChatGPT' && chatGptThreadModule && typeof chatGptThreadModule.installCaptureListeners === 'function') {
       chatGptThreadModule.installCaptureListeners({
@@ -1064,7 +1075,10 @@
     // Editors lifecycle is completely independent from thread
     const moAll = new MutationObserver(mutations => {
       // Only mark editor dirty on DOM changes
-      if (hasPageMutation(mutations)) editorScheduler.markDirty();
+      if (hasPageMutation(mutations)) {
+        bindThreadRoot();
+        editorScheduler.markDirty();
+      }
     });
     moAll.observe(document.documentElement, { childList: true, subtree: true });
 
@@ -1232,6 +1246,7 @@
     // excessive recalculations when a user navigates rapidly in a SPA.
     const handlePageNavigation = debounce(() => {
       log('Debounced navigation event triggered, forcing thread token update.');
+      bindThreadRoot();
       threadScheduler.forceNow();
       editorScheduler.forceNow();
     }, 2000);

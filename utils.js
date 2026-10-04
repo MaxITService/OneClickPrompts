@@ -393,7 +393,7 @@ class InjectionTargetsOnWebsite {
                     'div.ProseMirror', // legacy fallback
                     'textarea',
                 ],
-                threadRoot: '#thread',
+                threadRoot: '[data-thread-find-target="conversation"], #thread',
                 buttonsContainerId: 'chatgpt-custom-buttons-container',
                 stopButtons: [
                     'button#composer-submit-button[data-testid="stop-button"]',
@@ -427,8 +427,9 @@ class InjectionTargetsOnWebsite {
                     'div.ProseMirror[contenteditable="true"][data-testid="code-prompt-input"]', // claude.ai/code
                     'div.ProseMirror[contenteditable="true"]'
                 ],
-                // Second selector: claude.ai/code virtualized transcript (only on-screen rows are in the DOM).
-                threadRoot: 'div.flex-1.max-w-3xl.mx-auto:has([data-testid="user-message"]), [data-testid="epitaxy-virtual-transcript"]',
+                // Claude's current chat transcript uses a stable test ID; keep legacy chat and Code fallbacks.
+                // Code's virtualized transcript only has on-screen rows in the DOM.
+                threadRoot: '[data-testid="transcript-list"], div.flex-1.max-w-3xl.mx-auto:has([data-testid="user-message"]), [data-testid="epitaxy-virtual-transcript"]',
                 buttonsContainerId: 'claude-custom-buttons-container',
                 stopButtons: [
                     'button[aria-label="Stop response"]',
@@ -438,12 +439,14 @@ class InjectionTargetsOnWebsite {
             },
             Copilot: {
                 containers: [
+                    '#m365-chat-input-shared-container',
                     'div.w-expanded-composer.max-w-chat.bg-gradient-to-b',
                     'div.relative.max-h-full.w-expanded-composer',
                     'div.flex.grow.flex-col.overflow-hidden',
                     'div.shadow-composer-input'
                 ],
                 editors: [
+                    '#m365-chat-editor-target-element[contenteditable="true"]',
                     'textarea#userInput.block.min-h-user-input.w-full',
                     'textarea#userInput',
                     'textarea.block.min-h-user-input',
@@ -457,7 +460,7 @@ class InjectionTargetsOnWebsite {
                     'button.rounded-submitButton',
                     'button[type="submit"]',
                 ],
-                threadRoot: 'div.max-w-chat[data-content="conversation"]',
+                threadRoot: '[data-testid="MessageListContainer"], div.max-w-chat[data-content="conversation"]',
                 buttonsContainerId: 'copilot-custom-buttons-container',
                 stopButtons: [
                     'button[title="Stop responding"]',
@@ -568,7 +571,7 @@ class InjectionTargetsOnWebsite {
                     'div[contenteditable="true"]', // generic contenteditable fallback
                     'textarea' // last resort
                 ],
-                threadRoot: '.w-full.h-full.overflow-y-auto.overflow-x-hidden.scrollbar-gutter-stable.flex.flex-col.items-center.px-gutter',
+                threadRoot: '[data-testid="chat-transcript-scroller"], .w-full.h-full.overflow-y-auto.overflow-x-hidden.scrollbar-gutter-stable.flex.flex-col.items-center.px-gutter',
                 buttonsContainerId: 'grok-custom-buttons-container',
                 stopButtons: [
                     'button[aria-label="Stop model response"]',
@@ -615,7 +618,7 @@ class InjectionTargetsOnWebsite {
                     'div[contenteditable="true"][data-lexical-editor="true"]',
                     'div[contenteditable="true"]'
                 ],
-                threadRoot: 'div.relative.border-subtlest.ring-subtlest.divide-subtlest.bg-base',
+                threadRoot: '[class~="group/thread-content"], div.relative.border-subtlest.ring-subtlest.divide-subtlest.bg-base',
                 buttonsContainerId: 'perplexity-custom-buttons-container',
                 stopButtons: [
                     'button[aria-label^="Stop response"]', // 2026-09: "Stop response (Esc)"
