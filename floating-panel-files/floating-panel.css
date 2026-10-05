@@ -9,13 +9,47 @@
     flex-direction: column;
     z-index: 10000;
     overflow: hidden;
-    resize: both;
+    /* A captured pointer and a temporary drag shield keep resize working over iframes. */
+    resize: none;
+    min-width: 180px;
+    min-height: 80px;
     pointer-events: auto;
     color: rgba(255, 255, 255, 0.9);
     font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
     /* Create a dedicated stacking context so our internal z-index ordering is predictable */
     isolation: isolate;
     /* MDN: forces a new stacking context */
+}
+
+/* Separate from the footer controls, and usable when either header/footer is collapsed. */
+#max-extension-panel-resize-handle {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: nwse-resize;
+    touch-action: none;
+    user-select: none;
+    z-index: 2147483647;
+}
+
+#max-extension-panel-resize-handle::after {
+    content: '';
+    position: absolute;
+    inset: 4px 3px 3px 4px;
+    background: repeating-linear-gradient(135deg, transparent 0 3px, currentColor 3px 4px);
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+    opacity: 0.65;
+}
+
+#max-extension-panel-resize-handle:focus-visible {
+    outline: 2px solid #8b5cf6;
+    outline-offset: -2px;
 }
 
 /* Panel Header */
@@ -387,7 +421,7 @@
     /* Position relative to the main panel */
     bottom: 5px;
     /* Visual placement */
-    right: 5px;
+    right: 22px;
     display: flex;
     align-items: center;
     gap: 4px;

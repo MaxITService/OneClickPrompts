@@ -295,15 +295,8 @@ async function createFloatingPanelDom() {
         this.makeDraggable(panel, profileSwitcherContainer);
 
         // Resize listener
-        panel.addEventListener('mouseup', () => {
-            if (this.currentPanelSettings && (panel.style.width !== `${this.currentPanelSettings.width}px` ||
-                panel.style.height !== `${this.currentPanelSettings.height}px`)) {
-
-                this.currentPanelSettings.width = parseInt(panel.style.width);
-                this.currentPanelSettings.height = parseInt(panel.style.height);
-                this.debouncedSavePanelSettings();
-            }
-        });
+        // Saving only on mouseup inside the panel missed releases over the preview iframe.
+        this.initializePanelResize(panel);
 
         // Initialize the queue section with its logic
         this.initializeQueueSection();
@@ -322,6 +315,96 @@ async function createFloatingPanelDom() {
         return null;
     }
 }
+
+/** Resize with pointer capture; the shield keeps embedded pages from stealing the gesture. */
+window.MaxExtensionFloatingPanel.initializePanelResize = function (panel) {
+    const handle = document.createElement('button');
+    handle.id = 'max-extension-panel-resize-handle';
+    handle.type = 'button';
+    handle.setAttribute('aria-label', 'Resize floating panel');
+    handle.title = 'Drag to resize. Arrow keys resize by 10 px; Shift+arrow by 50 px.';
+    panel.append(handle);
+    const { signal } = this.__panelDomEvents;
+    let gesture = null;
+
+    const dimensions = () => {
+        const style = getComputedStyle(panel);
+        const rect = panel.getBoundingClientRect();
+        const scale = this.getPanelScale?.() || 1;
+        const width = parseFloat(style.width);
+        const height = parseFloat(style.height);
+        return { rect, scale, width, height, extraWidth: rect.width / scale - width, extraHeight: rect.height / scale - height };
+    };
+
+    const applySize = (width, height, geometry) => {
+        const maxWidth = Math.max(1, (window.innerWidth - geometry.rect.left) / geometry.scale - geometry.extraWidth);
+        const maxHeight = Math.max(1, (window.innerHeight - geometry.rect.top) / geometry.scale - geometry.extraHeight);
+        const clamp = (value, minimum, maximum) => Math.min(maximum, Math.max(Math.min(minimum, maximum), value));
+        panel.style.minWidth = `${Math.min(180, maxWidth)}px`;
+        panel.style.minHeight = `${Math.min(80, maxHeight)}px`;
+        // Update the live settings too, so a responsive/profile refresh cannot restore stale size.
+        this.currentPanelSettings.width = clamp(width, 180, maxWidth);
+        this.currentPanelSettings.height = clamp(height, 80, maxHeight);
+        panel.style.width = `${this.currentPanelSettings.width}px`;
+        panel.style.height = `${this.currentPanelSettings.height}px`;
+    };
+
+    const finish = (save = true) => {
+        if (!gesture) return;
+        const { pointerId, shield } = gesture;
+        gesture = null;
+        shield.remove();
+        if (handle.hasPointerCapture(pointerId)) handle.releasePointerCapture(pointerId);
+        if (save && panel.isConnected) this.debouncedSavePanelSettings();
+    };
+
+    handle.addEventListener('pointerdown', (event) => {
+        if (event.button !== 0 || !event.isPrimary || gesture) return;
+        event.preventDefault();
+        event.stopPropagation();
+        handle.focus({ preventScroll: true });
+        const shield = document.createElement('div');
+        shield.style.cssText = 'position:fixed;inset:0;z-index:2147483647;cursor:nwse-resize;touch-action:none;user-select:none;';
+        shield.setAttribute('aria-hidden', 'true');
+        gesture = { ...dimensions(), pointerId: event.pointerId, x: event.clientX, y: event.clientY, shield };
+        document.body.append(shield);
+        try {
+            handle.setPointerCapture(event.pointerId);
+        } catch (error) {
+            // Document listeners still receive shield events if capture is unavailable.
+            logConCgp('[floating-panel] Resize pointer capture unavailable:', error?.message || error);
+        }
+    }, { signal });
+
+    document.addEventListener('pointermove', (event) => {
+        if (!gesture || event.pointerId !== gesture.pointerId) return;
+        if (event.buttons === 0) { finish(); return; }
+        event.preventDefault();
+        applySize(gesture.width + (event.clientX - gesture.x) / gesture.scale,
+            gesture.height + (event.clientY - gesture.y) / gesture.scale, gesture);
+    }, { capture: true, signal });
+
+    const finishPointer = (event) => {
+        if (gesture && event.pointerId === gesture.pointerId) finish();
+    };
+    document.addEventListener('pointerup', finishPointer, { capture: true, signal });
+    document.addEventListener('pointercancel', finishPointer, { capture: true, signal });
+    handle.addEventListener('lostpointercapture', finishPointer, { signal });
+    window.addEventListener('blur', () => finish(), { signal });
+    signal.addEventListener('abort', () => finish(false), { once: true });
+
+    handle.addEventListener('keydown', (event) => {
+        if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key) || gesture) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const geometry = dimensions();
+        const step = event.shiftKey ? 50 : 10;
+        const dx = event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0;
+        const dy = event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0;
+        applySize(geometry.width + dx, geometry.height + dy, geometry);
+        this.debouncedSavePanelSettings();
+    }, { signal });
+};
 
 /**
  * Creates the profile switcher UI inside the panel footer.

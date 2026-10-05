@@ -23,6 +23,8 @@
 // session the page itself uses. The access token lives in memory for a few minutes and is never
 // stored or sent anywhere else. No new extension permissions are needed: content-script fetches
 // to the page's own origin are same-origin requests.
+// Claude.ai also uses this UI and delivery pipeline, with its same-origin adapter in
+// claude-conversation.js. Existing settings keys and the public namespace stay compatible.
 //
 // If the backend is unreachable (API change, network, signed out) we fall back to the text of
 // the messages rendered on the page, and say so, instead of failing silently.
@@ -30,7 +32,7 @@
 // Public API (window.OCPChatGptExporter):
 //   settingsReady            Promise that resolves once settings are loaded (never rejects)
 //   getToolbarPlacement()    'before' | 'after' — relative to the custom buttons
-//   createToolbarButtons()   HTMLButtonElement[] — empty when disabled or not on ChatGPT
+//   createToolbarButtons()   HTMLButtonElement[] — empty when disabled or on an unsupported site
 
 (() => {
     'use strict';
@@ -45,6 +47,7 @@
     const DEFAULT_SETTINGS = Object.freeze({
         enabled: false,
         placement: 'after',
+        includeHeader: true,
         includeThinking: true,
         includeSources: true,
         icons: buttonIcons.defaults.chatgptExporter
@@ -64,6 +67,7 @@
         return {
             enabled: value.enabled === true,
             placement: value.placement === 'before' ? 'before' : 'after',
+            includeHeader: value.includeHeader !== false,
             includeThinking: value.includeThinking !== false,
             includeSources: value.includeSources !== false,
             icons: buttonIcons.normalize('chatgptExporter', value.icons)
@@ -75,6 +79,9 @@
     // ---------------------------------------------------------------------------------------
 
     const isChatGptHost = CHATGPT_HOSTS.has(location.hostname);
+    const isClaudeHost = location.hostname === 'claude.ai';
+    const isSupportedHost = isChatGptHost || isClaudeHost;
+    const siteName = isClaudeHost ? 'Claude' : 'ChatGPT';
     let settings = { ...DEFAULT_SETTINGS };
 
     async function loadSettings() {
@@ -92,7 +99,7 @@
         init?.updateButtonsForProfileChange?.('panel');
     }
 
-    if (isChatGptHost) {
+    if (isSupportedHost) {
         chrome.runtime.onMessage.addListener((message) => {
             if (message?.type !== SETTINGS_CHANGED_MESSAGE || !message.settings) return;
             const next = normalizeSettings(message.settings);
@@ -158,6 +165,7 @@
     }();
 
     function currentConversationId() {
+        if (isClaudeHost) return location.pathname.match(/^\/chat\/([^/?#]+)/)?.[1] ?? '';
         return location.pathname.match(/\/c\/([^/?#]+)/)?.[1] ?? '';
     }
 
@@ -184,6 +192,7 @@
         const sourceUrl = `${location.origin}${location.pathname}`;
 
         try {
+            if (isClaudeHost) return { ...await ns.claude.loadConversation(conversationId, requestJson), sourceUrl };
             const conversation = ns.parser.parseConversation(await chatGptApi.conversation(conversationId));
             if (conversation.turns.some((turn) => turn.blocks.some((block) => block.kind === 'canvas'))) {
                 try {
@@ -196,9 +205,9 @@
         } catch (error) {
             if (error instanceof ExportError) throw error;
             log('Backend export failed; falling back to page text.', error);
-            const fallback = readConversationFromPage();
+            const fallback = isClaudeHost ? ns.claude.readConversationFromPage() : readConversationFromPage();
             if (!fallback.turns.length) throw new ExportError('Could not read this conversation. Reload the page and try again.');
-            toast('ChatGPT data was unavailable, so the visible page text was exported instead (formatting may be simplified).', 'warning', 6000);
+            toast(`${siteName} data was unavailable, so the visible page text was exported instead (formatting may be simplified).`, 'warning', 6000);
             return { ...fallback, sourceUrl };
         }
     }
@@ -214,7 +223,7 @@
             .replace(/\s+/g, ' ')
             .trim()
             .slice(0, MAX_FILE_TITLE_LENGTH)
-            .replace(/[. ]+$/, '') || 'ChatGPT conversation';
+            .replace(/[. ]+$/, '') || `${siteName} conversation`;
         const suffix = { answers: ' (answers)', selection: ' (selection)' }[mode] ?? '';
         const date = ns.markdown.formatLocalDateTime(new Date()).slice(0, 10);
         return `${safeTitle}${suffix} ${date}.md`;
@@ -278,6 +287,7 @@
         return {
             id: turn.id,
             role: turn.role,
+            roleLabel: turn.role === 'user' ? 'You' : siteName,
             number: turn.index + 1,
             text: preview.text,
             searchText: preview.searchText,
@@ -309,7 +319,7 @@
     async function loadTokenEstimator() {
         try {
             const { settings: tokenSettings } = await chrome.runtime.sendMessage({ type: 'getTokenApproximatorSettings' }) ?? {};
-            if (!tokenSettings?.enabled || tokenSettings.enabledSites?.ChatGPT === false) return null;
+            if (!tokenSettings?.enabled || tokenSettings.enabledSites?.[siteName] === false) return null;
             const registry = window.OCP_createTokenModelRegistry?.();
             if (!registry) return null;
             const modelId = registry.resolveModelId(tokenSettings.countingMethod);
@@ -354,7 +364,9 @@
             measure(ids) {
                 const sections = sectionsOf(ids);
                 // Mirrors assembleDocument: header + "\n\n" + sections joined by "\n\n" + "\n".
-                const separators = sections.length ? 2 + 2 * (sections.length - 1) + 1 : 0;
+                // An omitted header contributes neither its text nor its separating blank line.
+                const partCount = sections.length + Number(Boolean(header));
+                const separators = partCount ? 2 * (partCount - 1) + 1 : 0;
                 let chars = headerSize.chars + separators;
                 let bytes = headerSize.bytes + separators;
                 for (const section of sections) {
@@ -363,7 +375,7 @@
                 }
                 let tokens = null;
                 if (tokenEstimator) {
-                    headerTokens ??= tokenEstimator.estimate(header);
+                    headerTokens ??= header ? tokenEstimator.estimate(header) : 0;
                     tokens = sections.reduce((sum, section) => sum + tokensOf(section), headerTokens);
                 }
                 return { chars, bytes, tokens, tokenModel: tokenEstimator?.name ?? null };
@@ -424,6 +436,7 @@
             if (!conversation.turns.length) throw new ExportError('This chat has no messages to export yet.');
 
             const renderOptions = {
+                includeHeader: settings.includeHeader,
                 includeThinking: settings.includeThinking,
                 includeSources: settings.includeSources,
                 sourceUrl: conversation.sourceUrl
@@ -462,8 +475,8 @@
         },
         {
             id: 'answers',
-            label: 'Export ChatGPT answers to Markdown',
-            tooltip: `Export answers only\n• Click: download only ChatGPT's answers, without your prompts.${SHIFT_HINT}`
+            label: `Export ${siteName} answers to Markdown`,
+            tooltip: `Export answers only\n• Click: download only ${siteName}'s answers, without your prompts.${SHIFT_HINT}`
         },
         {
             id: 'select',
@@ -498,11 +511,11 @@
     }
 
     function createToolbarButtons() {
-        if (!settings.enabled || window.InjectionTargetsOnWebsite?.activeSite !== 'ChatGPT') return [];
+        if (!settings.enabled || !isSupportedHost || window.InjectionTargetsOnWebsite?.activeSite !== siteName) return [];
         return ACTIONS.map(createButton);
     }
 
-    ns.settingsReady = isChatGptHost ? loadSettings() : Promise.resolve();
+    ns.settingsReady = isSupportedHost ? loadSettings() : Promise.resolve();
     ns.getToolbarPlacement = () => settings.placement;
     ns.createToolbarButtons = createToolbarButtons;
 })();

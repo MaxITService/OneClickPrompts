@@ -1134,6 +1134,9 @@ window.MaxExtensionButtonsInit = {
             customElementsContainer.id = containerId; // where to insert buttons
             customElementsContainer.style.cssText = `
                 display: flex;
+                box-sizing: border-box;
+                min-width: 0;
+                flex-shrink: 0;
                 justify-content: flex-start;
                 flex-wrap: wrap;
                 gap: 8px;

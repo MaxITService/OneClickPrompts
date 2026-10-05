@@ -367,6 +367,10 @@ class InjectionTargetsOnWebsite {
         const selectors = {
             ChatGPT: {
                 containers: [
+                    // Chat and Work share the outer composer form on both home and thread pages.
+                    // Work omits data-chatgpt-composer; use the actual editor to scope this host.
+                    'form[data-composer-placement]:has([data-composer-input] [contenteditable="true"])',
+                    'form[data-thread-find-composer]:has([data-composer-markdown][contenteditable="true"])',
                     // Legacy composer UI (data-type="unified-composer", #prompt-textarea, Tailwind classes)
                     'form[data-type="unified-composer"] .\\[grid-area\\:footer\\]',
                     // New composer UI: keep our buttons below the entire composer surface.
@@ -387,6 +391,8 @@ class InjectionTargetsOnWebsite {
                     'button.send-button-class' // legacy fallback
                 ],
                 editors: [
+                    'form[data-thread-find-composer] [data-composer-markdown][contenteditable="true"]', // Chat + Work
+                    'form[data-composer-placement] [data-composer-input] [contenteditable="true"]',
                     'div.ProseMirror#prompt-textarea[contenteditable="true"]', // new main editor
                     'div.ProseMirror[contenteditable="true"]', // fallback
                     'div[contenteditable="true"].ProseMirror', // fallback

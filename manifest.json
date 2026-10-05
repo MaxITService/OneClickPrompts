@@ -92,6 +92,7 @@
         "modules/chatgpt-exporter/conversation-parser.js",
         "modules/chatgpt-exporter/markdown-renderer.js",
         "modules/chatgpt-exporter/message-picker.js",
+        "modules/chatgpt-exporter/claude-conversation.js",
         "modules/chatgpt-exporter/chatgpt-exporter.js",
         "buttons-init-and-render.js",
         "interface.js",

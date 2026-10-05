@@ -1127,7 +1127,7 @@
           <div class="collapsible" id="chatgptExporterModule">
             <div class="section-header subsection-header">
               <h3>
-                ChatGPT Exporter (Markdown)
+                ChatGPT &amp; Claude Exporter (Markdown)
                 <span class="expand-text">(click to expand)</span>
               </h3>
               <span class="toggle-icon">▶</span>
@@ -1145,16 +1145,16 @@
                     <span class="toggle__emoji"></span>
                   </label>
                 </div>
-                <span class="switch-label">Show export buttons on ChatGPT</span>
+                <span class="switch-label">Show export buttons on ChatGPT and Claude</span>
               </div>
               <div class="text-inside-container mb-16">
                 <p>
-                  Adds three buttons to the ChatGPT button row that save the chat
+                  Adds three buttons to the ChatGPT and Claude button rows that save the chat
                   as a Markdown (.md) file:
                 </p>
                 <ul>
                   <li><strong>📑 Export chat</strong> — the whole conversation (the branch you are viewing).</li>
-                  <li><strong>🤖 Export answers only</strong> — only ChatGPT's answers, without your prompts.</li>
+                  <li><strong>🤖 Export answers only</strong> — only the assistant's answers, without your prompts.</li>
                   <li>
                     <strong>☑️ Export selected</strong> — opens a compact list that shows
                     only the first lines of each message, so you can pick messages
@@ -1164,14 +1164,31 @@
                 <p>
                   <strong>Shift+click</strong> the first two buttons to copy the
                   Markdown to the clipboard instead of downloading it. Math (as
-                  <code>$…$</code> / <code>$$…$$</code>), code blocks, tables,
-                  Canvas documents, Deep research reports and web citations are
-                  kept.
+                  <code>$…$</code> / <code>$$…$$</code>), code blocks, tables
+                  and available thinking summaries are kept. ChatGPT exports also
+                  preserve Canvas documents, Deep research reports and web citations.
                 </p>
               </div>
 
               <!-- Settings visible when expanded -->
               <div id="chatgptExporterSettingsContainer" class="ml-20">
+                <div class="toggle-container mb-8">
+                  <div class="toggle">
+                    <input
+                      type="checkbox"
+                      id="chatgptExporterIncludeHeaderToggle"
+                      class="toggle__input"
+                    />
+                    <label for="chatgptExporterIncludeHeaderToggle" class="toggle__label">
+                      <span class="toggle__emoji"></span>
+                      <span class="toggle__emoji"></span>
+                    </label>
+                  </div>
+                  <span class="switch-label"
+                    title="Turn off to start directly with the messages, without the chat title, source link or metadata."
+                    >Include document header (title, chat link and metadata)</span
+                  >
+                </div>
                 <div class="toggle-container mb-8">
                   <div class="toggle">
                     <input

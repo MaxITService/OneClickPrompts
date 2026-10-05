@@ -131,6 +131,7 @@ function normalizeChatGptExporterSettings(value) {
   return {
     enabled: settings.enabled === true,
     placement: settings.placement === 'before' ? 'before' : 'after',
+    includeHeader: settings.includeHeader !== false,
     includeThinking: settings.includeThinking !== false,
     includeSources: settings.includeSources !== false,
     icons: normalizeModuleButtonIcons('chatgptExporter', settings.icons),

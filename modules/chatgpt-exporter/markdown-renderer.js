@@ -217,7 +217,7 @@
     }
 
     function renderCanvas(block, options) {
-        const heading = `### Canvas: ${block.title || 'Untitled'}`;
+        const heading = `### ${block.label || 'Canvas'}: ${block.title || 'Untitled'}`;
         if (block.docType?.startsWith('code/')) {
             const language = block.docType.slice('code/'.length);
             return `${heading}\n\n${fenced(block.content, CANVAS_LANGUAGE_ALIASES[language] ?? language)}`;
@@ -291,7 +291,7 @@
         return mapOutsideCode(markdown, (prose) => prose.replace(/\n{3,}/g, '\n\n'));
     }
 
-    const roleHeading = (turn) => `## ${turn.role === 'user' ? 'User' : 'ChatGPT'}`;
+    const roleHeading = (turn) => `## ${turn.role === 'user' ? 'User' : turn.assistantName || 'ChatGPT'}`;
 
     /** One `## Heading` + body section, or '' when the turn renders to nothing. */
     function renderSection(turn, options, heading = roleHeading(turn)) {
@@ -304,6 +304,7 @@
      * @param {{ mode: string, sourceUrl?: string, exportedAt?: Date }} options
      */
     function renderHeader(conversation, options) {
+        if (options.includeHeader === false) return '';
         const frontMatter = [
             '---',
             `title: ${JSON.stringify(conversation.title)}`, // JSON strings are valid YAML scalars.
@@ -319,7 +320,8 @@
 
     /** Joins a header and pre-rendered sections exactly the way renderDocument does. */
     function assembleDocument(header, sections) {
-        return `${header}\n\n${sections.join('\n\n')}\n`;
+        const content = [header, ...sections].filter(Boolean).join('\n\n');
+        return content ? `${content}\n` : '';
     }
 
     /**

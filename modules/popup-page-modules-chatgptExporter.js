@@ -9,11 +9,12 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   const enableToggle = document.getElementById('chatgptExporterEnableToggle');
+  const headerToggle = document.getElementById('chatgptExporterIncludeHeaderToggle');
   const thinkingToggle = document.getElementById('chatgptExporterIncludeThinkingToggle');
   const sourcesToggle = document.getElementById('chatgptExporterIncludeSourcesToggle');
   const placementRadios = [...document.getElementsByName('chatgptExporterPlacement')];
 
-  if (!enableToggle || !thinkingToggle || !sourcesToggle) {
+  if (!enableToggle || !headerToggle || !thinkingToggle || !sourcesToggle) {
     console.warn('[chatgptExporter] Module elements not found; skipping initialization');
     return;
   }
@@ -22,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const normalize = (raw) => ({
     enabled: raw?.enabled === true,
     placement: raw?.placement === 'before' ? 'before' : 'after',
+    includeHeader: raw?.includeHeader !== false,
     includeThinking: raw?.includeThinking !== false,
     includeSources: raw?.includeSources !== false,
     icons: window.OCPModuleButtonIcons.normalize('chatgptExporter', raw?.icons),
@@ -39,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function render() {
     renderIcons(settings.icons);
     enableToggle.checked = settings.enabled;
+    headerToggle.checked = settings.includeHeader;
     thinkingToggle.checked = settings.includeThinking;
     sourcesToggle.checked = settings.includeSources;
     for (const radio of placementRadios) radio.checked = radio.value === settings.placement;
@@ -68,6 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   enableToggle.addEventListener('change', () => save({ enabled: enableToggle.checked }));
+  headerToggle.addEventListener('change', () => save({ includeHeader: headerToggle.checked }));
   thinkingToggle.addEventListener('change', () => save({ includeThinking: thinkingToggle.checked }));
   sourcesToggle.addEventListener('change', () => save({ includeSources: sourcesToggle.checked }));
   for (const radio of placementRadios) {

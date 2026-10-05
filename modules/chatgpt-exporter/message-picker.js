@@ -289,7 +289,7 @@
                         <button type="button" class="btn" data-select="all" title="Select every visible message">All</button>
                         <button type="button" class="btn" data-select="none" title="Clear every visible message">None</button>
                         <button type="button" class="btn" data-select="user" title="Select only your prompts">Prompts</button>
-                        <button type="button" class="btn" data-select="assistant" title="Select only ChatGPT answers">Answers</button>
+                        <button type="button" class="btn" data-select="assistant" title="Select only assistant answers">Answers</button>
                         <button type="button" class="btn" data-select="invert" title="Invert the visible selection">Invert</button>
                     </div>
                     <input type="search" class="filter" placeholder="Filter messages&#x2026;" aria-label="Filter messages" spellcheck="false">
@@ -349,7 +349,7 @@
         check.setAttribute('aria-hidden', 'true');
 
         const meta = element('span', 'meta');
-        meta.append(element('span', 'role', ROLE_LABELS[item.role] ?? item.role), element('span', 'num', `#${item.number}`));
+        meta.append(element('span', 'role', item.roleLabel ?? ROLE_LABELS[item.role] ?? item.role), element('span', 'num', `#${item.number}`));
 
         const body = element('div', 'body'); // div: it will also hold the block-level full-text fold
         const badges = element('span', 'badges');

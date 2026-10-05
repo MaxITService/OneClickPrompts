@@ -82,6 +82,8 @@ window.OneClickPromptsContainerHeuristics = {
 
         // 3a) Known composer shells around ChatGPT/modern chat layouts
         const composerSelectors = [
+            'form[data-composer-placement]:has([data-composer-input] [contenteditable="true"])',
+            'form[data-thread-find-composer]:has([data-composer-markdown][contenteditable="true"])',
             'form:has(#prompt-textarea)',
             'form:has(textarea[name="prompt-textarea"])',
             'form[data-type="unified-composer"]',
