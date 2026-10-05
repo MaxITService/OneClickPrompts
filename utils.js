@@ -460,6 +460,7 @@ class InjectionTargetsOnWebsite {
                     'textarea'
                 ],
                 sendButtons: [
+                    '#m365-chat-input-shared-container button[type="submit"][aria-label="Send"]',
                     'button[type="button"][data-testid="submit-button"]',
                     'button[type="button"].rounded-submitButton[title="Submit message"]',
                     'button[type="button"][title="Submit message"]',
@@ -469,6 +470,7 @@ class InjectionTargetsOnWebsite {
                 threadRoot: '[data-testid="MessageListContainer"], div.max-w-chat[data-content="conversation"]',
                 buttonsContainerId: 'copilot-custom-buttons-container',
                 stopButtons: [
+                    '#m365-chat-input-shared-container button[aria-label="Stop generating"]',
                     'button[title="Stop responding"]',
                     'button[aria-label="Stop responding"]'
                 ]

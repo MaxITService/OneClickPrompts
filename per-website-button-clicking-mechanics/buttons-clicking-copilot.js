@@ -19,28 +19,40 @@ async function processCopilotCustomSendButtonClick(event, customText, autoSend) 
         return;
     }
 
-    const isEditorInInitialState = (element) => {
-        const currentValue = element.value ?? '';
-        const isInitial = currentValue.trim() === '';
-        logConCgp('[buttons] Editor initial state check:', isInitial);
-        return isInitial;
-    };
+    // Lexical adds invisible caret markers; they are not a non-empty prompt.
+    const readEditorText = () => String(
+        editorArea instanceof HTMLTextAreaElement ? editorArea.value : editorArea.innerText ?? editorArea.textContent ?? ''
+    ).replace(/[\u200B\u200C\u200D\uFEFF]/g, '');
 
-    const setEditorValueDirectly = (element, text) => {
-        element.focus();
-        logConCgp('[buttons] Editor focused for setting value directly.');
-
-        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-            Object.getPrototypeOf(element),
-            'value'
-        )?.set;
-
-        if (nativeInputValueSetter) {
-            nativeInputValueSetter.call(element, text);
-            element.dispatchEvent(new Event('input', { bubbles: true }));
-            element.dispatchEvent(new Event('change', { bubbles: true }));
-            logConCgp('[buttons] Events dispatched after setting value directly.');
+    const appendPrompt = async () => {
+        const previousText = readEditorText();
+        editorArea.focus();
+        if (editorArea instanceof HTMLTextAreaElement) {
+            // Preserve the controlled textarea's native setter and append semantics.
+            const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
+            setter.call(editorArea, (previousText.trim() ? editorArea.value : '') + customText);
+            editorArea.dispatchEvent(new Event('input', { bubbles: true }));
+            editorArea.dispatchEvent(new Event('change', { bubbles: true }));
+            const end = editorArea.value.length;
+            editorArea.setSelectionRange(end, end);
+        } else if (editorArea.isContentEditable) {
+            MaxExtensionUtils.moveCursorToEnd(editorArea);
+            // Let Lexical insert into its own document model, preserving existing formatting.
+            const clipboardData = new DataTransfer();
+            clipboardData.setData('text/plain', customText);
+            const paste = new ClipboardEvent('paste', { clipboardData, bubbles: true, cancelable: true, composed: true });
+            editorArea.dispatchEvent(paste);
+            if (!paste.defaultPrevented) {
+                // Older contenteditable variants use the browser's editing operation.
+                if (!document.execCommand('insertText', false, customText)) return false;
+            }
+            // Framework updates can finish after the paste handler returns.
+            await new Promise(resolve => setTimeout(resolve, 0));
+            MaxExtensionUtils.moveCursorToEnd(editorArea);
+        } else {
+            return false;
         }
+        return readEditorText() !== previousText;
     };
 
     const startAutoSend = (_, editor) => {
@@ -48,8 +60,7 @@ async function processCopilotCustomSendButtonClick(event, customText, autoSend) 
         return ButtonsClickingShared.performAutoSend({
             queueContext: event?.__queueContext,
             preClickValidation: () => {
-                const currentText = editor.value?.trim() ?? '';
-                return currentText.length > 0;
+                return editor.isConnected && readEditorText().trim().length > 0;
             },
             clickAction: (btn) => btn && btn.click()
         }).then((result) => {
@@ -61,27 +72,11 @@ async function processCopilotCustomSendButtonClick(event, customText, autoSend) 
     };
 
     const handleMessageInsertion = async () => {
-        await ButtonsClickingShared.insertPrompt(event, editorArea, () => {
-            const initialState = isEditorInInitialState(editorArea);
-
-            // Step 1: Consolidate text insertion logic to prevent duplication.
-            if (initialState) {
-                // If editor is empty, just set the text.
-                setEditorValueDirectly(editorArea, customText);
-            } else {
-                // If editor has content, append the new text.
-                const existingText = editorArea.value ?? '';
-                const newText = `${existingText}${customText}`;
-                setEditorValueDirectly(editorArea, newText);
-            }
-
-            // Step 2: Move cursor to the end after text is set.
-            const finalLength = editorArea.value.length;
-            if (editorArea.setSelectionRange) {
-                editorArea.setSelectionRange(finalLength, finalLength);
-                logConCgp('[buttons] Cursor moved to the end of the editor.');
-            }
-        });
+        const inserted = await ButtonsClickingShared.insertPrompt(event, editorArea, appendPrompt);
+        if (inserted === false) {
+            showToast('Could not insert text into Copilot. Nothing was sent.', 'error');
+            return { status: 'failed', reason: 'insertion_failed' };
+        }
         // Step 3: Handle auto-sending.
         if (autoSend && (event?.__fromDangerBroadcast || event?.__fromQueue || globalMaxExtensionConfig.globalAutoSendEnabled)) {
             return startAutoSend(null, editorArea);
