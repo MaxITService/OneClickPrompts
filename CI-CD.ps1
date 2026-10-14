@@ -1,409 +1,320 @@
-# CI-CD.ps1
-# --------------------------- Configuration --------------------------- #
-
-# Define exclusions
-$excludedDirs = @('Promo', 'node_modules', 'tests', 'coverage')   # Additional directories to exclude
-$excludedFiles = @('.gitignore', 'CI-CD.ps1', '.aider.chat.history.md', '.aider.input.history', 'notes.txt', 'instructions.txt', 'Full_logo.png', 'prompt-update.md', 'package.json', 'package-lock.json')  # Files to exclude
-
-# Define the source directory as the current working directory
-$source = Get-Location
-
-# Initialize array for gitignore patterns
-$gitignorePatterns = @()
-
-# Check if .gitignore exists and parse it
-$gitignorePath = Join-Path $source ".gitignore"
-if (Test-Path $gitignorePath) {
-    Write-Host "Found .gitignore file, parsing patterns..."
-    try {
-        $gitignoreContent = Get-Content $gitignorePath -ErrorAction Stop
-        foreach ($line in $gitignoreContent) {
-            # Skip empty lines and comments
-            if (-not [string]::IsNullOrWhiteSpace($line) -and -not $line.StartsWith('#')) {
-                # Clean up the pattern (trim spaces, etc.)
-                $pattern = $line.Trim()
-                # Add the pattern to our list
-                $gitignorePatterns += $pattern
-                Write-Verbose "Added gitignore pattern: $pattern"
-            }
-        }
-        Write-Host "Parsed $($gitignorePatterns.Count) patterns from .gitignore"
-    }
-    catch {
-        Write-Warning "Error reading .gitignore file: $_"
-        # Continue with empty gitignore patterns
-    }
-}
-
-# Define the parent directory (one level up from the source)
-$parent = Split-Path $source -Parent
-
-# Define the target directory path
-$targetFolderName = "OneClickPrompts Release"
-$destination = Join-Path $parent $targetFolderName
-
-# Define the ZIP file path
-$zipFileName = "$targetFolderName.zip"
-$zipPath = Join-Path $parent $zipFileName
-
-# Initialize an array to track items that failed to copy
-$failedCopies = @()
-
-# --------------------------- Functions --------------------------- #
-
+#Requires -Version 7.0
 <#
 .SYNOPSIS
-    Determines whether a given file or directory should be excluded.
-
+    Build a release ZIP, optionally bump the version and create a local Git commit.
 .DESCRIPTION
-    The Test-ShouldExclude function calculates the relative path of the given FileSystemInfo object
-    from the source directory and splits it into parts. If any part of the path (i.e., a directory name)
-    starts with a dot or matches an entry in $excludedDirs, the item is excluded.
-    Additionally, for files, it checks if the filename is in the $excludedFiles list or 
-    if the file matches any pattern in the .gitignore file.
+    Without -Mode, show the existing interactive menu. Agents must specify Release,
+    Bump, or Build to avoid prompts. Release requires a clean working tree and commits
+    only manifest.json and popup.html. No mode pushes or publishes to a store.
+    Relative output paths are resolved against this script's directory.
+.EXAMPLE
+    pwsh -NoProfile -File ./CI-CD.ps1 -Mode Release -OutputDirectory .release -Json
+.EXAMPLE
+    pwsh -NoProfile -File ./CI-CD.ps1 -Mode Release -Version 0.0.8.4 -OutputDirectory .release -Json
+.EXAMPLE
+    pwsh -NoProfile -File ./CI-CD.ps1 -Mode Build -OutputDirectory .release -Json
 #>
-function Test-ShouldExclude {
-    param (
-        [System.IO.FileSystemInfo]$Item
-    )
+[CmdletBinding()]
+param (
+    [ValidateSet('Interactive', 'Release', 'Bump', 'Build')]
+    [string]$Mode = 'Interactive',
+    [string]$Version,
+    [string]$OutputDirectory,
+    [switch]$Json
+)
 
-    # Get the relative path from the source directory
-    $relativePath = $Item.FullName.Substring($source.Path.Length).TrimStart('\')
-    if ([string]::IsNullOrWhiteSpace($relativePath)) {
-        return $false
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+$PSNativeCommandUseErrorActionPreference = $false
+$source = [System.IO.Path]::GetFullPath($PSScriptRoot)
+$excludedDirs = @('Promo', 'node_modules', 'tests', 'coverage')
+$excludedFiles = @(
+    '.gitignore', 'CI-CD.ps1', 'agents.md', 'code-notes.md',
+    '.aider.chat.history.md', '.aider.input.history', 'notes.txt', 'instructions.txt',
+    'Full_logo.png', 'prompt-update.md', 'package.json', 'package-lock.json'
+)
+$encoding = [System.Text.UTF8Encoding]::new($false)
+$currentVersion = $null
+$newVersion = $null
+$versionWritten = $false
+$committed = $false
+$commitHash = $null
+$commitMessage = $null
+$destination = $null
+$zipPath = $null
+
+function Write-ReleaseStatus {
+    param ([string]$Message)
+    if (-not $Json) {
+        Write-Host $Message
     }
-
-    # Split the path into parts
-    $pathParts = $relativePath -split '\\'
-
-    foreach ($part in $pathParts) {
-        # Exclude if any part (directory) starts with a dot
-        if ($part.StartsWith('.')) {
-            Write-Verbose "Excluding due to dot-starting folder: $($Item.FullName)"
-            return $true
-        }
-        # Exclude if the directory name matches one of the excluded directories
-        if ($excludedDirs -contains $part) {
-            Write-Verbose "Excluding due to matched excluded directory: $($Item.FullName)"
-            return $true
-        }
-    }
-
-    # If the item is a file and its name is in the list of excluded files, exclude it
-    if (-not $Item.PSIsContainer) {
-        # Exclude files in the excluded files list
-        if ($excludedFiles -contains $Item.Name) {
-            Write-Verbose "Excluding file: $($Item.FullName)"
-            return $true
-        }
-        
-        # Exclude files that start with a dot
-        if ($Item.Name.StartsWith('.')) {
-            Write-Verbose "Excluding file with dot prefix: $($Item.FullName)"
-            return $true
-        }
-    }
-
-    # Check against gitignore patterns if we have any
-    if ($gitignorePatterns.Count -gt 0) {
-        # Convert backslashes to forward slashes for gitignore pattern matching
-        $gitignorePath = $relativePath.Replace('\', '/')
-        
-        foreach ($pattern in $gitignorePatterns) {
-            # Skip empty patterns
-            if ([string]::IsNullOrWhiteSpace($pattern)) {
-                continue
-            }
-            
-            # Handle directory-specific patterns (ending with /)
-            $isDirPattern = $pattern.EndsWith('/')
-            if ($isDirPattern -and -not $Item.PSIsContainer) {
-                continue  # Skip directory patterns for files
-            }
-            
-            # Remove trailing slash for comparison
-            $cleanPattern = $pattern.TrimEnd('/')
-            
-            # Handle different pattern types
-            if ($cleanPattern.StartsWith('**/')) {
-                # Pattern like "**/foo" matches "foo" anywhere in the path
-                $matchPart = $cleanPattern.Substring(3)
-                if ($gitignorePath -like "*/$matchPart*" -or $gitignorePath -eq $matchPart) {
-                    Write-Verbose "Excluding due to gitignore pattern (subfolder anywhere): $cleanPattern -> $($Item.FullName)"
-                    return $true
-                }
-            }
-            elseif ($cleanPattern.EndsWith('/**')) {
-                # Pattern like "foo/**" matches everything inside "foo" directory
-                $matchPart = $cleanPattern.Substring(0, $cleanPattern.Length - 3)
-                if ($gitignorePath.StartsWith("$matchPart/")) {
-                    Write-Verbose "Excluding due to gitignore pattern (all inside): $cleanPattern -> $($Item.FullName)"
-                    return $true
-                }
-            }
-            elseif ($cleanPattern.Contains('*')) {
-                # Handle wildcards
-                if ($gitignorePath -like $cleanPattern) {
-                    Write-Verbose "Excluding due to gitignore wildcard pattern: $cleanPattern -> $($Item.FullName)"
-                    return $true
-                }
-            }
-            else {
-                # Direct match or directory path
-                if ($gitignorePath -eq $cleanPattern -or $gitignorePath.StartsWith("$cleanPattern/")) {
-                    Write-Verbose "Excluding due to gitignore exact pattern: $cleanPattern -> $($Item.FullName)"
-                    return $true
-                }
-            }
-        }
-    }
-
-    return $false
 }
 
-# --------------------------- Main Script --------------------------- #
+function Invoke-ReleaseGit {
+    param ([string[]]$Arguments)
+    $output = @(& git -C $source @Arguments 2>&1)
+    if ($LASTEXITCODE -ne 0) {
+        throw "git $($Arguments -join ' ') failed (exit $LASTEXITCODE): $($output -join "`n")"
+    }
+    return $output
+}
+
+function Test-ShouldExclude {
+    param ([string]$RelativePath)
+    $parts = $RelativePath -split '[/\\]'
+    foreach ($part in $parts) {
+        if ($part.StartsWith('.') -or $excludedDirs -contains $part) {
+            return $true
+        }
+    }
+    return $excludedFiles -contains $parts[-1]
+}
 
 try {
-    # ------------------- Interaction Prompt ------------------- #
-    Write-Host "--------------------------------------------------------" -ForegroundColor Cyan
-    Write-Host "Select mode:" -ForegroundColor Cyan
-    Write-Host " [ENTER]  Automatic Version Increase + Git Commit" -ForegroundColor Green
-    Write-Host " [c]      Increase Version ONLY (No Commit)" -ForegroundColor Yellow
-    Write-Host " [v]      Proceed with NO changes (Build only)" -ForegroundColor Gray
-    Write-Host "--------------------------------------------------------" -ForegroundColor Cyan
-
-    $doVersionIncrease = $false
-    $doCommit = $false
-
-    while ($true) {
-        $keyInfo = $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-        if ($keyInfo.VirtualKeyCode -eq 13) {
-            # Enter
-            $doVersionIncrease = $true
-            $doCommit = $true
-            Write-Host "Selected: Version Increase + Git Commit" -ForegroundColor Green
-            break
+    if ($Mode -eq 'Interactive') {
+        if ($Json -or [Console]::IsInputRedirected) {
+            throw 'Specify -Mode Release, Bump, or Build for non-interactive execution.'
         }
-        elseif ($keyInfo.Character -eq 'c') {
-            $doVersionIncrease = $true
-            Write-Host "Selected: Version Increase ONLY" -ForegroundColor Yellow
-            break
+        Write-Host 'Select mode:'
+        Write-Host ' [ENTER]  Automatic Version Increase + Git Commit'
+        Write-Host ' [c]      Increase Version ONLY (No Commit)'
+        Write-Host ' [v]      Proceed with NO changes (Build only)'
+        do {
+            $choice = Read-Host 'Choice'
+            switch ($choice.Trim()) {
+                '' { $Mode = 'Release' }
+                'c' { $Mode = 'Bump' }
+                'v' { $Mode = 'Build' }
+                default { Write-Host 'Use ENTER, c, or v.' }
+            }
+        } while ($Mode -eq 'Interactive')
+    }
+
+    if ($Mode -eq 'Build' -and $PSBoundParameters.ContainsKey('Version')) {
+        throw '-Version cannot be combined with -Mode Build; use Bump or Release.'
+    }
+    $doVersionIncrease = $Mode -ne 'Build'
+    $doCommit = $Mode -eq 'Release'
+
+    Get-Command git -ErrorAction Stop | Out-Null
+    $gitRoot = (Invoke-ReleaseGit -Arguments @('rev-parse', '--show-toplevel')) -join ''
+    if ([System.IO.Path]::GetFullPath($gitRoot) -ne $source) {
+        throw 'CI-CD.ps1 must be located at the Git repository root.'
+    }
+    if ($doCommit) {
+        $branch = (Invoke-ReleaseGit -Arguments @('rev-parse', '--abbrev-ref', 'HEAD')) -join ''
+        if ($branch -eq 'HEAD') {
+            throw 'Release requires a checked-out Git branch; HEAD is detached.'
         }
-        elseif ($keyInfo.Character -eq 'v') {
-            Write-Host "Selected: No Changes (Build Only)" -ForegroundColor Gray
-            break
+        $gitStatus = @(Invoke-ReleaseGit -Arguments @('status', '--porcelain=v1', '--untracked-files=normal'))
+        if ($gitStatus.Count -gt 0) {
+            throw "Release requires a clean working tree. Commit the intended changes first; do not stage unrelated files. Use -Mode Bump to build without a commit.`n$($gitStatus -join "`n")"
         }
     }
 
-    # ------------------- Version Management ------------------- #
-    $manifestPath = Join-Path $source "manifest.json"
-    $popupPath = Join-Path $source "popup.html"
-    $newVersion = $null 
+    # Validate both version locations before writing either of them.
+    $manifestPath = Join-Path $source 'manifest.json'
+    $popupPath = Join-Path $source 'popup.html'
+    $manifestContent = [System.IO.File]::ReadAllText($manifestPath, $encoding)
+    $popupContent = [System.IO.File]::ReadAllText($popupPath, $encoding)
+    $manifest = ConvertFrom-Json -InputObject $manifestContent
+    $currentVersion = [string]$manifest.version
+    $versionPattern = '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$'
+    if ($currentVersion -notmatch $versionPattern) {
+        throw "Expected a four-part version in manifest.json; found '$currentVersion'."
+    }
+    $currentParts = @($currentVersion.Split('.') | ForEach-Object { [int]$_ })
+    if (@($currentParts | Where-Object { $_ -gt 65535 }).Count -gt 0 -or $currentVersion -eq '0.0.0.0') {
+        throw "Invalid extension version '$currentVersion'. Components must be 0..65535, with at least one non-zero component."
+    }
+    $manifestRegex = [regex]::new('("version"\s*:\s*")(\d+\.\d+\.\d+\.\d+)(")')
+    $popupRegex = [regex]::new('(<div\b[^>]*\bid=(["''])version\2[^>]*>\s*Version\s*(?:<br\s*/?>|\s+)\s*)(\d+\.\d+\.\d+\.\d+)(\s*</div>)')
+    $manifestMatches = $manifestRegex.Matches($manifestContent)
+    $popupMatches = $popupRegex.Matches($popupContent)
+    if ($manifestMatches.Count -ne 1 -or $manifestMatches[0].Groups[2].Value -ne $currentVersion) {
+        throw 'Could not identify a unique manifest.json version to update.'
+    }
+    if ($popupMatches.Count -ne 1) {
+        throw 'Could not identify a unique version label in popup.html.'
+    }
+    if ($popupMatches[0].Groups[3].Value -ne $currentVersion) {
+        throw "Version mismatch: manifest.json is $currentVersion, popup.html is $($popupMatches[0].Groups[3].Value). Sync them before building."
+    }
 
+    $newVersion = $currentVersion
     if ($doVersionIncrease) {
-        Write-Host "Proceeding with version increase..."
-        if (Test-Path $manifestPath) {
-            $manifestContent = Get-Content $manifestPath -Raw
-            # Regex for "version": "X.X.X.X"
-            $versionPattern = '"version":\s*"(\d+\.\d+\.\d+\.\d+)"'
-            if ($manifestContent -match $versionPattern) {
-                $currentVersion = $matches[1]
-                Write-Host "Current Version: $currentVersion"
-                
-                $parts = $currentVersion.Split('.') | ForEach-Object { [int]$_ }
-                if ($parts.Count -eq 4) {
-                    $parts[3]++
-                    
-                    # Handle decimal carry-over (e.g. 0.0.0.9 -> 0.0.1.0)
-                    for ($i = 3; $i -gt 0; $i--) {
-                        if ($parts[$i] -gt 9) {
-                            $parts[$i] = 0
-                            $parts[$i - 1]++
-                        }
-                    }
-
-                    $newVersion = $parts -join '.'
-                    
-                    # Update Manifest
-                    $manifestContent = $manifestContent -replace $versionPattern, "`"version`": `"$newVersion`""
-                    $manifestContent | Set-Content $manifestPath -NoNewline
-                    Write-Host "Updated manifest.json to $newVersion"
-                    
-                    # Update popup.html
-                    if (Test-Path $popupPath) {
-                        $popupContent = Get-Content $popupPath -Raw
-                        $popupVersionPattern = '(<div\b[^>]*\bid=(["''])version\2[^>]*>\s*Version\s*(?:<br\s*/?>|\s+)\s*)(\d+\.\d+\.\d+\.\d+)(\s*</div>)'
-
-                        if ($popupContent -match $popupVersionPattern) {
-                            $popupVersion = $matches[3]
-                            if ($popupVersion -ne $currentVersion) {
-                                Write-Warning "popup.html version was $popupVersion, expected $currentVersion. Syncing it to $newVersion."
-                            }
-                            $popupContent = [regex]::Replace(
-                                $popupContent,
-                                $popupVersionPattern,
-                                [System.Text.RegularExpressions.MatchEvaluator] {
-                                    param($match)
-                                    return "$($match.Groups[1].Value)$newVersion$($match.Groups[4].Value)"
-                                },
-                                1
-                            )
-                            $popupContent | Set-Content $popupPath -NoNewline
-                            Write-Host "Updated popup.html to $newVersion"
-                        }
-                        else {
-                            Write-Host "CRITICAL ERROR: Could not find 'Version $currentVersion' in popup.html" -ForegroundColor Red -BackgroundColor Black
-                            throw "Could not update popup.html version"
-                        }
-                    }
-                    else {
-                        Write-Host "CRITICAL ERROR: popup.html not found at $popupPath" -ForegroundColor Red -BackgroundColor Black
-                        throw "popup.html not found"
-                    }
-                }
-                else {
-                    Write-Host "CRITICAL ERROR: Version format in manifest is not X.X.X.X (Found: $currentVersion)" -ForegroundColor Red -BackgroundColor Black
-                }
+        if ($PSBoundParameters.ContainsKey('Version')) {
+            if ($Version -notmatch $versionPattern) {
+                throw '-Version must contain four integer components, for example 0.0.8.4.'
             }
-            else {
-                Write-Host "CRITICAL ERROR: Could not find version pattern in manifest.json" -ForegroundColor Red -BackgroundColor Black
-            }
+            $newVersion = $Version
         }
         else {
-            Write-Host "CRITICAL ERROR: manifest.json not found at $manifestPath" -ForegroundColor Red -BackgroundColor Black
-        }
-    }
-
-    Write-Host "Starting the copy and archive process..."
-
-    # ------------------- Purge Existing Destination Directory ------------------- #
-    if (Test-Path -Path $destination) {
-        Write-Host "Purging existing destination directory: $destination"
-        try {
-            Remove-Item -Path $destination -Recurse -Force -ErrorAction Stop
-            Write-Host "Successfully purged the destination directory."
-        }
-        catch {
-            Write-Error "Failed to purge the destination directory: $destination"
-            throw $_  # Exit the script if purge fails
-        }
-    }
-
-    # Create the destination directory
-    Write-Host "Creating destination directory: $destination"
-    New-Item -ItemType Directory -Path $destination -Force | Out-Null
-
-    # ------------------- Gather Items to Copy ------------------- #
-    Write-Host "Retrieving items to copy..."
-    $itemsToCopy = Get-ChildItem -Path $source -Recurse -Force | Where-Object {
-        -not (Test-ShouldExclude -Item $_)
-    }
-
-    # Report the found items to copy
-    Write-Host "Found $($itemsToCopy.Count) items to copy:"
-    foreach ($item in $itemsToCopy) {
-        Write-Host " - $($item.FullName)"
-    }
-
-    # ------------------- Copy Items ------------------- #
-    Write-Host "Starting copy process..."
-    foreach ($item in $itemsToCopy) {
-        # Determine the relative path and destination path for the current item
-        $relativePath = $item.FullName.Substring($source.Path.Length).TrimStart("\")
-        $destPath = Join-Path $destination $relativePath
-
-        if ($item.PSIsContainer) {
-            # For directories, ensure the destination directory exists
-            if (-not (Test-Path -Path $destPath)) {
-                try {
-                    New-Item -ItemType Directory -Path $destPath -Force | Out-Null
-                    Write-Host "Created directory: $destPath"
-                }
-                catch {
-                    Write-Warning "Failed to create directory: $destPath"
-                    $failedCopies += $destPath
+            # Preserve the project's decimal carry convention: 0.0.8.9 -> 0.0.9.0.
+            $parts = [int[]]$currentParts.Clone()
+            $parts[3]++
+            for ($i = 3; $i -gt 0; $i--) {
+                if ($parts[$i] -gt 9) {
+                    $parts[$i] = 0
+                    $parts[$i - 1]++
                 }
             }
+            $newVersion = $parts -join '.'
         }
-        else {
-            # For files, ensure the destination directory exists and copy the file
-            $destDir = Split-Path $destPath
-            if (-not (Test-Path -Path $destDir)) {
-                try {
-                    New-Item -ItemType Directory -Path $destDir -Force | Out-Null
-                    Write-Host "Created directory for file: $destDir"
-                }
-                catch {
-                    Write-Warning "Failed to create directory for file: $destDir"
-                    $failedCopies += $destDir
-                    continue
-                }
-            }
-
-            try {
-                Copy-Item -Path $item.FullName -Destination $destPath -Force -ErrorAction Stop
-                Write-Host "Copied file: $($item.FullName) -> $destPath"
-            }
-            catch {
-                Write-Warning "Failed to copy file: $($item.FullName) -> $destPath"
-                $failedCopies += $item.FullName
-            }
+        $newParts = @($newVersion.Split('.') | ForEach-Object { [int]$_ })
+        if (@($newParts | Where-Object { $_ -gt 65535 }).Count -gt 0 -or [version]$newVersion -le [version]$currentVersion) {
+            throw "The new version '$newVersion' must be greater than $currentVersion and have components in 0..65535."
         }
     }
 
-    # ------------------- Copy Errors Report ------------------- #
-    if ($failedCopies.Count -gt 0) {
-        Write-Host "`nCopy process completed with errors."
-        Write-Host "The following items were not copied successfully:"
-        foreach ($failed in $failedCopies) {
-            Write-Host " - $failed"
+    $releaseManifest = $manifestContent
+    $releasePopup = $popupContent
+    if ($doVersionIncrease) {
+        $releaseManifest = $manifestRegex.Replace($manifestContent, [System.Text.RegularExpressions.MatchEvaluator] {
+            param($match)
+            return "$($match.Groups[1].Value)$newVersion$($match.Groups[3].Value)"
+        }, 1).Replace("`r`n", "`n")
+        $releasePopup = $popupRegex.Replace($popupContent, [System.Text.RegularExpressions.MatchEvaluator] {
+            param($match)
+            return "$($match.Groups[1].Value)$newVersion$($match.Groups[4].Value)"
+        }, 1).Replace("`r`n", "`n")
+    }
+
+    $outputRoot = if ($PSBoundParameters.ContainsKey('OutputDirectory')) {
+        if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
+            throw '-OutputDirectory cannot be empty.'
         }
+        [System.IO.Path]::GetFullPath($OutputDirectory, $source)
     }
     else {
-        Write-Host "`nAll items copied successfully."
+        Split-Path $source -Parent
+    }
+    $targetFolderName = 'OneClickPrompts Release'
+    $destination = [System.IO.Path]::GetFullPath((Join-Path $outputRoot $targetFolderName))
+    $zipPath = [System.IO.Path]::GetFullPath((Join-Path $outputRoot "$targetFolderName.zip"))
+    $destinationPrefix = $destination.TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
+    if ($source -eq $destination -or $source.StartsWith($destinationPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw 'The release destination cannot be the source directory or an ancestor of it.'
     }
 
-    # ------------------- Create ZIP Archive ------------------- #
-    Write-Host "`nCreating ZIP archive..."
-    Compress-Archive -Path "$destination\*" -DestinationPath $zipPath -Force
-    Write-Host "ZIP archive created at: $zipPath"
+    # Git applies .gitignore correctly, including negations, without scanning excluded folders ourselves.
+    $fileList = (Invoke-ReleaseGit -Arguments @('ls-files', '--cached', '--others', '--exclude-standard', '-z')) -join "`n"
+    $relativeFiles = @($fileList -split "`0" | Where-Object {
+        -not [string]::IsNullOrEmpty($_) -and -not (Test-ShouldExclude -RelativePath $_)
+    } | Sort-Object -Unique)
+    $filesToCopy = @(
+        foreach ($relativePath in $relativeFiles) {
+            $fullPath = [System.IO.Path]::GetFullPath((Join-Path $source $relativePath))
+            if ($fullPath -eq $zipPath -or $fullPath.StartsWith($destinationPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+                continue
+            }
+            if (-not (Test-Path -LiteralPath $fullPath -PathType Leaf)) {
+                throw "Release file is missing or is not a regular file: $relativePath"
+            }
+            $relativePath
+        }
+    )
+    if ($filesToCopy -notcontains 'manifest.json' -or $filesToCopy -notcontains 'popup.html') {
+        throw 'The release file list must include manifest.json and popup.html.'
+    }
 
-    # ------------------- Git Commit ------------------- #
-    
-    if ($doCommit -and $newVersion) {
-        $commitMsg = "Version $newVersion"
-        Write-Host "Committing changes with message: '$commitMsg'..."
-        
-        # Execute Git commands
+    # Only replace the named release artifacts, after checking the absolute destination.
+    if (Test-Path -LiteralPath $destination) {
+        $existingDestination = Get-Item -LiteralPath $destination -Force
+        if (-not $existingDestination.PSIsContainer -or ($existingDestination.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
+            throw "Refusing to replace a non-directory or linked release destination: $destination"
+        }
+        Remove-Item -LiteralPath $destination -Recurse -Force
+    }
+    if (Test-Path -LiteralPath $zipPath) {
+        $existingZip = Get-Item -LiteralPath $zipPath -Force
+        if ($existingZip.PSIsContainer -or ($existingZip.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
+            throw "Refusing to replace a directory or linked ZIP path: $zipPath"
+        }
+    }
+    New-Item -ItemType Directory -Path $destination -Force | Out-Null
+    Write-ReleaseStatus "Building version $newVersion from $source ($($filesToCopy.Count) files)..."
+    foreach ($relativePath in $filesToCopy) {
+        $destinationPath = Join-Path $destination $relativePath
+        New-Item -ItemType Directory -Path (Split-Path $destinationPath -Parent) -Force | Out-Null
+        Copy-Item -LiteralPath (Join-Path $source $relativePath) -Destination $destinationPath -Force
+    }
+    [System.IO.File]::WriteAllText((Join-Path $destination 'manifest.json'), $releaseManifest, $encoding)
+    [System.IO.File]::WriteAllText((Join-Path $destination 'popup.html'), $releasePopup, $encoding)
+    # Use literal filesystem paths; wildcard-based archiving breaks on names like "out [v1]".
+    if (Test-Path -LiteralPath $zipPath) {
+        Remove-Item -LiteralPath $zipPath -Force
+    }
+    [System.IO.Compression.ZipFile]::CreateFromDirectory(
+        $destination, $zipPath, [System.IO.Compression.CompressionLevel]::Optimal, $false
+    )
+
+    # Do not bump source files unless the ZIP was built successfully.
+    if ($doVersionIncrease) {
+        # Keep the failure summary conservative if a write or rollback fails midway.
+        $versionWritten = $true
         try {
-            git add .
-            if ($LASTEXITCODE -eq 0) {
-                git commit -m "$commitMsg"
-                if ($LASTEXITCODE -eq 0) {
-                    Write-Host "Git commit successful." -ForegroundColor Green
-                }
-                else {
-                    Write-Warning "Git commit failed (perhaps nothing to commit?)"
-                }
-            }
-            else {
-                Write-Error "Git add failed."
-            }
+            [System.IO.File]::WriteAllText($manifestPath, $releaseManifest, $encoding)
+            [System.IO.File]::WriteAllText($popupPath, $releasePopup, $encoding)
         }
         catch {
-            Write-Warning "Git command execution failed. Ensure git is installed and available."
+            [System.IO.File]::WriteAllText($manifestPath, $manifestContent, $encoding)
+            [System.IO.File]::WriteAllText($popupPath, $popupContent, $encoding)
+            $versionWritten = $false
+            throw
         }
     }
-    elseif ($doCommit -and -not $newVersion) {
-        Write-Warning "Commit was requested but new version was not generated. Skipping commit."
+    if ($doCommit) {
+        $commitMessage = "Version $newVersion"
+        Invoke-ReleaseGit -Arguments @('add', '--', 'manifest.json', 'popup.html') | Out-Null
+        Invoke-ReleaseGit -Arguments @('commit', '-m', $commitMessage, '--', 'manifest.json', 'popup.html') | Out-Null
+        $committed = $true
+        $commitHash = (Invoke-ReleaseGit -Arguments @('rev-parse', '--short', 'HEAD')) -join ''
+    }
+
+    $summary = [ordered]@{
+        success = $true
+        mode = $Mode
+        previousVersion = $currentVersion
+        version = $newVersion
+        versionChanged = $versionWritten
+        committed = $committed
+        commitHash = $commitHash
+        commitMessage = $commitMessage
+        releaseDirectory = $destination
+        zipPath = $zipPath
+        fileCount = $filesToCopy.Count
+    }
+    if ($Json) {
+        $summary | ConvertTo-Json -Compress
+    }
+    else {
+        Write-ReleaseStatus "Release folder: $destination"
+        Write-ReleaseStatus "ZIP: $zipPath"
+        if ($committed) {
+            Write-ReleaseStatus "Commit: $commitHash — $commitMessage"
+        }
+        Write-ReleaseStatus 'Process completed.'
     }
 }
 catch {
-    Write-Error "An unexpected error occurred: $_"
-    exit 1  # Exit the script with an error code
+    if ($Json) {
+        [ordered]@{
+            success = $false
+            mode = $Mode
+            error = $_.Exception.Message
+            previousVersion = $currentVersion
+            version = $newVersion
+            versionChanged = $versionWritten
+            committed = $committed
+            commitHash = $commitHash
+            commitMessage = $commitMessage
+            releaseDirectory = $destination
+            zipPath = $zipPath
+        } | ConvertTo-Json -Compress
+    }
+    else {
+        Write-Error "Release failed: $($_.Exception.Message)" -ErrorAction Continue
+    }
+    exit 1
 }
-
-# ------------------- Final Report and Exit ------------------- #
-Write-Host "`nProcess completed."
-Write-Host "Exiting in 2 seconds..."
-Start-Sleep -Seconds 2
