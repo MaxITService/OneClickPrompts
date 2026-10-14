@@ -25,6 +25,7 @@
 // to the page's own origin are same-origin requests.
 // Claude.ai also uses this UI and delivery pipeline, with its same-origin adapter in
 // claude-conversation.js. Existing settings keys and the public namespace stay compatible.
+// Gemini uses gemini-conversation.js, including pagination of its same-origin history RPC.
 //
 // If the backend is unreachable (API change, network, signed out) we fall back to the text of
 // the messages rendered on the page, and say so, instead of failing silently.
@@ -80,8 +81,9 @@
 
     const isChatGptHost = CHATGPT_HOSTS.has(location.hostname);
     const isClaudeHost = location.hostname === 'claude.ai';
-    const isSupportedHost = isChatGptHost || isClaudeHost;
-    const siteName = isClaudeHost ? 'Claude' : 'ChatGPT';
+    const isGeminiHost = location.hostname === 'gemini.google.com';
+    const isSupportedHost = isChatGptHost || isClaudeHost || isGeminiHost;
+    const siteName = isGeminiHost ? 'Gemini' : isClaudeHost ? 'Claude' : 'ChatGPT';
     let settings = { ...DEFAULT_SETTINGS };
 
     async function loadSettings() {
@@ -165,6 +167,7 @@
     }();
 
     function currentConversationId() {
+        if (isGeminiHost) return location.pathname.match(/^\/app\/([\da-f]+)\/?$/i)?.[1] ?? '';
         if (isClaudeHost) return location.pathname.match(/^\/chat\/([^/?#]+)/)?.[1] ?? '';
         return location.pathname.match(/\/c\/([^/?#]+)/)?.[1] ?? '';
     }
@@ -192,6 +195,7 @@
         const sourceUrl = `${location.origin}${location.pathname}`;
 
         try {
+            if (isGeminiHost) return { ...await ns.gemini.loadConversation(conversationId), sourceUrl };
             if (isClaudeHost) return { ...await ns.claude.loadConversation(conversationId, requestJson), sourceUrl };
             const conversation = ns.parser.parseConversation(await chatGptApi.conversation(conversationId));
             if (conversation.turns.some((turn) => turn.blocks.some((block) => block.kind === 'canvas'))) {
@@ -205,7 +209,11 @@
         } catch (error) {
             if (error instanceof ExportError) throw error;
             log('Backend export failed; falling back to page text.', error);
-            const fallback = isClaudeHost ? ns.claude.readConversationFromPage() : readConversationFromPage();
+            if (sourceUrl !== `${location.origin}${location.pathname}`) {
+                throw new ExportError('The chat changed during export. Try again in the chat you want to export.');
+            }
+            const fallback = isGeminiHost ? ns.gemini.readConversationFromPage()
+                : isClaudeHost ? ns.claude.readConversationFromPage() : readConversationFromPage();
             if (!fallback.turns.length) throw new ExportError('Could not read this conversation. Reload the page and try again.');
             toast(`${siteName} data was unavailable, so the visible page text was exported instead (formatting may be simplified).`, 'warning', 6000);
             return { ...fallback, sourceUrl };
