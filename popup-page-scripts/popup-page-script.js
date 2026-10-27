@@ -150,7 +150,7 @@ function normalizeUiScale(value) {
     const numeric = Number(value);
     const base = Number.isFinite(numeric) ? numeric : 1;
     const stepped = Math.round(base / 0.05) * 0.05;
-    return Math.min(2, Math.max(0.7, Number(stepped.toFixed(2))));
+    return Math.min(2, Math.max(0.4, Number(stepped.toFixed(2))));
 }
 
 function getUiScaleFromSlider() {

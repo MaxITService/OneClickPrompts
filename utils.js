@@ -899,7 +899,7 @@ window.MaxExtensionHotkeys = {
  * The source of truth is the active profile's `uiScale` value.
  */
 window.MaxExtensionUiScale = {
-    min: 0.7,
+    min: 0.4,
     max: 2,
     step: 0.05,
 
