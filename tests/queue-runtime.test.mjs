@@ -4,6 +4,22 @@ import { loadQueue } from './helpers.mjs';
 
 const prompt = text => ({ text, icon: 'Q', autoSend: true });
 
+test('extension invalidation retains the latest queue locally and pauses with refresh guidance', async () => {
+    const { runtime, context } = await loadQueue();
+    await runtime.ready;
+    const stored = new Map();
+    context.sessionStorage.setItem = (key, value) => stored.set(key, value);
+    context.chrome.runtime.sendMessage = async () => { throw new Error('Extension context invalidated.'); };
+    runtime.enqueue(prompt('keep this unsent prompt'), 10);
+    assert.equal(await runtime.flushPersistence(), false);
+    runtime.reportPersistenceFailure();
+    assert.equal(runtime.snapshot.isRunning, false);
+    assert.equal(runtime.snapshot.status.text, 'Refresh this tab');
+    assert.equal(JSON.parse(stored.get('ocpQueueBackup.v1')).snapshot.items[0].text, 'keep this unsent prompt');
+    runtime.reset();
+    assert.equal(JSON.parse(stored.get('ocpQueueBackup.v1')).snapshot, null);
+});
+
 test('queue capacity includes the prompt currently being sent', async () => {
     const { runtime } = await loadQueue();
     await runtime.ready;

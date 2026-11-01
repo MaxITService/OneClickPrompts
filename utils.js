@@ -392,6 +392,8 @@ class InjectionTargetsOnWebsite {
                 ],
                 editors: [
                     'form[data-thread-find-composer] [data-composer-markdown][contenteditable="true"]', // Chat + Work
+                    'form[data-composer-placement] [data-composer-markdown][contenteditable="true"]',
+                    '[data-composer-input-layout] [data-composer-markdown][contenteditable="true"]', // current responsive composer
                     'form[data-composer-placement] [data-composer-input] [contenteditable="true"]',
                     'div.ProseMirror#prompt-textarea[contenteditable="true"]', // new main editor
                     'div.ProseMirror[contenteditable="true"]', // fallback

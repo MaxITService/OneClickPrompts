@@ -206,12 +206,37 @@ export async function claimQueuePersistenceContext(request, sender) {
     }
 
     await cleanupExpiredSnapshotsOnce();
-    const instanceId = await claimInstanceId(request?.candidateInstanceId, tabId, origin);
+    // A duplicated tab inherits sessionStorage. Preserve the original sender ID
+    // even across extension reloads, which clear chrome.storage.session's registry.
+    const candidateInstanceId = Number.isInteger(request?.backup?.tabId) && request.backup.tabId !== tabId
+        ? null
+        : request?.candidateInstanceId;
+    const instanceId = await claimInstanceId(candidateInstanceId, tabId, origin);
     const key = snapshotKey(instanceId);
     return withRegistryLock(async () => {
         const stored = await chrome.storage.local.get(key);
         const rawSnapshot = stored?.[key];
         const snapshot = sanitizeSnapshot(rawSnapshot, origin);
+
+        // sessionStorage survives extension invalidation, but is copied when a tab
+        // is duplicated. Only the tab that retained this exact journal may restore it.
+        const backup = request?.backup;
+        const backupAt = Number(backup?.savedAt);
+        const backupSnapshot = sanitizeSnapshot(backup?.snapshot, origin);
+        const now = Date.now();
+        if (instanceId === request?.candidateInstanceId
+            && backup?.instanceId === instanceId
+            && Number.isSafeInteger(backupAt) && backupAt > 0
+            && backupAt <= now && now - backupAt <= SNAPSHOT_TTL_MS
+            && backupAt >= (snapshot?.savedAt || 0)
+            && (backup.snapshot === null || (backupSnapshot && backupSnapshot.savedAt === backupAt))) {
+            if (backupSnapshot) {
+                await chrome.storage.local.set({ [key]: backupSnapshot });
+            } else {
+                await chrome.storage.local.remove(key);
+            }
+            return { success: true, instanceId, tabId, snapshot: backupSnapshot };
+        }
 
         if (rawSnapshot && (
             !snapshot
@@ -223,6 +248,7 @@ export async function claimQueuePersistenceContext(request, sender) {
         return {
             success: true,
             instanceId,
+            tabId,
             snapshot: snapshot && Date.now() - snapshot.savedAt <= SNAPSHOT_TTL_MS
                 ? snapshot
                 : null

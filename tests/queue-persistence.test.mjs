@@ -13,6 +13,43 @@ const journal = text => ({
 });
 let moduleNumber = 0;
 
+test('refresh restores a newer tab backup after messaging failed', async () => {
+    const { api, local } = await setup();
+    const { instanceId, tabId } = await api.claimQueuePersistenceContext({}, sender);
+    await api.saveQueuePersistenceSnapshot({ instanceId, snapshot: { ...journal('old'), savedAt: Date.now() - 1000 } }, sender);
+    const snapshot = journal('latest unsent prompt');
+    const result = await api.claimQueuePersistenceContext({ candidateInstanceId: instanceId,
+        backup: { instanceId, tabId, savedAt: snapshot.savedAt, snapshot } }, sender);
+    assert.equal(result.snapshot.items[0].text, 'latest unsent prompt');
+    assert.equal(local.data[`${prefix}${instanceId}`].items[0].text, 'latest unsent prompt');
+});
+
+test('an empty tab backup prevents a completed prompt from returning after refresh', async () => {
+    const { api, local } = await setup();
+    const { instanceId, tabId } = await api.claimQueuePersistenceContext({}, sender);
+    await api.saveQueuePersistenceSnapshot({ instanceId, snapshot: journal('already sent') }, sender);
+    const result = await api.claimQueuePersistenceContext({ candidateInstanceId: instanceId,
+        backup: { instanceId, tabId, savedAt: Date.now(), snapshot: null } }, sender);
+    assert.equal(result.snapshot, null);
+    assert.equal(local.data[`${prefix}${instanceId}`], undefined);
+});
+
+test('a copied backup cannot steal a queue after extension reload clears the registry', async () => {
+    const { api, session } = await setup();
+    const { instanceId, tabId } = await api.claimQueuePersistenceContext({}, sender);
+    const snapshot = journal('original tab only');
+    await api.saveQueuePersistenceSnapshot({ instanceId, snapshot }, sender);
+    delete session.data['ocpQueuePersistenceRegistry.v1'];
+    const backup = { instanceId, tabId, savedAt: snapshot.savedAt, snapshot };
+    const duplicate = await api.claimQueuePersistenceContext({ candidateInstanceId: instanceId, backup },
+        { ...sender, tab: { id: 2 } });
+    assert.notEqual(duplicate.instanceId, instanceId);
+    assert.equal(duplicate.snapshot, null);
+    const original = await api.claimQueuePersistenceContext({ candidateInstanceId: instanceId, backup }, sender);
+    assert.equal(original.instanceId, instanceId);
+    assert.equal(original.snapshot.items[0].text, 'original tab only');
+});
+
 async function setup(initial = {}) {
     const local = createStorage(initial);
     const session = createStorage();

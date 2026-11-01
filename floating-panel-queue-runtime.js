@@ -5,6 +5,7 @@
 
 (() => {
     const QUEUE_INSTANCE_SESSION_KEY = 'ocpQueueInstanceId.v1';
+    const QUEUE_BACKUP_SESSION_KEY = 'ocpQueueBackup.v1';
     const QUEUE_SNAPSHOT_SCHEMA_VERSION = 1;
     const MAX_TIMEOUT_MS = 2 ** 31 - 1;
 
@@ -101,6 +102,7 @@
         #hydrationComplete = false;
         #mutatedBeforeHydration = false;
         #instanceId = null;
+        #tabId = null;
         #writeChain = Promise.resolve(true);
         #persistenceFailureLogged = false;
 
@@ -448,22 +450,41 @@
             return this.#requestPersistence();
         }
 
+        reportPersistenceFailure(sent = false) {
+            let connected = false;
+            try { connected = typeof chrome.runtime.id === 'string'; } catch (_) { }
+            this.setStatus(
+                connected ? 'Queue save failed' : 'Refresh this tab',
+                'error',
+                connected
+                    ? (sent
+                        ? 'The prompt was sent, but its recovery journal could not be updated. The queue is paused.'
+                        : 'The prompt was not sent because its recovery journal could not be saved. The queue is paused.')
+                    : 'The extension was reloaded or updated. Refresh this tab to reconnect, then review the recovered queue before pressing Play.'
+            );
+            this.pause();
+        }
+
         async #hydratePersistence() {
             try {
                 let candidateInstanceId = null;
+                let backup = null;
                 try {
                     candidateInstanceId = sessionStorage.getItem(QUEUE_INSTANCE_SESSION_KEY);
+                    backup = JSON.parse(sessionStorage.getItem(QUEUE_BACKUP_SESSION_KEY) || 'null');
                 } catch (_) { }
 
                 const response = await chrome.runtime.sendMessage({
                     type: 'queuePersistenceClaim',
-                    candidateInstanceId
+                    candidateInstanceId,
+                    backup
                 });
                 if (!response?.success || !response.instanceId) {
                     throw new Error(response?.error || 'Could not claim a queue recovery context.');
                 }
 
                 this.#instanceId = response.instanceId;
+                this.#tabId = response.tabId;
                 try {
                     sessionStorage.setItem(QUEUE_INSTANCE_SESSION_KEY, this.#instanceId);
                 } catch (_) { }
@@ -569,6 +590,21 @@
 
         #requestPersistence() {
             const snapshot = this.#createPersistenceSnapshot();
+            // A reloaded extension invalidates messaging in existing tabs. Keep the
+            // latest state (including an empty-queue tombstone) in this tab as well.
+            // The worker validates ownership before accepting it after a page refresh.
+            if (this.#instanceId) {
+                try {
+                    sessionStorage.setItem(QUEUE_BACKUP_SESSION_KEY, JSON.stringify({
+                        instanceId: this.#instanceId,
+                        tabId: this.#tabId,
+                        savedAt: snapshot?.savedAt ?? Date.now(),
+                        snapshot
+                    }));
+                } catch (error) {
+                    logConCgp('[queue-runtime] Tab-local recovery backup unavailable:', error?.message || error);
+                }
+            }
             const performWrite = async () => {
                 const persistenceReady = await this.ready;
                 if (!persistenceReady || !this.#instanceId) return false;

@@ -1542,6 +1542,9 @@ window.MaxExtensionButtons = {
     },
 
     __findActiveEditor: function () {
+        if (window.OneClickPromptsSelectorGuard?.findConfiguredEditor) {
+            return window.OneClickPromptsSelectorGuard.findConfiguredEditor();
+        }
         const editorSelectors = window?.InjectionTargetsOnWebsite?.selectors?.editors;
         return (Array.isArray(editorSelectors) ? editorSelectors : [])
             .map((selector) => {

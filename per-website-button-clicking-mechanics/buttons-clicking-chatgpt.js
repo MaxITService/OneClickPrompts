@@ -15,12 +15,12 @@ async function processChatGPTCustomSendButtonClick(event, customText, autoSend) 
     logConCgp('[buttons] Custom send button was clicked.');
 
     // Locate the editor area using SelectorGuard
-    const editorArea = await window.OneClickPromptsSelectorGuard.findEditor();
+    const editorArea = await window.OneClickPromptsSelectorGuard.findEditor({ signal: event?.__queueContext?.signal });
 
     if (!editorArea) {
         logConCgp('[buttons] Editor area not found. Unable to proceed.');
         // Toast handled by SelectorGuard/Detector
-        return;
+        return { status: 'failed', reason: 'editor_not_found' };
     }
 
     const getComposerRoot = () => editorArea?.closest?.('form[data-type="unified-composer"], form') || document;

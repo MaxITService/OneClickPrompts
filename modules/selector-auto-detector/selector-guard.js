@@ -12,14 +12,49 @@
 
 window.OneClickPromptsSelectorGuard = {
     /**
+     * Resolves a visible editor synchronously for queue/copy/create actions too.
+     * Saved selectors may outlive a site's composer; retain current defaults as recovery.
+     */
+    findConfiguredEditor: function () {
+        const targets = window.InjectionTargetsOnWebsite;
+        const configured = targets?.selectors?.editors || [];
+        const editor = this._querySelectors(configured, { requireEditable: true });
+        if (editor) return editor;
+        const defaults = targets?.getDefaultSelectors?.(targets.activeSite)?.editors || [];
+        return this._querySelectors(defaults.filter(selector => !configured.includes(selector)), { requireEditable: true });
+    },
+
+    /**
      * Tries to find the editor element using known selectors.
      * @returns {Promise<HTMLElement|null>}
      */
-    findEditor: async function () {
+    findEditor: async function ({ signal } = {}) {
+        signal?.throwIfAborted();
         const selectors = window.InjectionTargetsOnWebsite?.selectors?.editors || [];
 
         // 1. Try standard selectors
-        let element = this._querySelectors(selectors);
+        let element = this.findConfiguredEditor();
+
+        // SPA navigation and the first-send transition briefly replace the composer.
+        // Re-query the live DOM for a bounded period before declaring it missing.
+        if (!element) {
+            element = await new Promise((resolve, reject) => {
+                const finish = (candidate, error) => {
+                    clearInterval(intervalId);
+                    clearTimeout(timeoutId);
+                    signal?.removeEventListener('abort', onAbort);
+                    if (error) reject(error); else resolve(candidate);
+                };
+                const onAbort = () => finish(null, signal.reason);
+                const intervalId = setInterval(() => {
+                    const candidate = this.findConfiguredEditor();
+                    if (candidate) finish(candidate);
+                }, 100);
+                const timeoutId = setTimeout(() => finish(null), 2000);
+                signal?.addEventListener('abort', onAbort, { once: true });
+            });
+        }
+        signal?.throwIfAborted();
 
         // 2. Handle Result
         if (element) {
@@ -66,7 +101,7 @@ window.OneClickPromptsSelectorGuard = {
             return element;
         } else {
             // If editor is also missing, surface that failure first to guide the user.
-            const editorElement = this._querySelectors(editorSelectors);
+            const editorElement = this.findConfiguredEditor();
             if (!editorElement && window.OneClickPromptsSelectorAutoDetector) {
                 await window.OneClickPromptsSelectorAutoDetector.reportFailure?.('editor', { selectors: editorSelectors });
             }
@@ -145,6 +180,12 @@ window.OneClickPromptsSelectorGuard = {
         // determined from geometry and computed styles instead of falling back to mere existence.
         const visibleCandidate = candidates.find(el => {
             if (!isVisibleCandidate(el)) return false;
+            if (options.requireEditable) {
+                if (el.closest('[inert], [aria-hidden="true"]')) return false;
+                if (el instanceof HTMLTextAreaElement) {
+                    if (el.disabled || el.readOnly) return false;
+                } else if (!el.isContentEditable) return false;
+            }
             if (!requireEnabled) return true;
             const ariaDisabled = el.getAttribute && el.getAttribute('aria-disabled');
             return !el.disabled && ariaDisabled !== 'true';

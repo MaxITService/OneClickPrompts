@@ -150,6 +150,41 @@ test('selector lookup works without the optional detector and skips malformed or
     assert.equal(await h.w.OneClickPromptsSelectorGuard.findSendButton(), null);
 });
 
+test('editor lookup survives composer replacement and clears its waiting timers', async t => {
+    const h = await setup(t);
+    h.w.document.getElementById('editor').remove();
+    const found = h.w.OneClickPromptsSelectorGuard.findEditor();
+    await h.clock.advance(500);
+    const replacement = h.w.document.createElement('textarea');
+    replacement.id = 'editor';
+    h.w.document.body.append(replacement);
+    await h.clock.advance(100);
+    assert.equal(await found, replacement);
+    assert.equal(h.clock.pending.size, 0);
+});
+
+test('cancelling editor recovery prevents late resolution and releases timers', async t => {
+    const h = await setup(t);
+    h.w.document.getElementById('editor').remove();
+    const found = h.w.OneClickPromptsSelectorGuard.findEditor({ signal: h.abort.signal });
+    const rejected = assert.rejects(found, { name: 'AbortError' });
+    h.abort.abort();
+    await rejected;
+    assert.equal(h.clock.pending.size, 0);
+});
+
+test('stale custom editor selectors fall back to visible editable defaults', async t => {
+    const h = await setup(t);
+    const hidden = h.w.document.createElement('textarea');
+    hidden.id = 'old-editor';
+    hidden.hidden = true;
+    hidden.style.display = 'none';
+    h.w.document.body.prepend(hidden);
+    h.w.InjectionTargetsOnWebsite.selectors.editors = ['#old-editor'];
+    h.w.InjectionTargetsOnWebsite.getDefaultSelectors = () => ({ editors: ['#editor'] });
+    assert.equal((await h.w.OneClickPromptsSelectorGuard.findEditor()).id, 'editor');
+});
+
 test('fixed controls are visible and a second Stop attribute is respected', async t => {
     const h = await setup(t);
     h.button.style.position = 'fixed';

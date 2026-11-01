@@ -16,6 +16,7 @@ async function initialize(t) {
         InjectionTargetsOnWebsite: { activeSite: 'ChatGPT', selectors: {} },
         buttonBoxCheckingAndInjection() { injections++; }
     });
+    await h.load('modules/module-button-icons.js');
     await h.load('init.js');
     return { ...h, requests, listeners, get injections() { return injections; } };
 }
@@ -47,6 +48,7 @@ test('a late configuration response from the old route cannot start page initial
     h.requests[1].callback({ config: { PROFILE_NAME: 'New', customButtons: [] } });
     h.requests[2].callback({ settings: {} });
     h.requests[3].callback({ settings: {} });
+    await settle();
     h.requests[4].callback({ settings: { isVisible: false } });
     await settle();
     assert.equal(h.w.globalMaxExtensionConfig.PROFILE_NAME, 'New');
@@ -59,6 +61,7 @@ test('a profile broadcast received while settings load takes precedence over the
     h.listeners[0]({ type: 'profileChanged', config: { PROFILE_NAME: 'Latest', customButtons: [] } }, {}, () => {});
     h.requests[1].callback({ settings: {} });
     h.requests[2].callback({ settings: {} });
+    await settle();
     h.requests[3].callback({ settings: {} });
     await settle();
     assert.equal(h.w.globalMaxExtensionConfig.PROFILE_NAME, 'Latest');

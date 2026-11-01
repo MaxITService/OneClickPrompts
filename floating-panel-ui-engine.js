@@ -871,14 +871,7 @@ window.MaxExtensionFloatingPanel.dispatchNextQueueItem = async function (signal)
     if (!inFlightSaved) {
         logConCgp('[queue-engine] Queue paused: could not persist the in-flight item.');
         restoreUnsentItem();
-        if (typeof this.setQueueStatus === 'function') {
-            this.setQueueStatus(
-                'Queue save failed',
-                'error',
-                'The item was not sent because its recovery journal could not be saved. The queue is paused; refresh the page and try again.'
-            );
-        }
-        this.pauseQueue();
+        runtime.reportPersistenceFailure();
         return;
     }
 
@@ -994,14 +987,7 @@ window.MaxExtensionFloatingPanel.dispatchNextQueueItem = async function (signal)
         if (!runtime.isCurrentGeneration(dispatchGeneration)) return;
         if (!completionSaved) {
             logConCgp('[queue-engine] Sent item, but could not persist its completion. Pausing.');
-            if (typeof this.setQueueStatus === 'function') {
-                this.setQueueStatus(
-                    'Queue save failed',
-                    'error',
-                    'The item was sent, but its recovery journal could not be updated. The queue is paused to prevent unsafe follow-up sends.'
-                );
-            }
-            this.pauseQueue();
+            runtime.reportPersistenceFailure(true);
             return;
         }
 
