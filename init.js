@@ -256,7 +256,7 @@ function publicStaticVoidMain() {
                 // Start main initialization only after all global configs are present.
                 // The ChatGPT Exporter preloads its own settings; waiting (it never rejects) lets the
                 // first render include its buttons instead of re-rendering the row a moment later.
-                Promise.resolve(window.OCPChatGptExporter?.settingsReady).then(() => {
+                Promise.all([window.OCPChatGptExporter?.settingsReady, window.OCPReasoningEffort?.settingsReady]).then(() => {
                     if (!isCurrent()) return;
                     const config = profileRevision !== (window.__OCP_profileRevision || 0)
                         ? window.globalMaxExtensionConfig || mainConfig : mainConfig;

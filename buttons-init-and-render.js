@@ -870,6 +870,11 @@ window.MaxExtensionButtonsInit = {
             logConCgp(`[init] ChatGPT Exporter buttons appended ${placement} custom buttons.`);
         };
         appendExporterButtons('before');
+        const appendReasoningButtons = (placement) => {
+            const module = window.OCPReasoningEffort;
+            if (module?.getToolbarPlacement() === placement) container.append(...module.createToolbarButtons());
+        };
+        appendReasoningButtons('before');
 
         // Process the unified list to create and append buttons
         allButtonDefs.forEach((def, index) => {
@@ -1062,6 +1067,7 @@ window.MaxExtensionButtonsInit = {
         });
 
         appendExporterButtons('after');
+        appendReasoningButtons('after');
 
         // Inline Profile Selector AFTER buttons
         if (window.globalInlineSelectorConfig?.enabled && window.globalInlineSelectorConfig.placement === 'after' && !isPanel) {

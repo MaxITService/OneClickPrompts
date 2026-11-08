@@ -139,6 +139,9 @@ function sanitizeAppSettings(rawAppSettings) {
     if (isPlainObject(rawAppSettings.chatgptExporter)) {
         sanitized.chatgptExporter = deepCloneSafeJson(rawAppSettings.chatgptExporter);
     }
+    if (isPlainObject(rawAppSettings.reasoningEffort)) {
+        sanitized.reasoningEffort = deepCloneSafeJson(rawAppSettings.reasoningEffort);
+    }
 
     if (isPlainObject(rawAppSettings.promptVariables)) {
         sanitized.promptVariables = sanitizePromptVariables(rawAppSettings.promptVariables);
@@ -279,6 +282,7 @@ async function buildBackupPayload(scope = 'currentProfile') {
             tooltip: deepCloneSafeJson(await StateStore.getTooltipSettings()),
             manualQueueCards: deepCloneSafeJson(await StateStore.getManualQueueCards()),
             chatgptExporter: deepCloneSafeJson(await StateStore.getChatGptExporterSettings()),
+            reasoningEffort: deepCloneSafeJson(await StateStore.getReasoningEffortSettings()),
             promptVariables: sanitizePromptVariables(currentResponse[PROMPT_VARIABLES_STORAGE_KEY] || {
                 enabled: false,
                 dateExampleInitialized: false,
@@ -505,11 +509,19 @@ const PROFILE_OPERATION_TYPES = new Set([
     'saveCrossChatModuleSettings', 'saveStoredPrompt', 'clearStoredPrompt',
     'saveInlineProfileSelectorSettings', 'saveTokenApproximatorSettings',
     'saveSelectorAutoDetectorSettings', 'saveTooltipSettings', 'saveManualQueueCards',
-    'saveChatGptExporterSettings'
+    'saveChatGptExporterSettings', 'saveReasoningEffortSettings'
 ]);
 
 function dispatchMessage(request, sender, sendResponse) {
     switch (request.type) {
+        case 'getReasoningEffortSettings':
+            StateStore.getReasoningEffortSettings().then(settings => sendResponse({ settings }))
+                .catch(error => sendResponse({ error: error.message }));
+            return true;
+        case 'saveReasoningEffortSettings':
+            StateStore.saveReasoningEffortSettings(request.settings).then(() => sendResponse({ success: true }))
+                .catch(error => sendResponse({ error: error.message }));
+            return true;
         case 'ensurePromptVariableExample':
             ensurePromptVariableExample(request.profileName).then(sendResponse)
                 .catch(error => sendResponse({ success: false, error: String(error?.message || error) }));

@@ -57,6 +57,7 @@ const KEYS = {
     popup: 'ui.popup', // object { firstOpen:boolean, lastOpenedSection?:string, collapsibles?:Record<string,boolean> }
   },
   modules: {
+    reasoningEffort: 'modules.reasoningEffort',
     crossChat: 'modules.crossChat', // object { settings: {...}, storedPrompt: string }
     inlineProfileSelector: 'modules.inlineProfileSelector', // object { enabled:boolean, placement:'before'|'after' }
     tokenApproximator: 'modules.tokenApproximator', // object { enabled:boolean, calibration:number, threadMode:string, showEditorCounter:boolean, placement:'before'|'after' }
@@ -138,9 +139,17 @@ function normalizeChatGptExporterSettings(value) {
   };
 }
 
+function normalizeReasoningEffortSettings(value) {
+  return { enabled: value?.enabled === true, placement: value?.placement === 'before' ? 'before' : 'after' };
+}
+
 // Utilities to get/set nested key paths by flattening as separate storage entries
 // We store each top-level namespace as a whole object where applicable to limit storage ops:
 async function getValue(path) {
+  if (path === KEYS.modules.reasoningEffort) {
+    const stored = await lsGet([path]);
+    return normalizeReasoningEffortSettings(stored[path]);
+  }
   // Determine top namespace
   if (path === KEYS.ui.theme) {
     const r = await lsGet([KEYS.ui.theme, LEGACY.darkTheme]);
@@ -360,6 +369,10 @@ async function getValue(path) {
 }
 
 async function setValue(path, value, write = lsSet) {
+  if (path === KEYS.modules.reasoningEffort) {
+    await write({ [path]: normalizeReasoningEffortSettings(value) });
+    return;
+  }
   // Dual-write where applicable
   if (path === KEYS.ui.theme) {
     await write({ [KEYS.ui.theme]: value, [LEGACY.darkTheme]: value });
@@ -530,6 +543,7 @@ export const StateStore = {
       tokenApproximator: KEYS.modules.tokenApproximator,
       selectorAutoDetector: KEYS.modules.selectorAutoDetector, tooltip: KEYS.modules.tooltip,
       manualQueueCards: KEYS.modules.manualQueueCards, chatgptExporter: KEYS.modules.chatgptExporter,
+      reasoningEffort: KEYS.modules.reasoningEffort,
       floatingPanel: KEYS.floatingPanel, customSelectors: KEYS.global.customSelectors
     };
     for (const [field, key] of Object.entries(mapping)) {
@@ -553,7 +567,8 @@ export const StateStore = {
       'modules.selectorAutoDetector': ['selectorAutoDetectorSettingsChanged', 'settings'],
       'modules.tooltip': ['tooltipSettingsChanged', 'settings'],
       'modules.manualQueueCards': ['manualQueueCardsChanged', 'data'],
-      'modules.chatgptExporter': ['chatgptExporterSettingsChanged', 'settings']
+      'modules.chatgptExporter': ['chatgptExporterSettingsChanged', 'settings'],
+      'modules.reasoningEffort': ['reasoningEffortSettingsChanged', 'settings']
     };
     for (const [key, [type, property]] of Object.entries(events)) {
       if (Object.hasOwn(patch, key)) await this.broadcast({ type, [property]: patch[key] });
@@ -741,6 +756,16 @@ export const StateStore = {
   async saveManualQueueCards(data) {
     await setValue(KEYS.modules.manualQueueCards, data);
     this.broadcast({ type: 'manualQueueCardsChanged', data });
+  },
+
+  // ===== Reasoning Effort (Global Module) =====
+  async getReasoningEffortSettings() {
+    return await getValue(KEYS.modules.reasoningEffort);
+  },
+  async saveReasoningEffortSettings(settings) {
+    const normalized = normalizeReasoningEffortSettings(settings);
+    await setValue(KEYS.modules.reasoningEffort, normalized);
+    await this.broadcast({ type: 'reasoningEffortSettingsChanged', settings: normalized });
   },
 
   // ===== ChatGPT Exporter (Global Module) =====
