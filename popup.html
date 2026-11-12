@@ -825,7 +825,7 @@
         <div class="section-content">
         <div class="collapsible" id="reasoningEffortModule">
           <div class="section-header subsection-header">
-            <h3>Reasoning Effort — ChatGPT &amp; Claude <span class="expand-text">(click to expand)</span></h3>
+            <h3>Reasoning Effort — ChatGPT, Claude &amp; Gemini <span class="expand-text">(click to expand)</span></h3>
             <span class="toggle-icon">▶</span>
           </div>
           <div class="section-content">
@@ -836,7 +836,14 @@
               </div>
               <span class="switch-label">Show reasoning effort buttons</span>
             </div>
-            <p class="text-inside-container">Quickly select the levels available for your current model in ChatGPT Chat/Work and Claude Chat/Code. The selected level is highlighted. The module briefly opens the native model menu to discover supported levels. If your model or plan has no effort control, a notification explains why no buttons appear.</p>
+            <p class="text-inside-container">Quickly select the levels available for your current model in ChatGPT (Chat and Codex), Claude (Chat and Code) and Gemini. The selected level is highlighted. Once per model, the module briefly opens the native menu to discover supported levels and remembers them. If your model or plan has no effort control, a notification explains why no buttons appear.</p>
+            <div class="toggle-container mb-16">
+              <div class="toggle">
+                <input type="checkbox" id="reasoningEffortCompactToggle" class="toggle__input" checked />
+                <label for="reasoningEffortCompactToggle" class="toggle__label"><span class="toggle__emoji"></span><span class="toggle__emoji"></span></label>
+              </div>
+              <span class="switch-label">Compact mode (first letter only)</span>
+            </div>
             <label for="reasoningEffortPlacement">Button placement</label>
             <select id="reasoningEffortPlacement"><option value="before">Before custom buttons</option><option value="after">After custom buttons</option></select>
           </div>

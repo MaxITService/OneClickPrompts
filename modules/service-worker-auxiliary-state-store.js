@@ -140,7 +140,7 @@ function normalizeChatGptExporterSettings(value) {
 }
 
 function normalizeReasoningEffortSettings(value) {
-  return { enabled: value?.enabled === true, placement: value?.placement === 'before' ? 'before' : 'after' };
+  return { enabled: value?.enabled === true, compact: value?.compact !== false, placement: value?.placement === 'before' ? 'before' : 'after' };
 }
 
 // Utilities to get/set nested key paths by flattening as separate storage entries
