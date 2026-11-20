@@ -11,11 +11,11 @@ Treat phrases such as "релизни новую версию", "выпусти 
 - For a normal request, run this from the repository root:
 
   ```powershell
-  pwsh -NoProfile -File ./CI-CD.ps1 -Mode Release -OutputDirectory .release -Json
+  pwsh -NoProfile -File ./CI-CD.ps1 -Mode Release -Json
   ```
 
 - If the user names a version, append `-Version`, for example `-Version 0.0.8.4`. It must be a four-part version greater than the current one. Otherwise the script increments the last component and carries at 10: `0.0.8.9` becomes `0.0.9.0`.
-- `Release` keeps `manifest.json` and the version label in `popup.html` in sync, creates `.release/OneClickPrompts Release/` and `.release/OneClickPrompts Release.zip`, then commits only the two version files with message `Version <version>`. `.release/` is already ignored by the `.*/` rule. Each run replaces these named output artifacts. Supplying `-OutputDirectory` keeps agent output inside the workspace; without it, the script uses the repository's parent directory, as before.
+- `Release` keeps `manifest.json` and the version label in `popup.html` in sync, creates `OneClickPrompts Release/` and `OneClickPrompts Release.zip` in the repository's parent directory (`C:\Code\Released Software\`), then commits only the two version files with message `Version <version>`. Each run replaces these named output artifacts. Do not pass `-OutputDirectory`; the user expects the ZIP in the parent directory.
 - For "build/package only" or "собери ZIP без новой версии", use `-Mode Build`; it changes neither source versions nor Git. For "bump without a commit", use `-Mode Bump`; it updates both versions and builds the ZIP without committing. Do not pass `-Version` with `Build`.
 - Packaging includes tracked files and non-ignored untracked files, while excluding hidden paths, `Promo`, dependencies, tests, coverage, release tooling, agent instructions, and development notes. It does not run tests. A release request alone does not override the testing guideline above.
 - When the user explicitly asks to test this release workflow, run `pwsh -NoProfile -File ./tests/ci-cd.test.ps1`. The suite tests builds, version changes, local commits, archive contents, encoding, and failure handling in disposable Git repositories under `.ci-cd-tests/`, then removes those repositories. It does not release from the real checkout or modify another agent's source changes.
