@@ -9,6 +9,7 @@
     const MISSING_GRACE = 3000;
     const TYPING_IDLE = 2000;
     const STORE_KEY = 'ocpReasoningLevels';
+    const MISSING_TOAST_KEY = 'ocpReasoningMissingToastDay';
     let settings = { enabled: false, compact: true, placement: 'after' };
     let context = '';
     let levels = [];
@@ -59,9 +60,15 @@
         return '';
     }
 
+    // At most once per local calendar day per site; the in-memory set covers storage being unavailable.
     function unavailable() {
         if (notified.has(context)) return;
         notified.add(context);
+        const today = new Date().toLocaleDateString('sv');
+        try {
+            if (localStorage.getItem(MISSING_TOAST_KEY) === today) return;
+            localStorage.setItem(MISSING_TOAST_KEY, today);
+        } catch { /* storage unavailable */ }
         window.showToast?.('Reasoning effort control was not found for this model or plan. If it is available, open the native model/effort menu once so the module can read it.', 'info');
     }
 
