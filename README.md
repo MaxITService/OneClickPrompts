@@ -81,3 +81,4 @@ If you encounter any issues, simply reload your browser. For persistent problems
 - [Console2Ai](https://github.com/MaxITService/Console2Ai) — send a PowerShell buffer to AI.
 - [AI for Complete Beginners](https://medium.com/@maxim.fomins/ai-for-complete-beginners-guide-llms-f19c4b8a8a79) — an introductory guide to LLMs.
 - [Ping-Plotter](https://github.com/MaxITService/Ping-Plotter-PS51) — a PowerShell ping plotting script.
+- [Maxidian](https://github.com/MaxITService/Maxidian) — offline single-file Obsidian-compatible Markdown editor for the browser (coming soon).
