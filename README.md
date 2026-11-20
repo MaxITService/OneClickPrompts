@@ -44,6 +44,7 @@ Tired of retyping the same prompts in your AI chats? **OneClickPrompts** lets yo
   - **Copy & Paste Prompts (manual way):** Ever wanted to ask the same question to different AIs? Copy a prompt from one site's input box and instantly paste it into another.
   - **Multi-Chat Broadcast (auto send to all open tabs same prompt):** A power-user feature to send a prompt to _every_ supported AI chat tab you have open at once. Great for comparing responses across models. You can "shield" a tab to prevent it from receiving broadcasts. This is Dangerous and should me monitored: risk of sending to chats you didn't intend to!
 - **ChatGPT, Claude & Gemini Exporter (Markdown):** Save a ChatGPT, Claude.ai or Gemini conversation as a `.md` file in one click: the whole chat, answers only, or just the messages you pick from a compact list. Shift+click copies the Markdown to the clipboard instead. Math, code blocks, tables and available thinking summaries are kept; Gemini exports load the full history and include available web sources. ChatGPT exports also preserve Canvas documents, Deep research reports and web citations. Enable it in the Modules section of the popup.
+- **Reasoning Effort / Thinking Level Controls (ChatGPT, Claude & Gemini):** Quickly adjust a model's reasoning effort / thinking level right from the button row (or floating panel) on ChatGPT (Chat and Codex), Claude (Chat and Code), and Gemini. Available levels are read directly from each site's native menu or effort slider with the active level highlighted, and you can toggle compact mode (first letter only) and button placement. Enable it in the Modules section of the popup.
 - **Custom Module Button Icons:** Change the emojis of the Cross-Chat and ChatGPT Exporter buttons right in the popup.
 
 ## Get Started with OneClickPrompts in 3 Easy Steps:
@@ -54,7 +55,7 @@ Tired of retyping the same prompts in your AI chats? **OneClickPrompts** lets yo
 
 ## Documentation
 
-- [What's new in 0.0.7.5](documentation/what's%20new.md)
+- [What's new in 0.0.8.7](documentation/what's%20new.md)
 
 ## AI generated codebase overview - DeepWiki
 

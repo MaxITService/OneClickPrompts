@@ -1,3 +1,14 @@
+# What's New in 0.0.8.7
+
+Changes users will notice since `0.0.8.6`.
+
+## Reasoning Effort / Thinking Level controls (ChatGPT, Claude & Gemini)
+
+- New optional **Reasoning Effort** module (enable in Popup → **Modules**) adds quick thinking-level / reasoning-effort buttons to the inline button row and floating panel on **ChatGPT** (Chat and Codex), **Claude** (Chat and Code), and **Gemini**.
+- Reads available levels dynamically from each site's native UI—both list menus (Claude, Gemini, ChatGPT menus) and effort sliders (ChatGPT Chat and Codex)—so level names and counts always match your current model and plan.
+- Briefly opens the native menu once per model to discover and remember its levels, highlights the currently active level, and notifies you if the current model or plan has no effort control.
+- Includes **Compact mode** (first letter only, on by default) and placement **before** or **after** your custom buttons.
+
 # What's New in 0.0.7.5
 
 Changes users will notice since `0.0.7.4`.
